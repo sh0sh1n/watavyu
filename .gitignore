@@ -50,10 +50,17 @@ modules.xml
 log/
 target/
 
+# Gradle
+.gradle/
+build/
+
 # IntelliJ
 /out/
 quaqua64.jnilib
 NativeOSXCanvas.jnilib
+
+# VS Code
+.vscode/
 
 # Netbeans
 nbproject

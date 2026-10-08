@@ -94,7 +94,6 @@ public final class PluginManager {
         logger.info("Initializing the PluginManager");
         try {
             if (Datavyu.getPlatform() == Datavyu.Platform.MAC) {
-                addPlugin(FFmpegPlugin.class.getName());
                 addPlugin(AvFoundationPlugin.class.getName());
             } else if (Datavyu.getPlatform() == Datavyu.Platform.WINDOWS) {
                 addPlugin(FFmpegPlugin.class.getName());
