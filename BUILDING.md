@@ -69,6 +69,10 @@ The Gradle project version is currently `0.1.0-SNAPSHOT`. The legacy UI resource
 
 ## Video Playback
 
+### Priorities
+
+The fork is a hard reset for macOS: no backward compatibility with old Datavyu versions or platforms is required, and modernizing is preferred over carrying legacy complexity. For playback, the typical workflow is seeking to a cell's onset, playing to its offset, and repeating, so random seeking and forward playback come first, frame stepping (both directions) second, and reverse playback last; it may be dropped. Optional local transcoding or caching is acceptable when measurements show it helps, and originals are never modified. The target material is OBS screen recordings: 1920x1080, 30 fps, H.264/AAC, roughly 20 minutes.
+
 ### Backend
 
 OpenJFX Media (`org.datavyu.plugins.javafx`) is the only video player. Each video window is a Swing dialog that hosts a JavaFX `MediaView` through `JFXPanel`; the spreadsheet, timeline and annotation model stay Swing. On macOS, OpenJFX plays video through AVFoundation, so decoding is hardware-accelerated.

@@ -25,18 +25,18 @@ sourceSets {
     }
 }
 
-val integrationTestImplementation: Configuration by configurations.getting {
+configurations.named("integrationTestImplementation") {
     extendsFrom(configurations.implementation.get(), configurations.testImplementation.get())
 }
 configurations["integrationTestRuntimeOnly"].extendsFrom(configurations.runtimeOnly.get())
 
 // The published javafx-media jar with libjfxmedia_avf.dylib replaced by the
 // patched build. Everything else in the jar, including module-info, is upstream.
-val stockJavafxMedia: Configuration by configurations.creating {
+val stockJavafxMedia: Configuration = configurations.create("stockJavafxMedia") {
     isTransitive = false
 }
 
-val patchedJavafxMedia by tasks.registering(Jar::class) {
+val patchedJavafxMedia = tasks.register<Jar>("patchedJavafxMedia") {
     description = "Repackages javafx-media with the patched AVFoundation library."
     destinationDirectory.set(layout.buildDirectory.dir("javafx"))
     archiveFileName.set("javafx-media-$javafxVersion-watavyu-$javafxPlatform.jar")
@@ -121,7 +121,7 @@ tasks.test {
 }
 
 // Playback tests drive the real OpenJFX player and need an awake display; see BUILDING.md.
-val integrationTest by tasks.registering(Test::class) {
+tasks.register<Test>("integrationTest") {
     description = "Runs OpenJFX playback integration tests against a generated MP4 fixture."
     group = "verification"
     testClassesDirs = sourceSets["integrationTest"].output.classesDirs
@@ -132,7 +132,7 @@ val integrationTest by tasks.registering(Test::class) {
 }
 
 // Usage: ./gradlew playbackBenchmark -Pmedia=/path/to/video.mp4 [-Pseeks=200]
-val playbackBenchmark by tasks.registering(JavaExec::class) {
+tasks.register<JavaExec>("playbackBenchmark") {
     description = "Measures seek latency, frame accuracy, stepping and playback CPU for one video."
     group = "verification"
     mainClass.set("org.datavyu.plugins.javafx.PlaybackBenchmark")
