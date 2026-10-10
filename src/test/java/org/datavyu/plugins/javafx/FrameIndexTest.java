@@ -61,7 +61,37 @@ public class FrameIndexTest {
 
         FrameIndex variable = FrameIndex.measured(new double[]{0, 33.3, 66.7, 166.7}, 200);
         assertFalse(variable.isConstantRate());
-        assertEquals(variable.framesPerSecond(), 20.0, 1e-9);
+    }
+
+    @Test
+    public void frameRateIsTheInverseOfTheMedianFrameDuration() {
+        // Three 40 ms frames and one 100 ms frame: nominally 25 fps, though the average is 20.
+        FrameIndex index = FrameIndex.measured(new double[]{0, 40, 80, 120}, 220);
+
+        assertEquals(index.framesPerSecond(), 25.0, 1e-9);
+    }
+
+    @Test
+    public void ignoresAnOddDurationAtTheEndOfALongStream() {
+        // Like an OBS recording: the second-to-last frame is held for two frame times.
+        double[] starts = new double[100];
+        for (int i = 0; i < starts.length; i++) {
+            starts[i] = (i < 99 ? i : 100) * 1000.0 / 30;
+        }
+        FrameIndex index = FrameIndex.measured(starts, 101 * 1000.0 / 30);
+
+        assertTrue(index.isConstantRate());
+        assertEquals(index.framesPerSecond(), 30.0, 1e-9);
+    }
+
+    @Test
+    public void aLongGapInTheMiddleIsVariableRate() {
+        double[] starts = new double[100];
+        for (int i = 0; i < starts.length; i++) {
+            starts[i] = (i < 50 ? i : i + 1) * 1000.0 / 30;
+        }
+
+        assertFalse(FrameIndex.measured(starts, 101 * 1000.0 / 30).isConstantRate());
     }
 
     @Test

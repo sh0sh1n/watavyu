@@ -30,6 +30,9 @@ public final class FrameIndex {
     /** Frame durations within this tolerance are treated as one constant rate. */
     private static final double CONSTANT_RATE_TOLERANCE_MILLIS = 1.0;
 
+    /** Streams with more frames than this ignore edge frames when judging a constant rate. */
+    private static final int EDGE_FRAMES = 10;
+
     private final double[] startMillis;
     private final double endMillis;
     private final boolean measured;
@@ -88,16 +91,29 @@ public final class FrameIndex {
         return endMillis;
     }
 
-    /** @return Average frame rate over the stream. */
+    /** @return The nominal frame rate: the inverse of the median frame duration. */
     public double framesPerSecond() {
-        return startMillis.length * 1000.0 / (endMillis - startMillis[0]);
+        double[] durations = new double[startMillis.length];
+        for (int i = 0; i < durations.length; i++) {
+            durations[i] = frameDurationMillis(i);
+        }
+        Arrays.sort(durations);
+        int middle = durations.length / 2;
+        double median = durations.length % 2 == 1 ? durations[middle] : (durations[middle - 1] + durations[middle]) / 2;
+        return 1000.0 / median;
     }
 
-    /** @return True when every frame lasts the same time, within a millisecond. */
+    /**
+     * @return True when every frame lasts the same time, within a millisecond. Encoders often
+     * leave an odd duration on the first frame or the last two (OBS recordings hold the
+     * second-to-last frame for two frame times), so those are ignored when there are enough frames.
+     */
     public boolean isConstantRate() {
+        int from = startMillis.length > EDGE_FRAMES ? 1 : 0;
+        int to = startMillis.length > EDGE_FRAMES ? startMillis.length - 2 : startMillis.length;
         double min = Double.MAX_VALUE;
         double max = 0;
-        for (int i = 0; i < startMillis.length; i++) {
+        for (int i = from; i < to; i++) {
             double duration = frameDurationMillis(i);
             min = Math.min(min, duration);
             max = Math.max(max, duration);

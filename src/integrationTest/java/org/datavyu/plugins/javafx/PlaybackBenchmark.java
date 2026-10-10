@@ -89,7 +89,7 @@ public final class PlaybackBenchmark {
             new Scene(new Group(view));
             return view;
         }).get();
-        barcodeMode = barcode.settledFrame(300) == 0;
+        barcodeMode = hasBarcode();
 
         System.out.println("file: " + file.getName() + " (" + file.length() / 1_000_000 + " MB)");
         System.out.printf("video: %dx%d, %d frames, %.3f fps (%s), duration %d ms%n", engine.width(), engine.height(),
@@ -136,6 +136,21 @@ public final class PlaybackBenchmark {
             result.add(awaitShown(target, start, before), checkShown(target));
         }
         return result;
+    }
+
+    /** A dark corner reads as frame 0, so check frames whose numbers set several different bits. */
+    private boolean hasBarcode() throws Exception {
+        for (int frame : new int[]{0, 0b1011, 0b10110100}) {
+            if (frame >= frames.frameCount()) {
+                continue;
+            }
+            playback.seek(frames.reportedMillis(frame));
+            if (barcode.awaitFrame(frame, System.nanoTime(), 2_000) < 0) {
+                return false;
+            }
+        }
+        playback.seek(0);
+        return barcode.awaitFrame(0, System.nanoTime(), 2_000) >= 0;
     }
 
     private long awaitShown(final int target, final long start, final long hashBefore) throws Exception {

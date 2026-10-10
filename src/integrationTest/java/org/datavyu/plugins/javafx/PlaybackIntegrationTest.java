@@ -152,6 +152,25 @@ public class PlaybackIntegrationTest {
     }
 
     @Test
+    public void seeksImmediatelyAfterPauseAlwaysShowTheTarget() throws Exception {
+        // Datavyu's clock seeks every viewer right after pausing. Stock OpenJFX sometimes
+        // left the frame from before the seek on screen here.
+        java.util.Random random = new java.util.Random(3);
+        List<String> failures = new ArrayList<>();
+        for (int i = 0; i < 40; i++) {
+            playback.play();
+            Thread.sleep(150);
+            playback.pause();
+            int target = random.nextInt(FRAMES);
+            playback.seek(frames.reportedMillis(target));
+            if (probe.awaitFrame(target, System.nanoTime(), SEEK_TIMEOUT_MILLIS) < 0) {
+                failures.add(target + " showed " + probe.read());
+            }
+        }
+        assertTrue(failures.isEmpty(), "stale frames after pause and seek: " + failures);
+    }
+
+    @Test
     public void playsForwardFromAnOnset() throws Exception {
         playback.seek(frames.reportedMillis(90));
         assertShows(90);
