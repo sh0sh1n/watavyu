@@ -31,12 +31,12 @@ gop_source=$(python3 -c "from fractions import Fraction; print(round(Fraction('$
 gop_1s=$(python3 -c "from fractions import Fraction; print(round(Fraction('$fps')))")
 gop_half=$(python3 -c "from fractions import Fraction; print(round(Fraction('$fps') / 2))")
 
-ffmpeg -v error -y "${limit[@]}" -i "$source" -map 0:v:0 -map 0:a:0? -c copy -movflags +faststart "$out/remux.mp4"
+ffmpeg -v error -y ${limit[@]+"${limit[@]}"} -i "$source" -map 0:v:0 -map 0:a:0? -c copy -movflags +faststart "$out/remux.mp4"
 
 barcode="color=c=black:s=1024x64:r=$fps,format=gray,geq=lum='if(bitand(N\,pow(2\,floor(X/64)))\,255\,0)'"
 
 for gop in "$gop_source" "$gop_1s" "$gop_half"; do
-    ffmpeg -v error -y "${limit[@]}" -i "$source" -f lavfi -i "$barcode" \
+    ffmpeg -v error -y ${limit[@]+"${limit[@]}"} -i "$source" -f lavfi -i "$barcode" \
         -filter_complex "[1:v]format=yuv420p[bar];[0:v][bar]overlay=0:0:shortest=1[v]" \
         -map "[v]" -map 0:a:0? \
         -c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p \

@@ -6,7 +6,7 @@ group = "org.datavyu"
 version = "0.1.0-SNAPSHOT"
 
 // OpenJFX Media is the video backend. This fork targets Apple Silicon macOS only:
-// the seek-fixed native library in third_party/openjfx-media-seekfix is arm64.
+// the patched native library in third_party/openjfx-media-avf is arm64.
 val javafxVersion = "27"
 val javafxPlatform = "mac-aarch64"
 val javafxModules = listOf("base", "graphics", "media", "swing")
@@ -31,19 +31,19 @@ val integrationTestImplementation: Configuration by configurations.getting {
 configurations["integrationTestRuntimeOnly"].extendsFrom(configurations.runtimeOnly.get())
 
 // The published javafx-media jar with libjfxmedia_avf.dylib replaced by the
-// seek-fixed build. Everything else in the jar, including module-info, is upstream.
+// patched build. Everything else in the jar, including module-info, is upstream.
 val stockJavafxMedia: Configuration by configurations.creating {
     isTransitive = false
 }
 
 val patchedJavafxMedia by tasks.registering(Jar::class) {
-    description = "Repackages javafx-media with the seek-fixed AVFoundation library."
+    description = "Repackages javafx-media with the patched AVFoundation library."
     destinationDirectory.set(layout.buildDirectory.dir("javafx"))
-    archiveFileName.set("javafx-media-$javafxVersion-seekfix-$javafxPlatform.jar")
+    archiveFileName.set("javafx-media-$javafxVersion-watavyu-$javafxPlatform.jar")
     from(stockJavafxMedia.elements.map { jars -> jars.map { zipTree(it) } }) {
         exclude("libjfxmedia_avf.dylib", "META-INF/MANIFEST.MF")
     }
-    from("third_party/openjfx-media-seekfix/libjfxmedia_avf.dylib")
+    from("third_party/openjfx-media-avf/libjfxmedia_avf.dylib")
 }
 
 dependencies {

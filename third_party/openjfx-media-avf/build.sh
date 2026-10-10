@@ -1,14 +1,18 @@
 #!/usr/bin/env bash
-# Rebuilds libjfxmedia_avf.dylib from OpenJFX 27-ga with avf-seek.patch applied.
+# Rebuilds libjfxmedia_avf.dylib from OpenJFX 27-ga with avf.patch applied.
 #
-# OpenJFX's macOS player truncates every seek to whole seconds and lets
-# AVFoundation snap to a keyframe. The patch requests an exact seek instead.
+# The patch changes OpenJFX's macOS (AVFoundation) player in two ways:
+# - Seeks are exact. Upstream truncates every seek to whole seconds and lets
+#   AVFoundation snap to a keyframe.
+# - The audio processing tap is not attached and volume is set on the player.
+#   The tap (balance, equalizer, spectrum) delays the start of playback by about
+#   350 ms.
 # Only this one library is rebuilt; it links against the stock libjfxmedia,
 # libglib-lite and libgstreamer-lite from the published javafx-media jar.
 #
 # Requirements: Xcode command line tools, git, curl, JDK 25 (JAVA_HOME or asdf).
-# Usage: third_party/openjfx-media-seekfix/build.sh
-# Output: third_party/openjfx-media-seekfix/libjfxmedia_avf.dylib (arm64)
+# Usage: third_party/openjfx-media-avf/build.sh
+# Output: third_party/openjfx-media-avf/libjfxmedia_avf.dylib (arm64)
 set -euo pipefail
 
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -25,7 +29,7 @@ git -C "$work/jfx" sparse-checkout set \
     modules/javafx.media/src/main/native \
     modules/javafx.media/src/main/java \
     modules/javafx.media/src/tools
-git -C "$work/jfx" apply "$here/avf-seek.patch"
+git -C "$work/jfx" apply "$here/avf.patch"
 
 for module in base graphics media; do
     curl -sSfL -o "$work/javafx-$module.jar" \

@@ -163,7 +163,7 @@ public class JavaFxPlaybackTest {
         engine.time = 1_234.5;
 
         assertTrue(playback.isPlaying());
-        assertEquals(engine.commands, List.of("rate 2.0", "play"));
+        assertEquals(engine.commands, List.of("play", "rate 2.0"), "the rate is applied after playback starts");
         assertEquals(playback.currentTimeMillis(), 1_234);
     }
 

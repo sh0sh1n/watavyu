@@ -31,8 +31,9 @@ import java.util.concurrent.atomic.AtomicReference;
  * A {@link PlaybackEngine} backed by an OpenJFX {@link MediaPlayer}. Every method except
  * {@link #open} and {@link #currentTimeMillis()} must run on the JavaFX Application Thread.
  *
- * Exact seeking depends on the patched libjfxmedia_avf in third_party/openjfx-media-seekfix;
- * the stock OpenJFX library truncates seeks to whole seconds.
+ * Exact seeking and prompt playback start depend on the patched libjfxmedia_avf in
+ * third_party/openjfx-media-avf; the stock OpenJFX library truncates seeks to whole seconds
+ * and starts playback about 350 ms late.
  */
 final class FxPlaybackEngine implements PlaybackEngine {
 

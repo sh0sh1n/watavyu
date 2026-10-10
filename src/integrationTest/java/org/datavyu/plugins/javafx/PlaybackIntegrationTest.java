@@ -12,6 +12,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -172,6 +173,42 @@ public class PlaybackIntegrationTest {
 
         assertTrue(shown > 90 + FPS / 2 && shown < 90 + 2 * FPS, "about one second played, showing " + shown);
         assertTrue(playback.currentFrame() >= shown - 2, "the paused position follows playback");
+    }
+
+    @Test
+    public void playbackWithAudioStartsPromptly() throws Exception {
+        // Stock OpenJFX takes about 470 ms here because of its audio processing tap;
+        // the patched library takes about 135 ms.
+        List<Long> starts = new ArrayList<>();
+        for (int onset : new int[]{40, 120, 200}) {
+            playback.seek(frames.reportedMillis(onset));
+            assertShows(onset);
+            long start = System.nanoTime();
+            playback.play();
+            while (probe.read() <= onset && System.nanoTime() - start < TimeUnit.SECONDS.toNanos(2)) {
+                Thread.onSpinWait();
+            }
+            starts.add(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start));
+            playback.pause();
+        }
+        Collections.sort(starts);
+        assertTrue(starts.get(1) < 300, "median time to the first new frame was " + starts.get(1) + " ms: " + starts);
+    }
+
+    @Test
+    public void playsAtTheRequestedRate() throws Exception {
+        playback.seek(frames.reportedMillis(30));
+        assertShows(30);
+        playback.setRate(2F);
+        playback.play();
+        Thread.sleep(500);
+        int from = probe.read();
+        Thread.sleep(1_000);
+        int to = probe.read();
+        playback.pause();
+
+        int advanced = to - from;
+        assertTrue(advanced > 1.6 * FPS && advanced < 2.4 * FPS, "2x for 1 s advanced " + advanced + " frames");
     }
 
     @Test

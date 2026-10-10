@@ -126,9 +126,10 @@ public final class JavaFxPlayback {
         }
         playing = true;
         float playRate = rate;
+        // AVFoundation resets the rate to 1 when playback starts, so set it afterwards.
         onEngine(() -> {
-            engine.setRate(playRate);
             engine.play();
+            engine.setRate(playRate);
         });
     }
 
