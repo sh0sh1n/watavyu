@@ -440,40 +440,36 @@ public final class ProjectController {
                 plugin = PluginManager.getInstance().getCompatiblePlugin(setting.getPluginClassifier(), file) ;
             }
 
-            final StreamViewer streamViewer = plugin.getNewStreamViewer(
-                    Identifier.generateIdentifier(),
-                    file,
-                    Datavyu.getApplication().getMainFrame(),
-                    false);
-
-            if (setting.getSettingsId() != null) {
-                // new project file
-                streamViewer.loadSettings(setting.getSettingsInputStream());
-            } else {
-                // old project file
-                streamViewer.setOffset(setting.getOffset());
+            if (plugin == null) {
+                missingPluginList.add(setting.getPluginName());
+                continue;
             }
 
-            // Make sure that the parent dialog is visible
-            if (streamViewer.getParentJDialog() != null) {
-                boolean visible = streamViewer.getParentJDialog().isVisible();
-                Datavyu.getApplication().show(streamViewer.getParentJDialog());
-                if (!visible) {
-                    streamViewer.getParentJDialog().setVisible(false);
+            // Media opens in the background; the track appears once the player is ready.
+            final ViewerSetting viewerSetting = setting;
+            videoController.openStream(Identifier.generateIdentifier(), file, plugin, streamViewer -> {
+                if (viewerSetting.getSettingsId() != null) {
+                    // new project file
+                    streamViewer.loadSettings(viewerSetting.getSettingsInputStream());
+                } else {
+                    // old project file
+                    streamViewer.setOffset(viewerSetting.getOffset());
                 }
-            }
 
-            videoController.addStream(plugin.getTypeIcon(), streamViewer);
-
-            if (setting.getTrackSettings() != null) {
-                final TrackSettings ts = setting.getTrackSettings();
-                mixerController.setTrackInterfaceSettings(streamViewer.getIdentifier(), ts.getMarkers(), ts.isLocked());
-            }
-
-            mixerController.bindTrackActions(streamViewer.getIdentifier(), streamViewer.getCustomActions());
-            streamViewer.addViewerStateListener(
-                    mixerController.getTracksEditorController()
-                            .getViewerStateListener(streamViewer.getIdentifier()));
+                // Make sure that the parent dialog is visible
+                if (streamViewer.getParentJDialog() != null) {
+                    boolean visible = streamViewer.getParentJDialog().isVisible();
+                    Datavyu.getApplication().show(streamViewer.getParentJDialog());
+                    if (!visible) {
+                        streamViewer.getParentJDialog().setVisible(false);
+                    }
+                }
+            }, streamViewer -> {
+                if (viewerSetting.getTrackSettings() != null) {
+                    final TrackSettings ts = viewerSetting.getTrackSettings();
+                    mixerController.setTrackInterfaceSettings(streamViewer.getIdentifier(), ts.getMarkers(), ts.isLocked());
+                }
+            });
         }
 
         // Do not remove; this is here for backwards compatibility.

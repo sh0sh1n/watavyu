@@ -45,8 +45,7 @@ public abstract class BaseJFC extends PluginChooser {
     @Override
     public Plugin getSelectedPlugin() {
         Object selected = pluginsBox.getSelectedItem();
-
-        return ((PluginCallback) selected).plugin;
+        return selected instanceof PluginCallback ? ((PluginCallback) selected).plugin : null;
     }
 
     private static final class PluginCallback {

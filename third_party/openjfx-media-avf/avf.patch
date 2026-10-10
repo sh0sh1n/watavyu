@@ -1,0 +1,118 @@
+diff --git a/modules/javafx.media/src/main/native/jfxmedia/platform/osx/avf/AVFMediaPlayer.mm b/modules/javafx.media/src/main/native/jfxmedia/platform/osx/avf/AVFMediaPlayer.mm
+index 1a2ee85..84a7f15 100644
+--- a/modules/javafx.media/src/main/native/jfxmedia/platform/osx/avf/AVFMediaPlayer.mm
++++ b/modules/javafx.media/src/main/native/jfxmedia/platform/osx/avf/AVFMediaPlayer.mm
+@@ -39,6 +39,11 @@
+ #define FREEWHEELING_PERIOD_IN_SECONDS 0.5
+ #define ADVANCE_INTERVAL_IN_SECONDS 0.1
+ 
++// Watavyu patch: see deliverFrameAfterSeek.
++#define SEEK_FRAME_ATTEMPTS 20
++#define SEEK_FRAME_RETRY_MSEC 15
++#define SEEK_FRAME_TIME_NUDGE 1e-9
++
+ // set to 1 to debug track information
+ #define DUMP_TRACK_INFO 0
+ 
+@@ -105,7 +110,10 @@ static void append_log(NSMutableString *s, NSString *fmt, ...) {
+ // Max number of bytes we will provide per request
+ #define MAX_READ_SIZE (1024 * 1024)
+ 
+-@implementation AVFMediaPlayer
++@implementation AVFMediaPlayer {
++    // Watavyu patch: identifies the latest seek, see deliverFrameAfterSeek.
++    uint64_t _seekGeneration;
++}
+ 
+ static void SpectrumCallbackProc(void *context, double duration, double timestamp);
+ 
+@@ -396,12 +404,59 @@ - (double) currentTime
+ 
+ - (void) setCurrentTime:(double)time
+ {
+-    [self.player seekToTime:CMTimeMakeWithSeconds(time, 1)];
++    // Watavyu patch: seek to the exact requested time. Upstream truncates to whole
++    // seconds (timescale 1) and accepts AVFoundation's keyframe-snapping tolerance.
++    uint64_t generation;
++    @synchronized(self) {
++        generation = ++_seekGeneration;
++    }
++    __weak AVFMediaPlayer *weakSelf = self;
++    [self.player seekToTime:CMTimeMakeWithSeconds(time, NSEC_PER_SEC)
++            toleranceBefore:kCMTimeZero
++             toleranceAfter:kCMTimeZero
++          completionHandler:^(BOOL finished) {
++        if (finished) {
++            [weakSelf deliverFrameAfterSeek:generation attempt:0];
++        }
++    }];
+     if (previousPlayerState == kPlayerState_FINISHED) {
+         [self play];
+     }
+ }
+ 
++// Watavyu patch: after a seek the old frame could stay on screen. The display link
++// may hand over a frame decoded before the seek but stamped with the new item time;
++// javafx.scene.media.MediaPlayer then skips the correct frame because its timestamp
++// is unchanged, and while paused nothing replaces it. Deliver the frame at the new
++// time directly, retrying briefly while it is decoded, with a timestamp nudged by
++// less than a microsecond so the renderer always uploads it. Then restart the display
++// link for any frames that follow. A newer seek supersedes this one.
++- (void) deliverFrameAfterSeek:(uint64_t)generation attempt:(int)attempt {
++    @synchronized(self) {
++        if (isDisposed || generation != _seekGeneration || self.playerOutput == nil) {
++            return;
++        }
++        CMTime itemTime = self.player.currentItem.currentTime;
++        CVPixelBufferRef buffer = [self.playerOutput copyPixelBufferForItemTime:itemTime itemTimeForDisplay:NULL];
++        if (buffer != NULL) {
++            double frameTime = CMTimeGetSeconds(itemTime) + SEEK_FRAME_TIME_NUDGE * (generation % 1000 + 1);
++            [self sendPixelBuffer:buffer frameTime:frameTime hostTime:CVGetCurrentHostTime()];
++            CVBufferRelease(buffer);
++            if (_displayLink != NULL) {
++                self.lastHostTime = CVGetCurrentHostTime();
++                CVDisplayLinkStart(_displayLink);
++            }
++            return;
++        }
++    }
++    if (attempt < SEEK_FRAME_ATTEMPTS) {
++        __weak AVFMediaPlayer *weakSelf = self;
++        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, SEEK_FRAME_RETRY_MSEC * NSEC_PER_MSEC), playerQueue, ^{
++            [weakSelf deliverFrameAfterSeek:generation attempt:attempt + 1];
++        });
++    }
++}
++
+ - (BOOL) mute {
+     return self.player.muted;
+ }
+@@ -432,6 +487,7 @@ - (float) volume {
+ 
+ - (void) setVolume:(float)volume {
+     _audioProcessor.volume = volume;
++    self.player.volume = volume;
+ }
+ 
+ - (float) rate {
+@@ -625,15 +681,11 @@ - (void) extractTrackInfo {
+             name = [NSString stringWithFormat:@"Audio Track %d", audioIndex++];
+             TRACK_LOG(@"  track name: %@", name);
+ 
+-            // Set up audio processing
+-            if (_audioProcessor) {
+-                // Make sure the players volume is set to 1.0
+-                self.player.volume = 1.0;
+-
+-                // set up the mixer
+-                _audioProcessor.audioTrack = track;
+-                self.player.currentItem.audioMix = _audioProcessor.mixer;
+-            }
++            // Watavyu patch: do not attach the audio processing tap. The tap only
++            // provides balance, equalizer and spectrum, which Watavyu does not use,
++            // and it delays the start of playback by about 350 ms. Volume is applied
++            // on the player instead; see setVolume.
++            self.player.volume = _audioProcessor.volume;
+ 
+             // We have to get the audio information from the format description
+             const AudioStreamBasicDescription *asbd = CMAudioFormatDescriptionGetStreamBasicDescription(desc);

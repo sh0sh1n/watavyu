@@ -14,7 +14,6 @@
  */
 package org.datavyu.controllers.component;
 
-import com.apple.eawt.event.*;
 import com.google.common.collect.Maps;
 import com.sun.jna.Platform;
 import net.miginfocom.swing.MigLayout;
@@ -88,9 +87,6 @@ public final class MixerController implements PropertyChangeListener,
 
     /** Region model */
     private final RegionModel regionModel;
-
-    /** Listens and processes gestures on Mac OS X */
-    private final OSXGestureListener osxGestureListener = Platform.isMac() ? new OSXGestureListener() : null;
 
     /** Tracks panel */
     private JPanel tracksPanel;
@@ -175,10 +171,6 @@ public final class MixerController implements PropertyChangeListener,
         tracksPanel = new JPanel();
         tracksPanel.setLayout(new MigLayout("ins 0","[left|left|left]rel push[right|right] [left|left]", ""));
         tracksPanel.setBackground(Color.WHITE);
-
-        if (Platform.isMac()) {
-            osxGestureListener.register(tracksPanel);
-        }
 
         // Menu buttons
         lockToggle = new JToggleButton("Lock all");
@@ -1009,85 +1001,4 @@ public final class MixerController implements PropertyChangeListener,
         }
     }
 
-    private class OSXGestureListener implements MagnificationListener,
-            GesturePhaseListener, SwipeListener {
-
-        /**
-         * Cumulative sum of the current zoom gesture, where positive values
-         * indicate zooming in (enlarging) and negative values indicate zooming
-         * out (shrinking). On a 2009 MacBook Pro, pinch-and-zooming from
-         * corner-to-corner of the trackpad will result in a total sum of
-         * approximately +3.0 (zooming in) or -3.0 (zooming out).
-         */
-        private double osxMagnificationGestureSum = 0;
-
-        /**
-         * Relative zoom when the magnification gesture began.
-         */
-        private double osxMagnificationGestureInitialZoomSetting;
-
-        void register(final JComponent component) {
-            GestureUtilities.addGestureListenerTo(tracksPanel, osxGestureListener);
-        }
-
-        /**
-         * Invoked when a magnification gesture ("pinch and squeeze") is performed by the user on Mac OS X.
-         *
-         * @param event contains the scale of the magnification
-         */
-        @Override
-        public void magnify(final MagnificationEvent event) {
-            osxMagnificationGestureSum += event.getMagnification();
-            // Amount of the pinch-and-squeeze gesture required to perform a full zoom in the mixer
-            final double fullZoomMotion = 2.0;
-            final double newZoomSetting = Math.min(Math.max(osxMagnificationGestureInitialZoomSetting
-                            + (osxMagnificationGestureSum / fullZoomMotion), 0.0), 1.0);
-            viewportModel.setViewportZoom(newZoomSetting, needleController.getNeedleModel().getCurrentTime());
-        }
-
-        /**
-         * Indicates that the user has started performing a gesture on Mac OS X.
-         */
-        @Override
-        public void gestureBegan(final GesturePhaseEvent e) {
-            osxMagnificationGestureSum = 0;
-            osxMagnificationGestureInitialZoomSetting = viewportModel.getViewport().getZoomLevel();
-        }
-
-        /**
-         * Indicates that the user has finished performing a gesture on Mac OS X.
-         */
-        @Override
-        public void gestureEnded(final GesturePhaseEvent e) {
-        }
-
-        @Override
-        public void swipedDown(final SwipeEvent e) {
-        }
-
-        @Override
-        public void swipedLeft(final SwipeEvent e) {
-            swipeHorizontal(false);
-        }
-
-        @Override
-        public void swipedRight(final SwipeEvent e) {
-            swipeHorizontal(true);
-        }
-
-        private void swipeHorizontal(final boolean swipeLeft) {
-
-            // The number of horizontal swipe actions needed to move the scroll bar along by the visible amount (i.e. a page left/right action)
-            final int swipesPerVisibleAmount = 5;
-            final int newValue = tracksScrollBar.getValue()
-                    + ((swipeLeft ? -1 : 1) * tracksScrollBar.getVisibleAmount()
-                    / swipesPerVisibleAmount);
-            tracksScrollBar.setValue(Math.max(Math.min(newValue,
-                    tracksScrollBar.getMaximum() - tracksScrollBar.getVisibleAmount()), tracksScrollBar.getMinimum()));
-        }
-
-        @Override
-        public void swipedUp(final SwipeEvent e) {
-        }
-    }
 }

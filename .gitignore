@@ -50,12 +50,22 @@ modules.xml
 log/
 target/
 
+# Gradle
+.gradle/
+build/
+
 # IntelliJ
 /out/
 quaqua64.jnilib
 NativeOSXCanvas.jnilib
 
+# VS Code
+.vscode/
+
 # Netbeans
 nbproject
 nbactions.xml
 nb-configuration.xml
+
+# Patched OpenJFX media library, rebuilt by third_party/openjfx-media-avf/build.sh
+!third_party/openjfx-media-avf/libjfxmedia_avf.dylib

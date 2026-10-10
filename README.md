@@ -2,6 +2,8 @@
 
 [Datavyu](http://datavyu.org/) is an open-source research tool that integrates and displays all kinds of data, letting you discover the big picture while remaining connected with raw data. Datavyu will let you build and organize interpretations, and will assist with analysis.
 
+> **Watavyu fork:** this repository is a personal macOS (Apple Silicon) fork built with Gradle. See [BUILDING.md](BUILDING.md) for setup, video playback and tests. The Maven instructions below describe the original Datavyu build and are out of date for this fork.
+
 ## Download and Use Datavyu
 You can find binaries of Datavyu available for Windows and OSX on [the release page](https://github.com/databrary/datavyu/releases).
 
