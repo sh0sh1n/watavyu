@@ -50,7 +50,7 @@ public class OpenControllerTest {
 
     @Test
     public void testLoadCSV() {
-        File demoFile = new File(TEST_FOLDER + "IO/simple1.csv");
+        File demoFile = new File(TEST_FOLDER, "IO/simple1.csv");
         OpenController openc = new OpenController();
         openc.openDataStore(demoFile);
 
@@ -70,7 +70,7 @@ public class OpenControllerTest {
 
     @Test
     public void testLoadOPF() {
-        File demoFile = new File(TEST_FOLDER + "IO/simple2.opf");
+        File demoFile = new File(TEST_FOLDER, "IO/simple2.opf");
         OpenController openc = new OpenController();
         openc.openProject(demoFile);
 
@@ -90,7 +90,7 @@ public class OpenControllerTest {
 
     @Test
     public void testLoadOPF2() {
-        File demoFile = new File(TEST_FOLDER + "IO/simple3.opf");
+        File demoFile = new File(TEST_FOLDER, "IO/simple3.opf");
         OpenController openc = new OpenController();
         openc.openProject(demoFile);
 
@@ -142,7 +142,7 @@ public class OpenControllerTest {
 
     @Test
     public void testLoadOPF3() {
-        File demoFile = new File(TEST_FOLDER + "IO/simple4.opf");
+        File demoFile = new File(TEST_FOLDER, "IO/simple4.opf");
         OpenController openc = new OpenController();
         openc.openProject(demoFile);
 

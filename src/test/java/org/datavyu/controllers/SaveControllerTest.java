@@ -33,6 +33,9 @@ public class SaveControllerTest {
     // The location of the test files.
     private static final String TEST_FOLDER = System.getProperty("testPath");
 
+    // Where saved files are written.
+    private static final File OUTPUT_FOLDER = new File(System.getProperty("java.io.tmpdir"));
+
 
     /** BLOCK_SIZE for files */
     private static final int BLOCK_SIZE = 65536;
@@ -122,12 +125,12 @@ public class SaveControllerTest {
 
     @Test
     public void testSaveCSV() throws UserWarningException, IOException {
-        File outFile = new File("target/test1.csv");
+        File outFile = new File(OUTPUT_FOLDER, "test1.csv");
         // Clean up the out file only if it exists.
         if (outFile.exists()) {
             outFile.delete();
         }
-        File demoFile = new File(TEST_FOLDER + "IO/simple1.csv");
+        File demoFile = new File(TEST_FOLDER, "IO/simple1.csv");
 
         DataStore ds = DataStoreFactory.newDataStore();
         Variable var = ds.createVariable("TestColumn", Argument.Type.TEXT);
@@ -144,11 +147,11 @@ public class SaveControllerTest {
 
     @Test
     public void testLoadOPF() throws UserWarningException, IOException {
-        File outFile = new File("target/test2.opf");
+        File outFile = new File(OUTPUT_FOLDER, "test2.opf");
         if (outFile.exists()) {
             outFile.delete();
         }
-        File demoFile = new File(TEST_FOLDER + "IO/simple2.opf");
+        File demoFile = new File(TEST_FOLDER, "IO/simple2.opf");
 
         Project p = new Project();
         p.setProjectName("simple2");
@@ -168,11 +171,11 @@ public class SaveControllerTest {
 
     @Test
     public void testLoadOPF2() throws UserWarningException, IOException {
-        File outFile = new File("target/test3.opf");
+        File outFile = new File(OUTPUT_FOLDER, "test3.opf");
         if (outFile.exists()) {
             outFile.delete();
         }
-        File demoFile = new File(TEST_FOLDER + "IO/simple3.opf");
+        File demoFile = new File(TEST_FOLDER, "IO/simple3.opf");
 
         Project p = new Project();
         p.setProjectName("simple3");
