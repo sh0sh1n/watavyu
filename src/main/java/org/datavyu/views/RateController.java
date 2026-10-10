@@ -65,12 +65,24 @@ final class RateController {
      * @return Next rate for the number of signed jumps taking the current rate as a reference.
      */
     float nextRate(float currentRate, int jump) {
+        return nextRate(currentRate, jump, true);
+    }
+
+    /**
+     * Get the next rate for the current rate.
+     * @param currentRate The current rate.
+     * @param jump The number of jumps to the next currentRate.
+     * @param reverseAllowed False to stop at zero instead of moving to a negative rate.
+     *
+     * @return Next rate for the number of signed jumps taking the current rate as a reference.
+     */
+    float nextRate(float currentRate, int jump, boolean reverseAllowed) {
         List<Float> rates = jump < 0 ? smallerRates(currentRate) : largerRates(currentRate);
         float nextRate = currentRate;
         Iterator<Float> rate = rates.iterator();
         for (int jumps = 0; rate.hasNext() && jumps < Math.abs(jump); ++jumps) {
             nextRate = rate.next();
         }
-        return nextRate;
+        return reverseAllowed ? nextRate : Math.max(nextRate, 0F);
     }
 }

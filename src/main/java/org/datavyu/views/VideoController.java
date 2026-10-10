@@ -42,8 +42,6 @@ import org.jdesktop.application.Application;
 import org.jdesktop.application.ResourceMap;
 
 import javax.swing.*;
-import javax.swing.event.HyperlinkEvent;
-import javax.swing.event.HyperlinkListener;
 import javax.swing.filechooser.FileFilter;
 import java.awt.*;
 import java.awt.event.*;
@@ -51,12 +49,11 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.function.Consumer;
 
 
 /**
@@ -347,73 +344,48 @@ public final class VideoController extends DatavyuDialog
      */
     public Identifier openVideo(final File videoFile, final Plugin plugin){
         Identifier id = Identifier.generateIdentifier();
-        new Thread(() -> {
-            if (plugin != null) {
-                try {
-                    logger.debug("Open Video " + videoFile + " With plugin " + plugin);
-                    StreamViewer streamViewer = plugin.getNewStreamViewer(
-                            id,
-                            videoFile,
-                            Datavyu.getApplication().getMainFrame(),
-                            false);
-
-                    addStream(plugin.getTypeIcon(), streamViewer);
-                    mixerController.bindTrackActions(streamViewer.getIdentifier(), streamViewer.getCustomActions());
-                    streamViewer.addViewerStateListener(mixerController.getTracksEditorController()
-                            .getViewerStateListener(streamViewer.getIdentifier()));
-                } catch (Throwable t) {
-                    logger.error(t);
-
-                    StringWriter sw = new StringWriter();
-                    PrintWriter pw = new PrintWriter(sw);
-                    t.printStackTrace(pw);
-                    // stack trace as a string
-                    if (plugin.getNamespace().contains("quicktime")) {
-                        JLabel label = new JLabel();
-                        Font font = label.getFont();
-
-                        // create some css from the label's font
-                        StringBuilder style = new StringBuilder("font-family:").append(font.getFamily()).append(";");
-                        style.append("font-weight:").append(font.isBold() ? "bold" : "normal").append(";");
-                        style.append("font-size:").append(font.getSize()).append("pt;");
-
-                        // html content
-                        JEditorPane ep = new JEditorPane("text/html", "<html><body style=\"" + style + "\">" //
-                                + "Error: Could not load Quicktime.  <a href=\"https://support.apple.com/kb/DL1822?locale=en_US\">Please install Quicktime 7.7.6 from here</a><br>" +
-                                "and when installing, select \"Custom Install\" and then left click on the [+] next to the red X<br>" +
-                                "next to \"Legacy options\", click on the red X next to Quicktime For Java and select <br>\"Will be installed to local harddrive\". Then click \"Next\" and install.<br>" +
-                                "Afterwards relaunch Datavyu to use the Quicktime plugin." //
-                                + "</body></html>");
-
-                        // handle link events
-                        ep.addHyperlinkListener(new HyperlinkListener() {
-                            @Override
-                            public void hyperlinkUpdate(HyperlinkEvent evt) {
-                                if (evt.getEventType().equals(HyperlinkEvent.EventType.ACTIVATED)) {
-                                    try {
-                                        // roll your own link launcher or use Desktop if J6+
-                                        Desktop.getDesktop().browse(evt.getURL().toURI());
-                                    } catch (Exception e) {
-                                        logger.error("Error when opening hyper text " + e);
-                                    }
-                                }
-                            }
-                        });
-                        ep.setEditable(false);
-                        ep.setBackground(label.getBackground());
-
-                        // show
-                        JOptionPane.showMessageDialog(null, ep);
-                    } else {
-                        JOptionPane.showMessageDialog(null,
-                                "This plugin could not load this file. Error message:\n" + t.getMessage());
-                    }
-                }
-            }
-        }).start();
-
+        openStream(id, videoFile, plugin, streamViewer -> { }, streamViewer -> { });
         return id;
     }
+
+    /**
+     * Opens a stream on a background thread, because a plugin may block while its media
+     * loads, then adds the track on the Swing EDT. A file that fails to open adds no track
+     * and shows the plugin's error message.
+     *
+     * @param id Identifier for the new stream.
+     * @param file File to open.
+     * @param plugin Plugin to open it with.
+     * @param beforeAdd Runs on the EDT before the track is added, e.g. to load saved settings.
+     * @param afterAdd Runs on the EDT after the track is added.
+     */
+    public void openStream(final Identifier id, final File file, final Plugin plugin,
+                           final Consumer<StreamViewer> beforeAdd, final Consumer<StreamViewer> afterAdd) {
+        Thread opener = new Thread(() -> {
+            final StreamViewer streamViewer;
+            try {
+                logger.debug("Open Video " + file + " With plugin " + plugin);
+                streamViewer = plugin.getNewStreamViewer(id, file, Datavyu.getApplication().getMainFrame(), false);
+            } catch (Throwable t) {
+                logger.error("Unable to open " + file, t);
+                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(Datavyu.getApplication().getMainFrame(),
+                        t.getMessage() != null ? t.getMessage() : "Unable to open " + file.getName(),
+                        "Cannot Open Video", JOptionPane.ERROR_MESSAGE));
+                return;
+            }
+            SwingUtilities.invokeLater(() -> {
+                beforeAdd.accept(streamViewer);
+                addStream(plugin.getTypeIcon(), streamViewer);
+                mixerController.bindTrackActions(streamViewer.getIdentifier(), streamViewer.getCustomActions());
+                streamViewer.addViewerStateListener(mixerController.getTracksEditorController()
+                        .getViewerStateListener(streamViewer.getIdentifier()));
+                afterAdd.accept(streamViewer);
+            });
+        }, "open-video-" + file.getName());
+        opener.setDaemon(true);
+        opener.start();
+    }
+
     /**
      * Tells the Data Controller if shift is being held or not.
      *
@@ -1530,12 +1502,17 @@ public final class VideoController extends DatavyuDialog
             long stepSize = (long) Math.ceil(MILLI_IN_SEC / frameRate); // step size is in milliseconds
             // Update the clock timer with the new time
             long newTime = clockTime - (clockTime % stepSize) - stepSize;
+            // A viewer that steps by frame lands on an exact frame time; the clock follows it
+            Long steppedTime = null;
             for (StreamViewer streamViewer : streamViewers) {
                 // TODO: Tie offset & duration to stream viewer only and pull it in the track model
                 TrackModel trackModel = tracksEditorController.getTrackModel(streamViewer.getIdentifier());
                 if (streamViewer.isStepEnabled()
                     && streamViewer.getFramesPerSecond() == frameRate) {
                     streamViewer.stepBackward();
+                    if (steppedTime == null && trackModel != null) {
+                        steppedTime = streamViewer.getCurrentTime() + trackModel.getOffset();
+                    }
                 } else if (trackModel != null){
                     // Get the stream time
                     long trackTime = newTime - trackModel.getOffset();
@@ -1551,6 +1528,9 @@ public final class VideoController extends DatavyuDialog
                     streamViewer.setCurrentTime(newStreamTime);
                 }
                 // otherwise we can't step
+            }
+            if (steppedTime != null) {
+                newTime = steppedTime;
             }
 
             //Force the time in order to update the cell highlighting
@@ -1604,11 +1584,16 @@ public final class VideoController extends DatavyuDialog
 
             // Update the clock timer with the new time
             long newTime = clockTime - (clockTime % stepSize) + stepSize;
+            // A viewer that steps by frame lands on an exact frame time; the clock follows it
+            Long steppedTime = null;
             for (StreamViewer streamViewer : streamViewers) {
                 TrackModel trackModel = tracksEditorController.getTrackModel(streamViewer.getIdentifier());
                 if (streamViewer.isStepEnabled()
                         && streamViewer.getFramesPerSecond() == frameRate) {
                     streamViewer.stepForward();
+                    if (steppedTime == null && trackModel != null) {
+                        steppedTime = streamViewer.getCurrentTime() + trackModel.getOffset();
+                    }
                 } else if (trackModel != null){
                     // Get the stream time
                     long trackTime = newTime - trackModel.getOffset();
@@ -1625,6 +1610,9 @@ public final class VideoController extends DatavyuDialog
                 }
                 // otherwise we can't step
             }
+            if (steppedTime != null) {
+                newTime = steppedTime;
+            }
             //Force the time in order to update the cell highlighting
             clockTimer.setTime(newTime);
             updateCurrentTimeLabelAndNeedle(newTime);
@@ -1638,7 +1626,8 @@ public final class VideoController extends DatavyuDialog
         if (clockTimer.getClockTime() > mixerController.getRegionController().getModel().getRegion().getRegionStart()
                 && clockTimer.getClockTime() < mixerController.getRegionController().getModel().getRegion().getRegionEnd()) {
             float currentRate = clockTimer.getRate();
-            float nextRate = shuttleRates.nextRate(currentRate, shuttleJump);
+            boolean reverseAllowed = streamViewers.stream().allMatch(StreamViewer::isReversePlaybackSupported);
+            float nextRate = shuttleRates.nextRate(currentRate, shuttleJump, reverseAllowed);
             clockTimer.setRate(nextRate);
             logger.info("Changed rate from " + currentRate + " to " + nextRate + " for " + shuttleJump + " jumps.");
         }

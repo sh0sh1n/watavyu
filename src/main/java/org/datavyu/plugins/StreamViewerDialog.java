@@ -127,6 +127,9 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     /** Identifier of this data viewer */
     private Identifier identifier;
 
+    /** Forwards key presses in this window to the application's shortcuts */
+    private final KeyEventDispatcher keyEventDispatcher = e -> Datavyu.getApplication().dispatchKeyEvent(e);
+
     /** The offset of this stream viewer wrt to the others */
     // Offset gets updated when the user pushes the bar through 'handleCarriageOffsetChangeEvent' in the VideoController
     private long offset;
@@ -138,14 +141,7 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
 
         super(parent, modal);
 
-        KeyboardFocusManager.getCurrentKeyboardFocusManager()
-            .addKeyEventDispatcher(
-            new KeyEventDispatcher() {
-              @Override
-              public boolean dispatchKeyEvent(final KeyEvent e) {
-                return Datavyu.getApplication().dispatchKeyEvent(e);
-              }
-            });
+        KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(keyEventDispatcher);
 
         this.identifier = identifier;
         offset = 0;
@@ -541,6 +537,8 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     public void close() {
         stop();
         cleanUp();
+        KeyboardFocusManager.getCurrentKeyboardFocusManager().removeKeyEventDispatcher(keyEventDispatcher);
+        volumeDialog.dispose();
         dispose();
     }
 

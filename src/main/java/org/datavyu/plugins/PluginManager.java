@@ -18,9 +18,7 @@ import com.google.common.collect.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.Datavyu;
-import org.datavyu.plugins.ffmpegplayer.FFmpegPlugin;
-import org.datavyu.plugins.nativeosx.AvFoundationPlugin;
-import org.datavyu.plugins.nativeosx.AvFoundationViewer;
+import org.datavyu.plugins.javafx.JavaFxVideoPlugin;
 import org.datavyu.util.MacOS;
 
 import javax.swing.filechooser.FileFilter;
@@ -93,11 +91,7 @@ public final class PluginManager {
     private void initialize() {
         logger.info("Initializing the PluginManager");
         try {
-            if (Datavyu.getPlatform() == Datavyu.Platform.MAC) {
-                addPlugin(AvFoundationPlugin.class.getName());
-            } else if (Datavyu.getPlatform() == Datavyu.Platform.WINDOWS) {
-                addPlugin(FFmpegPlugin.class.getName());
-            }
+            addPlugin(JavaFxVideoPlugin.class.getName());
         } catch (Exception e) {
             logger.error("Unable to load plugin", e);
         }
@@ -200,78 +194,7 @@ public final class PluginManager {
     }
 
     public Iterable<Plugin> getPlugins() {
-        List<Plugin> p = Lists.newArrayList(plugins);
-        if (Datavyu.getPlatform() == Datavyu.Platform.MAC) {
-            p.sort(new Comparator<Plugin>() {
-                @Override
-                public int compare(final Plugin o1, final Plugin o2) {
-                    if ("Native OSX Video".equals(o1.getPluginName())) {
-                        return -1;
-                    }
-
-                    if ("Native OSX Video".equals(o2.getPluginName())) {
-                        return 1;
-                    }
-
-                    if ("FFmpeg Plugin".equals(o1.getPluginName())) {
-                        return -1;
-                    }
-
-                    if ("FFmpeg Plugin".equals(o2.getPluginName())) {
-                        return 1;
-                    }
-
-                    return o1.getPluginName().compareTo(o2.getPluginName());
-                }
-            });
-
-            for (int i = 0; i < p.size(); i++) {
-                if (p.get(i).getPluginName().equals("QuickTime Video") || p.get(i).getPluginName().equals("VLC Video")) {
-                    p.remove(i);
-                    break;
-                }
-            }
-        } else if (Datavyu.getPlatform() == Datavyu.Platform.WINDOWS) {
-            p.sort(new Comparator<Plugin>() {
-                @Override
-                public int compare(final Plugin o1, final Plugin o2) {
-
-                    if ("FFmpeg Plugin".equals(o1.getPluginName())) {
-                        return -1;
-                    }
-
-                    if ("FFmpeg Plugin".equals(o2.getPluginName())) {
-                        return 1;
-                    }
-
-                    return o1.getPluginName().compareTo(o2.getPluginName());
-                }
-            });
-            for (int i = 0; i < p.size(); i++) {
-                if (p.get(i).getPluginName().equals("QTKit Video")) {
-                    p.remove(i);
-                    break;
-                }
-            }
-        } else {
-            p.sort(new Comparator<Plugin>() {
-                @Override
-                public int compare(final Plugin o1, final Plugin o2) {
-
-                    if ("FFmpeg Plugin".equals(o1.getPluginName())) {
-                        return -1;
-                    }
-
-                    if ("FFmpeg Plugin".equals(o2.getPluginName())) {
-                        return 1;
-                    }
-
-                    return o1.getPluginName().compareTo(o2.getPluginName());
-                }
-            });
-        }
-
-        return p;
+        return Lists.newArrayList(plugins);
     }
 
     /**
@@ -279,36 +202,20 @@ public final class PluginManager {
      *
      * @param classifier Plugin classifier string
      * @param file       The data file to open
-     * @return The first compatible plugin that is found, null otherwise
+     * @return A plugin whose file filter accepts the file, otherwise any plugin with the classifier, or null
      */
     public Plugin getCompatiblePlugin(final String classifier, final File file) {
-
-        // Hard-code plugins for Windows, OSX, and Linux
-        if (classifier.equals("datavyu.video")) {
-
-            // Mac default is Native OSX
-            if (Datavyu.getPlatform() == Datavyu.Platform.MAC) {
-                return new AvFoundationPlugin();
-            }
-
-            // Windows default is FFmpegPlugin
-            if (Datavyu.getPlatform() == Datavyu.Platform.WINDOWS) {
-                return new FFmpegPlugin();
-            }
-
-        }
-
-        for (Plugin candidate : pluginClassifiers.get(classifier)) {
-
+        Collection<Plugin> candidates = pluginClassifiers.get(classifier);
+        for (Plugin candidate : candidates) {
             for (Filter filter : candidate.getFilters()) {
-
                 if (filter.getFileFilter().accept(file)) {
                     return candidate;
                 }
             }
         }
 
-        return null;
+        // No extension match: let a plugin of the same kind try, so it can explain why it fails.
+        return candidates.isEmpty() ? null : candidates.iterator().next();
     }
 
     /**
@@ -318,10 +225,6 @@ public final class PluginManager {
      * {@code null} otherwise.
      */
     public Plugin getAssociatedPlugin(final String dataViewer) {
-        //Native OSX backward compatibility
-        if (dataViewer.contains("org.datavyu.plugins.nativeosx")) {
-            return viewerClassToPlugin.get(AvFoundationViewer.class.getName());
-        }
         return viewerClassToPlugin.get(dataViewer);
     }
 

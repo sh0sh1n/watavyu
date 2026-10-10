@@ -66,3 +66,6 @@ NativeOSXCanvas.jnilib
 nbproject
 nbactions.xml
 nb-configuration.xml
+
+# Patched OpenJFX media library, rebuilt by third_party/openjfx-media-seekfix/build.sh
+!third_party/openjfx-media-seekfix/libjfxmedia_avf.dylib

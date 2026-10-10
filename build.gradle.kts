@@ -5,14 +5,45 @@ plugins {
 group = "org.datavyu"
 version = "0.1.0-SNAPSHOT"
 
+// OpenJFX Media is the video backend. This fork targets Apple Silicon macOS only:
+// the seek-fixed native library in third_party/openjfx-media-seekfix is arm64.
+val javafxVersion = "27"
+val javafxPlatform = "mac-aarch64"
+val javafxModules = listOf("base", "graphics", "media", "swing")
+check(System.getProperty("os.name").startsWith("Mac") && System.getProperty("os.arch") == "aarch64") {
+    "This build targets Apple Silicon macOS (OpenJFX $javafxPlatform)."
+}
+
 repositories {
     mavenCentral()
-    maven {
-        url = uri("https://oss.jfrog.org/artifactory/oss-release-local")
+}
+
+sourceSets {
+    create("integrationTest") {
+        compileClasspath += sourceSets.main.get().output
+        runtimeClasspath += sourceSets.main.get().output
     }
-    maven {
-        url = uri("https://dl.bintray.com/datavyu/datavyu")
+}
+
+val integrationTestImplementation: Configuration by configurations.getting {
+    extendsFrom(configurations.implementation.get(), configurations.testImplementation.get())
+}
+configurations["integrationTestRuntimeOnly"].extendsFrom(configurations.runtimeOnly.get())
+
+// The published javafx-media jar with libjfxmedia_avf.dylib replaced by the
+// seek-fixed build. Everything else in the jar, including module-info, is upstream.
+val stockJavafxMedia: Configuration by configurations.creating {
+    isTransitive = false
+}
+
+val patchedJavafxMedia by tasks.registering(Jar::class) {
+    description = "Repackages javafx-media with the seek-fixed AVFoundation library."
+    destinationDirectory.set(layout.buildDirectory.dir("javafx"))
+    archiveFileName.set("javafx-media-$javafxVersion-seekfix-$javafxPlatform.jar")
+    from(stockJavafxMedia.elements.map { jars -> jars.map { zipTree(it) } }) {
+        exclude("libjfxmedia_avf.dylib", "META-INF/MANIFEST.MF")
     }
+    from("third_party/openjfx-media-seekfix/libjfxmedia_avf.dylib")
 }
 
 dependencies {
@@ -34,8 +65,11 @@ dependencies {
     implementation("com.fasterxml.jackson.core:jackson-core:2.9.9")
     implementation("com.brsanthu:google-analytics-java:2.0.0")
 
-    runtimeOnly("org.datavyu:libNativeOSXCanvas:0.92")
-    implementation("org.datavyu:ffmpeg-plugin:0.24:mac")
+    for (module in javafxModules - "media") {
+        implementation("org.openjfx:javafx-$module:$javafxVersion:$javafxPlatform")
+    }
+    stockJavafxMedia("org.openjfx:javafx-media:$javafxVersion:$javafxPlatform")
+    implementation(files(patchedJavafxMedia))
 
     testImplementation("org.testng:testng:6.11")
     testImplementation("org.mockito:mockito-core:2.10.0")
@@ -53,6 +87,24 @@ application {
     applicationDefaultJvmArgs = listOf("-Xmx1g")
 }
 
+// OpenJFX is only supported from the module path; the rest of the app stays on the
+// class path. JFXPanel lives in javafx.swing, MediaPlayer in javafx.media.
+fun JavaForkOptions.useJavafxModules(classpath: FileCollection): FileCollection {
+    val javafxJars = classpath.filter { it.name.startsWith("javafx-") }
+    jvmArgumentProviders.add(CommandLineArgumentProvider {
+        listOf(
+            "--module-path", javafxJars.asPath,
+            "--add-modules", "javafx.swing,javafx.media",
+            "--enable-native-access=javafx.graphics,javafx.media",
+        )
+    })
+    return classpath.filter { !it.name.startsWith("javafx-") }
+}
+
+tasks.named<JavaExec>("run") {
+    classpath = useJavafxModules(classpath)
+}
+
 tasks.processResources {
     exclude("org/datavyu/resources/Build.properties")
     from("src/main/resources/org/datavyu/resources/Build_Template.properties") {
@@ -65,4 +117,25 @@ tasks.processResources {
 tasks.test {
     useTestNG()
     systemProperty("testPath", file("src/test/resources").absolutePath)
+    classpath = useJavafxModules(classpath)
+}
+
+// Playback tests drive the real OpenJFX player and need an awake display; see BUILDING.md.
+val integrationTest by tasks.registering(Test::class) {
+    description = "Runs OpenJFX playback integration tests against a generated MP4 fixture."
+    group = "verification"
+    testClassesDirs = sourceSets["integrationTest"].output.classesDirs
+    classpath = useJavafxModules(sourceSets["integrationTest"].runtimeClasspath)
+    useTestNG()
+    systemProperty("fixtureDir", layout.buildDirectory.dir("playback-fixtures").get().asFile.absolutePath)
+    shouldRunAfter(tasks.test)
+}
+
+// Usage: ./gradlew playbackBenchmark -Pmedia=/path/to/video.mp4 [-Pseeks=200]
+val playbackBenchmark by tasks.registering(JavaExec::class) {
+    description = "Measures seek latency, frame accuracy, stepping and playback CPU for one video."
+    group = "verification"
+    mainClass.set("org.datavyu.plugins.javafx.PlaybackBenchmark")
+    classpath = useJavafxModules(sourceSets["integrationTest"].runtimeClasspath)
+    args(providers.gradleProperty("media").orElse("").get(), providers.gradleProperty("seeks").orElse("200").get())
 }

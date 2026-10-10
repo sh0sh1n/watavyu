@@ -3,8 +3,6 @@ package org.datavyu.util;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.Datavyu;
-import org.datavyu.plugins.Plugin;
-import org.datavyu.plugins.ffmpegplayer.FFmpegPlugin;
 
 import java.awt.Desktop;
 import java.io.BufferedReader;
@@ -149,17 +147,4 @@ public class MacOS {
         return true;
     }
 
-    /**
-     * Get the native OSX plugin.
-     *
-     * @return OSX plugin.
-     */
-    public static Plugin getNativeOSXPlugin() {
-        try {
-            return new FFmpegPlugin();
-        } catch (Exception e) {
-            logger.error("Could create plugin. Error: ", e);
-        }
-        return new FFmpegPlugin();
-    }
 }
