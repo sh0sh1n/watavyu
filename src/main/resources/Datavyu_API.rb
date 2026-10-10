@@ -2658,9 +2658,9 @@ end
 alias :getOS :get_os
 
 # Return Datavyu version string.
-# @return [String] Version string in the fromat "v.:#.#"
+# @return [String] Version string in the format "#.#.#", for example "0.1.0" or "0.1.0-SNAPSHOT"
 def get_datavyu_version
-  return org.datavyu.util.DatavyuVersion.getLocalVersion.getVersion
+  return org.datavyu.util.DatavyuVersion.getVersion
 end
 alias :getDatavyuVersion :get_datavyu_version
 
@@ -2694,7 +2694,7 @@ def set_column_order(*column_list)
 end
 
 # Check whether current Datavyu version falls within the specified minimum and maximum versions (inclusive)
-# @param minVersion [String] Minimum version (e.g. 'v:1.3.6')
+# @param minVersion [String] Minimum version (e.g. '0.1.0')
 # @param maxVersion [String] Maximum version. If unspecified, no upper bound is checked.
 # @return [true, false] true if min,max version check passes; false otherwise.
 def check_datavyu_version(minVersion, maxVersion = nil)

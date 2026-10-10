@@ -10,11 +10,9 @@ test.txtDB
 *._*.properties
 TODO.txt
 logger.txt
-packaged_docs/user-guide.pdf
 src/main/java/au
 src/test/java/au
 src/main/resources/au
-src/main/resources/org/datavyu/resources/Build.properties
 src/main/resources/doc
 src/main/resources/.yardoc
 test-output/
@@ -28,7 +26,6 @@ test-output/
 .externalToolBuilders/
 cop.sh
 out.csv
-usermetrix.id
 datavyu.iml
 
 # R
@@ -46,9 +43,7 @@ modules.xml
 *.DS_Store
 *._.DS_Store
 
-# Maven
 log/
-target/
 
 # Gradle
 .gradle/
@@ -65,7 +60,6 @@ NativeOSXCanvas.jnilib
 # Netbeans
 nbproject
 nbactions.xml
-nb-configuration.xml
 
 # Patched OpenJFX media library, rebuilt by third_party/openjfx-media-avf/build.sh
 !third_party/openjfx-media-avf/libjfxmedia_avf.dylib

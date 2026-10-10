@@ -14,15 +14,11 @@
  */
 package org.datavyu;
 
-import com.brsanthu.googleanalytics.GoogleAnalytics;
-import org.apache.commons.io.FilenameUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.TitleNotifier;
 import org.datavyu.models.db.UserWarningException;
-import org.datavyu.plugins.PluginManager;
-import org.datavyu.plugins.StreamViewer;
 import org.datavyu.undoableedits.SpreadsheetUndoManager;
 import org.datavyu.util.*;
 import org.datavyu.views.*;
@@ -74,8 +70,6 @@ public final class Datavyu extends SingleFrameApplication implements KeyEventDis
 
     /** The project controller */
     private static ProjectController projectController;
-
-    private static GoogleAnalytics ga;
 
     // Load native libraries
     static {
@@ -172,10 +166,6 @@ public final class Datavyu extends SingleFrameApplication implements KeyEventDis
             return datavyuView.getSpreadsheetPanel().getProjectController();
         }
         return projectController;
-    }
-
-    public static GoogleAnalytics getGoogleAnalytics() {
-        return ga;
     }
 
     public static void setProjectController(ProjectController p) {
@@ -600,37 +590,6 @@ public final class Datavyu extends SingleFrameApplication implements KeyEventDis
     }
 
     /**
-     * Action for opening the support site
-     */
-    public void openSupportSite() {
-        String url = ConfigProperties.getInstance().getSupportSiteUrl();
-        try {
-            java.awt.Desktop.getDesktop().browse(java.net.URI.create(url));
-        } catch (java.io.IOException e) {
-            logger.error("Error while opening support site " + e);
-        }
-    }
-
-    /**
-     * Action for opening the guide site
-     */
-    public void openGuideSite() {
-        String url = ConfigProperties.getInstance().getUserGuideUrl();
-        try {
-            java.awt.Desktop.getDesktop().browse(java.net.URI.create(url));
-        } catch (java.io.IOException e) {
-            logger.error("Error while opening guide site " + e);
-        }
-    }
-
-    /**
-     * Action for showing the about window.
-     */
-    public void showUpdateWindow() {
-        Datavyu.getApplication().show(new UpdateVersion(Datavyu.getView().getFrame(), true));
-    }
-
-    /**
      * Show a warning dialog to the user.
      *
      * @param s The message to present to the user.
@@ -794,15 +753,6 @@ public final class Datavyu extends SingleFrameApplication implements KeyEventDis
         if (args.length > 0) {
             commandLineFile = args[0];
         }
-
-        try {
-            // Check for updates
-            if (DatavyuVersion.isUpdateAvailable() && !DatavyuVersion.isIgnoreVersion()) {
-                Datavyu.getApplication().show(new UpdateVersion(Datavyu.getApplication().getMainFrame(), true));
-            }
-        } catch (ExceptionInInitializerError e) {
-            logger.error("Cannot reach Datavyu servers " + e.getMessage());
-        }
     }
 
     /**
@@ -850,50 +800,10 @@ public final class Datavyu extends SingleFrameApplication implements KeyEventDis
         videoController.setLocation(x, y);
         show(videoController);
         datavyuView.checkForAutosavedFile();
-        datavyuView.checkFirstStart();
 
         // The DB we create by default doesn't really have any unsaved changes.
         projectController.getDataStore().markAsUnchanged();
         ready();
-
-        if (ConfigProperties.getInstance().getShareData()) {
-
-            ga = GoogleAnalytics.builder()
-                .withTrackingId("UA-129130876-3")
-                .build();
-
-            ResourceMap resourceMap = Application.getInstance(Datavyu.class).getContext()
-                .getResourceMap(Build.class);
-
-            logger.debug("Application Name: Datavyu"
-                + " ,Application Version: " + resourceMap.getString("Application.version")
-                + " ,OS Name: " + System.getProperty("os.name")
-                + " ,OS Version: " + System.getProperty("os.version")
-                + " ,Java Version: " + System.getProperty("java.version"));
-
-            ga.screenView()
-                .applicationName("datavyu")
-                .applicationVersion(resourceMap.getString("Application.version"))
-                .send();
-
-            ga.event()
-                .eventCategory("os")
-                .eventAction("name")
-                .eventLabel(System.getProperty("os.name"))
-                .send();
-
-            ga.event()
-                .eventCategory("os")
-                .eventAction("version")
-                .eventLabel(System.getProperty("os.version"))
-                .send();
-
-            ga.event()
-                .eventCategory("java")
-                .eventAction("version")
-                .eventLabel(System.getProperty("java.version"))
-                .send();
-        }
     }
 
     @Override
@@ -914,28 +824,6 @@ public final class Datavyu extends SingleFrameApplication implements KeyEventDis
             MacOS.setOSXPressAndHoldValue(true);
         }
 
-        if (ConfigProperties.getInstance().getShareData()) {
-            for (StreamViewer streamViewer :getVideoController().getStreamViewers()) {
-                String videoFormat = FilenameUtils.getExtension(streamViewer.getSourceFile().getName());
-                String pluginName = PluginManager.getInstance()
-                    .getAssociatedPlugin(streamViewer.getClass().getName()).getClass().getSimpleName();
-                logger.debug("GA - Event - Plugin: " + pluginName
-                                + " ,Video Format: " + videoFormat);
-                ga.event()
-                    .eventCategory("video")
-                    .eventAction("format")
-                    .eventLabel(videoFormat)
-                    .send();
-
-                ga.event()
-                    .eventCategory("video")
-                    .eventAction("plugin")
-                    .eventLabel(pluginName)
-                    .send();
-            }
-        }
-        
-        
         logger.info("Saving configuration properties.");
         ConfigProperties.save();
         super.shutdown();

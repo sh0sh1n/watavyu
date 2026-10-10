@@ -36,8 +36,6 @@ import org.datavyu.util.ConfigProperties;
 import org.datavyu.util.DragAndDrop.TransparentPanel;
 import org.datavyu.util.FileFilters.*;
 import org.datavyu.util.FileSystemTreeModel;
-import org.datavyu.util.MacOS;
-import org.datavyu.util.WindowsOS;
 import org.datavyu.views.discrete.SpreadSheetPanel;
 import org.datavyu.views.discrete.SpreadsheetColumn;
 import org.datavyu.views.discrete.layouts.SheetLayoutFactory.SheetLayoutType;
@@ -107,11 +105,8 @@ public final class DatavyuView extends FrameView implements FileDropEventListene
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JMenuItem ShowAllVariablesMenuItem;
     private javax.swing.JMenuItem aboutMenuItem;
-    private javax.swing.JMenuItem updateMenuItem;
-    private javax.swing.JMenuItem supportMenuItem;
-    private javax.swing.JMenuItem guideMenuItem;
-    private javax.swing.JMenuItem citationMenuItem;
     private javax.swing.JMenuItem hotkeysMenuItem;
+    private javax.swing.JMenuItem citationMenuItem;
     private javax.swing.JMenuItem changeVarNameMenuItem;
     private javax.swing.JMenu controllerMenu;
     private javax.swing.JMenuItem deleteCellMenuItem;
@@ -1545,37 +1540,11 @@ public final class DatavyuView extends FrameView implements FileDropEventListene
     }
 
     /**
-     * Action for opening the support site
-     */
-    @Action
-    public void openSupportSite() {
-        Datavyu.getApplication().openSupportSite();
-    }
-
-    /**
-     * Action for opening the guide
-     */
-    @Action
-    public void openGuideSite() {
-        Datavyu.getApplication().openGuideSite();
-    }
-
-    /**
-     * Action for showing the update window.
-     */
-    @Action
-    public void showUpdateWindow() {
-        Datavyu.getApplication().showUpdateWindow();
-    }
-
-    /**
-     * Action for showing the citation dialog
+     * Action for showing how to cite Watavyu.
      */
     @Action
     public void showCitationDialog() {
-        ResourceMap rMap = Application.getInstance(Datavyu.class).getContext()
-                .getResourceMap(DatavyuView.class);
-        JOptionPane.showMessageDialog(null, rMap.getString("citationText.text"), "How to Cite Datavyu", JOptionPane.INFORMATION_MESSAGE);
+        Datavyu.getApplication().show(new CitationDialog(getFrame()));
     }
 
     /**
@@ -2018,11 +1987,8 @@ public final class DatavyuView extends FrameView implements FileDropEventListene
         favScripts = new javax.swing.JMenuItem();
         helpMenu = new javax.swing.JMenu();
         aboutMenuItem = new javax.swing.JMenuItem();
-        updateMenuItem = new javax.swing.JMenuItem();
-        supportMenuItem = new javax.swing.JMenuItem();
-        guideMenuItem = new javax.swing.JMenuItem();
-        citationMenuItem = new javax.swing.JMenuItem();
         hotkeysMenuItem = new javax.swing.JMenuItem();
+        citationMenuItem = new javax.swing.JMenuItem();
         quickkeysMenuItem = new javax.swing.JMenuItem();
         highlightAndFocusMenuItem = new javax.swing.JMenuItem();
         jSeparator11 = new javax.swing.JSeparator();
@@ -2400,34 +2366,13 @@ public final class DatavyuView extends FrameView implements FileDropEventListene
             helpMenu.add(aboutMenuItem);
         }
 
-        supportMenuItem.setAction(actionMap.get("openSupportSite"));
-        supportMenuItem.setName("supportMenuItem");
-        //TODO - don't add this on Macs.  Instead it will be in the "Application Menu"
-        //if (Datavyu.getPlatform() != Platform.MAC) {
-        helpMenu.add(supportMenuItem);
-        //}
-
-        guideMenuItem.setAction(actionMap.get("openGuideSite"));
-        guideMenuItem.setName("guideMenuItem");
-        //TODO - don't add this on Macs.  Instead it will be in the "Application Menu"
-        //if (Datavyu.getPlatform() != Platform.MAC) {
-        helpMenu.add(guideMenuItem);
-        //}
-
-        updateMenuItem.setAction(actionMap.get("showUpdateWindow"));
-        updateMenuItem.setName("updateMenuItem");
-        //TODO - don't add this on Macs.  Instead it will be in the "Application Menu"
-        //if (Datavyu.getPlatform() != Platform.MAC) {
-        helpMenu.add(updateMenuItem);
-        //}
+        hotkeysMenuItem.setAction(actionMap.get("showHotkeysDialog"));
+        hotkeysMenuItem.setName("hotkeysMenuItem");
+        helpMenu.add(hotkeysMenuItem);
 
         citationMenuItem.setAction(actionMap.get("showCitationDialog"));
         citationMenuItem.setName("citationMenuItem");
         helpMenu.add(citationMenuItem);
-
-        hotkeysMenuItem.setAction(actionMap.get("showHotkeysDialog"));
-        hotkeysMenuItem.setName("hotkeysMenuItem");
-        helpMenu.add(hotkeysMenuItem);
 
         menuBar.add(helpMenu);
         resourceMap.injectComponents(menuBar);
@@ -2806,68 +2751,6 @@ public final class DatavyuView extends FrameView implements FileDropEventListene
 
     public JTabbedPane getTabbedPane() {
         return tabbedPane;
-    }
-
-    public void checkFirstStart() {
-        ConfigProperties config = ConfigProperties.getInstance();
-        if (config.getFirstStart()) {
-            ResourceMap rMap = Application.getInstance(Datavyu.class).getContext()
-                .getResourceMap(DatavyuView.class);
-
-            JLabel label = new JLabel();
-            Font font = label.getFont();
-
-            // create some css from the label's font
-            StringBuilder style = new StringBuilder("font-family:").append(font.getFamily()).append(";");
-            style.append("font-weight:").append(font.isBold() ? "bold" : "normal").append(";");
-            style.append("font-size:").append(font.getSize()).append("pt;");
-
-
-            String defaultOption = "No";
-            String alternativeOption = "Yes";
-            String[] options =
-                Datavyu.getPlatform() == Platform.MAC
-                    ? MacOS.getOptions(defaultOption, alternativeOption)
-                    : WindowsOS.getOptions(defaultOption, alternativeOption);
-
-            // html content
-            JEditorPane ep = new JEditorPane("text/html"
-                , "<html><body style=\"" + style + "\">"
-                + rMap.getString("dataCollectionNotice.text") + " </html>");
-
-            // handle link events
-            ep.addHyperlinkListener(new HyperlinkListener() {
-                @Override
-                public void hyperlinkUpdate(HyperlinkEvent evt) {
-                    if (evt.getEventType().equals(HyperlinkEvent.EventType.ACTIVATED)) {
-                        try {
-                            // roll your own link launcher or use Desktop if J6+
-                            Desktop.getDesktop().browse(evt.getURL().toURI());
-                        } catch (Exception e) {
-                            logger.error("Error when opening hyper text " + e);
-                        }
-                    }
-                }
-            });
-            ep.setEditable(false);
-            ep.setBackground(label.getBackground());
-
-            int selectedOption =
-                JOptionPane.showOptionDialog(
-                    Datavyu.getView().getComponent()
-                    , ep
-                    , "Data Collection"
-                    , JOptionPane.YES_NO_OPTION
-                    , JOptionPane.PLAIN_MESSAGE
-                    , null
-                    , options
-                    , defaultOption);
-            boolean confirmation =
-                (Datavyu.getPlatform() == Platform.MAC) ? (selectedOption == 1)
-                    : (selectedOption == 0);
-            config.setShareData(confirmation);
-            config.setFirstStart(false);
-        }
     }
 
     class OpenTask extends SwingWorker<ProjectController, Void> {

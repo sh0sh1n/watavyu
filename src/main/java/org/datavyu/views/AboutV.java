@@ -14,10 +14,7 @@
  */
 package org.datavyu.views;
 
-import org.datavyu.Build;
-import org.datavyu.Datavyu;
-import org.jdesktop.application.Application;
-import org.jdesktop.application.ResourceMap;
+import org.datavyu.util.DatavyuVersion;
 
 import javax.swing.*;
 
@@ -39,14 +36,7 @@ public class AboutV extends DatavyuDialog {
         version.setBorder(null);
         version.setOpaque(false);
 
-        ResourceMap bMap = Application.getInstance(Datavyu.class).getContext()
-                .getResourceMap(Build.class);
-
-        ResourceMap rMap = Application.getInstance(Datavyu.class).getContext()
-                .getResourceMap(Datavyu.class);
-
-        version.setText("<html><div style=\"color:#77BB21\">" + rMap.getString("Application.version")
-                + "<br>" + bMap.getString("Application.build") + "</span></html>");
+        version.setText("<html><div style=\"color:#77BB21\">" + DatavyuVersion.getVersion() + "</div></html>");
 
         GroupLayout layout = new GroupLayout(getContentPane());
         getContentPane().setLayout(layout);

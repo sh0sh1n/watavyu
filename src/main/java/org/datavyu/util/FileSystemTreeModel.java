@@ -182,8 +182,7 @@ public class FileSystemTreeModel implements TreeModel {
      *
      * @author <a href="mailto:info@geosoft.no">GeoSoft</a>
      */
-    private class FileTreeNode extends File
-            implements Comparable<File> {
+    private static class FileTreeNode extends File {
         public FileTreeNode(File file) {
             super(file, "");
         }
@@ -196,6 +195,7 @@ public class FileSystemTreeModel implements TreeModel {
          * @param object Object to compare to.
          * @return Compare identifier.
          */
+        @Override
         public int compareTo(File object) {
             File file1 = this;
             File file2 = object;
