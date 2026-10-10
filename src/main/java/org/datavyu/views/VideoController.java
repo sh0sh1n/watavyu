@@ -308,6 +308,12 @@ public final class VideoController extends DatavyuDialog
      */
     private Identifier openVideo(final PluginChooser chooser) {
         final Plugin plugin = chooser.getSelectedPlugin();
+        if (plugin == null) {
+            JOptionPane.showMessageDialog(this,
+                    "No video player is available for this file on this system.",
+                    "No Video Player", JOptionPane.ERROR_MESSAGE);
+            return null;
+        }
         final File selectedFile = chooser.getSelectedFile();
 
         return openVideo(selectedFile, plugin);

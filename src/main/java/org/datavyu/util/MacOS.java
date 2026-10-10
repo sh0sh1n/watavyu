@@ -6,13 +6,10 @@ import org.datavyu.Datavyu;
 import org.datavyu.plugins.Plugin;
 import org.datavyu.plugins.ffmpegplayer.FFmpegPlugin;
 
+import java.awt.Desktop;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 
 /**
@@ -54,8 +51,12 @@ public class MacOS {
      */
     public static int getOSVersion() {
         try {
-            String osVersion = System.getProperty("os.version");
-            return Integer.valueOf(osVersion.split("\\.")[1]); // get major version
+            String[] versionParts = System.getProperty("os.version").split("\\.");
+            int firstPart = Integer.parseInt(versionParts[0]);
+            if (firstPart == 10 && versionParts.length > 1) {
+                return Integer.parseInt(versionParts[1]);
+            }
+            return firstPart;
         } catch (Exception e) {
             logger.error("Could not get major version number", e);
         }
@@ -111,114 +112,41 @@ public class MacOS {
     }
 
     /**
-     * InvocationHandler for the ApplicationAdapter to override some methods.
-     */
-    private final static class HandlerForApplicationAdapter implements InvocationHandler {
-        /**
-         * Called when a method in the proxy object is being invoked.
-         *
-         * @param proxy  The object we are proxying.
-         * @param method The method that is being invoked.
-         * @param args   The arguments being supplied to the method.
-         * @return CellValue for the method being invoked.
-         */
-        public Object invoke(final Object proxy, final Method method, final Object[] args) {
-            try {
-                Class ae = Class.forName("com.apple.eawt.ApplicationEvent");
-                Method setHandled;
-                String methodName = method.getName();
-                switch (methodName) {
-                    case "handleAbout":
-                        Datavyu.getApplication().showAboutWindow();
-                        setHandled = ae.getMethod("setHandled", boolean.class);
-                        setHandled.invoke(args[0], true);
-                        break;
-                    case "handleSupportOpen":
-                        Datavyu.getApplication().openSupportSite();
-                        setHandled = ae.getMethod("setHandled", boolean.class);
-                        setHandled.invoke(args[0], true);
-                        break;
-                    case "handleGuideOpen":
-                        Datavyu.getApplication().openGuideSite();
-                        setHandled = ae.getMethod("setHandled", boolean.class);
-                        setHandled.invoke(args[0], true);
-                        break;
-                    case "handleUpdate":
-                        Datavyu.getApplication().showUpdateWindow();
-                        setHandled = ae.getMethod("setHandled", boolean.class);
-                        setHandled.invoke(args[0], true);
-                        break;
-                    case "handleQuit":
-                        boolean shouldQuit = Datavyu.getApplication().safeQuit();
-                        if (shouldQuit) {
-                            Datavyu.getApplication().getMainFrame().setVisible(false);
-                            Datavyu.getApplication().shutdown();
-                        }
-                        setHandled = ae.getMethod("setHandled", boolean.class);
-                        setHandled.invoke(args[0], shouldQuit);
-                        break;
-                    case "handleOpenFile":
-                        Method getFilename = ae.getMethod("getFilename", null);
-                        String fileName = (String) getFilename.invoke(args[0],null);
-                        if (Datavyu.getApplication().readyToOpenFile) {
-                            Datavyu.getApplication().getView().openExternalFile(new File(fileName));
-                        } else {
-                            Datavyu.getApplication().setCommandLineFile(fileName);
-                        }
-                        setHandled = ae.getMethod("setHandled", boolean.class);
-                        setHandled.invoke(args[0], true);
-                        break;
-                    default:
-                        logger.info("Tried to invoke method " + methodName + " which is not registered");
-                }
-            } catch (NoSuchMethodException e) {
-                logger.error("Unable to access method in application", e);
-            } catch (IllegalAccessException e) {
-                logger.error("Unable to access application excapeion", e);
-            } catch (InvocationTargetException e) {
-                logger.error("Unable to invoke target", e);
-            } catch (ClassNotFoundException e) {
-                logger.error("Unable to find apple classes", e);
-            }
-            return null;
-        }
-    }
-
-    /**
      * Load compile handler for MacOS.
      *
      * @return True if load was successful; otherwise false.
      */
     public static boolean loadCompileHandler() {
-        // This curly piece of work is a bit body of reflection to basically achieve the following snippet of code that
-        // will ultimately compile on any platform.
-        // public class MacOSAboutHandler extends Application {
-        // public MacOSAboutHandler() { addApplicationListener(new AboutBoxHandler()); }
-        // class AboutBoxHandler extends ApplicationAdapter { public void
-        // handleAbout(ApplicationEvent event) {
-        // Datavyu.getApplication().showAboutWindow(); event.setHandled(true); } } }
-        try {
-            Class appClass = Class.forName("com.apple.eawt.Application");
-            Object app = appClass.newInstance();
-            Class appListenerClass = Class.forName("com.apple.eawt.ApplicationListener");
-            Object listener = Proxy.newProxyInstance(Thread.currentThread().getContextClassLoader(),
-                    new Class[]{appListenerClass}, new HandlerForApplicationAdapter());
-            // Add the listener to the application.
-            Method m = appClass.getMethod("addApplicationListener", appListenerClass);
-            m.invoke(app, listener);
-            return true;
-        } catch (ClassNotFoundException e) {
-            logger.error("Unable to find apple classes", e);
-        } catch (InstantiationException e) {
-            logger.error("Unable to instantiate apple application", e);
-        } catch (IllegalAccessException e) {
-            logger.error("Unable to access application excapeion", e);
-        } catch (NoSuchMethodException e) {
-            logger.error("Unable to access method in application", e);
-        } catch (InvocationTargetException e) {
-            logger.error("Unable to invoke target", e);
+        if (!Desktop.isDesktopSupported()) {
+            return false;
         }
-        return false;
+
+        Desktop desktop = Desktop.getDesktop();
+        Datavyu application = Datavyu.getApplication();
+        if (desktop.isSupported(Desktop.Action.APP_ABOUT)) {
+            desktop.setAboutHandler(event -> application.showAboutWindow());
+        }
+        if (desktop.isSupported(Desktop.Action.APP_OPEN_FILE)) {
+            desktop.setOpenFileHandler(event -> event.getFiles().forEach(file -> {
+                if (application.readyToOpenFile) {
+                    application.getView().openExternalFile(file);
+                } else {
+                    application.setCommandLineFile(file.getAbsolutePath());
+                }
+            }));
+        }
+        if (desktop.isSupported(Desktop.Action.APP_QUIT_HANDLER)) {
+            desktop.setQuitHandler((event, response) -> {
+                if (application.safeQuit()) {
+                    application.getMainFrame().setVisible(false);
+                    application.shutdown();
+                    response.performQuit();
+                } else {
+                    response.cancelQuit();
+                }
+            });
+        }
+        return true;
     }
 
     /**

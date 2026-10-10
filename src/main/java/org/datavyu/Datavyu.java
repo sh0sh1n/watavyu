@@ -14,7 +14,6 @@
  */
 package org.datavyu;
 
-import ch.randelshofer.quaqua.QuaquaManager;
 import com.brsanthu.googleanalytics.GoogleAnalytics;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.logging.log4j.LogManager;
@@ -87,12 +86,6 @@ public final class Datavyu extends SingleFrameApplication implements KeyEventDis
         switch (getPlatform()) {
             case MAC:
                 logger.info("Detected platform: MAC");
-                // Load library for look and feel under Mac OSX
-                try {
-                    NativeLibraryLoader.extractAndLoad("quaqua64");
-                } catch (Exception e) {
-                    logger.error("Could not load library quaqua64 for mac OS " + e);
-                }
                 if (MacOS.isOSXPressAndHoldEnabled()) {
                     osxPressAndHoldEnabled = true;
                     MacOS.setOSXPressAndHoldValue(false);
@@ -169,10 +162,6 @@ public final class Datavyu extends SingleFrameApplication implements KeyEventDis
      * @param args The command line arguments passed to Datavyu.
      */
     public static void main(final String[] args) {
-        // If we are running on a MAC set system properties
-        if (Datavyu.getPlatform() == Platform.MAC) {
-            System.setProperty("Quaqua.jniIsPreloaded", "true");
-        }
         launch(Datavyu.class, args);
     }
 
@@ -789,11 +778,6 @@ public final class Datavyu extends SingleFrameApplication implements KeyEventDis
 
         switch (getPlatform()) {
             case MAC:
-                try {
-                    UIManager.setLookAndFeel(QuaquaManager.getLookAndFeel());
-                } catch (UnsupportedLookAndFeelException e) {
-                    logger.error("Failed to set Quaqua LNF " + e);
-                }
                 MacOS.loadCompileHandler();
                 break;
             case WINDOWS:
