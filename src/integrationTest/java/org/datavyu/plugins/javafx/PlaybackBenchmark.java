@@ -222,6 +222,12 @@ public final class PlaybackBenchmark {
     }
 
     private void rapidScrub(final int bursts, final int seeksPerBurst) throws Exception {
+        if (!barcodeMode) {
+            // The final frame is often already on screen when the last request returns, so
+            // waiting for the picture to change would measure nothing.
+            System.out.println("rapid scrub: not measured without a barcode");
+            return;
+        }
         Result result = new Result();
         for (int b = 0; b < bursts; b++) {
             int frame = randomFrames(1).get(0);
