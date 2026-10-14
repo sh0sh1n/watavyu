@@ -469,12 +469,8 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
     @Override
     public boolean dispatchKeyEvent(final KeyEvent e) {
         SpreadsheetColumn selectedColumn = Datavyu.getView().getSpreadsheetPanel().getSelectedColumn();
-        // Quick filter - if we aren't dealing with a key press and left or
-        // right arrow. Forget about it - just chuck it back to Java to deal
-        // with.
-        if ((e.getID() == KeyEvent.KEY_PRESSED)
-                && ((e.getKeyCode() == KeyEvent.VK_LEFT)
-                || (e.getKeyCode() == KeyEvent.VK_RIGHT))) {
+        // ⌘← and ⌘→ select the column to the left or right; plain arrows move the caret in a cell.
+        if (isColumnMove(e, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx())) {
 
             List<SpreadsheetColumn> visibleColumns = Datavyu.getView().getSpreadsheetPanel().getVisibleColumns();
 
@@ -488,8 +484,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
             }
 
             // User is attempting to move to the column to the left.
-            if ((e.getKeyCode() == KeyEvent.VK_LEFT)
-                    && platformCellMovementMask(e)) {
+            if (e.getKeyCode() == KeyEvent.VK_LEFT) {
                 if(selectedColumn == null) {
                     visibleColumns.get(visibleColumns.size()-1).setSelected(true); // select last visible column
                     visibleColumns.get(visibleColumns.size()-1).requestFocus();
@@ -501,8 +496,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
                 return true;
 
                 // User is attempting to move to the column to the right.
-            } else if ((e.getKeyCode() == KeyEvent.VK_RIGHT)
-                    && platformCellMovementMask(e)) {
+            } else {
 
                 if(selectedColumn == null){
                     visibleColumns.get(0).setSelected(true); // select first visible column
@@ -819,10 +813,22 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
      * @param e KeyEvent to examine.
      * @return true if the input mask is used, false otherwise.
      */
-    private boolean platformCellMovementMask(final KeyEvent e) {
-
-        return e.getModifiers() == Toolkit.getDefaultToolkit().getMenuShortcutKeyMask();
+    /**
+     * Whether a key press selects the next column: ⌘← or ⌘→, with no other modifier.
+     *
+     * @param e        the key event
+     * @param menuMask the platform's menu shortcut modifier, as an extended modifier mask
+     * @return whether the event is a column move
+     */
+    static boolean isColumnMove(final KeyEvent e, final int menuMask) {
+        return e.getID() == KeyEvent.KEY_PRESSED
+            && (e.getKeyCode() == KeyEvent.VK_LEFT || e.getKeyCode() == KeyEvent.VK_RIGHT)
+            && (e.getModifiersEx() & ALL_MODIFIERS) == menuMask;
     }
+
+    /** The keyboard modifiers that make an arrow key something other than a plain arrow. */
+    private static final int ALL_MODIFIERS = InputEvent.SHIFT_DOWN_MASK | InputEvent.CTRL_DOWN_MASK
+        | InputEvent.META_DOWN_MASK | InputEvent.ALT_DOWN_MASK | InputEvent.ALT_GRAPH_DOWN_MASK;
 
     public void reorientView(SpreadsheetCell cell) {
         ((SheetLayout) scrollPane.getLayout()).reorientView(cell);
