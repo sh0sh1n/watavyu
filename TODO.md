@@ -16,7 +16,7 @@ Updated 2026-10-14. Re-measure with the commands in [BUILDING.md › Analysis Re
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
 | Java source (main) | 242 files, 42.5k lines | 185 files, 31.4k lines |
-| Tests / line coverage | 113 / 9.9% | 292 / 17.3%; still 0% in most views, the timeline and undo |
+| Tests / line coverage | 113 / 9.9% | 293 / 17.3%; still 0% in most views, the timeline and undo |
 | Runtime dependencies / with known vulnerabilities | 28 / 8 | 12 / 0 |
 | Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 837 |
 | PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 463 / 93; 15 |
@@ -30,8 +30,6 @@ Updated 2026-10-14. Re-measure with the commands in [BUILDING.md › Analysis Re
 **B4. Thread safety.** ready, *SpotBugs*. 25 thread-safety findings, including inconsistently synchronized fields in `ClockTimer` and `NeedleModelImpl`. Do with R7.
 
 **B5. Arrow keys may not move the caret in a cell.** ready, *from reading*. `SpreadSheetPanel` registers its own global key dispatcher for ⌘←/⌘→ column selection. When at most one column is visible, it consumes every left and right arrow press in every window.
-
-**B6. Backslash in a cell is handled as Backspace.** ready, *from reading*. A `\` typed without ⌘ falls through to the Backspace handling in `EditorTracker.keyPressed`.
 
 **B9. Typing in a cell of a column with no codes shows text that is not kept.** ready, *verified by the owner*. In a column whose codes have all been deleted, typed text appears outside the parentheses but is not in the cell's value, so it is not saved. With no codes the cell has no value editor (`DataValueEditorFactory`), so `MatrixRootView`'s text area takes the keys itself (`EditorTracker`). It should refuse typing, or the column should not lose its last code.
 
@@ -72,7 +70,7 @@ Updated 2026-10-14. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 **R3. Replace static singletons with explicit wiring.** 271 call sites reach the app through `Datavyu.getView()`, `getApplication()`, `getVideoController()` and `getProjectController()`, and `getProjectController()` returns different objects depending on whether a tab exists. Introduce a per-document object (data store, project, undo manager, playback) and pass it explicitly. Global state is what keeps the views untestable: `ProjectController.loadProject`, which opens a project file's videos and keeps missing ones for saving, is checked only by hand because its dialogs reach the app through `Datavyu.getApplication()`.
 
-**R4. Per-editor key handling.** `EditorTracker` and the value editors handle keys per editor, with 22 uses of the deprecated modifier API (`getModifiers`, `*_MASK`, `getMenuShortcutKeyMask`). Move what can go into `Shortcuts`; fix B5 and B6 on the way.
+**R4. Per-editor key handling.** `EditorTracker` and the value editors handle keys per editor, with 22 uses of the deprecated modifier API (`getModifiers`, `*_MASK`, `getMenuShortcutKeyMask`). Move what can go into `Shortcuts`; fix B5 on the way.
 
 **R7. Threading.** Make the boundary between the clock thread, the JavaFX thread and the EDT explicit, as `JavaFxPlayback` already does for the player. Start with B4.
 
