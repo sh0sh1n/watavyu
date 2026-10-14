@@ -16,18 +16,16 @@ Updated 2026-10-14. Re-measure with the commands in [BUILDING.md › Analysis Re
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
 | Java source (main) | 242 files, 42.5k lines | 185 files, 31.4k lines |
-| Tests / line coverage | 113 / 9.9% | 289 / 17.3%; still 0% in most views, the timeline and undo |
+| Tests / line coverage | 113 / 9.9% | 292 / 17.3%; still 0% in most views, the timeline and undo |
 | Runtime dependencies / with known vulnerabilities | 28 / 8 | 12 / 0 |
 | Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 837 |
 | PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 463 / 93; 15 |
-| Never-invoked methods (`dead-code.py`) | 109+ | 10, all intended: B3's events and test-only accessors |
+| Never-invoked methods (`dead-code.py`) | 109+ | 4, all test-only accessors |
 | Static global access (`Datavyu.getView()` and friends) | about 330 call sites | 272 |
 
 ## Bugs
 
 **B2. The app changes a global macOS setting.** ready, *from reading*. At startup `Datavyu` runs `defaults write -g ApplePressAndHoldEnabled -bool false` for every application on the Mac, and restores it only on a clean shutdown; a crash or force-quit leaves it changed. (It used to run when the class loaded, so every test run turned the setting off and never restored it.) The intent is key repeat instead of the accent popup while holding keys. Scope it to the app (a per-app defaults domain once there is an app bundle, or in-app key repeat), then delete the global write.
-
-**B3. Two data-store events are never fired.** ready, *verified with the dead-code scan*. `DataStoreListener.variableNameChange` and `variableOrderChanged` are implemented by `SpreadSheetPanel` and `VariableListV`, but no data store calls them, so the Column List window probably goes stale when a column is renamed or reordered.
 
 **B4. Thread safety.** ready, *SpotBugs*. 25 thread-safety findings, including inconsistently synchronized fields in `ClockTimer` and `NeedleModelImpl`. Do with R7.
 

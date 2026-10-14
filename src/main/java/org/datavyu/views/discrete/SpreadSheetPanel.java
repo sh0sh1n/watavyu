@@ -657,6 +657,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
             mainView.add(comp, destination);
 
         }
+        dataStore.columnsReordered();
         revalidate();
     }
 

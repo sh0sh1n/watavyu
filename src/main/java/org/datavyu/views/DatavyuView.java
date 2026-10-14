@@ -1008,19 +1008,6 @@ public final class DatavyuView implements FileDropEventListener {
         redraw = b;
     }
 
-    public boolean checkAllTabsForChanges() {
-        boolean changes = false;
-        for (Component tab : tabbedPane.getComponents()) {
-            if (tab instanceof SpreadSheetPanel) {
-                SpreadSheetPanel sp = (SpreadSheetPanel) tab;
-                if (sp.getProjectController().isChanged()) {
-                    changes = true;
-                }
-            }
-        }
-        return changes;
-    }
-
     public boolean checkIfFileAlreadyOpen(String filepath) {
         for (Component tab : tabbedPane.getComponents()) {
             if (tab instanceof SpreadSheetPanel) {

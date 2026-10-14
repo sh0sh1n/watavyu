@@ -243,10 +243,12 @@ public final class DatavyuVariable implements Variable {
             owningDatastore.addExemptionVariable(newName);
         }
 
-        if (name != null && owningDatastore != null) {
-            owningDatastore.updateVariableName(name, newName, this);
-        }
+        // The name is set first, so the data store's listeners see the new one.
+        String oldName = name;
         this.name = newName;
+        if (oldName != null && owningDatastore != null) {
+            owningDatastore.updateVariableName(oldName, newName, this);
+        }
         for (VariableListener vl : getListeners(getID())) {
             vl.nameChanged(newName);
         }
