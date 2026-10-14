@@ -101,12 +101,6 @@ public final class TimescaleController implements PropertyChangeListener {
         }
     }
 
-    public void removeTimescaleEventListener(final TimescaleListener listener) {
-        synchronized (this) {
-            listenerList.remove(TimescaleListener.class, listener);
-        }
-    }
-
     public void jumpToTime(final long jumpTime, final boolean togglePlaybackMode) {
         fireJumpEvent(jumpTime, togglePlaybackMode);
     }

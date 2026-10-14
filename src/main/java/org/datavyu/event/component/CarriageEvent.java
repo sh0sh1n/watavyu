@@ -17,7 +17,6 @@ package org.datavyu.event.component;
 import org.datavyu.models.Identifier;
 
 import java.util.EventObject;
-import java.util.List;
 
 
 /**
@@ -30,9 +29,6 @@ public final class CarriageEvent extends EventObject {
 
     /** Describes the type of event that occurred */
     public enum EventType {
-        MARKER_CHANGED,     // Snap position changed
-        MARKER_REQUEST,     // Requesting snap position
-        MARKER_SAVE,        // Requesting snap saving
         CARRIAGE_SELECTION, // Track changed selection state
         OFFSET_CHANGE,      // Track changed offset position
         CARRIAGE_LOCK       // Track is (un)locked
@@ -47,9 +43,6 @@ public final class CarriageEvent extends EventObject {
     /** Duration of the track in milliseconds */
     private final long duration;
 
-    /** Track markers in milliseconds */
-    private final List<Long> markers;
-
     /** Temporal position of the mouse. Only meaningful for EventType.OFFSET_CHANGE */
     private final long time;
 
@@ -63,18 +56,15 @@ public final class CarriageEvent extends EventObject {
      * @param source
      * @param trackId
      * @param offset
-     * @param markers
      * @param duration
      * @param time
      * @param eventType
      * @param hasModifiers;
      */
-    public CarriageEvent(final Object source, final Identifier trackId, final long offset, final List<Long> markers,
-                         final long duration, final long time, final EventType eventType, final boolean hasModifiers) {
+    public CarriageEvent(final Object source, final Identifier trackId, final long offset, final long duration, final long time, final EventType eventType, final boolean hasModifiers) {
         super(source);
         this.trackId = trackId;
         this.offset = offset;
-        this.markers = markers;
         this.duration = duration;
         this.time = time;
         this.eventType = eventType;
@@ -86,13 +76,6 @@ public final class CarriageEvent extends EventObject {
      */
     public long getOffset() {
         return offset;
-    }
-
-    /**
-     * @return the markers
-     */
-    public List<Long> getMarkers() {
-        return markers;
     }
 
     /**

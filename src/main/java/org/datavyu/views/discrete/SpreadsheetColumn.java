@@ -20,17 +20,14 @@ import org.datavyu.Datavyu;
 import org.datavyu.models.db.*;
 import org.datavyu.undoableedits.ChangeNameVariableEdit;
 import org.datavyu.util.ClockTimer;
-import org.datavyu.util.ConfigProperties;
 import org.datavyu.util.Constants;
 import org.datavyu.util.DragAndDrop.TransparentPanel;
-import org.jdesktop.application.Action;
 
 import javax.swing.*;
 import javax.swing.undo.UndoableEdit;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
 
@@ -115,24 +112,9 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
     private ColumnVisibilityListener columnVisList;
 
     /**
-     * Layout state: The ordinal we are working on for this column.
-     */
-    private int workingOrd = 0;
-
-    /**
      * Layout state: The height of the column data area in pixels.
      */
     private int dataHeight = 0;
-
-    /**
-     * Layout state: The padding to apply to the onset of the current working cell.
-     */
-    private int onsetPadding = 0;
-
-    /**
-     * Layout state: The padding to apply to the offset of the current working cell.
-     */
-    private int offsetPadding = 0;
 
     private TransparentPanel transparentPanel = (TransparentPanel) Datavyu.getView().getFrame().getGlassPane();
 
@@ -177,36 +159,6 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
     }
 
     /**
-     * @return The onset padding to use for the next cell you are laying in this
-     * column
-     */
-    public int getWorkingOnsetPadding() {
-        return onsetPadding;
-    }
-
-    /**
-     * @param padding The working onset padding to use for cells in this column.
-     */
-    public void setWorkingOnsetPadding(final int padding) {
-        onsetPadding = padding;
-    }
-
-    /**
-     * @return The offset padding to use for the next cell you are laying in
-     * this column.
-     */
-    public int getWorkingOffsetPadding() {
-        return offsetPadding;
-    }
-
-    /**
-     * @param padding The working offset padding to use for cells in this column.
-     */
-    public void setWorkingOffsetPadding(final int padding) {
-        offsetPadding = padding;
-    }
-
-    /**
      * @return The height in pixels of the cells that have been laid in this
      * column
      */
@@ -222,54 +174,8 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
         dataHeight = newHeight;
     }
 
-    /**
-     * @return The ordinal of the current cell that is being laid in this
-     * column.
-     */
-    public int getWorkingOrd() {
-        return workingOrd;
-    }
-
-    /**
-     * @param newOrd Set the ordinal value of the current cell that we are about
-     *               to lay.
-     */
-    public void setWorkingOrd(final int newOrd) {
-        workingOrd = newOrd;
-    }
-
-    /**
-     * @return The next cell that needs to be laid in the column.
-     */
-    public SpreadsheetCell getWorkingTemporalCell() {
-        if (workingOrd < datapanel.getNumCells()) {
-            return datapanel.getCellTemporally(workingOrd);
-        }
-
-        return null;
-    }
-
-    public List<SpreadsheetCell> getOverlappingCells() {
-        ArrayList<SpreadsheetCell> workingList = new ArrayList<SpreadsheetCell>();
-        int currentOrd = workingOrd + 1;
-        SpreadsheetCell currentCell = datapanel.getCellTemporally(workingOrd);
-
-        while (currentOrd < datapanel.getNumCells() && currentCell.getOffsetTicks() > datapanel.getCellTemporally(currentOrd).getOnsetTicks()) {
-            workingList.add(datapanel.getCellTemporally(currentOrd));
-            currentOrd++;
-        }
-
-        return workingList;
-    }
-
     public Variable getVariable() {
         return variable;
-    }
-
-    public void setAllCellsProcessed(boolean p) {
-        for (SpreadsheetCell c : getCells()) {
-            c.setBeingProcessed(p);
-        }
     }
 
     /**
@@ -362,13 +268,6 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
     }
 
     /**
-     * @return selected status of column
-     */
-    public boolean getSelected() {
-        return selected;
-    }
-
-    /**
      * @return The datapanel.
      */
     public ColumnDataPanel getDataPanel() {
@@ -405,7 +304,7 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
         this.selected = isSelected;
 
         if (selected) {
-            setBackground(ConfigProperties.getInstance().getSpreadSheetSelectedColor());
+            setBackground(SpreadsheetTheme.SELECTED_COLOR);
         } else {
             setBackground(backColor);
         }
@@ -420,20 +319,6 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
      */
     public void setIndexOfPreviousFocusedCell(final int index) {
         previouslyFocusedCellIdx = index;
-    }
-
-    /**
-     * Set the preferred size of the column.
-     *
-     * @param bottom Number of pixels to set.
-     */
-    public void setBottomBound(final int bottom) {
-
-        if (bottom < 0) {
-            datapanel.setPreferredSize(null);
-        } else {
-            datapanel.setPreferredSize(new Dimension(this.getWidth(), bottom));
-        }
     }
 
     /**
@@ -473,11 +358,6 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
             }
         }
         return closestCell;
-    }
-
-    @Action
-    public void addNewCellToVar() {
-//        new NewVariableController();
     }
 
     /**
@@ -620,7 +500,7 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
 
     @Override
     public void mouseReleased(final MouseEvent me) {
-        // BugzID:301 - Fix dragging columns
+        // Fix dragging columns
         // Call column moving routine if user dragged mouse across columns.
 
         if (moveable) {
@@ -699,7 +579,7 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
 
     @Override
     public void mouseDragged(final MouseEvent me) {
-        // BugzID:660 - Implements columns dragging.
+        // Implements columns dragging.
         if (draggable) {
             int newWidth = me.getX();
 
@@ -745,12 +625,12 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
 //        final int rangeStart = Math.round(componentWidth / 4F);
 //        final int rangeEnd = Math.round(3F * componentWidth / 4F);
 
-        // BugzID:660 - Implements columns dragging.
+        // Implements columns dragging.
         if ((componentWidth - xCoord) < RESIZE_BOUNDARY_SIZE) {
             setCursor(Cursor.getPredefinedCursor(Cursor.E_RESIZE_CURSOR));
             draggable = true;
 
-            // BugzID:128 - Implements moveable columns
+            // Implements moveable columns
         } else if (!draggable) {
             moveable = true;
         } else {

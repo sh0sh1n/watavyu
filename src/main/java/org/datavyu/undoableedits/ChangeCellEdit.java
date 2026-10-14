@@ -18,7 +18,6 @@ import org.datavyu.Datavyu;
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.Variable;
 import org.datavyu.util.Constants;
-import org.datavyu.views.discrete.SpreadsheetCell;
 
 import javax.swing.undo.CannotRedoException;
 import javax.swing.undo.CannotUndoException;
@@ -93,24 +92,9 @@ abstract public class ChangeCellEdit extends SpreadSheetEdit {
         Variable var = Datavyu.getProjectController().getDataStore().getVariable(columnName);
         Cell cell = var.getCells().get(ord);
         updateCell(cell);
-/*
-        if (this.granularity == Granularity.COARSEGRAINED) {
-            updateSpreadsheetCell(cell);
-        }
-*/
     }
 
     abstract protected void updateCell(Cell cell);
-
-    protected void updateSpreadsheetCell(Cell cell) {
-        unselectAll();
-        SpreadsheetCell sCell = getSpreadsheetCell(cell);
-        cell.setHighlighted(true);
-        sCell.requestFocusInWindow();
-        selectField(sCell);
-    }
-
-    abstract protected void selectField(SpreadsheetCell sCell);
 
     @Override
     public boolean equals(Object obj) {

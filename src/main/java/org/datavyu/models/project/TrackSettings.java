@@ -14,8 +14,6 @@
  */
 package org.datavyu.models.project;
 
-import java.util.ArrayList;
-import java.util.List;
 
 
 /**
@@ -35,11 +33,8 @@ public final class TrackSettings {
     /** Is the track's movement locked on the interface */
     private boolean isLocked;
 
-    /** The track's markers positions */
-    private List<Long> markers;
 
     public TrackSettings() {
-        markers = new ArrayList<>();
     }
 
     /**
@@ -50,7 +45,6 @@ public final class TrackSettings {
     private TrackSettings(final TrackSettings other) {
         filePath = other.filePath;
         isLocked = other.isLocked;
-        markers = other.markers;
     }
 
     /**
@@ -66,29 +60,6 @@ public final class TrackSettings {
      */
     public void setLocked(final boolean isLocked) {
         this.isLocked = isLocked;
-    }
-
-    /**
-     * @return bookmark positions
-     */
-    public List<Long> getMarkers() {
-        return markers;
-    }
-
-    /**
-     * Add a bookmark marker to our settings.
-     *
-     * @param marker
-     */
-    public void addMarkerPosition(final long marker) {
-        markers.add(marker);
-    }
-
-    /**
-     * @param markers the bookmark position to set
-     */
-    public void setMarkers(final List<Long> markers) {
-        this.markers = markers;
     }
 
     /**

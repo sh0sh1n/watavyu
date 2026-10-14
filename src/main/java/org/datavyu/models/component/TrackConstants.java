@@ -20,6 +20,9 @@ import java.awt.*;
 
 public interface TrackConstants {
 
+    /** Width in pixels reserved at each end of the timeline so the needle can reach both ends */
+    int TIMELINE_END_PADDING = 10;
+
     Color BORDER_COLOR = new Color(73, 73, 73);
     int CARRIAGE_HEIGHT = 75;
     int HEADER_WIDTH = 140;

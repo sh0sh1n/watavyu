@@ -54,17 +54,6 @@ public class DataviewProgressBar extends JDialog {
         return isCanceled;
     }
 
-    public void setError(final String update) {
-        setProgress(progress, update);
-        isError = true;
-        messageLabel.setText(update);
-        messageLabel.setFont(new Font(messageLabel.getFont().getName(), Font.BOLD, messageLabel.getFont().getSize()));
-        cancelButton.setText("Close");
-        this.setVisible(false);  // Toggling the visibility is necessary to change the modal status.
-        this.setModal(true);
-        this.setVisible(true);
-    }
-
     public void setIndeterminate(final boolean indeterminate) {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
@@ -76,10 +65,6 @@ public class DataviewProgressBar extends JDialog {
 
     public int getProgress() {
         return progress;
-    }
-
-    public boolean isCancelled() {
-        return isCanceled;
     }
 
     public void close() {
@@ -155,38 +140,4 @@ public class DataviewProgressBar extends JDialog {
         }
     }
 
-    /**
-     * @param args the command line arguments
-     */
-    public static void main(String args[]) {
-        try {
-            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
-                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
-                    break;
-                }
-            }
-        } catch (ClassNotFoundException ex) {
-            java.util.logging.Logger.getLogger(DataviewProgressBar.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (InstantiationException ex) {
-            java.util.logging.Logger.getLogger(DataviewProgressBar.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (IllegalAccessException ex) {
-            java.util.logging.Logger.getLogger(DataviewProgressBar.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        } catch (javax.swing.UnsupportedLookAndFeelException ex) {
-            java.util.logging.Logger.getLogger(DataviewProgressBar.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        }
-        /* Create and display the dialog */
-        java.awt.EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                DataviewProgressBar dialog = new DataviewProgressBar(new javax.swing.JFrame(), true);
-                dialog.addWindowListener(new java.awt.event.WindowAdapter() {
-                    @Override
-                    public void windowClosing(java.awt.event.WindowEvent e) {
-                        System.exit(0);
-                    }
-                });
-                dialog.setVisible(true);
-            }
-        });
-    }
 }

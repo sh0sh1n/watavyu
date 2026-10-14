@@ -14,7 +14,7 @@
  */
 package org.datavyu.views;
 
-import org.datavyu.util.ConfigProperties;
+import org.datavyu.util.Settings;
 
 import javax.swing.*;
 import java.awt.*;
@@ -39,12 +39,12 @@ public final class DatavyuFileChooser extends JFileChooser {
      */
     @Override
     public int showOpenDialog(final Component parent) {
-        this.setCurrentDirectory(ConfigProperties.getInstance().resolveStartDirectory());
+        this.setCurrentDirectory(Settings.get().resolveStartDirectory());
 
         this.setFileHidingEnabled(false);
 
         int result = super.showOpenDialog(parent);
-        ConfigProperties.getInstance().setLastChosenDirectory(this.getCurrentDirectory().getAbsolutePath());
+        Settings.get().setLastChosenDirectory(this.getCurrentDirectory().getAbsolutePath());
 
         return result;
     }
@@ -62,10 +62,10 @@ public final class DatavyuFileChooser extends JFileChooser {
      */
     @Override
     public int showSaveDialog(final Component parent) {
-        this.setCurrentDirectory(ConfigProperties.getInstance().resolveStartDirectory());
+        this.setCurrentDirectory(Settings.get().resolveStartDirectory());
 
         int result = super.showSaveDialog(parent);
-        ConfigProperties.getInstance().setLastChosenDirectory(this.getCurrentDirectory().getAbsolutePath());
+        Settings.get().setLastChosenDirectory(this.getCurrentDirectory().getAbsolutePath());
 
         return result;
     }

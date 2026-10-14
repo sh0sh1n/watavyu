@@ -24,7 +24,6 @@ import org.datavyu.undoableedits.AddCellEdit;
 import org.datavyu.undoableedits.ChangeCellEdit;
 import org.datavyu.undoableedits.ChangeOffsetCellEdit;
 import org.datavyu.util.ArrayDirection;
-import org.datavyu.views.discrete.SpreadSheetPanel;
 
 import javax.swing.undo.UndoableEdit;
 import java.util.ArrayList;
@@ -371,7 +370,7 @@ public final class CreateNewCellController {
         if (!newcelladded) {
             logger.info("create cell in same location as last created cell");
 
-            // BugzID:779 - Check for presence of columns, else return
+            // Check for presence of columns, else return
             if (model.getAllVariables().isEmpty()) {
                 return;
             }

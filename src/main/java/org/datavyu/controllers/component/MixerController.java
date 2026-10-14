@@ -14,16 +14,14 @@
  */
 package org.datavyu.controllers.component;
 
-import com.google.common.collect.Maps;
-import com.sun.jna.Platform;
 import net.miginfocom.swing.MigLayout;
-import org.apache.commons.text.StrSubstitutor;
 import org.datavyu.Datavyu;
 import org.datavyu.event.component.*;
 import org.datavyu.event.component.TracksControllerEvent.EventType;
 import org.datavyu.models.Identifier;
 import org.datavyu.models.component.*;
 import org.datavyu.plugins.CustomActions;
+import org.datavyu.views.VideoController;
 import org.datavyu.views.component.TrackPainter;
 
 import javax.swing.*;
@@ -37,8 +35,6 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.util.EventObject;
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 
@@ -56,7 +52,7 @@ public final class MixerController implements PropertyChangeListener,
 
     private static final int H_SCROLL_HEIGHT = 17;
 
-    private static final int REGION_EDGE_PADDING = 5;
+    private static final int EDGE_PADDING = 5;
 
     private static final int MIXER_MIN_WIDTH = 785;
 
@@ -66,11 +62,7 @@ public final class MixerController implements PropertyChangeListener,
 
     private static final int TRACKS_DEPTH_ORDER = 10;
 
-    private static final int REGION_DEPTH_ORDER = 20;
-
     private static final int NEEDLE_DEPTH_ORDER = 30;
-
-    private static final int MARKER_DEPTH_ORDER = 50;
 
     private static final int TRACKS_SCROLL_BAR_DEPTH_ORDER = 60;
 
@@ -84,9 +76,6 @@ public final class MixerController implements PropertyChangeListener,
 
     /** Viewport model */
     private final ViewportModel viewportModel;
-
-    /** Region model */
-    private final RegionModel regionModel;
 
     /** Tracks panel */
     private JPanel tracksPanel;
@@ -106,14 +95,8 @@ public final class MixerController implements PropertyChangeListener,
     /** Controller managing the timing needle */
     private NeedleController needleController;
 
-    /** Controller managing a selected region */
-    private RegionController regionController;
-
     /** Controller managing tracks */
     private TracksEditorController tracksEditorController;
-
-    /** Bookmark (create snap point) button */
-    private JButton bookmarkButton;
 
     /** Button for locking and unlocking all tracks */
     private JToggleButton lockToggle;
@@ -144,9 +127,6 @@ public final class MixerController implements PropertyChangeListener,
 
         viewportModel = mixerModel.getViewportModel();
         viewportModel.addPropertyChangeListener(this);
-
-        regionModel = mixerModel.getRegionModel();
-        regionModel.addPropertyChangeListener(this);
 
         runInEDT(new Runnable() {
             @Override
@@ -181,32 +161,9 @@ public final class MixerController implements PropertyChangeListener,
         });
         lockToggle.setName("lockToggleButton");
 
-        bookmarkButton = new JButton("Add Bookmark");
-        bookmarkButton.addActionListener(new ActionListener() {
-            public void actionPerformed(final ActionEvent e) {
-                addBookmarkHandler();
-            }
-        });
-        bookmarkButton.setEnabled(false);
-        bookmarkButton.setName("bookmarkButton");
-
-        JButton snapRegion = new JButton("Snap Region");
-        snapRegion.addActionListener(new ActionListener() {
-            public void actionPerformed(final ActionEvent e) {
-                snapRegionHandler(e);
-            }
-        });
-        snapRegion.setName("snapRegionButton");
-
-        JButton clearRegion = new JButton("Clear Region");
-        clearRegion.addActionListener(new ActionListener() {
-            public void actionPerformed(final ActionEvent e) {
-                clearRegionHandler(e);
-            }
-        });
-        clearRegion.setName("clearRegionButton");
-
-        enableHighlight = new JButton("Enable Cell Highlighting");
+        final boolean highlightAndFocusByDefault = VideoController.HIGHLIGHT_AND_FOCUS_BY_DEFAULT;
+        enableHighlight = new JButton(highlightAndFocusByDefault ? "Disable Cell Highlighting" : "Enable Cell Highlighting");
+        enableHighlight.setEnabled(!highlightAndFocusByDefault);
         enableHighlight.addActionListener(new ActionListener() {
             public void actionPerformed(final ActionEvent e) {
                 enableHighlightHandler(e);
@@ -214,7 +171,8 @@ public final class MixerController implements PropertyChangeListener,
         });
         enableHighlight.setName("enableHighlightButton");
 
-        enableHighlightAndFocus = new JButton("Enable Highlight and Focus");
+        enableHighlightAndFocus = new JButton(
+                highlightAndFocusByDefault ? "Disable Highlight and Focus" : "Enable Highlight and Focus");
         enableHighlightAndFocus.addActionListener(new ActionListener() {
             public void actionPerformed(final ActionEvent e) {
                 Datavyu.getView().toggleHighlightAndFocusMode();
@@ -241,28 +199,25 @@ public final class MixerController implements PropertyChangeListener,
         zoomSlide.setName("zoomSlider");
         zoomSlide.setBackground(tracksPanel.getBackground());
 
-        JButton zoomRegionButton = new JButton("", zoomIcon);
-        zoomRegionButton.addActionListener(new ActionListener() {
+        JButton zoomToFitButton = new JButton("", zoomIcon);
+        zoomToFitButton.setToolTipText("Zoom to fit all tracks");
+        zoomToFitButton.addActionListener(new ActionListener() {
             public void actionPerformed(final ActionEvent e) {
-                zoomToRegion(e);
+                zoomToFit();
             }
         });
-        zoomRegionButton.setName("zoomRegionButton");
+        zoomToFitButton.setName("zoomToFitButton");
 
-        tracksPanel.add(bookmarkButton);
-        tracksPanel.add(snapRegion);
         tracksPanel.add(lockToggle);
-        tracksPanel.add(zoomRegionButton);
+        tracksPanel.add(zoomToFitButton);
         tracksPanel.add(zoomSlide, "wrap");
         tracksPanel.add(enableHighlight);
-        tracksPanel.add(enableHighlightAndFocus);
-        tracksPanel.add(clearRegion, "wrap");
+        tracksPanel.add(enableHighlightAndFocus, "wrap");
 
         timescaleController = new TimescaleController(mixerModel);
         timescaleController.addTimescaleEventListener(this);
         needleController = new NeedleController(this, mixerModel);
-        regionController = new RegionController(mixerModel);
-        tracksEditorController = new TracksEditorController(this, mixerModel);
+        tracksEditorController = new TracksEditorController(mixerModel);
 
         needleController.setTimescaleTransitionHeight(
                 timescaleController.getTimescaleModel()
@@ -283,7 +238,7 @@ public final class MixerController implements PropertyChangeListener,
         final int timescaleViewY = layeredPaneHeight - H_SCROLL_HEIGHT - timescaleViewHeight;
         final int tracksScrollPaneHeight = timescaleViewY - tracksScrollPaneY;
         final int tracksScrollBarY = timescaleViewY + timescaleViewHeight;
-        final int needleAndRegionMarkerHeight = (timescaleViewY
+        final int needleHeight = (timescaleViewY
                 + timescaleViewHeight
                 - timescaleController.getTimescaleModel()
                 .getZoomWindowIndicatorHeight()
@@ -297,38 +252,27 @@ public final class MixerController implements PropertyChangeListener,
             filler.setName("Filler");
             filler.addComponentListener(new SizeHandler());
 
-            Map<String, String> constraints = Maps.newHashMap();
-            constraints.put("wmin", Integer.toString(MIXER_MIN_WIDTH));
 
             // TODO Could probably use this same component to handle vertical resizing...
-            String template = "id filler, h 0!, grow 100 0, wmin ${wmin}, cell 0 0 ";
-            StrSubstitutor sub = new StrSubstitutor(constraints);
 
             layeredPane.setLayer(filler, FILLER_DEPTH_ORDER);
-            layeredPane.add(filler, sub.replace(template), FILLER_DEPTH_ORDER);
+            String layout = "id filler, h 0!, grow 100 0, wmin " + MIXER_MIN_WIDTH + ", cell 0 0 ";
+            layeredPane.add(filler, layout, FILLER_DEPTH_ORDER);
         }
 
         // Set up the timescale layout
         {
             JComponent timescaleView = timescaleController.getTimescaleComponent();
 
-            Map<String, String> constraints = Maps.newHashMap();
-            constraints.put("x", Integer.toString(TimescaleConstants.XPOS_ABS));
-            constraints.put("y", Integer.toString(timescaleViewY));
 
             // Calculate padding from the right
-            int rightPad = (int) (RegionConstants.RMARKER_WIDTH + V_SCROLL_WIDTH
-                                 + REGION_EDGE_PADDING);
-            constraints.put("x2", "(filler.w-" + rightPad + ")");
-            constraints.put("y2", "(tscale.y+${height})");
-            constraints.put("height", Integer.toString(timescaleViewHeight));
+            int rightPad = TrackConstants.TIMELINE_END_PADDING + V_SCROLL_WIDTH + EDGE_PADDING;
 
-            String template = "id tscale, pos ${x} ${y} ${x2} ${y2}";
-            StrSubstitutor sub = new StrSubstitutor(constraints);
 
             // Must call setLayer first.
             layeredPane.setLayer(timescaleView, TIME_SCALE_DEPTH_ORDER);
-            layeredPane.add(timescaleView, sub.replace(template), TIME_SCALE_DEPTH_ORDER);
+            String layout = "id tscale, pos " + TimescaleConstants.XPOS_ABS + " " + timescaleViewY + " " + ("(filler.w-" + rightPad + ")") + " (tscale.y+" + timescaleViewHeight + ")";
+            layeredPane.add(timescaleView, layout, TIME_SCALE_DEPTH_ORDER);
         }
 
         // Set up the scroll pane's layout.
@@ -339,92 +283,34 @@ public final class MixerController implements PropertyChangeListener,
             tracksScrollPane.setBorder(BorderFactory.createEmptyBorder());
             tracksScrollPane.setName("jScrollPane");
 
-            Map<String, String> constraints = Maps.newHashMap();
-            constraints.put("x", "0");
-            constraints.put("y", Integer.toString(tracksScrollPaneY));
-            constraints.put("x2", "(filler.w-" + REGION_EDGE_PADDING + ")");
-            constraints.put("height", Integer.toString(tracksScrollPaneHeight));
 
-            String template = "pos ${x} ${y} ${x2} n, h ${height}!";
-            StrSubstitutor sub = new StrSubstitutor(constraints);
 
             layeredPane.setLayer(tracksScrollPane, TRACKS_DEPTH_ORDER);
-            layeredPane.add(tracksScrollPane, sub.replace(template), TRACKS_DEPTH_ORDER);
-        }
-
-        // Create the region markers and set up the layout.
-        {
-            JComponent regionView = regionController.getView();
-
-            Map<String, String> constraints = Maps.newHashMap();
-
-            int x = (int) (TrackConstants.HEADER_WIDTH - RegionConstants.RMARKER_WIDTH);
-            constraints.put("x", Integer.toString(x));
-            constraints.put("y", "0");
-
-            // Padding from the right
-            int rightPad = REGION_EDGE_PADDING + V_SCROLL_WIDTH - 2;
-
-            constraints.put("x2", "(filler.w-" + rightPad + ")");
-            constraints.put("height", Integer.toString(needleAndRegionMarkerHeight));
-
-            String template = "pos ${x} ${y} ${x2} n, h ${height}::";
-            StrSubstitutor sub = new StrSubstitutor(constraints);
-
-            layeredPane.setLayer(regionView, REGION_DEPTH_ORDER);
-            layeredPane.add(regionView, sub.replace(template), REGION_DEPTH_ORDER);
+            String layout = "pos 0 " + tracksScrollPaneY + " " + ("(filler.w-" + EDGE_PADDING + ")") + " n, h " + tracksScrollPaneHeight + "!";
+            layeredPane.add(tracksScrollPane, layout, TRACKS_DEPTH_ORDER);
         }
 
         // Set up the timing needle's layout
         {
             JComponent needleView = needleController.getNeedleComponent();
 
-            Map<String, String> constraints = Maps.newHashMap();
 
             int x = (int) (TrackConstants.HEADER_WIDTH
                     - NeedleConstants.NEEDLE_HEAD_WIDTH
                     + NeedleConstants.NEEDLE_WIDTH);
-            constraints.put("x", Integer.toString(x));
-            constraints.put("y", "0");
 
             // Padding from the right
-            int rightPad = REGION_EDGE_PADDING + V_SCROLL_WIDTH - 1;
+            int rightPad = EDGE_PADDING + V_SCROLL_WIDTH - 1;
 
-            constraints.put("x2", "(filler.w-" + rightPad + ")");
-            constraints.put("height",
-                    Integer.toString(
-                            needleAndRegionMarkerHeight
+
+
+            layeredPane.setLayer(needleView, NEEDLE_DEPTH_ORDER);
+            String layout = "pos " + x + " 0 " + ("(filler.w-" + rightPad + ")") + " n, h " + (needleHeight
                                     + timescaleController.getTimescaleModel()
                                     .getZoomWindowToTrackTransitionHeight()
                                     + timescaleController.getTimescaleModel()
-                                    .getZoomWindowIndicatorHeight() - 1));
-
-            String template = "pos ${x} ${y} ${x2} n, h ${height}::";
-            StrSubstitutor sub = new StrSubstitutor(constraints);
-
-            layeredPane.setLayer(needleView, NEEDLE_DEPTH_ORDER);
-            layeredPane.add(needleView, sub.replace(template), NEEDLE_DEPTH_ORDER);
-        }
-
-        // Set up the snap marker's layout
-        {
-            JComponent markerView = tracksEditorController.getMarkerView();
-
-            Map<String, String> constraints = Maps.newHashMap();
-            constraints.put("x", Integer.toString(TimescaleConstants.XPOS_ABS));
-            constraints.put("y", Integer.toString(needleHeadHeight + 1));
-
-            // Padding from the right
-            int rightPad = REGION_EDGE_PADDING + V_SCROLL_WIDTH - 1;
-
-            constraints.put("x2", "(filler.w-" + rightPad + ")");
-            constraints.put("height", Integer.toString(needleAndRegionMarkerHeight - needleHeadHeight - 1));
-
-            String template = "pos ${x} ${y} ${x2} n, h ${height}::";
-            StrSubstitutor sub = new StrSubstitutor(constraints);
-
-            layeredPane.setLayer(markerView, MARKER_DEPTH_ORDER);
-            layeredPane.add(markerView, sub.replace(template), MARKER_DEPTH_ORDER);
+                                    .getZoomWindowIndicatorHeight() - 1) + "::";
+            layeredPane.add(needleView, layout, NEEDLE_DEPTH_ORDER);
         }
 
         // Set up the tracks horizontal scroll bar
@@ -438,32 +324,20 @@ public final class MixerController implements PropertyChangeListener,
             tracksScrollBar.setVisible(false);
             tracksScrollBar.setName("horizontalScrollBar");
 
-            Map<String, String> constraints = Maps.newHashMap();
-            constraints.put("x", Integer.toString(TimescaleConstants.XPOS_ABS));
-            constraints.put("y", Integer.toString(tracksScrollBarY));
 
-            int rightPad = (int) (RegionConstants.RMARKER_WIDTH
-                    + V_SCROLL_WIDTH + REGION_EDGE_PADDING);
-            constraints.put("x2", "(filler.w-" + rightPad + ")");
-            constraints.put("height", Integer.toString(H_SCROLL_HEIGHT));
+            int rightPad = TrackConstants.TIMELINE_END_PADDING + V_SCROLL_WIDTH + EDGE_PADDING;
 
-            String template = "pos ${x} ${y} ${x2} n, h ${height}::";
-            StrSubstitutor sub = new StrSubstitutor(constraints);
 
             layeredPane.setLayer(tracksScrollBar, TRACKS_SCROLL_BAR_DEPTH_ORDER);
-            layeredPane.add(tracksScrollBar, sub.replace(template), TRACKS_SCROLL_BAR_DEPTH_ORDER);
+            String layout = "pos " + TimescaleConstants.XPOS_ABS + " " + tracksScrollBarY + " " + ("(filler.w-" + rightPad + ")") + " n, h " + H_SCROLL_HEIGHT + "::";
+            layeredPane.add(tracksScrollBar, layout, TRACKS_SCROLL_BAR_DEPTH_ORDER);
         }
 
         {
-            Map<String, String> constraints = Maps.newHashMap();
-            constraints.put("span", "6");
-            constraints.put("width", Integer.toString(MIXER_MIN_WIDTH));
-            constraints.put("height", Integer.toString(layeredPaneHeight));
 
-            String template = "growx, span ${span}, w ${width}::, h ${height}::, wrap";
-            StrSubstitutor sub = new StrSubstitutor(constraints);
 
-            tracksPanel.add(layeredPane, sub.replace(template));
+            String layout = "growx, span 6, w " + MIXER_MIN_WIDTH + "::, h " + layeredPaneHeight + "::, wrap";
+            tracksPanel.add(layeredPane, layout);
         }
 
         tracksPanel.validate();
@@ -497,21 +371,12 @@ public final class MixerController implements PropertyChangeListener,
 
         if ((trackEnd > viewport.getMaxEnd()) || ((tracksEditorController.numberOfTracks() == 0) && (trackEnd > 0))) {
             viewportModel.setViewportMaxEnd(trackEnd, true);
-            regionModel.resetPlaybackRegion();
         }
 
         tracksEditorController.addNewTrack(id, icon, mediaPath, duration, offset, this, trackPainter, frameRate);
         tracksScrollPane.validate();
 
         updateGlobalLockToggle();
-    }
-
-    /**
-     * Clears the region of interest and zooms all the way out.
-     */
-    public void clearRegionAndZoomOut() {
-        clearRegionOfInterest();
-        zoomToRegion(null);
     }
 
     /**
@@ -533,67 +398,33 @@ public final class MixerController implements PropertyChangeListener,
     }
 
     /**
-     * Used to set up the track interface.
+     * Sets whether a track can be moved.
      *
-     * @param trackId  Track identifier.
-     * @param bookmarks Bookmark position in milliseconds.
+     * @param trackId Track identifier.
      * @param lock True if track movement is locked, false otherwise.
      */
-    public void setTrackInterfaceSettings(final Identifier trackId, final List<Long> bookmarks, final boolean lock) {
-        runInEDT(new Runnable() {
-            @Override
-            public void run() {
-                tracksEditorController.setBookmarkPositions(trackId, bookmarks);
-                tracksEditorController.setMovementLock(trackId, lock);
-            }
-        });
+    public void setTrackLocked(final Identifier trackId, final boolean lock) {
+        runInEDT(() -> tracksEditorController.setMovementLock(trackId, lock));
     }
 
     /**
-     * For backwards compatibility; used the set up the track interface. If
-     * there are multiple tracks identified by the same media path, only the
-     * first track found is used.
+     * Sets whether a track can be moved, for project files that identify tracks by media path. If several tracks
+     * show the same media, only the first is changed.
      *
      * @param mediaPath Absolute path to the media file.
-     * @param bookmarks Bookmark position in milliseconds.
      * @param lock      True if track movement is locked, false otherwise.
      */
     @Deprecated
-    public void setTrackInterfaceSettings(final String mediaPath, final List<Long> bookmarks, final boolean lock) {
-        runInEDT(new Runnable() {
-            @Override
-            public void run() {
-                tracksEditorController.setBookmarkPositions(mediaPath, bookmarks);
-                tracksEditorController.setMovementLock(mediaPath, lock);
-            }
-        });
+    public void setTrackLocked(final String mediaPath, final boolean lock) {
+        runInEDT(() -> tracksEditorController.setMovementLock(mediaPath, lock));
     }
 
     /**
-     * Zooms into the displayed region and re-adjusts the timing needle accordingly
-     *
-     * @param evt
+     * Zooms out to show the whole timeline and moves the needle to its start.
      */
-    private void zoomToRegion(final ActionEvent evt) {
-        final ViewportState viewport = viewportModel.getViewport();
-        final RegionState region = regionModel.getRegion();
-
-        if (region.getRegionDuration() >= 1) {
-            final int percentOfRegionToPadOutsideMarkers = 5;
-            assert (percentOfRegionToPadOutsideMarkers >= 0) && (percentOfRegionToPadOutsideMarkers <= 100);
-
-            final long displayedAreaStart = Math.max(region.getRegionStart()
-                    - (region.getRegionDuration()
-                    * percentOfRegionToPadOutsideMarkers / 100), 0);
-            final long displayedAreaEnd = Math.min(region.getRegionEnd()
-                    + (region.getRegionDuration()
-                    * percentOfRegionToPadOutsideMarkers / 100),
-                    viewport.getMaxEnd());
-
-            viewportModel.setViewportWindow(displayedAreaStart,
-                    displayedAreaEnd);
-            needleController.setCurrentTime(region.getRegionStart());
-        }
+    public void zoomToFit() {
+        viewportModel.setViewportWindow(0, viewportModel.getViewport().getMaxEnd());
+        needleController.setCurrentTime(0);
     }
 
     /**
@@ -617,7 +448,6 @@ public final class MixerController implements PropertyChangeListener,
         tracksEditorController.removeAllTracks();
 
         viewportModel.resetViewport();
-        regionModel.resetPlaybackRegion();
         needleController.setCurrentTime(0);
 
         tracksScrollPane.validate();
@@ -641,13 +471,6 @@ public final class MixerController implements PropertyChangeListener,
      */
     public NeedleController getNeedleController() {
         return needleController;
-    }
-
-    /**
-     * @return RegionController.
-     */
-    public RegionController getRegionController() {
-        return regionController;
     }
 
     /**
@@ -716,36 +539,6 @@ public final class MixerController implements PropertyChangeListener,
     }
 
     /**
-     * Handles the event for adding a temporal bookmark to selected tracks.
-     */
-    private void addBookmarkHandler() {
-        tracksEditorController.addTemporalBookmarkToSelected(
-                needleController.getNeedleModel().getCurrentTime());
-    }
-
-    /**
-     * Handles the event for toggling the snap functionality on and off.
-     *
-     * @param e expecting the event to be generated from a JToggleButton
-     */
-    private void snapRegionHandler(final ActionEvent e) {
-        // IMPORTANT: Don't change the order of
-        // the video controller calls, it will break
-        // the features.
-        Datavyu.getVideoController().setRegionOfInterestAction();
-        Datavyu.getVideoController().pressFind();
-    }
-
-    /**
-     * Handles the event for clearing the snap region.
-     *
-     * @param e The event that triggered this action.
-     */
-    private void clearRegionHandler(final ActionEvent e) {
-        clearRegionOfInterest();
-    }
-
-    /**
      * Enables/Disables cell highlighting.
      *
      * @param e The event that triggered this action.
@@ -779,14 +572,6 @@ public final class MixerController implements PropertyChangeListener,
 
         enableHighlight.setEnabled(!Datavyu.getVideoController().getCellHighlightAndFocus());
         Datavyu.getProjectController().getSpreadSheetPanel().redrawCells();
-        Datavyu.getApplication().updateTitle();
-    }
-
-    /**
-     * Clears the region of interest.
-     */
-    public void clearRegionOfInterest() {
-        regionModel.resetPlaybackRegion();
     }
 
     /**
@@ -833,15 +618,14 @@ public final class MixerController implements PropertyChangeListener,
      * @param e the event to handle
      */
     public void offsetChanged(final CarriageEvent e) {
-        final boolean wasOffsetChanged = tracksEditorController.setTrackOffset(
-                e.getTrackId(), e.getOffset(), e.getTime());
+        final boolean wasOffsetChanged = tracksEditorController.setTrackOffset(e.getTrackId(), e.getOffset());
         final CarriageEvent newEvent;
 
         if (wasOffsetChanged) {
             final long newOffset = tracksEditorController.getTrackModel(
                     e.getTrackId()).getOffset();
             newEvent = new CarriageEvent(e.getSource(), e.getTrackId(),
-                    newOffset, e.getMarkers(), e.getDuration(),
+                    newOffset, e.getDuration(),
                     e.getTime(), e.getEventType(),
                     e.hasModifiers());
         } else {
@@ -851,32 +635,6 @@ public final class MixerController implements PropertyChangeListener,
         fireTracksControllerEvent(EventType.CARRIAGE_EVENT, newEvent);
         tracksPanel.invalidate();
         tracksPanel.repaint();
-    }
-
-    /**
-     * Track is requesting current temporal position to create a bookmark.
-     *
-     * @param carriageEvent the event to handle
-     */
-    public void requestMarker(final CarriageEvent carriageEvent) {
-        TrackController trackController = (TrackController) carriageEvent.getSource();
-        trackController.addReferencedMarker(needleController.getNeedleModel().getCurrentTime());
-
-        CarriageEvent newEvent = new CarriageEvent(carriageEvent.getSource(),
-                carriageEvent.getTrackId(), carriageEvent.getOffset(), trackController.getMarkers(),
-                carriageEvent.getDuration(), carriageEvent.getTime(),
-                CarriageEvent.EventType.MARKER_CHANGED, carriageEvent.hasModifiers());
-
-        fireTracksControllerEvent(EventType.CARRIAGE_EVENT, newEvent);
-    }
-
-    /**
-     * Track is requesting for bookmark to be saved.
-     *
-     * @param carriageEvent the event to handle
-     */
-    public void saveMarker(final CarriageEvent carriageEvent) {
-        fireTracksControllerEvent(EventType.CARRIAGE_EVENT, carriageEvent);
     }
 
     /**
@@ -895,7 +653,7 @@ public final class MixerController implements PropertyChangeListener,
      * @param e the event to handle
      */
     public void selectionChanged(final CarriageEvent e) {
-        bookmarkButton.setEnabled(tracksEditorController.hasSelectedTracks());
+        // Selection has no effect on the mixer's own controls
     }
 
     public void jumpToTime(final TimescaleEvent e) {
@@ -910,17 +668,6 @@ public final class MixerController implements PropertyChangeListener,
     public void addTracksControllerListener(final TracksControllerListener listener) {
         synchronized (this) {
             eventListenerList.add(TracksControllerListener.class, listener);
-        }
-    }
-
-    /**
-     * De-register listeners from receiving events from this class.
-     *
-     * @param listener the listener to remove
-     */
-    public void removeTracksControllerListener(final TracksControllerListener listener) {
-        synchronized (this) {
-            eventListenerList.remove(TracksControllerListener.class, listener);
         }
     }
 

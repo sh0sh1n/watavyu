@@ -16,7 +16,6 @@ package org.datavyu.undoableedits;
 
 import org.datavyu.models.db.Cell;
 import org.datavyu.util.Constants;
-import org.datavyu.views.discrete.SpreadsheetCell;
 
 /**
  * An undoable edit for changing the offset of a cell.
@@ -45,11 +44,6 @@ public class ChangeOffsetCellEdit extends ChangeCellEdit {
         cell.setOffset(this.oldOffset);
         this.oldOffset = currentOffset;
     }
-
-    @Override
-    protected void selectField(SpreadsheetCell sCell) {
-        sCell.selectOffset();
-    } 
 
     @Override
     public boolean equals(Object obj) {

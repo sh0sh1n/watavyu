@@ -22,7 +22,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.Datavyu;
 import org.datavyu.models.db.*;
-import org.datavyu.util.ConfigProperties;
 import org.datavyu.views.discrete.SpreadSheetPanel;
 
 import javax.swing.*;
@@ -59,21 +58,7 @@ public final class OpenDataStoreFileController {
      * @return Returns a populated data store on success, otherwise null
      */
     public DataStore open(final File dataStoreFile) {
-        String inputFile = dataStoreFile.toString().toLowerCase();
-        // If file ends with CSV -- treat as column separated file -- otherwise as open shapa file
-        return inputFile.endsWith(".csv") ? openAsCsv(dataStoreFile) : openAsMacShapa(dataStoreFile);
-    }
-
-    /**
-     * This method treats a file as a MacSHAPA database file and attempts to
-     * populate the database with data.
-     *
-     * @param dataStoreFile The source file to use when populating the database.
-     * @return populated data store on success, null otherwise.
-     */
-    private DataStore openAsMacShapa(final File dataStoreFile) {
-        logger.error("Open as mac SHAPA DB is not implemented.");
-        return null;
+        return openAsCsv(dataStoreFile);
     }
 
     /**
@@ -629,7 +614,7 @@ public final class OpenDataStoreFileController {
                 // Split the line into tokens using a comma delimiter
                 String[] tokens = line.split(",");
 
-                // BugzID: 1075 - If the line ends with an escaped new line - add
+                // If the line ends with an escaped new line - add
                 // the next line to the current text field.
                 while ((line != null) && line.endsWith("\\") && !line.endsWith("\\\\")) {
                     line = csvReader.readLine();
@@ -768,7 +753,7 @@ public final class OpenDataStoreFileController {
             varType = tokens[1].substring(0, tokens[1].indexOf(")"));
         }
 
-        // BugzID:1703 - Ignore old macshapa query variables, we don't have a
+        // Ignore old macshapa query variables, we don't have a
         // reliable mechanisim for loading their predicates. Given problems
         // between the untyped nature of macshapa and the typed nature of
         // Datavyu.
@@ -885,7 +870,7 @@ public final class OpenDataStoreFileController {
          */
         @Override
         void populate(final String[] tokens, final CellValue destCellValue) {
-            // BugzID:722 - Only populate the value if we have one from the file
+            // Only populate the value if we have one from the file
             if (tokens.length > DATA_INDEX) {
                 destCellValue.set(stripEscapeCharacters(tokens[DATA_INDEX]));
             }
@@ -905,7 +890,7 @@ public final class OpenDataStoreFileController {
          */
         @Override
         void populate(final String[] tokens, final CellValue destCellValue) {
-            // BugzID:722 - Only populate the value if we have one from the file
+            // Only populate the value if we have one from the file
             if (tokens.length > DATA_INDEX) {
                 String text = "";
 
@@ -923,6 +908,9 @@ public final class OpenDataStoreFileController {
     }
     
     private class NameWarning implements Runnable {
+        /** Whether to warn about invalid column names; the user can turn it off until the application quits. */
+        private static volatile boolean warnOnIllegalColumnNames = true;
+
         private String names;
         
         public NameWarning(String names)
@@ -931,15 +919,14 @@ public final class OpenDataStoreFileController {
         }
         
         public void run() {
-            ConfigProperties config = ConfigProperties.getInstance();
-            if (config.getDoWarnOnIllegalColumnNames()) {
+            if (warnOnIllegalColumnNames) {
                 String message = "The following: \n" + names + " is/are no longer a valid column name(s)." +
                         "\nColumn names should begin with letter. Underscores are the only permitted special characters." +
-                        "\nIt is recommended that you manually rename this column immediately or use the nifty script in favorites." +
+                        "\nIt is recommended that you rename this column." +
                         "\nContinue showing this warning in the future?";
                 if (JOptionPane.showConfirmDialog(null, message,"Warning!",
                         JOptionPane.YES_NO_OPTION) == JOptionPane.NO_OPTION){
-                    config.setDoWarnOnIllegalColumnNames(false);
+                    warnOnIllegalColumnNames = false;
                 }
             }
         }

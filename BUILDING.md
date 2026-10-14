@@ -43,7 +43,7 @@ make clean
 
 The Makefile is a small convenience layer over the Gradle Wrapper; it does not introduce another build system. It reads the repo-pinned Java location from asdf for the build process. You can also invoke Gradle directly with `./gradlew <task>`.
 
-`make run` starts the desktop UI in the foreground. The first application launch creates or updates settings under `~/Library/Application Support/Datavyu`. `./gradlew run --args=/path/to/project.opf` opens a project at launch.
+`make run` starts the desktop UI in the foreground. The application keeps its settings in `~/Library/Application Support/Watavyu/settings.json` (see [Settings](#settings)). `./gradlew run --args=/path/to/project.opf` opens a project at launch.
 
 Playback checks that drive the real player (see [Testing Playback](#testing-playback)):
 
@@ -61,22 +61,33 @@ caffeinate -d ./gradlew playbackBenchmark -Pmedia=/path/to/video.mp4 [-Pseeks=20
 - `javafx-media` is not used as published. The `patchedJavafxMedia` task repackages it with `libjfxmedia_avf.dylib` replaced by the patched build in `third_party/openjfx-media-avf` (see [The OpenJFX Patch](#the-openjfx-patch)); everything else in the jar, including `module-info`, is upstream.
 - `run`, `test`, `integrationTest` and `playbackBenchmark` put the OpenJFX jars on the module path (`--add-modules javafx.swing,javafx.media`) and keep the rest of the application on the class path. OpenJFX is only supported from the module path.
 - The `integrationTest` source set (`src/integrationTest`) holds tests and the benchmark that need the real player and a display; `./gradlew test` does not run them.
-- `processResources` stamps the Gradle project version into `org/datavyu/version.properties` in the generated resource output. `DatavyuVersion.getVersion()` reads it; the About dialog and the Ruby API's `get_datavyu_version` use it. There is no other version string to keep in sync.
+- `processResources` stamps the Gradle project version into `org/datavyu/version.properties` in the generated resource output. `DatavyuVersion.getVersion()` reads it; the About dialog and the citation use it. There is no other version string to keep in sync.
 - `tasks.test` uses the repository's existing TestNG tests and supplies their `testPath` resource directory and the expected project version.
 - Every test task loads Mockito 5 (`mockito-core` 5.24.0) as a `-javaagent` from the `mockitoAgent` configuration. Mockito 5 mocks through an inline agent; JDK 21+ warns when an agent attaches itself at runtime, and future JDKs will refuse it, so it is loaded at JVM start as Mockito documents.
 - Gradle outputs are under `build/`; local Gradle caches are under `.gradle/`. Both are ignored by Git. JavaFX extracts its native libraries to `~/.openjfx/cache/27+30/aarch64` and replaces them there whenever the jar's copy differs.
 
-The Gradle project version is currently `0.1.0-SNAPSHOT`. The window title (`Application.title` in `Datavyu.properties`) is `Watavyu`. `Application.name` stays `Datavyu` because the Swing Application Framework derives the settings directory from it; changing it would move settings to a new, empty directory.
+The Gradle project version is currently `0.1.0-SNAPSHOT`. The window title (`Application.title` in `Datavyu.properties`) is `Watavyu`.
 
 ## Lint
 
-[Error Prone](https://errorprone.info) runs inside `javac` on every compile (`net.ltgt.errorprone` Gradle plugin, `error_prone_core` 2.50.0) for all source sets, with its default severities: bug patterns marked ERROR fail the build, WARNING patterns are reported and do not. It replaced `checkstyle.xml`, which held only whitespace rules, was not wired into any build, and had every `value` attribute mangled to `cellValue`. Error Prone was chosen because it finds correctness bugs, which matter more than formatting in a codebase whose checks stand in for code review. Adopting it found two errors, both fixed: a redundant `Comparable<File>` on `FileSystemTreeModel.FileTreeNode`, and a discarded `values()` call in `DatavyuProjectConstructor`. The existing warnings (over 100; javac lists at most 100 per compile task; mostly missing `@Override`, unused variables and Javadoc style) are not yet addressed; promoting a check to ERROR is done with `options.errorprone.error("CheckName")` once its warnings are fixed.
+[Error Prone](https://errorprone.info) runs inside `javac` on every compile (`net.ltgt.errorprone` Gradle plugin, `error_prone_core` 2.50.0) for all source sets, with its default severities: bug patterns marked ERROR fail the build, WARNING patterns are reported and do not. It replaced `checkstyle.xml`, which held only whitespace rules, was not wired into any build, and had every `value` attribute mangled to `cellValue`. Error Prone was chosen because it finds correctness bugs, which matter more than formatting in a codebase whose checks stand in for code review. Adopting it found two errors, both fixed: a redundant `Comparable<File>` on `FileSystemTreeModel.FileTreeNode`, and a discarded `values()` call in `DatavyuProjectConstructor`. The existing warnings are not yet addressed; promoting a check to ERROR is done with `options.errorprone.error("CheckName")` once its warnings are fixed. javac lists at most 100 warnings per compile task; `./gradlew compileJava -PallWarnings` lifts that limit and adds every javac `-Xlint` category (853 warnings in all on 2026-10-14, mostly Javadoc style and missing `@Override`).
+
+### Analysis Reports
+
+These fill the Measures table in [TODO.md](TODO.md). They are reports, not gates: they never fail the build, and Error Prone ERRORs and the tests remain the only checks that do. A rule moves into a gate once its count reaches zero ([AGENTS.md](AGENTS.md#how-to-work-here)).
+
+- `./gradlew analyze` runs the tests with JaCoCo and writes `build/reports/jacoco/test/html`, PMD (`build/reports/pmd/main.html`) and SpotBugs (`build/reports/spotbugs/main.html`) for the main source set. `./gradlew check` and `build` also run PMD and SpotBugs.
+  - PMD uses `config/pmd/ruleset.xml`: dead code, size and complexity, error handling, correctness and legacy-API rules, with no formatting or naming rules.
+  - SpotBugs excludes the defensive-copy patterns (`EI_EXPOSE_REP*`, `MS_EXPOSE_REP`) through `config/spotbugs/exclude.xml`; they do not apply to a single-user desktop app and were 60% of its findings.
+- `./gradlew dependencyUpdates` (Ben Manes versions plugin) lists stable updates for every dependency and plugin, ignoring alpha, beta, RC and early-access releases.
+- `tools/analysis/dead-code.py` (after `./gradlew classes`, with `JAVA_HOME` set) lists classes unreachable from the entry points and methods nothing invokes, using `jdeps` and `javap`. Its docstring explains what it can and cannot see.
+- `./gradlew -q dependencies --configuration runtimeClasspath | tools/analysis/osv-check.py` lists runtime dependencies with known vulnerabilities from OSV.dev. It sends only Maven coordinates and versions.
+
+The SpotBugs Gradle plugin (6.5.13, the latest) itself calls `Configuration.setVisible`, which Gradle 11 removes. That is the build's only Gradle deprecation warning; it needs a plugin update, not a change here.
 
 ## Network Access
 
-The application makes no network connections of its own. The Datavyu update check (which fetched `version.txt`/`pre_version.txt` from datavyu.org, sending the app, Java and OS versions in its User-Agent) and the Google Analytics telemetry with its first-start opt-in prompt have been removed. `NoNetworkAccessTest` fails the build if compiled application classes reference socket, `URLConnection`, `java.net.http` or analytics APIs. The Help menu's Support Forum, User Guide and Cite Datavyu items (Cite Datavyu is replaced by Cite Watavyu, which links nowhere), their datavyu.org settings, and the datavyu.org link in the unsupported-plugin message have also been removed. The remaining external link is the HandBrake conversion URL (`conversionUrl`), opened only on request.
-
-Settings files written before this change still contain `shareData`, `firstStart`, `ignoreVersion`, `downloadUrl`, `supportSiteUrl` and `userGuideUrl`. `SettingsDecoder` skips properties the application no longer has (logging a warning) instead of discarding the whole file, and the next save drops them.
+The application makes no network connections of its own. The Datavyu update check (which fetched `version.txt`/`pre_version.txt` from datavyu.org, sending the app, Java and OS versions in its User-Agent) and the Google Analytics telemetry with its first-start opt-in prompt have been removed. `NoNetworkAccessTest` fails the build if compiled application classes reference socket, `URLConnection`, `java.net.http` or analytics APIs. The Help menu's Support Forum, User Guide and Cite Datavyu items (Cite Datavyu is replaced by Cite Watavyu, which links nowhere), their datavyu.org settings, and the datavyu.org link in the unsupported-plugin message have also been removed. The application opens no external links.
 
 ## Citation
 
@@ -84,7 +95,29 @@ Settings files written before this change still contain `shareData`, `firstStart
 
 ## Settings
 
-Settings live in `~/Library/Application Support/Datavyu/settings.xml`, seeded on first launch from `src/main/resources/settings.xml`. `lastChosenDirectory` is absent until a file chooser is used. File choosers open in that directory if it still exists and otherwise in the current user's home (`ConfigProperties.resolveStartDirectory`); the fallback is never written back, so a missing, empty, deleted or foreign path (for example one from another machine) is handled the same way.
+`Settings` keeps the user's settings in `~/Library/Application Support/Watavyu/settings.json`, a JSON file readable and editable by hand:
+
+- `lastChosenDirectory`: where the last file dialog was left. File dialogs open there if the folder still exists and otherwise in the user's home (`Settings.resolveStartDirectory`). The fallback is never written back, so a missing, deleted or foreign path (for example one from another machine) is handled the same way.
+- `recentProjects`: the five most recently opened or saved projects and data files, newest first, for File > Open Recent Files. It is saved as soon as it changes.
+- `windows`: where the main window, the video controller and each video window were last left, keyed `main`, `videoController` and `JavaFxVideoViewer-<file name>`. A window is put back only if at least 50 × 50 points of it would be on a connected screen (`WindowPlacement`); otherwise it is placed as on first launch. Other dialogs open centred on the window that owns them.
+
+Unknown keys are ignored and a missing or unreadable file gives the defaults, so the file never stops the application from starting. Everything except recent projects is saved when the application quits.
+
+The `watavyu.settingsDir` system property moves the file to another directory. Every Gradle test task sets it to `build/test-settings/<task>`, so tests never read or write the user's settings; `SettingsTest` fails if that wiring is lost.
+
+Spreadsheet colours and fonts are not settings: they are constants in `SpreadsheetTheme`. Zoom changes the cell font size until the application quits.
+
+Before this file existed, settings lived in `~/Library/Application Support/Datavyu` as Java XMLEncoder files (`settings.xml`, `projectHistory.xml` and `*.session.xml`). Nothing reads them any more and they can be deleted.
+
+## Application Structure
+
+- `Datavyu.main` starts the application on the Swing EDT: the system look-and-feel, the main window (`DatavyuView`) and the video controller, then the file named on the command line, if any. `Datavyu.exit()` asks about unsaved changes and then saves settings and quits; closing the main window and the macOS Quit command both go through it.
+- UI text and icons come from `resources/<ClassName>.properties` next to each view, read through `Resources.of(Class)`, which falls back to `org/datavyu/resources/Datavyu.properties`.
+- `Shortcuts` is the one table of keyboard shortcuts. Menu items take their accelerators from it, Help > Keyboard Shortcuts List shows it, and its key dispatcher runs the shortcuts:
+  - Menu shortcuts are handled by the menu bar while the main window has focus, and by the dispatcher from other windows, such as the video controller, if the menu item is enabled.
+  - New Cell to Left/Right (⌘L, ⌘R) and Zoom In/Out (⌘=, ⌘-) are handled by the dispatcher first in every window.
+  - Numeric keypad keys drive the video controller from every window. The character a keypad key would type is dropped, even for keys without a shortcut.
+  - Column selection (⌘←, ⌘→, in `SpreadSheetPanel`) and the code editor's keys (in `VocabEditorV`) are handled by those components and listed for reference.
 
 ## Video Playback
 
@@ -96,7 +129,7 @@ The fork is a hard reset for macOS: no backward compatibility with old Datavyu v
 
 OpenJFX Media (`org.datavyu.plugins.javafx`) is the only video player. Each video window is a Swing dialog that hosts a JavaFX `MediaView` through `JFXPanel`; the spreadsheet, timeline and annotation model stay Swing. On macOS, OpenJFX plays video through AVFoundation, so decoding is hardware-accelerated.
 
-- `JavaFxVideoPlugin` opens a file on a background thread, waits up to 30 s for the player to become ready, and only then builds the window on the Swing EDT. Add Data and project loading both open videos this way, so neither UI thread blocks. A file that fails to open shows a message and adds no track, and its player is disposed.
+- `JavaFxVideoPlugin` opens a file on a background thread (it is no longer a plugin: there is no plugin system), waits up to 30 s for the player to become ready, and only then builds the window on the Swing EDT. Add Data and project loading both open videos this way, so neither UI thread blocks. A file that fails to open shows a message and adds no track, and its player is disposed.
 - `JavaFxPlayback` is the thread-safe adapter between Datavyu's clock/Swing threads and the JavaFX Application Thread. Every player command is queued to the JavaFX thread; reads never block. Rapid seeks (scrubbing) are coalesced so only the latest target is decoded.
 - `Mp4FrameTable` reads every frame's presentation time from the file's sample tables (`stts`, `ctts`, `elst`) without decoding. Seeks and frame steps target real frame boundaries, including variable-frame-rate files, and paused positions are reported as the displayed frame's start time rounded up to a whole millisecond. If the frame table cannot be read, 30 fps is assumed and frame stepping is disabled.
 - The reported frame rate is the nominal one (inverse of the median frame duration). OBS recordings hold the second-to-last frame for two frame times; edge frames like that do not make a file count as variable frame rate.
@@ -170,10 +203,10 @@ Not needed for seeking with this backend. Native exact seeks already complete in
 
 ## Verification On This Machine
 
-- `make build` succeeds on Temurin 25.0.4 / macOS 27 arm64 with Error Prone enabled. Remaining compiler warnings are Error Prone warnings and legacy `Object.finalize()` removal.
+- `make build` succeeds on Temurin 25.0.4 / macOS 27 arm64 with Error Prone enabled. Remaining compiler warnings are Error Prone warnings.
 - `make run` reaches the application window. Opening a project that lists the integration fixture loads its track (1280x720, 300 frames, 30 fps), and a `.mov` in the same project shows the conversion message and adds no track.
 - `./gradlew integrationTest`: 14 tests pass. As controls, the same tests fail against stock OpenJFX (6 seek/step tests), against a library without the audio-tap change (start latency), and against a library without the seek-frame fix (stale frame after pause).
-- `./gradlew test` runs 113 tests and all pass, with none skipped. Before the move from Mockito 2.10 to 5.24.0, the `setUp` methods of `CellTest`, `DataStoreTest` and `VariableTest` failed on JDK 25 ("Cannot define class using reflection") and TestNG skipped those classes' 27 tests. `OpenControllerTest` and `SaveControllerTest` pass since their Maven-era paths (a trailing slash on `testPath`, output under `target/`) were fixed. The suite is now a green verification gate.
+- `./gradlew test` runs 154 tests and all pass, with none skipped. Before the move from Mockito 2.10 to 5.24.0, the `setUp` methods of `CellTest`, `DataStoreTest` and `VariableTest` failed on JDK 25 ("Cannot define class using reflection") and TestNG skipped those classes' 27 tests. `OpenControllerTest` and `SaveControllerTest` pass since their Maven-era paths (a trailing slash on `testPath`, output under `target/`) were fixed. The suite is now a green verification gate.
 - Not verified automatically: audible audio and the volume slider (the volume path changed with the audio-tap removal), and interactive playback driven by the Datavyu clock and keyboard shortcuts. Check these by hand after `make run`.
 
 ## Not Included

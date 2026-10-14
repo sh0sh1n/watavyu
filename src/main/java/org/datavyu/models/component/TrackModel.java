@@ -55,15 +55,6 @@ public final class TrackModel {
     /** This is the offset of this track with respect to other tracks in milliseconds */
     private long offset;
 
-    /** Track markers location in milliseconds that are sorted at all times */
-    private Set<Long> markers = new TreeSet<>(new Comparator<Long>() {
-        @Override
-        public int compare(Long o1, Long o2) {
-            long l1 = o1;
-            long l2 = o2;
-            return l1 == l2 ? 0 : l1 < l2 ? -1 : +1;
-        }
-    });
 
     /** Is there an error with track information */
     private boolean erroneous;
@@ -99,7 +90,6 @@ public final class TrackModel {
         change = new PropertyChangeSupport(this);
         duration = trackModel.duration;
         offset = trackModel.offset;
-        markers = new TreeSet<>(trackModel.markers);
         erroneous = trackModel.erroneous;
         sourceFile = trackModel.sourceFile;
         trackName = trackModel.trackName;
@@ -226,44 +216,6 @@ public final class TrackModel {
     }
 
     /**
-     * @return list of bookmark positions in milliseconds.
-     */
-    public List<Long> getMarkers() {
-        return new ArrayList<>(markers); // markers are sorted
-    }
-
-    /**
-     * Adds a snap marker position.
-     *
-     * @param marker new marker position in milliseconds
-     */
-    public void addMarker(final long marker) {
-        if (markers.add(marker)) {
-            // If we added the marker fire a change event -- otherwise it was already there
-            change.firePropertyChange("markers", null, markers);
-        }
-    }
-    
-    /**
-     * Removes a snap marker position.
-     *
-     * @param marker marker position in milliseconds
-     */
-    public void removeMarker(final long marker) {
-        if (markers.remove(marker)) {
-            // This marker was in the set fire a change event
-            change.firePropertyChange("markers", null, markers);
-        }
-    }
-    
-    public void removeMarkers() {
-    	if (!markers.isEmpty()) {
-    		markers.clear();
-	        change.firePropertyChange("markers", null, markers);
-    	}
-    }
-
-    /**
      * Set the track name.
      *
      * @param trackName the new track name
@@ -338,7 +290,6 @@ public final class TrackModel {
     @Override public int hashCode() {
         final int prime = 31;
         int result = 1;
-        result = (prime * result) + markers.hashCode();
         result = (prime * result) + (int) (duration ^ (duration >>> 32));
         result = (prime * result) + (erroneous ? 1231 : 1237);
         result = (prime * result) + (locked ? 1231 : 1237);
@@ -369,9 +320,6 @@ public final class TrackModel {
 
         TrackModel other = (TrackModel) obj;
 
-        if (!markers.equals(other.markers)) {
-            return false;
-        }
 
         if (duration != other.duration) {
             return false;
@@ -418,14 +366,7 @@ public final class TrackModel {
 
     @Override public String toString() {
         StringBuilder builder = new StringBuilder();
-        builder.append("TrackModel [marker={");
-        for (Long bookmark : markers) {
-        	builder.append(bookmark);
-        	if (markers.size() > 1) {
-        		builder.append(", ");
-        	}
-        }
-        builder.append("}, duration=");
+        builder.append("TrackModel [duration=");
         builder.append(duration);
         builder.append(", erroneous=");
         builder.append(erroneous);

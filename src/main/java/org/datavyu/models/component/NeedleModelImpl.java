@@ -49,12 +49,12 @@ public final class NeedleModelImpl extends MixerComponentModelImpl implements Ne
      */
     @Override
     public void wireListeners() {
-        mixerModel.getRegionModel().addPropertyChangeListener(this);
+        mixerModel.getViewportModel().addPropertyChangeListener(this);
     }
 
     @Override
     public NeedleState getNeedle() {
-        return new NeedleStateImpl(currentTime, false);
+        return new NeedleStateImpl(currentTime);
     }
 
     /**
@@ -74,7 +74,7 @@ public final class NeedleModelImpl extends MixerComponentModelImpl implements Ne
 
         synchronized (this) {
             oldTime = currentTime;
-            newTime = calculateRegionBoundedTime(time);
+            newTime = calculateTimelineBoundedTime(time);
             if (oldTime == newTime) {
                 return;
             }
@@ -126,17 +126,14 @@ public final class NeedleModelImpl extends MixerComponentModelImpl implements Ne
 
     @Override
     public void propertyChange(PropertyChangeEvent evt) {
-        if (evt.getSource() == mixerModel.getRegionModel()) {
-            // keep the needle within the playback region
+        if (evt.getSource() == mixerModel.getViewportModel()) {
+            // keep the needle within the timeline
             setCurrentTime(getCurrentTime());
         }
     }
 
-    private long calculateRegionBoundedTime(final long time) {
-        final RegionState region = mixerModel.getRegionModel().getRegion();
-        //logger.info("The time is " + time + " msec. The region is " + region.getRegionStart() + " msec to "
-        //        + region.getRegionEnd() + " msec.");
-        return Math.min(Math.max(time, region.getRegionStart()), region.getRegionEnd());
+    private long calculateTimelineBoundedTime(final long time) {
+        return Math.min(Math.max(time, 0), mixerModel.getViewportModel().getViewport().getMaxEnd());
     }
 
     /**

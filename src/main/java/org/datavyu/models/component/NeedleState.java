@@ -4,5 +4,4 @@ public interface NeedleState {
 
     long getCurrentTime();
 
-    boolean wasDragged();
 }

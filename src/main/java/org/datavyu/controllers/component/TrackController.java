@@ -14,16 +14,13 @@
  */
 package org.datavyu.controllers.component;
 
-import com.google.common.collect.Maps;
 import net.miginfocom.swing.MigLayout;
-import org.apache.commons.text.StrSubstitutor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.Datavyu;
 import org.datavyu.event.component.CarriageEvent;
 import org.datavyu.event.component.CarriageEvent.EventType;
 import org.datavyu.event.component.CarriageEventListener;
-import org.datavyu.event.component.TrackMouseEventListener;
 import org.datavyu.models.Identifier;
 import org.datavyu.models.component.MixerModel;
 import org.datavyu.models.component.TrackConstants;
@@ -32,7 +29,6 @@ import org.datavyu.models.component.TrackModel.TrackState;
 import org.datavyu.models.component.ViewportState;
 import org.datavyu.plugins.CustomActions;
 import org.datavyu.plugins.ViewerStateListener;
-import org.datavyu.views.VideoController;
 import org.datavyu.views.component.TrackPainter;
 
 import javax.swing.*;
@@ -44,8 +40,6 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.text.DecimalFormat;
-import java.util.List;
-import java.util.Map;
 
 
 /**
@@ -83,11 +77,6 @@ public final class TrackController implements ViewerStateListener, PropertyChang
     /** Component that paints the track */
     private final TrackPainter trackPainter;
 
-    /** Right click menu */
-    private final JPopupMenu menu;
-    private final JMenuItem setMarkerMenuItem;
-    private final JMenuItem clearMarkerMenuItem;
-
     /** Button for (un)locking the track */
     private final JButton lockUnlockButton;
 
@@ -104,11 +93,8 @@ public final class TrackController implements ViewerStateListener, PropertyChang
     private final TrackModel trackModel;
 
     //TODO: These may be better suited for a resource bundle and properties file, OR TrackConstants.java
-    /** Listeners interested in custom playback region events and mouse events on the track */
+    /** Listeners interested in carriage events on the track */
     private final EventListenerList listenerList;
-
-    /** can the carriage be moved using the mouse when snap is switched on */
-    private boolean isMoveable;
 
     /** visible? */
     private boolean isViewerVisible = true;
@@ -119,7 +105,6 @@ public final class TrackController implements ViewerStateListener, PropertyChang
      * @param trackPainter the track painter for this controller to manage.
      */
     public TrackController(final MixerModel mixerModel, final TrackPainter trackPainter) {
-        isMoveable = true;
         view = new JPanel();
         view.setLayout(new MigLayout("fillx, ins 0", "[]0[]"));
         view.setBorder(BorderFactory.createLineBorder(TrackConstants.BORDER_COLOR, 1));
@@ -129,7 +114,6 @@ public final class TrackController implements ViewerStateListener, PropertyChang
         this.mixerModel = mixerModel;
         trackModel = new TrackModel();
         trackModel.setState(TrackState.NORMAL);
-        trackModel.removeMarkers();
         trackModel.setLocked(false);
 
         trackPainter.setMixerView(mixerModel);
@@ -142,27 +126,6 @@ public final class TrackController implements ViewerStateListener, PropertyChang
         final TrackPainterListener painterListener = new TrackPainterListener();
         trackPainter.addMouseListener(painterListener);
         trackPainter.addMouseMotionListener(painterListener);
-
-        menu = new JPopupMenu();
-        menu.setName("trackPopUpMenu");
-
-        setMarkerMenuItem = new JMenuItem("Set marker");
-        setMarkerMenuItem.addActionListener(new ActionListener() {
-            public void actionPerformed(final ActionEvent e) {
-                TrackController.this.setMarkerAction();
-            }
-        });
-
-        clearMarkerMenuItem = new JMenuItem("Clear marker");
-        clearMarkerMenuItem.addActionListener(new ActionListener() {
-            public void actionPerformed(final ActionEvent e) {
-                TrackController.this.clearMarkerAction();
-            }
-        });
-        menu.add(setMarkerMenuItem);
-        menu.add(clearMarkerMenuItem);
-
-        trackPainter.add(menu);
 
         // Create the Header panel and its components
         trackLabel = new JLabel("", SwingConstants.CENTER);
@@ -207,14 +170,10 @@ public final class TrackController implements ViewerStateListener, PropertyChang
                 }
             });
 
-            Map<String, String> constraints = Maps.newHashMap();
-            constraints.put("width", Integer.toString(TrackConstants.ACTION_BUTTON_WIDTH));
-            constraints.put("height", Integer.toString(TrackConstants.ACTION_BUTTON_HEIGHT));
 
-            String template = "cell 0 2, w ${width}!, h ${height}!";
-            StrSubstitutor sub = new StrSubstitutor(constraints);
 
-            header.add(lockUnlockButton, sub.replace(template));
+            String layout = "cell 0 2, w " + TrackConstants.ACTION_BUTTON_WIDTH + "!, h " + TrackConstants.ACTION_BUTTON_HEIGHT + "!";
+            header.add(lockUnlockButton, layout);
         }
 
         // Set up the button used for hiding/showing a track's data viewer
@@ -231,14 +190,10 @@ public final class TrackController implements ViewerStateListener, PropertyChang
                 }
             });
 
-            Map<String, String> constraints = Maps.newHashMap();
-            constraints.put("width", Integer.toString(TrackConstants.ACTION_BUTTON_WIDTH));
-            constraints.put("height", Integer.toString(TrackConstants.ACTION_BUTTON_HEIGHT));
 
-            String template = "cell 1 2, w ${width}!, h ${height}!";
-            StrSubstitutor sub = new StrSubstitutor(constraints);
 
-            header.add(visibleButton, sub.replace(template));
+            String layout = "cell 1 2, w " + TrackConstants.ACTION_BUTTON_WIDTH + "!, h " + TrackConstants.ACTION_BUTTON_HEIGHT + "!";
+            header.add(visibleButton, layout);
         }
 
         // Set up the button used for removing a track and its plugin
@@ -255,78 +210,29 @@ public final class TrackController implements ViewerStateListener, PropertyChang
                 }
             });
 
-            Map<String, String> constraints = Maps.newHashMap();
-            constraints.put("width", Integer.toString(TrackConstants.ACTION_BUTTON_WIDTH));
-            constraints.put("height", Integer.toString(TrackConstants.ACTION_BUTTON_HEIGHT));
 
-            String template = "cell 5 2, w ${width}!, h ${height}!";
-            StrSubstitutor sub = new StrSubstitutor(constraints);
 
-            header.add(unloadingButton, sub.replace(template));
+            String layout = "cell 5 2, w " + TrackConstants.ACTION_BUTTON_WIDTH + "!, h " + TrackConstants.ACTION_BUTTON_HEIGHT + "!";
+            header.add(unloadingButton, layout);
         }
 
         // Add the header to our layout.
         {
-            Map<String, String> constraints = Maps.newHashMap();
-            constraints.put("width", Integer.toString(TrackConstants.HEADER_WIDTH));
-            constraints.put("height", Integer.toString(TrackConstants.CARRIAGE_HEIGHT));
 
-            String template = "w ${width}!, h ${height}!";
-            StrSubstitutor sub = new StrSubstitutor(constraints);
 
-            view.add(header, sub.replace(template));
+            String layout = "w " + TrackConstants.HEADER_WIDTH + "!, h " + TrackConstants.CARRIAGE_HEIGHT + "!";
+            view.add(header, layout);
         }
 
         // Add the track carriage to our layout.
         {
-            Map<String, String> constraints = Maps.newHashMap();
-            constraints.put("height", Integer.toString(TrackConstants.CARRIAGE_HEIGHT));
 
-            String template = "pushx, growx, h ${height}!";
-            StrSubstitutor sub = new StrSubstitutor(constraints);
 
-            view.add(trackPainter, sub.replace(template));
+            String layout = "pushx, growx, h " + TrackConstants.CARRIAGE_HEIGHT + "!";
+            view.add(trackPainter, layout);
         }
 
         view.validate();
-    }
-
-    /**
-     * Calculates the time threshold below which data tracks will snap into place.
-     *
-     * @param viewport current viewport
-     * @return snapping threshold in time units (milliseconds);
-     */
-    static long calculateSnappingThreshold(final ViewportState viewport) {
-        final long MINIMUM_THRESHOLD_MILLISECONDS = 10;
-        return Math.max((long) Math.ceil(0.01F * viewport.getViewDuration()), MINIMUM_THRESHOLD_MILLISECONDS);
-    }
-
-    private void updatePopupMenu() {
-
-        // 1. Remove every other popup menu item apart from the defaults.
-        menu.removeAll();
-        menu.add(setMarkerMenuItem);
-        menu.add(clearMarkerMenuItem);
-
-        // 2. Add a divider if there are bookmarks.
-        if (!trackModel.getMarkers().isEmpty()) {
-            menu.addSeparator();
-        }
-
-        // 3. Add menu item for deleting individual bookmarks
-        for (final Long marker : trackModel.getMarkers()) {
-            String text = VideoController.formatTime(marker);
-            JMenuItem delete = new JMenuItem("Delete marker " + text);
-            delete.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(final ActionEvent e) {
-                    removeMarker(marker);
-                }
-            });
-
-            menu.add(delete);
-        }
     }
 
     /**
@@ -396,47 +302,6 @@ public final class TrackController implements ViewerStateListener, PropertyChang
     }
 
     /**
-     * Add a marker location to the track. Does not take track offsets into
-     * account.
-     *
-     * @param marker marker position in milliseconds
-     */
-    void addMarker(final long marker) {
-        if ((0 <= marker) && (marker <= trackModel.getDuration())) {
-            trackModel.addMarker(marker);
-            trackPainter.setTrackModel(trackModel);
-        }
-        updatePopupMenu();
-    }
-
-    void addMarkers(final List<Long> markers) {
-        // Ensure that all added markers are within the range like this is the case for the addMarker
-        for (Long marker : markers) {
-            if (0 <= marker && (marker <= trackModel.getDuration())) {
-                trackModel.addMarker(marker);
-            }
-        }
-        trackPainter.setTrackModel(trackModel);
-        updatePopupMenu();
-    }
-
-    void removeMarker(final long bookmark) {
-        trackModel.removeMarker(bookmark);
-        trackPainter.setTrackModel(trackModel);
-        updatePopupMenu();
-    }
-
-    /**
-     * Add a bookmark location to the track. Track offsets are taken into
-     * account. This call is the same as addMarker(position - offset).
-     *
-     * @param position temporal position in milliseconds to bookmark.
-     */
-    void addReferencedMarker(final long position) {
-        addMarker(position - trackModel.getOffset());
-    }
-
-    /**
      * Sets the state of the track model.
      *
      * @param state the new state to set.
@@ -490,21 +355,6 @@ public final class TrackController implements ViewerStateListener, PropertyChang
     }
 
     /**
-     * @return Bookmarked positions in milliseconds. Does not take into account
-     * any offsets.
-     */
-    List<Long> getMarkers() {
-        return trackModel.getMarkers();
-    }
-
-    /**
-     * @return track name, i.e. file name.
-     */
-    public String getTrackName() {
-        return trackLabel.getText();
-    }
-
-    /**
      * @return View used by the controller
      */
     public JComponent getView() {
@@ -516,23 +366,6 @@ public final class TrackController implements ViewerStateListener, PropertyChang
      */
     TrackModel getTrackModel() {
         return trackModel.copy();
-    }
-
-    /**
-     * Set if the track carriage can be moved while the snap functionality is
-     * switched on.
-     *
-     * @param canMove true if the carriage can be moved, false otherwise.
-     */
-    void setMoveable(final boolean canMove) {
-        isMoveable = canMove;
-    }
-
-    /**
-     * Used to request bookmark saving.
-     */
-    void saveMarker() {
-        fireCarriageMarkerSaveEvent();
     }
 
     void deselect() {
@@ -579,7 +412,7 @@ public final class TrackController implements ViewerStateListener, PropertyChang
                     trackModel.setDuration(val);
                     view.repaint();
                     Datavyu.getVideoController().updateMaxViewerDuration();
-                    Datavyu.getVideoController().getMixerController().clearRegionAndZoomOut();
+                    Datavyu.getVideoController().getMixerController().zoomToFit();
                 }
             }
 
@@ -602,15 +435,8 @@ public final class TrackController implements ViewerStateListener, PropertyChang
             @Override
             public void run() {
 
-                Map<String, String> constraints = Maps.newHashMap();
-                constraints.put("width",
-                        Integer.toString(TrackConstants.ACTION_BUTTON_WIDTH));
-                constraints.put("height",
-                        Integer.toString(TrackConstants.ACTION_BUTTON_HEIGHT));
 
-                String template = "w ${width}!, h ${height}!";
-                StrSubstitutor sub = new StrSubstitutor(constraints);
-                String cons = sub.replace(template);
+                String cons = "w " + TrackConstants.ACTION_BUTTON_WIDTH + "!, h " + TrackConstants.ACTION_BUTTON_HEIGHT + "!";
 
                 if (actions.getActionButton1() != null) {
                     header.add(actions.getActionButton1(),
@@ -636,21 +462,6 @@ public final class TrackController implements ViewerStateListener, PropertyChang
         } else {
             SwingUtilities.invokeLater(edtTask);
         }
-    }
-
-    /**
-     * Request a bookmark.
-     */
-    private void setMarkerAction() {
-        fireCarriageMarkerRequestEvent();
-    }
-
-    /**
-     * Remove the track's bookmark.
-     */
-    private void clearMarkerAction() {
-        trackModel.removeMarkers();
-        trackPainter.setTrackModel(trackModel);
     }
 
     /**
@@ -759,29 +570,6 @@ public final class TrackController implements ViewerStateListener, PropertyChang
     }
 
     /**
-     * Register the listener interested in mouse events on the track's carriage.
-     *
-     * @param listener listener to register.
-     */
-    void addTrackMouseEventListener(final TrackMouseEventListener listener) {
-        synchronized (this) {
-            listenerList.add(TrackMouseEventListener.class, listener);
-        }
-    }
-
-    /**
-     * Remove the listener from being notified of mouse events on the track's
-     * carriage.
-     *
-     * @param listener listener to remove.
-     */
-    void removeTrackMouseEventListener(final TrackMouseEventListener listener) {
-        synchronized (this) {
-            listenerList.remove(TrackMouseEventListener.class, listener);
-        }
-    }
-
-    /**
      * Used to inform listeners about a new carriage event
      *
      * @param newOffset the new offset to inform listeners about
@@ -791,51 +579,13 @@ public final class TrackController implements ViewerStateListener, PropertyChang
     private void fireCarriageOffsetChangeEvent(final long newOffset, final long time,
                                                final boolean hasModifiers) {
         synchronized (this) {
-            final CarriageEvent e = new CarriageEvent(this, trackModel.getIdentifier(), newOffset,
-                    trackModel.getMarkers(), trackModel.getDuration(), time, EventType.OFFSET_CHANGE,
+            final CarriageEvent e = new CarriageEvent(this, trackModel.getIdentifier(), newOffset, trackModel.getDuration(), time, EventType.OFFSET_CHANGE,
                     hasModifiers);
             final Object[] listeners = listenerList.getListenerList();
             // The listener list contains the listening class and then the listener instance
             for (int iListener = 0; iListener < listeners.length; iListener += 2) {
                 if (listeners[iListener] == CarriageEventListener.class) {
                     ((CarriageEventListener) listeners[iListener + 1]).offsetChanged(e);
-                }
-            }
-        }
-    }
-
-    /**
-     * Used to inform listeners about a marker request event.
-     */
-    private void fireCarriageMarkerRequestEvent() {
-        synchronized (this) {
-            final CarriageEvent e = new CarriageEvent(this, trackModel.getIdentifier(), trackModel.getOffset(),
-                    trackModel.getMarkers(), trackModel.getDuration(), 0, EventType.MARKER_REQUEST,
-                    false);
-            final Object[] listeners = listenerList.getListenerList();
-            // The listener list contains the listening class and then the listener instance
-            for (int iListener = 0; iListener < listeners.length; iListener += 2) {
-                if (listeners[iListener] == CarriageEventListener.class) {
-                    ((CarriageEventListener) listeners[iListener + 1]).requestMarker(e);
-                }
-            }
-        }
-    }
-
-    /**
-     * Used to inform listeners about a marker request event.
-     */
-    private void fireCarriageMarkerSaveEvent() {
-        synchronized (this) {
-            final CarriageEvent e = new CarriageEvent(this, trackModel.getIdentifier(),
-                    trackModel.getOffset(), trackModel.getMarkers(),
-                    trackModel.getDuration(), 0, EventType.MARKER_SAVE,
-                    false);
-            final Object[] listeners = listenerList.getListenerList();
-            // The listener list contains the listening class and then the listener instance
-            for (int iListener = 0; iListener < listeners.length; iListener += 2) {
-                if (listeners[iListener] == CarriageEventListener.class) {
-                    ((CarriageEventListener) listeners[iListener + 1]).saveMarker(e);
                 }
             }
         }
@@ -849,8 +599,7 @@ public final class TrackController implements ViewerStateListener, PropertyChang
     private void fireCarriageSelectionChangeEvent(final boolean hasModifiers) {
         synchronized (this) {
             final CarriageEvent e = new CarriageEvent(this, trackModel.getIdentifier(),
-                    trackModel.getOffset(), trackModel.getMarkers(),
-                    trackModel.getDuration(), 0, EventType.CARRIAGE_SELECTION,
+                    trackModel.getOffset(), trackModel.getDuration(), 0, EventType.CARRIAGE_SELECTION,
                     hasModifiers);
             final Object[] listeners = listenerList.getListenerList();
             // The listener list contains the listening class and then the listener instance
@@ -868,31 +617,13 @@ public final class TrackController implements ViewerStateListener, PropertyChang
     private void fireLockStateChangedEvent() {
         synchronized (this) {
             final CarriageEvent carriageEvent = new CarriageEvent(this, trackModel.getIdentifier(),
-                    trackModel.getOffset(), trackModel.getMarkers(), trackModel.getDuration(), 0,
+                    trackModel.getOffset(), trackModel.getDuration(), 0,
                     EventType.CARRIAGE_LOCK, false);
             final Object[] listeners = listenerList.getListenerList();
             // The listener list contains the listening class and then the listener instance
             for (int iListener = 0; iListener < listeners.length; iListener += 2) {
                 if (listeners[iListener] == CarriageEventListener.class) {
                     ((CarriageEventListener) listeners[iListener + 1]).lockStateChanged(carriageEvent);
-                }
-            }
-        }
-    }
-
-    /**
-     * Used to inform listeners about the mouse release event on the track's
-     * carriage.
-     *
-     * @param mouseEvent the event to handle.
-     */
-    private void fireMouseReleasedEvent(final MouseEvent mouseEvent) {
-        synchronized (this) {
-            final Object[] listeners = listenerList.getListenerList();
-            // The listener list contains the listening class and then the listener instance
-            for (int iListener = 0; iListener < listeners.length; iListener += 2) {
-                if (listeners[iListener] == TrackMouseEventListener.class) {
-                    ((TrackMouseEventListener) listeners[iListener + 1]).mouseReleased(mouseEvent);
                 }
             }
         }
@@ -993,10 +724,6 @@ public final class TrackController implements ViewerStateListener, PropertyChang
                 initialState = trackModel.getState();
                 handleOffsetChanges(e);
             }
-
-            if (e.isPopupTrigger()) {
-                menu.show(e.getComponent(), e.getX(), e.getY());
-            }
         }
 
         @Override
@@ -1020,33 +747,17 @@ public final class TrackController implements ViewerStateListener, PropertyChang
                 final long temporalPosition = viewport.computeTimeFromXOffset(
                         e.getX()) + viewport.getViewStart();
 
-                if (isMoveable) {
-                    fireCarriageOffsetChangeEvent((long) newOffset,
-                            temporalPosition, hasModifiers);
-                } else {
-                    final long threshold = calculateSnappingThreshold(viewport);
-
-                    if (Math.abs(newOffset - offsetInit) >= threshold) {
-                        isMoveable = true;
-                    }
-                }
+                fireCarriageOffsetChangeEvent((long) newOffset, temporalPosition, hasModifiers);
             }
         }
 
         @Override
         public void mouseReleased(final MouseEvent e) {
-            isMoveable = true;
             inCarriage = false;
 
             final Component source = (Component) e.getSource();
             source.setCursor(defaultCursor);
             setState(initialState);
-
-            if (e.isPopupTrigger()) {
-                menu.show(e.getComponent(), e.getX(), e.getY());
-            }
-
-            fireMouseReleasedEvent(e);
         }
     }
 

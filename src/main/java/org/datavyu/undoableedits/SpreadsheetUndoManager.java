@@ -17,25 +17,17 @@ package org.datavyu.undoableedits;
 import org.datavyu.Datavyu;
 import org.datavyu.undoableedits.ChangeCellEdit.Granularity;
 
-import javax.swing.*;
-import javax.swing.event.ListDataListener;
 import javax.swing.undo.CannotRedoException;
 import javax.swing.undo.CannotUndoException;
 import javax.swing.undo.UndoManager;
 import javax.swing.undo.UndoableEdit;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
- *
+ * Undo manager for spreadsheet edits that merges consecutive fine-grained cell edits.
  */
-public class SpreadsheetUndoManager extends UndoManager implements ListModel {
+public class SpreadsheetUndoManager extends UndoManager {
 
-    List<ListDataListener> listeners;
 
-    public SpreadsheetUndoManager() {
-        listeners = new ArrayList<ListDataListener>();
-    }
 
     @Override
     public synchronized void undo() throws CannotUndoException {
@@ -81,85 +73,6 @@ public class SpreadsheetUndoManager extends UndoManager implements ListModel {
             result = false;
         }
 
-        for (ListDataListener l : listeners) {
-            l.contentsChanged(null);
-        }
         return result;
-    }
-
-    // Return the complete list of edits in an array.
-    public synchronized UndoableEdit[] getEdits() {
-        UndoableEdit[] array = new UndoableEdit[edits.size()];
-        edits.copyInto(array);
-        return array;
-    }
-
-    public synchronized List<UndoableEdit> getUndoableEdits() {
-        int size = edits.size();
-        List<UndoableEdit> v = new ArrayList<UndoableEdit>(size);
-
-        for (int i = size - 1; i >= 0; i--) {
-            UndoableEdit u = (UndoableEdit) edits.elementAt(i);
-            if (u.canUndo() && u.isSignificant()) {
-                v.add(u);
-            }
-        }
-
-        return v;
-    }
-
-    // Return all currently significant redoable edits. The first edit is the
-    // next one to be redone.
-    public synchronized List<UndoableEdit> getRedoableEdits() {
-        int size = edits.size();
-        List<UndoableEdit> v = new ArrayList<UndoableEdit>(size);
-        for (int i = 0; i < size; i++) {
-            UndoableEdit u = (UndoableEdit) edits.elementAt(i);
-            if (u.canRedo() && u.isSignificant()) {
-                v.add(u);
-            }
-        }
-
-        return v;
-    }
-
-    // Return the last edit.
-    public synchronized UndoableEdit getLastEdit(){
-        return edits.size()>0 ? edits.lastElement() : null;
-    }
-
-    // Return index of next add.
-    public synchronized int getIndexOfNextAdd(){
-        // The index is actually not exposed directly, but we can cheat and get it from the toString...
-        String[] toks = super.toString().split(":");
-        return Integer.parseInt(toks[toks.length-1].trim());
-    }
-    // ListModel Methods
-    @Override
-    public Object getElementAt(int index) {
-        return edits.get(index);
-    }
-
-    @Override
-    public int getSize() {
-        return edits.size();
-    }
-
-    @Override
-    public void addListDataListener(ListDataListener l) {
-        listeners.add(l);
-    }
-
-    @Override
-    public void removeListDataListener(ListDataListener l) {
-        listeners.remove(l);
-    }
-
-    public void goTo(SpreadSheetEdit edit) {
-        if (edit.canUndo()) {
-            this.undoTo(edit);
-        } else if (edit.canRedo()) {
-            this.redoTo(edit);
-        }
     }
 }

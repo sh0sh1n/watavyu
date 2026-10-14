@@ -131,28 +131,6 @@ public final class EditorTracker
         currentEditor.setStartPos(preCharCount);
     }
 
-    /**
-     * Adds editors to the tracker on the end of the vector.
-     *
-     * @param eds The editors to add.
-     */
-    public void addEditors(final List<EditorComponent> eds) {
-        if (editors.addAll(eds)) {
-            calculatePrePostCounts();
-        }
-    }
-
-    /**
-     * Removes editors from the tracker.
-     *
-     * @param eds The editors to remove.
-     */
-    public void removeEditors(final List<EditorComponent> eds) {
-        if (editors.removeAll(eds)) {
-            calculatePrePostCounts();
-        }
-    }
-    
     public int indexOfCurrentEditor()
     {
         int i = 0;
@@ -340,18 +318,10 @@ public final class EditorTracker
         switch (e.getKeyCode()) {
 
             case KeyEvent.VK_BACK_SLASH:
-                if(Datavyu.getPlatform() == Datavyu.Platform.MAC) {
-                    if (e.getModifiers() == KeyEvent.META_MASK) {
-                        Datavyu.getView().deleteCells();
-                        e.consume();
-                        break;
-                    }
-                }else if(Datavyu.getPlatform() == Datavyu.Platform.WINDOWS){
-                    if (e.getModifiers() == KeyEvent.CTRL_MASK) {
-                        Datavyu.getView().deleteCells();
-                        e.consume();
-                        break;
-                    }
+                if (e.getModifiers() == KeyEvent.META_MASK) {
+                    Datavyu.getView().deleteCells();
+                    e.consume();
+                    break;
                 }
             case KeyEvent.VK_BACK_SPACE:
                 if (!gotKeyUp) {
@@ -458,7 +428,7 @@ public final class EditorTracker
         setEditor(tempEC, charPos, charPos);
         me.consume();
 
-        // BugzID:629 - Prevent users from selecting place holders.
+        // Prevent users from selecting place holders.
         if (!currentEditor.canSubSelect()) {
             currentEditor.selectAll();
         }
@@ -468,7 +438,7 @@ public final class EditorTracker
     public void mouseReleased(final MouseEvent me) {
         me.consume();
 
-        // BugzID:629 - Prevent users from selecting place holders.
+        // Prevent users from selecting place holders.
         if (!currentEditor.canSubSelect()) {
             currentEditor.selectAll();
         }

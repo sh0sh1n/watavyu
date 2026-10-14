@@ -28,23 +28,6 @@ public abstract class CarriageEventAdapter implements CarriageEventListener {
         // Blank implementation.
     }
 
-    /**
-     * @see org.datavyu.event.component.CarriageEventListener
-     * #requestMarker(org.datavyu.event.component.CarriageEvent)
-     */
-    @Override
-    public void requestMarker(final CarriageEvent e) {
-        // Blank implementation.
-    }
-
-    /**
-     * @see org.datavyu.event.component.CarriageEventListener
-     * #saveMarker(org.datavyu.event.component.CarriageEvent)
-     */
-    @Override
-    public void saveMarker(final CarriageEvent e) {
-        // Blank implementation.
-    }
 
     /**
      * @see org.datavyu.event.component.CarriageEventListener

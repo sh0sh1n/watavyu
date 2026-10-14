@@ -15,11 +15,9 @@
 package org.datavyu.views;
 
 import net.miginfocom.swing.MigLayout;
-import org.apache.commons.lang3.NotImplementedException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.Datavyu;
-import org.datavyu.Datavyu.Platform;
 import org.datavyu.controllers.CreateNewCellController;
 import org.datavyu.controllers.SetNewCellStopTimeController;
 import org.datavyu.controllers.SetSelectedCellStartTimeController;
@@ -33,22 +31,17 @@ import org.datavyu.event.component.TracksControllerListener;
 import org.datavyu.models.Identifier;
 import org.datavyu.models.component.*;
 import org.datavyu.plugins.StreamViewer;
-import org.datavyu.plugins.Plugin;
-import org.datavyu.plugins.PluginManager;
+import org.datavyu.plugins.javafx.JavaFxVideoPlugin;
 import org.datavyu.util.*;
 import org.datavyu.util.ClockTimer.ClockListener;
-import org.jdesktop.application.Action;
-import org.jdesktop.application.Application;
-import org.jdesktop.application.ResourceMap;
+import org.datavyu.util.Resources;
 
 import javax.swing.*;
-import javax.swing.filechooser.FileFilter;
 import java.awt.*;
 import java.awt.event.*;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -61,9 +54,6 @@ import java.util.function.Consumer;
  */
 public final class VideoController extends DatavyuDialog
         implements ClockListener, TracksControllerListener, PropertyChangeListener {
-
-    /** Threshold used to compare frame rates */
-    private static final double ALMOST_EQUAL_FRAME_RATES = 1e-1*5;
 
     /** The logger for this class */
     private static Logger logger = LogManager.getLogger(VideoController.class);
@@ -219,15 +209,18 @@ public final class VideoController extends DatavyuDialog
     /** */
     private JPanel tracksPanel;
 
-    private ResourceMap resourceMap;
+    private Resources resourceMap;
 
-    private ActionMap actionMap;
+    /**
+     * Whether video controllers start in highlight and focus mode, which highlights the cell at the current time in
+     * the selected column and focuses its first uncoded argument. The mode needs cell highlighting, so that starts on
+     * with it.
+     */
+    public static final boolean HIGHLIGHT_AND_FOCUS_BY_DEFAULT = true;
 
-    private String osModifier;
+    private boolean highlightCells = HIGHLIGHT_AND_FOCUS_BY_DEFAULT;
 
-    private boolean highlightCells = false;
-
-    private boolean highlightAndFocus = false;
+    private boolean highlightAndFocus = HIGHLIGHT_AND_FOCUS_BY_DEFAULT;
 
     private FrameRateController frameRateController = new FrameRateController();
 
@@ -246,18 +239,9 @@ public final class VideoController extends DatavyuDialog
 
         setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE);
 
-        resourceMap = Application.getInstance(org.datavyu.Datavyu.class)
-                                        .getContext().getResourceMap(VideoController.class);
+        resourceMap = Resources.of(VideoController.class);
 
-        actionMap = Application.getInstance(org.datavyu.Datavyu.class)
-                                    .getContext().getActionMap(VideoController.class, this);
 
-        if (Datavyu.getPlatform() == Platform.MAC) {
-            osModifier = "osx";
-            setJMenuBar(((JFrame) parent).getJMenuBar());
-        } else {
-            osModifier = "win";
-        }
         initComponents();
 
         setResizable(false);
@@ -270,7 +254,6 @@ public final class VideoController extends DatavyuDialog
         tracksPanel.add(mixerController.getTracksPanel(), "growx");
         mixerController.addTracksControllerListener(this);
         mixerController.getMixerModel().getViewportModel().addPropertyChangeListener(this);
-        mixerController.getMixerModel().getRegionModel().addPropertyChangeListener(this);
         mixerController.getMixerModel().getNeedleModel().addPropertyChangeListener(this);
 
         showTracksPanel(tracksPanelVisible);
@@ -299,73 +282,34 @@ public final class VideoController extends DatavyuDialog
     }
 
     /**
-     * Handles opening a data source.
+     * Opens a video file as a new track.
      *
-     * @param chooser The plugin chooser used to open the data source.
-     */
-    private Identifier openVideo(final PluginChooser chooser) {
-        final Plugin plugin = chooser.getSelectedPlugin();
-        if (plugin == null) {
-            JOptionPane.showMessageDialog(this,
-                    "No video player is available for this file on this system.",
-                    "No Video Player", JOptionPane.ERROR_MESSAGE);
-            return null;
-        }
-        final File selectedFile = chooser.getSelectedFile();
-
-        return openVideo(selectedFile, plugin);
-    }
-
-
-    /**
-     *  Open a video using specified file path and plugin.
-     *  @param filepath Name of video file
-     *  @param pluginUUID UUID of the plugin
-     */
-    public Identifier openVideo(final String filepath, final UUID pluginUUID) throws FileNotFoundException {
-        File videoFile = new File(filepath);
-        if(!videoFile.exists()){
-            logger.error("Cannot find file: " + filepath);
-            return null;
-        }
-
-        Plugin plugin = PluginManager.getInstance().getPluginFromUUID(pluginUUID);
-        if(plugin == null ){
-            logger.error("Cannot find plugin with UUID: " + pluginUUID);
-            return null;
-        }
-
-        return openVideo(videoFile, plugin);
-    }
-
-    /** Open video file using given plugin.
      * @param videoFile Video file.
-     * @param plugin Plugin to open with.
+     * @return The identifier of the new track.
      */
-    public Identifier openVideo(final File videoFile, final Plugin plugin){
+    public Identifier openVideo(final File videoFile) {
         Identifier id = Identifier.generateIdentifier();
-        openStream(id, videoFile, plugin, streamViewer -> { }, streamViewer -> { });
+        openStream(id, videoFile, streamViewer -> { }, streamViewer -> { });
         return id;
     }
 
     /**
-     * Opens a stream on a background thread, because a plugin may block while its media
+     * Opens a stream on a background thread, because the player blocks while its media
      * loads, then adds the track on the Swing EDT. A file that fails to open adds no track
-     * and shows the plugin's error message.
+     * and shows the player's error message.
      *
      * @param id Identifier for the new stream.
      * @param file File to open.
-     * @param plugin Plugin to open it with.
      * @param beforeAdd Runs on the EDT before the track is added, e.g. to load saved settings.
      * @param afterAdd Runs on the EDT after the track is added.
      */
-    public void openStream(final Identifier id, final File file, final Plugin plugin,
+    public void openStream(final Identifier id, final File file,
                            final Consumer<StreamViewer> beforeAdd, final Consumer<StreamViewer> afterAdd) {
         Thread opener = new Thread(() -> {
             final StreamViewer streamViewer;
             try {
-                logger.debug("Open Video " + file + " With plugin " + plugin);
-                streamViewer = plugin.getNewStreamViewer(id, file, Datavyu.getApplication().getMainFrame(), false);
+                logger.debug("Open video " + file);
+                streamViewer = JavaFxVideoPlugin.open(id, file, Datavyu.getApplication().getMainFrame(), false);
             } catch (Throwable t) {
                 logger.error("Unable to open " + file, t);
                 SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(Datavyu.getApplication().getMainFrame(),
@@ -375,7 +319,7 @@ public final class VideoController extends DatavyuDialog
             }
             SwingUtilities.invokeLater(() -> {
                 beforeAdd.accept(streamViewer);
-                addStream(plugin.getTypeIcon(), streamViewer);
+                addStream(JavaFxVideoPlugin.trackIcon(), streamViewer);
                 mixerController.bindTrackActions(streamViewer.getIdentifier(), streamViewer.getCustomActions());
                 streamViewer.addViewerStateListener(mixerController.getTracksEditorController()
                         .getViewerStateListener(streamViewer.getIdentifier()));
@@ -421,8 +365,7 @@ public final class VideoController extends DatavyuDialog
 
     @Override
     public void clockBoundaryCheck(double clockTime) {
-        if((clockTime >= mixerController.getRegionController().getModel().getRegion().getRegionEnd()
-                || clockTime <= mixerController.getRegionController().getModel().getRegion().getRegionStart())
+        if((clockTime >= getTimelineEnd() || clockTime <= 0)
                 && !clockTimer.isPaused()){
             logger.info("Clock Boundary Pausing Master Clock at " + clockTime );
             clockTimer.pause();
@@ -482,6 +425,13 @@ public final class VideoController extends DatavyuDialog
     }
 
     /**
+     * @return The end of the timeline, the latest end of any track, in milliseconds.
+     */
+    private long getTimelineEnd() {
+        return mixerController.getMixerModel().getViewportModel().getViewport().getMaxEnd();
+    }
+
+    /**
      * @return the mixer controller.
      */
     public MixerController getMixerController() {
@@ -530,7 +480,6 @@ public final class VideoController extends DatavyuDialog
 
         if (streamViewers.isEmpty()) {
             mixerController.getNeedleController().resetNeedlePosition();
-            mixerController.getMixerModel().getRegionModel().resetPlaybackRegion();
         }
     }
 
@@ -569,7 +518,6 @@ public final class VideoController extends DatavyuDialog
         // Remove the frame rate, this is problematic if we have several tracks with the same frame rate
         frameRateController.removeFrameRate(streamViewer.getIdentifier().asLong());
 
-        // BugzID:2000
         streamViewer.removeViewerStateListener(
                 mixerController.getTracksEditorController().getViewerStateListener(
                         streamViewer.getIdentifier()));
@@ -620,17 +568,16 @@ public final class VideoController extends DatavyuDialog
      * @return True if the plugin should be removed, false otherwise.
      */
     private boolean shouldRemove() {
-        ResourceMap rMap = Application.getInstance(Datavyu.class).getContext().getResourceMap(Datavyu.class);
+        Resources rMap = Resources.of(Datavyu.class);
         String defaultOption = "Cancel";
         String alternativeOption = "OK";
-        String[] options = Datavyu.getPlatform() == Platform.MAC ? MacOS.getOptions(defaultOption, alternativeOption) :
-                WindowsOS.getOptions(defaultOption, alternativeOption);
+        String[] options = MacOS.getOptions(defaultOption, alternativeOption);
         int selectedOption = JOptionPane.showOptionDialog(this,
                 rMap.getString("ClosePluginDialog.message"),
                 rMap.getString("ClosePluginDialog.title"),
                 JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE,
                 null, options, defaultOption);
-        return (Datavyu.getPlatform() == Platform.MAC) ? (selectedOption == 1) : (selectedOption == 0);
+        return selectedOption == 1;
     }
 
     /**
@@ -638,12 +585,13 @@ public final class VideoController extends DatavyuDialog
      *
      * @param name Prefix when looking for actions and buttons.
      * @param modifier Modifier (if any) to apply to the prefix. Maybe null.
+     * @param action What the button does.
      * @return A configured button.
      */
-    private JButton buildButton(final String name, final String modifier) {
+    private JButton buildButton(final String name, final String modifier, final Runnable action) {
         String dotModifier = (modifier == null) || modifier.isEmpty() ? "" : "." + modifier;
         JButton jButton = new JButton();
-        jButton.setAction(actionMap.get(name + "Action"));
+        jButton.addActionListener(e -> action.run());
         jButton.setIcon(resourceMap.getIcon(name + "Button.icon" + dotModifier));
         jButton.setPressedIcon(resourceMap.getIcon(name + "SelectedButton.icon" + dotModifier));
         jButton.setFocusPainted(false);
@@ -651,9 +599,6 @@ public final class VideoController extends DatavyuDialog
         return jButton;
     }
 
-    private JButton buildButton(final String name) {
-        return buildButton(name, null);
-    }
 
     private JPanel makeLabelAndTextFieldPanel(JLabel label, JTextField textField) {
         JPanel jPanel = new JPanel();
@@ -778,11 +723,11 @@ public final class VideoController extends DatavyuDialog
         // Placeholder at top, left: 'clear' or 'numlock' position
         gridButtonPanel.add(makePlaceholderButton(), NUM_PAD_KEY_SIZE);
 
-        // Point cell: Mac equal sign, windows forward slash
-        pointCellButton = buildButton("pointCell");
+        // Point cell: equals sign on the Mac keypad
+        pointCellButton = buildButton("pointCell", null, this::pointCellAction);
         gridButtonPanel.add(pointCellButton, NUM_PAD_KEY_SIZE);
 
-        // Show/hide: Mac forward flash, windows asterisk
+        // Show/hide: forward slash on the Mac keypad
         showTracksSmallButton = new JButton();
         showTracksSmallButton.setIcon(resourceMap.getIcon(
                 "showTracksSmallButton.hide.icon"));
@@ -797,74 +742,58 @@ public final class VideoController extends DatavyuDialog
         showTracksSmallButton.setFocusPainted(false);
         gridButtonPanel.add(showTracksSmallButton, NUM_PAD_KEY_SIZE);
 
-        // MAC and WINDOWS DIFFER
-        if (osModifier.equals("osx")) {
-            //Placeholder at asterisk location
-            gridButtonPanel.add(makePlaceholderButton(), NUM_PAD_KEY_SIZE);
-            //Placeholder - perhaps eventually the sync video button
-            gridButtonPanel.add(makePlaceholderButton(false), WIDE_TEXT_FIELD_SIZE);
-        } else {
-            addJumpByPair();
-        }
+        // Placeholder at asterisk location
+        gridButtonPanel.add(makePlaceholderButton(), NUM_PAD_KEY_SIZE);
+        // Placeholder - perhaps eventually the sync video button
+        gridButtonPanel.add(makePlaceholderButton(false), WIDE_TEXT_FIELD_SIZE);
+
         // Set cell onset button with 7
-        setCellOnsetButton = buildButton("setCellOnset");
+        setCellOnsetButton = buildButton("setCellOnset", null, this::setCellOnsetAction);
         gridButtonPanel.add(setCellOnsetButton, NUM_PAD_KEY_SIZE);
 
         // Play video button with 8
-        playButton = buildButton("start");
+        playButton = buildButton("start", null, this::startAction);
         playButton.setRequestFocusEnabled(false);
         gridButtonPanel.add(playButton, NUM_PAD_KEY_SIZE);
 
         // Set cell offset button with 9
-        nineSetCellOffsetButton = buildButton("setCellOffset", "nine");
+        nineSetCellOffsetButton = buildButton("setCellOffset", "nine", this::setCellOffsetAction);
         gridButtonPanel.add(nineSetCellOffsetButton, NUM_PAD_KEY_SIZE);
 
-        // MAC and WINDOWS DIFFER
-        if (osModifier.equals("osx")) {
-            addJumpByPair();
-        } else {
-            // Find button (big plus)
-            findButton = buildButton("find", "win");
-            gridButtonPanel.add(findButton, TALL_NUM_PAD_KEY_SIZE);
-            // Placeholder - perhaps eventually the sync video button
-            gridButtonPanel.add(makePlaceholderButton(false), WIDE_TEXT_FIELD_SIZE);
-        }
+        addJumpByPair();
 
         // Shuttle back button with 4
-        shuttleBackButton = buildButton("shuttleBack");
+        shuttleBackButton = buildButton("shuttleBack", null, this::shuttleBackAction);
         gridButtonPanel.add(shuttleBackButton, NUM_PAD_KEY_SIZE);
 
         // Stop button with 5
-        stopButton = buildButton("stop");
+        stopButton = buildButton("stop", null, this::stopAction);
         gridButtonPanel.add(stopButton, NUM_PAD_KEY_SIZE);
 
         // Shuttle forward button with 6
-        shuttleForwardButton = buildButton("shuttleForward");
+        shuttleForwardButton = buildButton("shuttleForward", null, this::shuttleForwardAction);
         gridButtonPanel.add(shuttleForwardButton, NUM_PAD_KEY_SIZE);
 
 
-        // MAC and WINDOWS DIFFER
-        if (osModifier.equals("osx")) {
-            //Find button (small plus)
-            findButton = buildButton("find", "osx");
-            gridButtonPanel.add(findButton, NUM_PAD_KEY_SIZE);
-        }
+        // Find button (small plus)
+        findButton = buildButton("find", "osx", this::findAction);
+        gridButtonPanel.add(findButton, NUM_PAD_KEY_SIZE);
         addStepSizePanel();
 
         // Jog back button with 1
-        JButton jogBackButton = buildButton("jogBack");
+        JButton jogBackButton = buildButton("jogBack", null, this::jogBackAction);
         gridButtonPanel.add(jogBackButton, NUM_PAD_KEY_SIZE);
 
         // Pause button with 2
-        pauseButton = buildButton("pause");
+        pauseButton = buildButton("pause", null, this::pauseAction);
         gridButtonPanel.add(pauseButton, NUM_PAD_KEY_SIZE);
 
         // Jog forward button with 3
-        JButton jogForwardButton = buildButton("jogForward");
+        JButton jogForwardButton = buildButton("jogForward", null, this::jogForwardAction);
         gridButtonPanel.add(jogForwardButton, NUM_PAD_KEY_SIZE);
 
         // Create new cell button with enter
-        createNewCell = buildButton("createNewCell");
+        createNewCell = buildButton("createNewCell", null, this::createNewCellAction);
         createNewCell.setAlignmentY(0.0F);
         createNewCell.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
         gridButtonPanel.add(createNewCell, TALL_NUM_PAD_KEY_SIZE);
@@ -878,11 +807,11 @@ public final class VideoController extends DatavyuDialog
         gridButtonPanel.add(makeLabelAndTextFieldPanel(new JLabel("Onset"), onsetTextField), WIDE_TEXT_FIELD_SIZE);
 
         // Create new cell setting offset button with zero
-        createNewCellSettingOffset = buildButton("createNewCellAndSetOffset");
+        createNewCellSettingOffset = buildButton("createNewCellAndSetOffset", null, this::createNewCellAndSetOffsetAction);
         gridButtonPanel.add(createNewCellSettingOffset, "span 2, w 95!, h 45!");
 
         // Set cell offset button
-        setCellOffsetButton = buildButton("setCellOffset", "period");
+        setCellOffsetButton = buildButton("setCellOffset", "period", this::setCellOffsetAction);
         gridButtonPanel.add(setCellOffsetButton, NUM_PAD_KEY_SIZE);
 
         // Offset text field
@@ -907,7 +836,7 @@ public final class VideoController extends DatavyuDialog
 
     private void addJumpByPair() {
         //Go back button - minus key
-        jumpByButton = buildButton("jumpBy", null);
+        jumpByButton = buildButton("jumpBy", null, this::jumpByAction);
         gridButtonPanel.add(jumpByButton, NUM_PAD_KEY_SIZE);
         //Go back text field
         jumpByTextField.setHorizontalAlignment(SwingConstants.CENTER);
@@ -969,32 +898,12 @@ public final class VideoController extends DatavyuDialog
     private void openVideoButtonActionPerformed(final ActionEvent evt) {
         logger.info("Add data");
 
-        PluginChooser chooser;
-
-        switch (Datavyu.getPlatform()) {
-            case WINDOWS:
-                chooser = new WindowsJFC();
-                break;
-            case MAC:
-                chooser = new MacOSJFC();
-                break;
-            case LINUX:
-                chooser = new LinuxJFC();
-                break;
-            default:
-                throw new NotImplementedException("Plugin chooser not implemented.");
-        }
-
-        PluginManager pluginManager = PluginManager.getInstance();
-        chooser.addPlugin(pluginManager.getPlugins());
-
-        for (FileFilter fileFilter : pluginManager.getFileFilters()) {
-            chooser.addChoosableFileFilter(fileFilter);
-            chooser.setFileFilter(fileFilter);
-        }
+        DatavyuFileChooser chooser = new DatavyuFileChooser();
+        chooser.addChoosableFileFilter(JavaFxVideoPlugin.VIDEO_FILE_FILTER);
+        chooser.setFileFilter(JavaFxVideoPlugin.VIDEO_FILE_FILTER);
 
         if (JFileChooser.APPROVE_OPTION == chooser.showOpenDialog(this)) {
-            openVideo(chooser);
+            openVideo(chooser.getSelectedFile());
         }
     }
 
@@ -1009,8 +918,7 @@ public final class VideoController extends DatavyuDialog
         assert (evt.getSource() instanceof JButton);
 
         JButton button = (JButton) evt.getSource();
-        ResourceMap resourceMap = Application.getInstance(org.datavyu.Datavyu.class).getContext().getResourceMap(
-                VideoController.class);
+        Resources resourceMap = Resources.of(VideoController.class);
 
         if (tracksPanelVisible) {
             logger.info("Show tracks (" + button.getName() + ")");
@@ -1078,7 +986,6 @@ public final class VideoController extends DatavyuDialog
     /**
      * Action to invoke when the user clicks the set cell onset button.
      */
-    @Action
     public void setCellOnsetAction() {
         logger.info("Set cell onset");
         new SetSelectedCellStartTimeController(getCurrentTime());
@@ -1088,7 +995,6 @@ public final class VideoController extends DatavyuDialog
     /**
      * Action to invoke when the user clicks on the set cell offset button
      */
-    @Action
     public void setCellOffsetAction() {
         logger.info("Set cell offset");
         new SetSelectedCellStopTimeController(getCurrentTime());
@@ -1154,8 +1060,6 @@ public final class VideoController extends DatavyuDialog
                 break;
 
             case CARRIAGE_LOCK:
-            case MARKER_CHANGED:
-            case MARKER_SAVE:
                 Datavyu.getProjectController().projectChanged();
                 break;
 
@@ -1192,14 +1096,6 @@ public final class VideoController extends DatavyuDialog
     private void handleNeedleChange(final NeedleState needle) {
         // Nothing to do here, since we update the needle based on the clock timer and not vice versa
         // Notice, that dragging on the needle is handled through "handleTimescaleEvent"
-    }
-
-    private void handleRegionChange(final RegionState region) {
-        final long start = region.getRegionStart();
-        final long end = region.getRegionEnd();
-        logger.info("Set Region with start " + start + " ane end " + end + " CLock " + clockTimer.getClockTime());
-        clockTimer.setMinTime(start);
-        clockTimer.setMaxTime(end);
     }
 
     private void handleViewportChange(final ViewportState viewport) {
@@ -1313,8 +1209,6 @@ public final class VideoController extends DatavyuDialog
     /**
      * Action to invoke when the user clicks on the start button.
      */
-    @Action
-    @SuppressWarnings("unused")  // Called through actionMap
     public void startAction() {
         logger.info("Play");
         clockTimer.setRate(1f);
@@ -1323,8 +1217,6 @@ public final class VideoController extends DatavyuDialog
     /**
      * Action to invoke when the user clicks on the pause button.
      */
-    @Action
-    @SuppressWarnings("unused")  // Called through actionMap
     public void pauseAction() {
         // Toggle between isPlaying and not isPlaying
         if (clockTimer.isPaused() && !clockTimer.isStopped()) {
@@ -1342,7 +1234,6 @@ public final class VideoController extends DatavyuDialog
     /**
      * Action to invoke when the user clicks on the stop button.
      */
-    @Action
     public void stopAction() {
         logger.info("Stop.");
         clockTimer.setRate(0f);
@@ -1352,8 +1243,6 @@ public final class VideoController extends DatavyuDialog
     /**
      * Action to invoke when the user clicks on the shuttle forward button.
      */
-    @Action
-    @SuppressWarnings("unused")  // Called through actionMap
     public void shuttleForwardAction() {
         logger.info("Shuttle forward.");
         shuttle(1);
@@ -1362,8 +1251,6 @@ public final class VideoController extends DatavyuDialog
     /**
      * Action to invoke when the user clicks on the shuttle back button.
      */
-    @Action
-    @SuppressWarnings("unused")  // Called through actionMap
     public void shuttleBackAction() {
         logger.info("Shuttle back.");
         shuttle(-1);
@@ -1390,8 +1277,6 @@ public final class VideoController extends DatavyuDialog
     /**
      * Action to invoke when the user clicks on the find button.
      */
-    @Action
-    @SuppressWarnings("unused")  // Called through actionMap
     public void findAction() {
         if (shiftMask) {
             findOffsetAction();
@@ -1426,10 +1311,6 @@ public final class VideoController extends DatavyuDialog
         return highlightCells;
     }
 
-    public void setCellHighlighting(boolean v) {
-        highlightCells = v;
-    }
-
     public void toggleCellHighlightingAutoFocus() {
         highlightAndFocus = !highlightAndFocus;
     }
@@ -1438,35 +1319,9 @@ public final class VideoController extends DatavyuDialog
         return highlightAndFocus;
     }
 
-    public void clearRegionOfInterestAction() {
-        mixerController.clearRegionOfInterest();
-    }
-
-    /**
-     * Sets the playback region of interest to lie from the find time to offset time.
-     */
-    public void setRegionOfInterestAction() {
-        if (this.getStreamViewers().size() > 0) {
-            try {
-                final long findTextTime = CLOCK_FORMAT.parse(onsetTextField.getText()).getTime();
-                final long findOffsetTime = CLOCK_FORMAT.parse(offsetTextField.getText()).getTime();
-
-                final long newWindowPlayStart = findTextTime;
-                final long newWindowPlayEnd = (findOffsetTime > newWindowPlayStart)
-                        ? findOffsetTime : newWindowPlayStart;
-                mixerController.getMixerModel().getRegionModel().setPlaybackRegion(newWindowPlayStart, newWindowPlayEnd);
-                mixerController.getMixerModel().getNeedleModel().setCurrentTime(newWindowPlayStart);
-            } catch (ParseException e) {
-                logger.error("Unable to set region of interest for playback " + e);
-            }
-        }
-    }
-
     /**
      * Action to invoke when the user clicks on the go back button.
      */
-    @Action
-    @SuppressWarnings("unused")  // Called through actionMap
     public void jumpByAction() {
         try {
             long backTime = jumpDirection * CLOCK_FORMAT.parse(jumpByTextField.getText()).getTime();
@@ -1474,22 +1329,14 @@ public final class VideoController extends DatavyuDialog
             logger.info("Jump back by " +  backTime + " From: " + clockTimer.getStreamTime() + " To: " + newTime);
             clockTimer.setForceTime(newTime);
 
-            //Bugzilla bug #179 - undoes the behavior from FogBugz BugzID:721
-            // BugzID:721 - After going back - start isPlaying again.
-            //playAt(PLAY_RATE);
         } catch (ParseException e) {
             logger.error("Unable to jump back " + e);
         }
     }
 
-    private boolean almostEqual(double value1, double value2, double threshold) {
-        return Math.abs(value1 - value2) <= threshold;
-    }
-
     /**
      * Action to invoke when the user clicks on the jog backwards button.
      */
-    @Action
     public void jogBackAction() {
         logger.info("Jog back");
         if (!clockTimer.isStopped()) {
@@ -1518,9 +1365,7 @@ public final class VideoController extends DatavyuDialog
                     long trackTime = newTime - trackModel.getOffset();
 
                     // Notice that the new time is in jogs to frame markers by being modulo step size
-                    long newStreamTime = Math.max( Math.min(Math.max(trackTime, 0),
-                                            trackModel.getDuration())
-                        , Datavyu.getVideoController().getMixerController().getRegionController().getModel().getRegion().getRegionStart());
+                    long newStreamTime = Math.min(Math.max(trackTime, 0), trackModel.getDuration());
 
                     logger.info("Stream " + streamViewer.getIdentifier()
                         + " - Jog back from " + trackTime + " milliseconds to " + newStreamTime + " milliseconds");
@@ -1570,7 +1415,6 @@ public final class VideoController extends DatavyuDialog
     /**
      * Action to invoke when the user clicks on the jog forwards button.
      */
-    @Action
     public void jogForwardAction() {
         logger.info("Jog forward");
         if (!clockTimer.isStopped()) {
@@ -1599,9 +1443,8 @@ public final class VideoController extends DatavyuDialog
                     long trackTime = newTime - trackModel.getOffset();
 
                     // Notice that the new time is in jogs to frame markers by being modulo step size
-                    long newStreamTime = Math.min(Math.min(Math.max(trackTime, 0),
-                                            trackModel.getDuration())
-                       , Datavyu.getVideoController().getMixerController().getRegionController().getModel().getRegion().getRegionEnd());
+                    long newStreamTime = Math.min(Math.min(Math.max(trackTime, 0), trackModel.getDuration()),
+                            getTimelineEnd());
 
                     logger.info("Stream " + streamViewer.getIdentifier()
                         + " - Jog forward from " + trackTime + " milliseconds to " + newStreamTime + " milliseconds.");
@@ -1623,8 +1466,7 @@ public final class VideoController extends DatavyuDialog
      * @param shuttleJump The required rate and direction of the shuttle.
      */
     private void shuttle(int shuttleJump) {
-        if (clockTimer.getClockTime() > mixerController.getRegionController().getModel().getRegion().getRegionStart()
-                && clockTimer.getClockTime() < mixerController.getRegionController().getModel().getRegion().getRegionEnd()) {
+        if (clockTimer.getClockTime() > 0 && clockTimer.getClockTime() < getTimelineEnd()) {
             float currentRate = clockTimer.getRate();
             boolean reverseAllowed = streamViewers.stream().allMatch(StreamViewer::isReversePlaybackSupported);
             float nextRate = shuttleRates.nextRate(currentRate, shuttleJump, reverseAllowed);
@@ -1636,8 +1478,6 @@ public final class VideoController extends DatavyuDialog
     /**
      * Action to invoke when the user clicks on the create new cell button.
      */
-    @Action
-    @SuppressWarnings("unused")  // Called through actionMap
     public void createNewCellAction() {
         logger.info("New cell");
 
@@ -1654,8 +1494,6 @@ public final class VideoController extends DatavyuDialog
     /**
      * Action to invoke when the user clicks on the new cell button.
      */
-    @Action
-    @SuppressWarnings("unused")  // Called through actionMap
     public void createNewCellAndSetOffsetAction() {
         logger.info("New cell set offset");
 
@@ -1671,8 +1509,6 @@ public final class VideoController extends DatavyuDialog
     /**
      * Action to invoke when the user clicks on the new cell offset button.
      */
-    @Action
-    @SuppressWarnings("unused")  // Called through actionMap
     public void pointCellAction() {
         logger.info("Set new cell offset");
 
@@ -1694,8 +1530,6 @@ public final class VideoController extends DatavyuDialog
             handleNeedleChange(((NeedleModel) source).getNeedle());
         } else if (source instanceof ViewportModel) {
             handleViewportChange(((ViewportModel) source).getViewport());
-        } else if (source instanceof RegionModel) {
-            handleRegionChange(((RegionModel) source).getRegion());
         }
     }
 

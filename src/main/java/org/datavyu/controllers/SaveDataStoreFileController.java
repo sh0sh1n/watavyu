@@ -14,13 +14,12 @@
  */
 package org.datavyu.controllers;
 
+import org.datavyu.util.Resources;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.Datavyu;
 import org.datavyu.models.db.*;
 import org.datavyu.util.StringUtils;
-import org.jdesktop.application.Application;
-import org.jdesktop.application.ResourceMap;
 
 import java.io.*;
 
@@ -115,8 +114,7 @@ public final class SaveDataStoreFileController {
             saveAsCsv(fos, dataStore);
             fos.close();
         } catch (IOException ie) {
-            ResourceMap rMap = Application.getInstance(Datavyu.class)
-                    .getContext().getResourceMap(Datavyu.class);
+            Resources rMap = Resources.of(Datavyu.class);
             throw new UserWarningException(rMap.getString("UnableToSave.message", outFile), ie);
         }
     }

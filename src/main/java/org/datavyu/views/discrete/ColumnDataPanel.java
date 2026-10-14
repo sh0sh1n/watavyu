@@ -17,7 +17,6 @@ package org.datavyu.views.discrete;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.models.db.Cell;
-import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.Variable;
 import org.datavyu.util.Constants;
 
@@ -47,10 +46,6 @@ public final class ColumnDataPanel extends JPanel implements KeyEventDispatcher 
      * The model that this variable represents.
      */
     private Variable model;
-    /**
-     * The cell selection listener used for cells in this column.
-     */
-    private CellSelectionListener cellSelectionL;
     /**
      * Collection of the SpreadsheetCells held in by this data panel.
      */
@@ -88,7 +83,6 @@ public final class ColumnDataPanel extends JPanel implements KeyEventDispatcher 
         columnHeight = 0;
         cells = new ArrayList<>();
         viewMap = new HashMap<>();
-        cellSelectionL = cellSelL;
         model = variable;
 
         setLayout(null);
@@ -255,13 +249,6 @@ public final class ColumnDataPanel extends JPanel implements KeyEventDispatcher 
             }
         }
         return result;
-    }
-
-    /**
-     * @return The number of cells stored in this column.
-     */
-    public int getNumCells() {
-        return cells.size();
     }
 
     /**

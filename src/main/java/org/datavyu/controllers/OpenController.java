@@ -39,15 +39,6 @@ public final class OpenController {
     /** Reference to the project that this controller opened */
     private Project project = null;
 
-    /**
-     * Opens a file as a Datavyu dataStore.
-     *
-     * @param dataStoreFile The file to use when opening a file as a dataStore.
-     */
-    @SuppressWarnings("unused") // This method is used by the Ruby datavyu API
-    public void openDataStore(final String dataStoreFile) {
-        this.openDataStore(new File(dataStoreFile));
-    }
 
     /**
      * Opens a file as a Datavyu dataStore.
@@ -66,25 +57,8 @@ public final class OpenController {
      * @param projectFile The file to use when opening a file as a project.
      */
     public void openProject(final File projectFile) {
+        openProjectArchive(projectFile);
 
-        // If project is archive - open it as such.
-        if (projectFile.getName().endsWith(".opf")) {
-            logger.info("open project archive");
-            openProjectArchive(projectFile);
-
-            // Otherwise project is uncompressed.
-        } else {
-            logger.info("open legacy shapa");
-
-            OpenProjectFileController opc = new OpenProjectFileController();
-            project = opc.open(projectFile);
-
-            if (project != null) {
-                OpenDataStoreFileController odc = new OpenDataStoreFileController();
-                dataStore = odc.open(new File(projectFile.getParent(),
-                        project.getDatabaseFileName()));
-            }
-        }
         dataStore.setName(projectFile.getName());
 
         dataStore.deselectAll();
@@ -106,7 +80,7 @@ public final class OpenController {
             String arch = archiveFile.getName().substring(0, archiveFile.getName().lastIndexOf('.'));
             ZipEntry zippedProjectFile = zipFile.getEntry("project");
 
-            // BugzID:1941 - Older project files are nested within a directory.
+            // Older project files are nested within a directory.
             // Try in the nested location if unable to find a project.
             if (zippedProjectFile == null) {
                 zippedProjectFile = zipFile.getEntry(arch + File.separator + "project");
@@ -117,7 +91,7 @@ public final class OpenController {
 
             ZipEntry zippedDataStore = zipFile.getEntry("db");
 
-            // BugzID:1941 - Older dataStore files are nested within a directory
+            // Older dataStore files are nested within a directory
             // Try in the nested location if unable to find a project.
             if (zippedDataStore == null) {
                 zippedDataStore = zipFile.getEntry(arch + File.separator + "db");
@@ -126,7 +100,6 @@ public final class OpenController {
             OpenDataStoreFileController odc = new OpenDataStoreFileController();
             dataStore = odc.openAsCsv(zipFile.getInputStream(zippedDataStore));
 
-            // BugzID:1806
             for (ViewerSetting vs : project.getViewerSettings()) {
                 if (vs.getSettingsId() != null) {
                     ZipEntry entry = zipFile.getEntry(vs.getSettingsId());
@@ -142,15 +115,6 @@ public final class OpenController {
         dataStore.deselectAll();
     }
 
-    /**
-     * Opens a file as a Datavyu project
-     *
-     * @param projectFile the file to use when opening a file as a project.
-     */
-    @SuppressWarnings("unused") // This method is used by the Ruby datavyu API
-    public void openProject(final String projectFile) {
-        this.openProject(new File(projectFile));
-    }
 
     /**
      * @return The instance of the data store that was opened by this controller, returns null if no dataStore opened.
