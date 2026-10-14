@@ -58,11 +58,9 @@ val patchedJavafxMedia = tasks.register<Jar>("patchedJavafxMedia") {
 }
 
 dependencies {
-    implementation("org.yaml:snakeyaml:1.18")
+    implementation("org.yaml:snakeyaml:2.7")
     implementation("com.miglayout:miglayout:3.7.4:swing")
-    implementation("commons-io:commons-io:2.5")
-    implementation("org.apache.commons:commons-lang3:3.6")
-    implementation("com.google.guava:guava:27.1-jre")
+    implementation("commons-io:commons-io:2.22.0")
     implementation("org.apache.logging.log4j:log4j-api:2.26.1")
     implementation("org.apache.logging.log4j:log4j-core:2.26.1")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.22.3")
@@ -75,10 +73,10 @@ dependencies {
 
     errorprone("com.google.errorprone:error_prone_core:2.50.0")
 
-    testImplementation("org.testng:testng:6.11")
+    testImplementation("org.testng:testng:7.12.0")
     testImplementation("org.mockito:mockito-core:5.24.0")
     // Validates project files against the published JSON Schema. It uses Jackson 3 (tools.jackson), which does not
-    // clash with the app's Jackson 2; its YAML support is excluded because it would replace SnakeYAML 1.18.
+    // clash with the app's Jackson 2; its YAML support is excluded because the schema is JSON.
     testImplementation("com.networknt:json-schema-validator:3.0.7") {
         exclude(group = "tools.jackson.dataformat", module = "jackson-dataformat-yaml")
     }

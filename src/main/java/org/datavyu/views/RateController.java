@@ -1,6 +1,5 @@
 package org.datavyu.views;
 
-import com.google.common.collect.Lists;
 
 import java.util.*;
 
@@ -9,7 +8,7 @@ import java.util.*;
  */
 final class RateController {
 
-    private SortedSet<Float> rates;
+    private NavigableSet<Float> rates;
 
     /**
      * Rate controller for the rates.
@@ -54,7 +53,7 @@ final class RateController {
      * @return Next smaller rate.
      */
     private List<Float> smallerRates(float rate) {
-        return Lists.reverse(new ArrayList<>(rates.headSet(rate)));
+        return new ArrayList<>(rates.headSet(rate, false).descendingSet());
     }
 
     /**

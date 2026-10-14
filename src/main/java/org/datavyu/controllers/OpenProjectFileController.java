@@ -18,10 +18,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.controllers.project.DatavyuProjectConstructor;
 import org.datavyu.models.project.Project;
-import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.error.YAMLException;
-import org.yaml.snakeyaml.representer.Representer;
 
 import java.io.*;
 
@@ -61,9 +59,7 @@ public final class OpenProjectFileController {
      * @return valid project if stream was deserialized, null otherwise.
      */
     public Project open(final InputStream inputStream) {
-        DumperOptions options = new DumperOptions();
-        options.setAllowUnicode(false); // Allow for the encoding of foreign characters by using escape characters
-        Yaml yaml = new Yaml(new DatavyuProjectConstructor(), new Representer(), options);
+        Yaml yaml = new Yaml(new DatavyuProjectConstructor());
 
         Project p;
         try {

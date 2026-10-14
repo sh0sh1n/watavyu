@@ -15,17 +15,13 @@ Updated 2026-10-14. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
-| Java source (main) | 242 files, 42.5k lines | 184 files, 31.4k lines |
-| Tests / line coverage | 113 / 9.9% | 289 / 17.2%; still 0% in most views, the timeline and undo |
-| Runtime dependencies / with known vulnerabilities | 28 / 8 | 21 / 4 |
+| Java source (main) | 242 files, 42.5k lines | 185 files, 31.4k lines |
+| Tests / line coverage | 113 / 9.9% | 289 / 17.3%; still 0% in most views, the timeline and undo |
+| Runtime dependencies / with known vulnerabilities | 28 / 8 | 12 / 0 |
 | Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 837 |
-| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 463 / 97; 15 |
+| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 463 / 93; 15 |
 | Never-invoked methods (`dead-code.py`) | 109+ | 10, all intended: B3's events and test-only accessors |
 | Static global access (`Datavyu.getView()` and friends) | about 330 call sites | 272 |
-
-## Security
-
-**S3. Other vulnerable libraries.** *verified with OSV.dev*. SnakeYAML 1.18 (8 advisories; opening `.opf` files now uses its `SafeConstructor`, which refuses tags naming Java classes, but the parser's denial-of-service advisories remain), commons-io 2.5 (2), Guava 27.1 (2), commons-lang3 3.6 (1). Fixed by D1.
 
 ## Bugs
 
@@ -65,9 +61,7 @@ Updated 2026-10-14. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 | Library | Now → latest stable | Used by | Action |
 |---|---|---|---|
-| SnakeYAML | 1.18 → 2.7 | opening `.opf` files, citation | drop with `.opf` opening (a migration question, see AGENTS.md › Decisions); the citation can parse its few keys without it. Until then, upgrade |
-| commons-io, commons-lang3, Guava | 2.5 / 3.6 / 27.1 → 2.22 / 3.21 / 33.7 | a few files each | ready: upgrade, or replace the remaining uses with the JDK |
-| TestNG | 6.11 → 7.12.0 | tests | ready: upgrade; JUnit 5 is optional |
+| SnakeYAML | 2.7 (latest) | opening `.opf` files, citation | drop with `.opf` opening (a migration question, see AGENTS.md › Undecided); the citation can parse its few keys without it |
 | MigLayout | 3.7.4 → `miglayout-swing` 11.x | 6 files | after-ui |
 
 **D2. Version catalog and dependency verification.** ready. Move versions into `gradle/libs.versions.toml` and enable Gradle dependency verification (checksums).

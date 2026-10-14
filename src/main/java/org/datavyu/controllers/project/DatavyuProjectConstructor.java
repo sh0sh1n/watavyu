@@ -17,6 +17,7 @@ package org.datavyu.controllers.project;
 import org.datavyu.models.project.Project;
 import org.datavyu.models.project.TrackSettings;
 import org.datavyu.models.project.ViewerSetting;
+import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.constructor.AbstractConstruct;
 import org.yaml.snakeyaml.constructor.SafeConstructor;
 import org.yaml.snakeyaml.nodes.MappingNode;
@@ -37,6 +38,7 @@ public class DatavyuProjectConstructor extends SafeConstructor {
      * Default Constructor.
      */
     public DatavyuProjectConstructor() {
+        super(new LoaderOptions());
         yamlMultiConstructors.put("!vs", new ConstructViewerSetting());
         yamlMultiConstructors.put("!project", new ConstructProject());
         yamlMultiConstructors.put("!ts", new ConstructTrackSettings());
