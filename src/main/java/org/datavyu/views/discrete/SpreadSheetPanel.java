@@ -844,19 +844,6 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
     }
 
     /**
-     * Remove listener from being notified of file drop events.
-     *
-     * @param listener The listener to remove.
-     */
-    public void removeFileDropEventListener(
-            final FileDropEventListener listener) {
-
-        synchronized (this) {
-            fileDropListeners.remove(listener);
-        }
-    }
-
-    /**
      * Notifies all registered listeners about the file drag and drop event.
      *
      * @param files The files that were dropped onto the spreadsheet.
