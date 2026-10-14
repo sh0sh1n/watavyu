@@ -74,11 +74,6 @@ public final class Datavyu implements TitleNotifier {
         logger.info("Working directory is: " + System.getProperty("user.dir"));
         logger.info("Class path is: " + System.getProperty("java.class.path"));
         logger.info("The java library path is: " + System.getProperty("java.library.path"));
-
-        if (MacOS.isOSXPressAndHoldEnabled()) {
-            osxPressAndHoldEnabled = true;
-            MacOS.setOSXPressAndHoldValue(false);
-        }
     }
 
     /** This application is ready to open a file */
@@ -335,6 +330,11 @@ public final class Datavyu implements TitleNotifier {
      * Creates and shows the main window and the video controller, then opens the file given on the command line.
      */
     private void start(final String[] args) {
+        // Key repeat instead of the accent popup while holding keys (B2: this changes the setting for every app).
+        if (MacOS.isOSXPressAndHoldEnabled()) {
+            osxPressAndHoldEnabled = true;
+            MacOS.setOSXPressAndHoldValue(false);
+        }
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (ReflectiveOperationException | UnsupportedLookAndFeelException e) {
