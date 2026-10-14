@@ -132,6 +132,14 @@ public final class DatavyuVariable implements Variable {
     }
 
     @Override
+    public Cell createPointCell(final long time) {
+        Cell cell = createCell();
+        cell.setOnset(time);
+        cell.setOffset(time);
+        return cell;
+    }
+
+    @Override
     public void removeCell(final Cell cell) {
         cells.remove(cell);
 

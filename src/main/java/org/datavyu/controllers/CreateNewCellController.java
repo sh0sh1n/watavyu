@@ -191,8 +191,7 @@ public final class CreateNewCellController {
         long newOnset = 0;
         newOnset = Datavyu.getVideoController().getCurrentTime();
 
-        Cell newCell = v.createCell();
-        newCell.setOnset(newOnset);
+        Cell newCell = v.createPointCell(newOnset);
         Datavyu.getProjectController().setLastCreatedCell(newCell);
         Datavyu.getProjectController().setLastCreatedVariable(v);
 
@@ -302,8 +301,7 @@ public final class CreateNewCellController {
 
         for (Variable var : model.getSelectedVariables()) {
             logger.info("create cell in selected column");
-            newCell = var.createCell();
-            newCell.setOnset(onset);
+            newCell = var.createPointCell(onset);
             Datavyu.getProjectController().setLastCreatedCell(newCell);
             Datavyu.getProjectController().setLastCreatedVariable(var);
 
@@ -327,8 +325,7 @@ public final class CreateNewCellController {
                 // recasting to DataCell without checking as the iterator
                 // only returns DataCells (no ref cells allowed so far)
                 Variable var = model.getVariable(cell);
-                newCell = var.createCell();
-                newCell.setOnset(onset);
+                newCell = var.createPointCell(onset);
                 Datavyu.getProjectController().setLastCreatedCell(newCell);
                 Datavyu.getProjectController().setLastCreatedVariable(var);
 
@@ -351,8 +348,7 @@ public final class CreateNewCellController {
                 logger.info("create cell while editing existing cell");
                 Variable var = model.getVariable(Datavyu.getProjectController().getLastCreatedCell());
                 if (var != null) {
-                    newCell = var.createCell();
-                    newCell.setOnset(onset);
+                    newCell = var.createPointCell(onset);
                     Datavyu.getProjectController().setLastCreatedCell(newCell);
                     Datavyu.getProjectController().setLastCreatedVariable(var);
 
@@ -379,8 +375,7 @@ public final class CreateNewCellController {
                 Datavyu.getProjectController().setLastCreatedVariable(model.getAllVariables().get(0));
             }
 
-            newCell = Datavyu.getProjectController().getLastCreatedVariable().createCell();
-            newCell.setOnset(onset);
+            newCell = Datavyu.getProjectController().getLastCreatedVariable().createPointCell(onset);
             Datavyu.getProjectController().setLastCreatedCell(newCell);
 
             // Add the undoable action

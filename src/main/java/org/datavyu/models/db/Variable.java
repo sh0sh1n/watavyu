@@ -44,6 +44,14 @@ public interface Variable {
     Cell createCell();
 
     /**
+     * Creates and inserts a point cell, whose onset and offset are both the given time. New cells are point cells.
+     *
+     * @param time The cell's onset and offset in milliseconds.
+     * @return The newly created cell.
+     */
+    Cell createPointCell(long time);
+
+    /**
      * Removes a cell from the variable.
      *
      * @param cell to remove from the variable.
