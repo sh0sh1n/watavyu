@@ -20,13 +20,12 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import javax.swing.JOptionPane;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.Datavyu;
 import org.datavyu.models.db.*;
-import org.datavyu.util.MacOS;
 import org.datavyu.util.StringUtils;
+import org.datavyu.util.Dialogs;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -101,16 +100,11 @@ public final class ExportDatabaseFileController {
                 }
             } catch(IllegalArgumentException e) {
                 frameRate = 30.0;
-                String defaultOption = "Cancel";
-                String alternativeOption = "OK";
-                String[] options = MacOS.getOptions(defaultOption, alternativeOption);
-                int selectedOption = JOptionPane.showOptionDialog(Datavyu.getView().getComponent(),
-                    "Unable to get frame rate. Would you like to export with a 30 frame per second?",
-                    e.getMessage(),
-                    JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE,
-                    null, options, defaultOption);
-                boolean confirmation = selectedOption == 1;
-                if (!confirmation) { return; }
+                if (!Dialogs.confirm(Datavyu.getView().getComponent(),
+                        "Unable to get frame rate. Would you like to export with a 30 frame per second?",
+                        e.getMessage(), "OK")) {
+                    return;
+                }
                 logger.error("Unable to get frame rate. Assuming value: " + frameRate);
             }
             long current_time = firstTime;

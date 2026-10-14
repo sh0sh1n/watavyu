@@ -564,15 +564,8 @@ public final class VideoController extends DatavyuDialog
      */
     private boolean shouldRemove() {
         Resources rMap = Resources.of(Datavyu.class);
-        String defaultOption = "Cancel";
-        String alternativeOption = "OK";
-        String[] options = MacOS.getOptions(defaultOption, alternativeOption);
-        int selectedOption = JOptionPane.showOptionDialog(this,
-                rMap.getString("ClosePluginDialog.message"),
-                rMap.getString("ClosePluginDialog.title"),
-                JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE,
-                null, options, defaultOption);
-        return selectedOption == 1;
+        return Dialogs.confirm(this, rMap.getString("ClosePluginDialog.message"),
+                rMap.getString("ClosePluginDialog.title"), "OK");
     }
 
     /**

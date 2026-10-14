@@ -28,6 +28,7 @@ import org.datavyu.views.VariableListV;
 import org.datavyu.views.VideoController;
 import org.datavyu.views.WindowPlacement;
 import org.datavyu.views.discrete.SpreadSheetPanel;
+import org.datavyu.util.Dialogs;
 
 import javax.swing.*;
 import java.awt.*;
@@ -247,7 +248,7 @@ public final class Datavyu implements TitleNotifier {
         Resources resourceMap = Resources.of(Datavyu.class);
         String saveOption = "Save";
         String discardOption = "Don't save";
-        String[] options = MacOS.getOptions(saveOption, discardOption, "Cancel");
+        String[] options = MacOS.getOptions(saveOption, discardOption, Dialogs.CANCEL);
         return UnsavedWork.mayClose(spreadsheets, spreadsheet -> spreadsheet.getProjectController().isChanged(),
             spreadsheet -> {
                 getView().getTabbedPane().setSelectedComponent(spreadsheet);
@@ -272,23 +273,10 @@ public final class Datavyu implements TitleNotifier {
      * @return True for overwrite, false otherwise.
      */
     public boolean overwriteExisting() {
-        JFrame mainFrame = Datavyu.getApplication().getMainFrame();
         Resources resourceMap = Resources.of(Datavyu.class);
-        String defaultOption = "Cancel";
-        String alternativeOption = "Overwrite";
-        String[] options = MacOS.getOptions(defaultOption, alternativeOption);
-
-        int selectedOption = JOptionPane.showOptionDialog(
-                mainFrame,
+        return Dialogs.confirm(Datavyu.getApplication().getMainFrame(),
                 resourceMap.getString("OverwriteDialog.message"),
-                resourceMap.getString("OverwriteDialog.title"),
-                JOptionPane.OK_CANCEL_OPTION,
-                JOptionPane.QUESTION_MESSAGE,
-                null,
-                options,
-                defaultOption);
-
-        return selectedOption == 1;
+                resourceMap.getString("OverwriteDialog.title"), "Overwrite");
     }
 
     /**

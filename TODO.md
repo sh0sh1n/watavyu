@@ -16,7 +16,7 @@ Updated 2026-10-14. Re-measure with the commands in [BUILDING.md › Analysis Re
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
 | Java source (main) | 242 files, 42.5k lines | 185 files, 31.4k lines |
-| Tests / line coverage | 113 / 9.9% | 296 / 17.3%; still 0% in most views, the timeline and undo |
+| Tests / line coverage | 113 / 9.9% | 298 / 17.3%; still 0% in most views, the timeline and undo |
 | Runtime dependencies / with known vulnerabilities | 28 / 8 | 12 / 0 |
 | Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 837 |
 | PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 463 / 93; 15 |
@@ -75,5 +75,3 @@ Updated 2026-10-14. Re-measure with the commands in [BUILDING.md › Analysis Re
 **R8. Mechanical language modernization.** Low priority. Diamonds, switch expressions, pattern-matching `instanceof`, `java.time`, missing `@Override`. Error Prone can apply most of it (`-XepPatchChecks:MissingOverride,... -XepPatchLocation:IN_PLACE`), in one pass or per file as files change.
 
 **R9. Autosave and crash recovery.** ready. `AutoSaveController` saves a `~<name>_*.watavyu.json` project file to the temporary folder every minute; at launch, `DatavyuView.checkForAutosavedFile` offers to recover any left in the temporary folder (Datavyu's `~*.opf`/`~*.csv` too) and opens one as an unsaved project; that flow is checked only by reading, as its dialogs need clicks. The temporary folder is shared with other apps and cleared by macOS. Settle this together with U3.
-
-**R10. Hand-ordered dialog buttons.** ready. `Datavyu.overwriteExisting`, `VideoController` and `ExportDatabaseFileController` order dialog buttons with `MacOS.getOptions` and then compare the chosen index by hand. Read the answer by the chosen button's label, as `UnsavedWork.choice` does for the unsaved-changes dialog, or use `JOptionPane`'s standard options.

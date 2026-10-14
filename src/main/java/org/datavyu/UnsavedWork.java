@@ -1,5 +1,6 @@
 package org.datavyu;
 
+import org.datavyu.util.Dialogs;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -23,13 +24,11 @@ final class UnsavedWork {
      * @return the answer; a closed dialog, like any button but Save and Don't Save, cancels
      */
     static Choice choice(final int selected, final String[] options, final String save, final String discard) {
-        if (selected < 0 || selected >= options.length) {
-            return Choice.CANCEL;
-        }
-        if (options[selected].equals(save)) {
+        String chosen = Dialogs.chosen(selected, options);
+        if (save.equals(chosen)) {
             return Choice.SAVE;
         }
-        return options[selected].equals(discard) ? Choice.DISCARD : Choice.CANCEL;
+        return discard.equals(chosen) ? Choice.DISCARD : Choice.CANCEL;
     }
 
     /**
