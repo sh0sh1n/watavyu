@@ -352,21 +352,24 @@ public final class DatavyuView implements FileDropEventListener {
     /**
      * Action for saving the current project. A project not yet saved as a project file, including one opened from an
      * older Datavyu file, is saved through {@link #saveAs()}.
+     *
+     * @return whether the project was saved
      */
-    public void save() {
+    public boolean save() {
         ProjectController projectController = Datavyu.getProjectController();
         if (projectController.isNewProject() || (projectController.getProjectName() == null)
                 || !(projectController.getLastSaveOption() instanceof ProjectFileFilter)) {
-            saveAs();
-            return;
+            return saveAs();
         }
-        saveProject(new File(projectController.getProjectDirectory(), projectController.getDatabaseFileName()));
+        return saveProject(new File(projectController.getProjectDirectory(), projectController.getDatabaseFileName()));
     }
 
     /**
      * Action for saving the current project as a particular project file.
+     *
+     * @return whether the project was saved
      */
-    public void saveAs() {
+    public boolean saveAs() {
         DatavyuFileChooser fileChooser = new DatavyuFileChooser();
 
         fileChooser.addChoosableFileFilter(ProjectFileFilter.INSTANCE);
@@ -376,6 +379,7 @@ public final class DatavyuView implements FileDropEventListener {
 
         int result = fileChooser.showSaveDialog(getComponent());
 
+        boolean saved = false;
         if (result == JFileChooser.APPROVE_OPTION) {
             String fileName = fileChooser.getSelectedFile().getName();
             if (!fileName.endsWith(ProjectDocument.EXTENSION)) {
@@ -384,7 +388,8 @@ public final class DatavyuView implements FileDropEventListener {
             String folder = fileChooser.getSelectedFile().getParent();
 
             // Only save if the project file does not exist or the user confirms overwriting it.
-            if (canSave(folder, fileName) && saveProject(new File(folder, fileName))) {
+            saved = canSave(folder, fileName) && saveProject(new File(folder, fileName));
+            if (saved) {
                 ProjectController projectController = Datavyu.getProjectController();
                 projectController.setProjectName(fileName);
                 projectController.setProjectDirectory(folder);
@@ -394,6 +399,7 @@ public final class DatavyuView implements FileDropEventListener {
             }
         }
         updateTitle();
+        return saved;
     }
 
     /**

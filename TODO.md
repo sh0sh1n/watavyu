@@ -16,7 +16,7 @@ Updated 2026-10-14. Re-measure with the commands in [BUILDING.md › Analysis Re
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
 | Java source (main) | 242 files, 42.5k lines | 184 files, 31.4k lines |
-| Tests / line coverage | 113 / 9.9% | 283 / 17.2%; still 0% in most views, the timeline and undo |
+| Tests / line coverage | 113 / 9.9% | 288 / 17.2%; still 0% in most views, the timeline and undo |
 | Runtime dependencies / with known vulnerabilities | 28 / 8 | 21 / 4 |
 | Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 837 |
 | PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 463 / 97; 15 |
@@ -28,8 +28,6 @@ Updated 2026-10-14. Re-measure with the commands in [BUILDING.md › Analysis Re
 **S3. Other vulnerable libraries.** *verified with OSV.dev*. SnakeYAML 1.18 (8 advisories; opening `.opf` files now uses its `SafeConstructor`, which refuses tags naming Java classes, but the parser's denial-of-service advisories remain), commons-io 2.5 (2), Guava 27.1 (2), commons-lang3 3.6 (1). Fixed by D1.
 
 ## Bugs
-
-**B1. Quitting can discard unsaved work.** ready, *from reading*. `Datavyu.safeQuit()` loops over the open tabs but `return`s after prompting for the first one with changes, so other changed tabs are never asked about. Closing the Save / Don't Save / Cancel dialog with Esc or its close button returns `CLOSED_OPTION`, which the code treats as "go ahead", so the app quits, or the tab closes, without saving.
 
 **B8. Crash recovery deletes what it recovers.** ready, *from reading*. When the recovery prompt at launch is accepted, `DatavyuView.openRecoveredFile` opens the autosave into an `OpenController` and discards it, `saveAs()` then saves whatever spreadsheet is open, and the autosave is deleted. Rework with R9 (or U3).
 
@@ -94,4 +92,4 @@ Updated 2026-10-14. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 **R9. Autosave and crash recovery.** ready. `AutoSaveController` saves a `~<name>_*.watavyu.json` project file to the temporary folder every minute; the recovery prompt in `DatavyuView` still says "Datavyu", also looks for Datavyu's `~*.opf`/`~*.csv` files, and loses what it recovers (B8). Settle this together with U3.
 
-**R10. Hand-ordered dialog buttons.** ready. `Datavyu`, `VideoController` and `ExportDatabaseFileController` order dialog buttons with `MacOS.getOptions` and then compare the chosen index by hand. `JOptionPane` with standard options does it, and removes the index confusion behind part of B1.
+**R10. Hand-ordered dialog buttons.** ready. `Datavyu.overwriteExisting`, `VideoController` and `ExportDatabaseFileController` order dialog buttons with `MacOS.getOptions` and then compare the chosen index by hand. Read the answer by the chosen button's label, as `UnsavedWork.choice` does for the unsaved-changes dialog, or use `JOptionPane`'s standard options.
