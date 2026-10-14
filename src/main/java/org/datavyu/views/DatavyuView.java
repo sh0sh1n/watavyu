@@ -263,16 +263,19 @@ public final class DatavyuView implements FileDropEventListener {
                                     (FilenameUtils.wildcardMatchOnSystem(f.getName(), "~*.opf")) ||
                                     (FilenameUtils.wildcardMatchOnSystem(f.getName(), "~*.csv")))) {
 
-                        // Show the Dialog
+                        // The autosave is deleted once it has opened, or if the user does not want it.
                         if (JOptionPane.showConfirmDialog(null,
-                                "Datavyu has detected an unsaved file. Would you like recover this file ?",
-                                "Datavyu",
+                                "Watavyu quit before \"" + recoveredName(f.getName())
+                                    + "\" was saved. Recover the unsaved project?",
+                                "Watavyu",
                                 JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
-                            openRecoveredFile(f);
-                            this.saveAs();
+                            if (recover(f)) {
+                                f.delete();
+                                saveAs();
+                            }
+                        } else {
+                            f.delete();
                         }
-                        // delete the recovered file
-                        f.delete();
                     }
                 }
             }
@@ -734,22 +737,34 @@ public final class DatavyuView implements FileDropEventListener {
     }
 
     /**
-     * Method for opening a recovered file from disk.
+     * Opens an autosaved project in a new tab as an unsaved project named after the original, so that saving it goes
+     * through Save As and quitting asks about it.
      *
-     * @param f The file to open.
+     * @param autosave the autosaved file
+     * @return whether it opened
      */
-    public void openRecoveredFile(final File f) {
-        // Clear the current spreadsheet before loading the new content - we need to clean up resources
-        FileFilter filter = filterFor(f);
-        if (filter == ProjectFileFilter.INSTANCE) {
-            openProjectFile(f);
-        } else if (filter == OpfFilter.INSTANCE) {
-            openProject(f);
-        } else {
-            openDatabase(f);
+    private boolean recover(final File autosave) {
+        open(autosave);
+        ProjectController projectController = Datavyu.getProjectController();
+        if (projectController == null || !autosave.getName().equals(projectController.getDatabaseFileName())) {
+            return false;
         }
-        // Default is to highlight cells when created - clear selection on load.
-        panel.clearCellSelection();
+        projectController.setLastSaveOption(null);
+        projectController.setProjectName(recoveredName(autosave.getName()));
+        projectController.projectChanged();
+        return true;
+    }
+
+    /**
+     * @param autosave the name of an autosaved file: {@code ~}, the project's name, {@code _} and a number, then the
+     *                 extension
+     * @return the project's name
+     */
+    static String recoveredName(final String autosave) {
+        String name = autosave.endsWith(ProjectDocument.EXTENSION)
+            ? autosave.substring(0, autosave.length() - ProjectDocument.EXTENSION.length())
+            : FilenameUtils.removeExtension(autosave);
+        return name.replaceFirst("^~", "").replaceFirst("_\\d+$", "");
     }
 
     private OpenController openDatabase(final File databaseFile) {

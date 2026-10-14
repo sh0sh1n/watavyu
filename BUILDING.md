@@ -124,7 +124,7 @@ A project is one `<name>.watavyu.json` file: UTF-8 JSON that people and other to
 - The schema checks every field; three rules across fields are the reader's alone: column names are unique, an annotation cell has one value per code, and a clip's offset is its onset plus its source's duration. `ProjectJsonTest` keeps the schema and the reader in agreement on every refused file.
 - Media paths are relative to the project file's folder when the file is inside it, and absolute otherwise. Media whose file is missing, or fails to open, keeps its column: it is saved back as it was read. Media added in the app gets a column named `media_1`, `media_2` and so on, skipping names already in use.
 - File > Open offers project files and Datavyu's `.opf` files; `.csv` data files open from the command line or by dragging. Save on a project opened from `.opf` or `.csv` goes through Save As, which writes a project file.
-- Autosave writes `~<name>_<number>.watavyu.json` to the temporary folder every minute; see R9 and B8 in [TODO.md](TODO.md) for crash recovery.
+- Autosave writes `~<name>_<number>.watavyu.json` to the temporary folder every minute and deletes it on a clean quit. At the next launch after a crash, Watavyu offers to recover it: it opens in a new tab as an unsaved project named after the original, Save As follows, and the autosave is deleted once it has opened (or if recovery is declined). See R9 in [TODO.md](TODO.md).
 
 ## Application Structure
 
@@ -223,7 +223,7 @@ Not needed for seeking with this backend. Native exact seeks already complete in
 - `make build` succeeds on Temurin 25.0.4 / macOS 27 arm64 with Error Prone enabled. Remaining compiler warnings are Error Prone warnings.
 - `make run` reaches the application window. Opening a project file that lists the integration fixture loads its track (1280x720, 300 frames, 30 fps) at its onset, volume and lock, and the autosave written a minute later held that video, a second video whose file was missing (unchanged) and the annotation column. A `.mov` shows the conversion message and adds no track.
 - `./gradlew integrationTest`: 15 tests pass. As controls, the same tests fail against stock OpenJFX (6 seek/step tests), against a library without the audio-tap change (start latency), and against a library without the seek-frame fix (stale frame after pause).
-- `./gradlew test` runs 288 tests and all pass, with none skipped. Before the move from Mockito 2.10 to 5.24.0, the `setUp` methods of `CellTest`, `DataStoreTest` and `VariableTest` failed on JDK 25 ("Cannot define class using reflection") and TestNG skipped those classes' 27 tests. `OpenControllerTest` and `SaveControllerTest` pass since their Maven-era paths (a trailing slash on `testPath`, output under `target/`) were fixed. The suite is now a green verification gate.
+- `./gradlew test` runs 289 tests and all pass, with none skipped. Before the move from Mockito 2.10 to 5.24.0, the `setUp` methods of `CellTest`, `DataStoreTest` and `VariableTest` failed on JDK 25 ("Cannot define class using reflection") and TestNG skipped those classes' 27 tests. `OpenControllerTest` and `SaveControllerTest` pass since their Maven-era paths (a trailing slash on `testPath`, output under `target/`) were fixed. The suite is now a green verification gate.
 - Not verified automatically: audible audio and the volume slider (the volume path changed with the audio-tap removal), and interactive playback driven by the Datavyu clock and keyboard shortcuts. Check these by hand after `make run`.
 
 ## Not Included

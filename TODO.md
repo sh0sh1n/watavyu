@@ -16,7 +16,7 @@ Updated 2026-10-14. Re-measure with the commands in [BUILDING.md › Analysis Re
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
 | Java source (main) | 242 files, 42.5k lines | 184 files, 31.4k lines |
-| Tests / line coverage | 113 / 9.9% | 288 / 17.2%; still 0% in most views, the timeline and undo |
+| Tests / line coverage | 113 / 9.9% | 289 / 17.2%; still 0% in most views, the timeline and undo |
 | Runtime dependencies / with known vulnerabilities | 28 / 8 | 21 / 4 |
 | Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 837 |
 | PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 463 / 97; 15 |
@@ -28,8 +28,6 @@ Updated 2026-10-14. Re-measure with the commands in [BUILDING.md › Analysis Re
 **S3. Other vulnerable libraries.** *verified with OSV.dev*. SnakeYAML 1.18 (8 advisories; opening `.opf` files now uses its `SafeConstructor`, which refuses tags naming Java classes, but the parser's denial-of-service advisories remain), commons-io 2.5 (2), Guava 27.1 (2), commons-lang3 3.6 (1). Fixed by D1.
 
 ## Bugs
-
-**B8. Crash recovery deletes what it recovers.** ready, *from reading*. When the recovery prompt at launch is accepted, `DatavyuView.openRecoveredFile` opens the autosave into an `OpenController` and discards it, `saveAs()` then saves whatever spreadsheet is open, and the autosave is deleted. Rework with R9 (or U3).
 
 **B2. The app changes a global macOS setting.** ready, *from reading*. At startup `Datavyu` runs `defaults write -g ApplePressAndHoldEnabled -bool false` for every application on the Mac, and restores it only on a clean shutdown; a crash or force-quit leaves it changed. (It used to run when the class loaded, so every test run turned the setting off and never restored it.) The intent is key repeat instead of the accent popup while holding keys. Scope it to the app (a per-app defaults domain once there is an app bundle, or in-app key repeat), then delete the global write.
 
@@ -90,6 +88,6 @@ Updated 2026-10-14. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 **R8. Mechanical language modernization.** Low priority. Diamonds, switch expressions, pattern-matching `instanceof`, `java.time`, missing `@Override`. Error Prone can apply most of it (`-XepPatchChecks:MissingOverride,... -XepPatchLocation:IN_PLACE`), in one pass or per file as files change.
 
-**R9. Autosave and crash recovery.** ready. `AutoSaveController` saves a `~<name>_*.watavyu.json` project file to the temporary folder every minute; the recovery prompt in `DatavyuView` still says "Datavyu", also looks for Datavyu's `~*.opf`/`~*.csv` files, and loses what it recovers (B8). Settle this together with U3.
+**R9. Autosave and crash recovery.** ready. `AutoSaveController` saves a `~<name>_*.watavyu.json` project file to the temporary folder every minute; at launch, `DatavyuView.checkForAutosavedFile` offers to recover any left in the temporary folder (Datavyu's `~*.opf`/`~*.csv` too) and opens one as an unsaved project; that flow is checked only by reading, as its dialogs need clicks. The temporary folder is shared with other apps and cleared by macOS. Settle this together with U3.
 
 **R10. Hand-ordered dialog buttons.** ready. `Datavyu.overwriteExisting`, `VideoController` and `ExportDatabaseFileController` order dialog buttons with `MacOS.getOptions` and then compare the chosen index by hand. Read the answer by the chosen button's label, as `UnsavedWork.choice` does for the unsaved-changes dialog, or use `JOptionPane`'s standard options.
