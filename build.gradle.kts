@@ -1,6 +1,10 @@
 plugins {
     application
+    jacoco
+    pmd
     id("net.ltgt.errorprone") version "5.1.1"
+    id("com.github.spotbugs") version "6.5.13"
+    id("com.github.ben-manes.versions") version "0.66.0"
 }
 
 group = "org.datavyu"
@@ -145,6 +149,56 @@ tasks.register<Test>("integrationTest") {
     useTestNG()
     systemProperty("fixtureDir", layout.buildDirectory.dir("playback-fixtures").get().asFile.absolutePath)
     shouldRunAfter(tasks.test)
+}
+
+// Analysis reports that measure the backlog in docs/modernization.md. They do not gate the build:
+// Error Prone ERRORs and the tests are the gates. ./gradlew analyze writes all of them under build/reports.
+// ./gradlew compileJava -PallWarnings lists every javac lint and Error Prone warning (javac stops at 100).
+if (providers.gradleProperty("allWarnings").isPresent) {
+    tasks.withType<JavaCompile>().configureEach {
+        options.compilerArgs.addAll(listOf("-Xmaxwarns", "100000", "-Xlint:all,-serial,-processing"))
+    }
+}
+
+pmd {
+    toolVersion = "7.17.0"
+    sourceSets = listOf(project.sourceSets.main.get())
+    ruleSets = emptyList()
+    ruleSetFiles = files("config/pmd/ruleset.xml")
+    isIgnoreFailures = true
+    isConsoleOutput = false
+}
+
+spotbugs {
+    ignoreFailures.set(true)
+    excludeFilter.set(file("config/spotbugs/exclude.xml"))
+    showProgress.set(false)
+}
+tasks.withType<com.github.spotbugs.snom.SpotBugsTask>().configureEach {
+    enabled = name == "spotbugsMain"
+    reports.create("html") { required.set(true) }
+    reports.create("xml") { required.set(true) }
+}
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+}
+
+tasks.register("analyze") {
+    description = "Writes coverage, PMD and SpotBugs reports under build/reports."
+    group = "verification"
+    dependsOn(tasks.jacocoTestReport, tasks.named("pmdMain"), tasks.named("spotbugsMain"))
+}
+
+// Only stable releases count as available updates in ./gradlew dependencyUpdates.
+tasks.named<com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask>("dependencyUpdates") {
+    rejectVersionIf {
+        Regex("(?i).*[.-](alpha|beta|rc|cr|m|ea|preview)[.\\d+-]*$").matches(candidate.version)
+    }
 }
 
 // Usage: ./gradlew playbackBenchmark -Pmedia=/path/to/video.mp4 [-Pseeks=200]

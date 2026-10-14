@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ruleset name="Watavyu cleanup"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+    <description>
+        Rules that measure the modernization backlog in docs/modernization.md: dead code, oversized
+        classes and methods, swallowed errors and legacy APIs. Formatting and naming rules are left out
+        on purpose. The report does not fail the build yet; see BUILDING.md (Lint).
+    </description>
+
+    <!-- Dead code -->
+    <rule ref="category/java/bestpractices.xml/UnusedPrivateField"/>
+    <rule ref="category/java/bestpractices.xml/UnusedPrivateMethod"/>
+    <rule ref="category/java/bestpractices.xml/UnusedLocalVariable"/>
+    <rule ref="category/java/bestpractices.xml/UnusedFormalParameter"/>
+    <rule ref="category/java/bestpractices.xml/UnusedAssignment"/>
+    <rule ref="category/java/codestyle.xml/UnnecessaryImport"/>
+
+    <!-- Size and complexity -->
+    <rule ref="category/java/design.xml/GodClass"/>
+    <rule ref="category/java/design.xml/CyclomaticComplexity"/>
+    <rule ref="category/java/design.xml/CognitiveComplexity"/>
+    <rule ref="category/java/design.xml/NcssCount"/>
+    <rule ref="category/java/design.xml/CouplingBetweenObjects"/>
+    <rule ref="category/java/design.xml/ExcessiveImports"/>
+    <rule ref="category/java/design.xml/TooManyMethods"/>
+    <rule ref="category/java/design.xml/TooManyFields"/>
+    <rule ref="category/java/design.xml/ExcessiveParameterList"/>
+    <rule ref="category/java/design.xml/CollapsibleIfStatements"/>
+    <rule ref="category/java/design.xml/SimplifyBooleanReturns"/>
+
+    <!-- Error handling -->
+    <rule ref="category/java/errorprone.xml/EmptyCatchBlock"/>
+    <rule ref="category/java/design.xml/AvoidCatchingGenericException"/>
+    <rule ref="category/java/errorprone.xml/AvoidCatchingThrowable"/>
+    <rule ref="category/java/bestpractices.xml/PreserveStackTrace"/>
+    <rule ref="category/java/bestpractices.xml/AvoidPrintStackTrace"/>
+    <rule ref="category/java/bestpractices.xml/SystemPrintln"/>
+
+    <!-- Correctness -->
+    <rule ref="category/java/errorprone.xml/CompareObjectsWithEquals"/>
+    <rule ref="category/java/errorprone.xml/UseEqualsToCompareStrings"/>
+    <rule ref="category/java/errorprone.xml/CloseResource"/>
+    <rule ref="category/java/errorprone.xml/AssignmentInOperand"/>
+    <rule ref="category/java/errorprone.xml/ImplicitSwitchFallThrough"/>
+    <rule ref="category/java/multithreading.xml/NonThreadSafeSingleton"/>
+    <rule ref="category/java/multithreading.xml/AvoidSynchronizedAtMethodLevel"/>
+
+    <!-- Legacy APIs and idioms -->
+    <rule ref="category/java/bestpractices.xml/ReplaceHashtableWithMap"/>
+    <rule ref="category/java/bestpractices.xml/ReplaceVectorWithList"/>
+    <rule ref="category/java/bestpractices.xml/ReplaceEnumerationWithIterator"/>
+    <rule ref="category/java/bestpractices.xml/LooseCoupling"/>
+    <rule ref="category/java/bestpractices.xml/ForLoopCanBeForeach"/>
+    <rule ref="category/java/codestyle.xml/UseDiamondOperator"/>
+    <rule ref="category/java/bestpractices.xml/UseTryWithResources"/>
+    <rule ref="category/java/errorprone.xml/AvoidFieldNameMatchingMethodName"/>
+</ruleset>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Patterns excluded from the SpotBugs report. Defensive copies against hostile callers (EI_EXPOSE_REP*,
+     MS_EXPOSE_REP) do not apply to a single-user desktop application and made up 60% of the report. -->
+<FindBugsFilter xmlns="https://github.com/spotbugs/filter/3.0.0">
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2,EI_EXPOSE_STATIC_REP2,MS_EXPOSE_REP"/>
+    </Match>
+</FindBugsFilter>
