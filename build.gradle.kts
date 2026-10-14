@@ -33,6 +33,12 @@ configurations["integrationTestRuntimeOnly"].extendsFrom(configurations.runtimeO
 
 // The published javafx-media jar with libjfxmedia_avf.dylib replaced by the
 // patched build. Everything else in the jar, including module-info, is upstream.
+// Mockito mocks through an inline Java agent. JDK 21+ warns about agents attached at
+// runtime (and future JDKs will refuse them), so test JVMs load it with -javaagent.
+val mockitoAgent: Configuration = configurations.create("mockitoAgent") {
+    isTransitive = false
+}
+
 val stockJavafxMedia: Configuration = configurations.create("stockJavafxMedia") {
     isTransitive = false
 }
@@ -74,7 +80,8 @@ dependencies {
     errorprone("com.google.errorprone:error_prone_core:2.50.0")
 
     testImplementation("org.testng:testng:6.11")
-    testImplementation("org.mockito:mockito-core:2.10.0")
+    testImplementation("org.mockito:mockito-core:5.24.0")
+    mockitoAgent("org.mockito:mockito-core:5.24.0")
     testImplementation("org.easytesting:fest-swing:1.2a4")
 }
 
@@ -116,6 +123,10 @@ tasks.processResources {
     }
     // CITATION.cff at the repository root is what GitHub's "Cite this repository" reads; the app reads the same file.
     from("CITATION.cff")
+}
+
+tasks.withType<Test>().configureEach {
+    jvmArgumentProviders.add(CommandLineArgumentProvider { listOf("-javaagent:${mockitoAgent.singleFile}") })
 }
 
 tasks.test {
