@@ -4,7 +4,7 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
     <description>
-        Rules that measure the modernization backlog in docs/modernization.md: dead code, oversized
+        Rules that measure the work in TODO.md: dead code, oversized
         classes and methods, swallowed errors and legacy APIs. Formatting and naming rules are left out
         on purpose. The report does not fail the build yet; see BUILDING.md (Lint).
     </description>

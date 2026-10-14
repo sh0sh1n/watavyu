@@ -74,7 +74,7 @@ The Gradle project version is currently `0.1.0-SNAPSHOT`. The window title (`App
 
 ### Analysis Reports
 
-These measure the cleanup backlog in [docs/modernization.md](docs/modernization.md). They are reports, not gates: they never fail the build, and Error Prone ERRORs and the tests remain the only checks that do. A rule moves into a gate once its count reaches zero (see the ratchet plan in that document).
+These fill the Measures table in [TODO.md](TODO.md). They are reports, not gates: they never fail the build, and Error Prone ERRORs and the tests remain the only checks that do. A rule moves into a gate once its count reaches zero ([AGENTS.md](AGENTS.md#how-to-work-here)).
 
 - `./gradlew analyze` runs the tests with JaCoCo and writes `build/reports/jacoco/test/html`, PMD (`build/reports/pmd/main.html`) and SpotBugs (`build/reports/spotbugs/main.html`) for the main source set. `./gradlew check` and `build` also run PMD and SpotBugs.
   - PMD uses `config/pmd/ruleset.xml`: dead code, size and complexity, error handling, correctness and legacy-API rules, with no formatting or naming rules.

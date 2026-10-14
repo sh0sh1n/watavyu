@@ -1,6 +1,6 @@
 # Watavyu
 
-Fork of Datavyu aimed at modernization and simplification. [BUILDING.md](BUILDING.md) covers building, testing and playback; [docs/modernization.md](docs/modernization.md) is the cleanup backlog to finish before new features.
+Fork of Datavyu aimed at modernization and simplification. [BUILDING.md](BUILDING.md) covers building, testing and playback; [TODO.md](TODO.md) tracks known bugs and planned work; [AGENTS.md](AGENTS.md) records the direction and the decisions behind it.
 
 ## Citing
 

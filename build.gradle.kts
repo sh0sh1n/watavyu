@@ -146,7 +146,7 @@ tasks.register<Test>("integrationTest") {
     shouldRunAfter(tasks.test)
 }
 
-// Analysis reports that measure the backlog in docs/modernization.md. They do not gate the build:
+// Analysis reports that measure the work in TODO.md. They do not gate the build:
 // Error Prone ERRORs and the tests are the gates. ./gradlew analyze writes all of them under build/reports.
 // ./gradlew compileJava -PallWarnings lists every javac lint and Error Prone warning (javac stops at 100).
 if (providers.gradleProperty("allWarnings").isPresent) {
