@@ -1,0 +1,24 @@
+# Every dependency and plugin version of the build. ./gradlew dependencyUpdates lists newer stable releases.
+
+[versions]
+javafx = "27"
+log4j = "2.26.1"
+mockito = "5.24.0"
+pmd = "7.17.0"
+
+[libraries]
+commons-io = "commons-io:commons-io:2.22.0"
+errorprone-core = "com.google.errorprone:error_prone_core:2.50.0"
+jackson-databind = "com.fasterxml.jackson.core:jackson-databind:2.22.3"
+json-schema-validator = "com.networknt:json-schema-validator:3.0.7"
+log4j-api = { module = "org.apache.logging.log4j:log4j-api", version.ref = "log4j" }
+log4j-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4j" }
+miglayout = "com.miglayout:miglayout:3.7.4"
+mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }
+snakeyaml = "org.yaml:snakeyaml:2.7"
+testng = "org.testng:testng:7.12.0"
+
+[plugins]
+errorprone = "net.ltgt.errorprone:5.1.1"
+spotbugs = "com.github.spotbugs:6.5.13"
+versions = "io.github.ben-manes.versions:0.66.0"

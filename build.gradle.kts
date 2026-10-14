@@ -2,9 +2,9 @@ plugins {
     application
     jacoco
     pmd
-    id("net.ltgt.errorprone") version "5.1.1"
-    id("com.github.spotbugs") version "6.5.13"
-    id("com.github.ben-manes.versions") version "0.66.0"
+    alias(libs.plugins.errorprone)
+    alias(libs.plugins.spotbugs)
+    alias(libs.plugins.versions)
 }
 
 group = "org.datavyu"
@@ -12,7 +12,7 @@ version = "0.1.0-SNAPSHOT"
 
 // OpenJFX Media is the video backend. This fork targets Apple Silicon macOS only:
 // the patched native library in third_party/openjfx-media-avf is arm64.
-val javafxVersion = "27"
+val javafxVersion = libs.versions.javafx.get()
 val javafxPlatform = "mac-aarch64"
 val javafxModules = listOf("base", "graphics", "media", "swing")
 check(System.getProperty("os.name").startsWith("Mac") && System.getProperty("os.arch") == "aarch64") {
@@ -58,12 +58,12 @@ val patchedJavafxMedia = tasks.register<Jar>("patchedJavafxMedia") {
 }
 
 dependencies {
-    implementation("org.yaml:snakeyaml:2.7")
-    implementation("com.miglayout:miglayout:3.7.4:swing")
-    implementation("commons-io:commons-io:2.22.0")
-    implementation("org.apache.logging.log4j:log4j-api:2.26.1")
-    implementation("org.apache.logging.log4j:log4j-core:2.26.1")
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.22.3")
+    implementation(libs.snakeyaml)
+    implementation(variantOf(libs.miglayout) { classifier("swing") })
+    implementation(libs.commons.io)
+    implementation(libs.log4j.api)
+    implementation(libs.log4j.core)
+    implementation(libs.jackson.databind)
 
     for (module in javafxModules - "media") {
         implementation("org.openjfx:javafx-$module:$javafxVersion:$javafxPlatform")
@@ -71,16 +71,16 @@ dependencies {
     stockJavafxMedia("org.openjfx:javafx-media:$javafxVersion:$javafxPlatform")
     implementation(files(patchedJavafxMedia))
 
-    errorprone("com.google.errorprone:error_prone_core:2.50.0")
+    errorprone(libs.errorprone.core)
 
-    testImplementation("org.testng:testng:7.12.0")
-    testImplementation("org.mockito:mockito-core:5.24.0")
+    testImplementation(libs.testng)
+    testImplementation(libs.mockito.core)
     // Validates project files against the published JSON Schema. It uses Jackson 3 (tools.jackson), which does not
     // clash with the app's Jackson 2; its YAML support is excluded because the schema is JSON.
-    testImplementation("com.networknt:json-schema-validator:3.0.7") {
+    testImplementation(libs.json.schema.validator) {
         exclude(group = "tools.jackson.dataformat", module = "jackson-dataformat-yaml")
     }
-    mockitoAgent("org.mockito:mockito-core:5.24.0")
+    mockitoAgent(libs.mockito.core)
 }
 
 java {
@@ -159,7 +159,7 @@ if (providers.gradleProperty("allWarnings").isPresent) {
 }
 
 pmd {
-    toolVersion = "7.17.0"
+    toolVersion = libs.versions.pmd.get()
     sourceSets = listOf(project.sourceSets.main.get())
     ruleSets = emptyList()
     ruleSetFiles = files("config/pmd/ruleset.xml")

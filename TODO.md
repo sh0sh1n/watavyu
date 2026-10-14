@@ -64,8 +64,6 @@ Updated 2026-10-14. Re-measure with the commands in [BUILDING.md › Analysis Re
 | SnakeYAML | 2.7 (latest) | opening `.opf` files, citation | drop with `.opf` opening (a migration question, see AGENTS.md › Undecided); the citation can parse its few keys without it |
 | MigLayout | 3.7.4 → `miglayout-swing` 11.x | 6 files | after-ui |
 
-**D2. Version catalog and dependency verification.** ready. Move versions into `gradle/libs.versions.toml` and enable Gradle dependency verification (checksums).
-
 ## Refactors
 
 **R2. Split the god classes.** PMD flags 15. Split along responsibilities (menu model, document and file service, spreadsheet view, transport) rather than by line count. The project file itself is in `org.datavyu.projectfile`; saving and opening in `DatavyuView` and `ProjectController` are the next document-service piece to pull out.
