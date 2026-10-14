@@ -19,15 +19,13 @@ Updated 2026-10-14. Re-measure with the commands in [BUILDING.md › Analysis Re
 | Tests / line coverage | 113 / 9.9% | 298 / 17.3%; still 0% in most views, the timeline and undo |
 | Runtime dependencies / with known vulnerabilities | 28 / 8 | 12 / 0 |
 | Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 837 |
-| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 463 / 93; 15 |
+| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 463 / 82; 15 |
 | Never-invoked methods (`dead-code.py`) | 109+ | 4, all test-only accessors |
 | Static global access (`Datavyu.getView()` and friends) | about 330 call sites | 272 |
 
 ## Bugs
 
 **B2. The app changes a global macOS setting.** ready, *from reading*. At startup `Datavyu` runs `defaults write -g ApplePressAndHoldEnabled -bool false` for every application on the Mac, and restores it only on a clean shutdown; a crash or force-quit leaves it changed. (It used to run when the class loaded, so every test run turned the setting off and never restored it.) The intent is key repeat instead of the accent popup while holding keys. Scope it to the app (a per-app defaults domain once there is an app bundle, or in-app key repeat), then delete the global write.
-
-**B4. Thread safety.** ready, *SpotBugs*. 25 thread-safety findings, including inconsistently synchronized fields in `ClockTimer` and `NeedleModelImpl`. Do with R7.
 
 **B9. Typing in a cell of a column with no codes shows text that is not kept.** ready, *verified by the owner*. In a column whose codes have all been deleted, typed text appears outside the parentheses but is not in the cell's value, so it is not saved. With no codes the cell has no value editor (`DataValueEditorFactory`), so `MatrixRootView`'s text area takes the keys itself (`EditorTracker`). It should refuse typing, or the column should not lose its last code.
 
@@ -70,7 +68,7 @@ Updated 2026-10-14. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 **R4. Per-editor key handling.** `EditorTracker` and the value editors handle keys per editor, with 21 uses of the deprecated modifier API (`getModifiers`, `*_MASK`, `getMenuShortcutKeyMask`). Move what can go into `Shortcuts`.
 
-**R7. Threading.** Make the boundary between the clock thread, the JavaFX thread and the EDT explicit, as `JavaFxPlayback` already does for the player. Start with B4.
+**R7. Threading.** Make the boundary between the clock thread, the JavaFX thread and the EDT explicit, as `JavaFxPlayback` already does for the player. `ClockTimer` notifies its listeners on its own pool threads, most of them while holding its lock, so a listener that waits on another thread can deadlock it. SpotBugs reports 14 thread-safety findings, all in `MixerController`, `TimescaleController` and `TrackController` fields that by reading are only touched on the EDT (listeners and `runInEDT`); making that confinement explicit should clear them.
 
 **R8. Mechanical language modernization.** Low priority. Diamonds, switch expressions, pattern-matching `instanceof`, `java.time`, missing `@Override`. Error Prone can apply most of it (`-XepPatchChecks:MissingOverride,... -XepPatchLocation:IN_PLACE`), in one pass or per file as files change.
 

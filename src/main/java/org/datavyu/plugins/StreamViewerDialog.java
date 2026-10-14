@@ -71,19 +71,19 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     private final List<ViewerStateListener> viewerListeners = new LinkedList<>();
 
     /** Volume for start back in dB? */
-    protected float volume = 1f;
+    protected volatile float volume = 1f;
 
     /** Controls visibility */
-    protected boolean isVisible = true;
+    protected volatile boolean isVisible = true;
 
     /** Did we assume the frames per second? */
     protected boolean isAssumedFramesPerSecond = false;
 
     /** The playback speed */
-    protected float playBackRate = 0;
+    protected volatile float playBackRate = 0;
 
     /** Frames per second */
-    private float framesPerSecond = -1;
+    private volatile float framesPerSecond = -1;
 
     /** The current video file */
     protected File sourceFile;
@@ -126,7 +126,7 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
 
     /** The offset of this stream viewer wrt to the others */
     // Offset gets updated when the user pushes the bar through 'handleCarriageOffsetChangeEvent' in the VideoController
-    private long offset;
+    private volatile long offset;
 
     /**
      * Constructs a base data video viewer.

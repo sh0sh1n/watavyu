@@ -53,7 +53,7 @@ public final class NeedleModelImpl extends MixerComponentModelImpl implements Ne
     }
 
     @Override
-    public NeedleState getNeedle() {
+    public synchronized NeedleState getNeedle() {
         return new NeedleStateImpl(currentTime);
     }
 
@@ -153,16 +153,16 @@ public final class NeedleModelImpl extends MixerComponentModelImpl implements Ne
 
         NeedleModelImpl other = (NeedleModelImpl) obj;
 
-        if (currentTime != other.currentTime)
+        if (currentTime != other.getCurrentTime())
             return false;
 
         if (!needleColor.equals(other.needleColor))
             return false;
 
-        if (timescaleTransitionHeight != other.timescaleTransitionHeight)
+        if (timescaleTransitionHeight != other.getTimescaleTransitionHeight())
             return false;
 
-        if (zoomIndicatorHeight != other.zoomIndicatorHeight)
+        if (zoomIndicatorHeight != other.getZoomIndicatorHeight())
             return false;
 
         return true;

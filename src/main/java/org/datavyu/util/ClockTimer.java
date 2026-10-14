@@ -20,8 +20,8 @@ import java.util.concurrent.TimeUnit;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 
 /**
@@ -57,7 +57,7 @@ public final class ClockTimer {
     private double lastTime;
 
     /** Is the clock stopped */
-    private boolean isStopped;
+    private volatile boolean isStopped;
 
     /** The rate factor for the clock updates */
     private float rate = 1F;
@@ -66,7 +66,7 @@ public final class ClockTimer {
         =   Executors.newScheduledThreadPool(4);
 
     /** Listeners of this clock */
-    private Set<ClockListener> clockListeners = new HashSet<>();
+    private final Set<ClockListener> clockListeners = new CopyOnWriteArraySet<>();
 
     /**
      * Default constructor.
@@ -322,8 +322,13 @@ public final class ClockTimer {
     // Notify seek playback could be used if a different interval is need for the
     // For the fake playback scheduler
     private void notifySeekPlayback() {
+        // Runs on its own pool thread without the clock's lock, so it reads the time under the lock first.
+        double time;
+        synchronized (this) {
+            time = clockTime;
+        }
         for (ClockListener clockListener : clockListeners) {
-            clockListener.clockSeekPlayback(clockTime);
+            clockListener.clockSeekPlayback(time);
         }
     }
 
