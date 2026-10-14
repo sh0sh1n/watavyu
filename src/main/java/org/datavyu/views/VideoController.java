@@ -42,9 +42,6 @@ import java.awt.event.*;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.File;
-import java.text.DateFormat;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.function.Consumer;
 
@@ -87,31 +84,13 @@ public final class VideoController extends DatavyuDialog
     private static final Font TEXT_LABEL_FONT = new Font("Arial", Font.PLAIN, 10);
 
     /** Format for time */
-    private static final DateFormat CLOCK_FORMAT;
-
-    private static final DateFormat CLOCK_FORMAT_HTML;
-
     private static int timeStampFontSize = 15;
 
-    // initialize standard date format for clockTimer display.
-    static {
-        CLOCK_FORMAT = new SimpleDateFormat("HH:mm:ss:SSS");
-        CLOCK_FORMAT.setTimeZone(new SimpleTimeZone(0, "NO_ZONE"));
-
-        Color hoursColor = TimescaleConstants.HOURS_COLOR;
-        Color minutesColor = TimescaleConstants.MINUTES_COLOR;
-        Color secondsColor = TimescaleConstants.SECONDS_COLOR;
-        Color millisecondsColor = TimescaleConstants.MILLISECONDS_COLOR;
-
-        CLOCK_FORMAT_HTML = new SimpleDateFormat("'<html>" + "<font color=\""
-                + toRGBString(hoursColor) + "\">'HH'</font>':"
-                + "'<font color=\"" + toRGBString(minutesColor)
-                + "\">'mm'</font>':" + "'<font color=\""
-                + toRGBString(secondsColor) + "\">'ss'</font>':"
-                + "'<font color=\"" + toRGBString(millisecondsColor)
-                + "\">'SSS'</font>" + "</html>'");
-        CLOCK_FORMAT_HTML.setTimeZone(new SimpleTimeZone(0, "NO_ZONE"));
-    }
+    /** Colours of the hours, minutes, seconds and milliseconds in the current time label. */
+    private static final Color[] CLOCK_COLORS = {
+        TimescaleConstants.HOURS_COLOR, TimescaleConstants.MINUTES_COLOR,
+        TimescaleConstants.SECONDS_COLOR, TimescaleConstants.MILLISECONDS_COLOR
+    };
 
     private static RateController shuttleRates = new RateController();
 
@@ -268,7 +247,24 @@ public final class VideoController extends DatavyuDialog
      * @return
      */
     public static String formatTime(final long time) {
-        return CLOCK_FORMAT.format(new Date(time));
+        return Timestamp.format(time);
+    }
+
+    /**
+     * @param time a time in milliseconds
+     * @return the time as {@code HH:MM:SS:mmm} in HTML, each field in its timescale colour
+     */
+    static String formatTimeHtml(final long time) {
+        String[] fields = Timestamp.format(time).split(":");
+        StringBuilder html = new StringBuilder("<html>");
+        for (int i = 0; i < fields.length; i++) {
+            if (i > 0) {
+                html.append(':');
+            }
+            html.append("<font color=\"").append(toRGBString(CLOCK_COLORS[i])).append("\">")
+                .append(fields[i]).append("</font>");
+        }
+        return html.append("</html>").toString();
     }
 
     /**
@@ -441,8 +437,7 @@ public final class VideoController extends DatavyuDialog
     private void updateCurrentTimeLabelAndNeedle(long currentTime) {
         long currentTimeInRange = clockTimer.toRange(currentTime);
 
-        timeStampLabel.setText(tracksPanelVisible ? CLOCK_FORMAT_HTML.format(currentTimeInRange)
-                                                  : CLOCK_FORMAT_HTML.format(currentTimeInRange));
+        timeStampLabel.setText(formatTimeHtml(currentTimeInRange));
         mixerController.getMixerModel().getNeedleModel().setCurrentTime(currentTimeInRange);
     }
 
@@ -1262,7 +1257,7 @@ public final class VideoController extends DatavyuDialog
      * @param milliseconds The time to use when populating the find field.
      */
     public void setOnsetField(final long milliseconds) {
-        onsetTextField.setText(CLOCK_FORMAT.format(milliseconds));
+        onsetTextField.setText(Timestamp.format(milliseconds));
     }
 
     /**
@@ -1271,7 +1266,7 @@ public final class VideoController extends DatavyuDialog
      * @param milliseconds The time to use when populating the find field.
      */
     public void setOffsetField(final long milliseconds) {
-        offsetTextField.setText(CLOCK_FORMAT.format(milliseconds));
+        offsetTextField.setText(Timestamp.format(milliseconds));
     }
 
     /**
@@ -1283,10 +1278,10 @@ public final class VideoController extends DatavyuDialog
         } else {
 
             try {
-                logger.info("Finding to " + onsetTextField.getText() + " "
-                        + CLOCK_FORMAT.parse(onsetTextField.getText()).getTime());
-                clockTimer.setForceTime(CLOCK_FORMAT.parse(onsetTextField.getText()).getTime());
-            } catch (ParseException e) {
+                long onset = Timestamp.parse(onsetTextField.getText());
+                logger.info("Finding to " + onsetTextField.getText() + " " + onset);
+                clockTimer.setForceTime(onset);
+            } catch (IllegalArgumentException e) {
                 logger.error("unable to find within video", e);
             }
         }
@@ -1297,8 +1292,8 @@ public final class VideoController extends DatavyuDialog
      */
     public void findOffsetAction() {
         try {
-            clockTimer.setForceTime(CLOCK_FORMAT.parse(offsetTextField.getText()).getTime());
-        } catch (ParseException e) {
+            clockTimer.setForceTime(Timestamp.parse(offsetTextField.getText()));
+        } catch (IllegalArgumentException e) {
             logger.error("Unable to find offset " + e);
         }
     }
@@ -1324,12 +1319,12 @@ public final class VideoController extends DatavyuDialog
      */
     public void jumpByAction() {
         try {
-            long backTime = jumpDirection * CLOCK_FORMAT.parse(jumpByTextField.getText()).getTime();
+            long backTime = jumpDirection * Timestamp.parse(jumpByTextField.getText());
             long newTime = (long) clockTimer.getClockTime() + backTime;
             logger.info("Jump back by " +  backTime + " From: " + clockTimer.getStreamTime() + " To: " + newTime);
             clockTimer.setForceTime(newTime);
 
-        } catch (ParseException e) {
+        } catch (IllegalArgumentException e) {
             logger.error("Unable to jump back " + e);
         }
     }

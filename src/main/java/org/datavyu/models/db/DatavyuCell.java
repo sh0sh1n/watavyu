@@ -14,6 +14,7 @@
  */
 package org.datavyu.models.db;
 
+import org.datavyu.util.Timestamp;
 import java.util.*;
 
 
@@ -72,33 +73,9 @@ public class DatavyuCell implements Cell {
         return parent;
     }
 
-    private String convertMStoTimestamp(long time) {
-        long hours = Math.round(Math.floor((time / 1000.0 / 60.0 / 60.0)));
-        long minutes = Math.round(Math.floor(time / 1000.0 / 60.0 - (hours * 60)));
-        long seconds = Math.round(Math.floor(time / 1000.0 - (hours * 60 * 60) - (minutes * 60)));
-        long mseconds = Math.round(Math.floor(time - (hours * 60 * 60 * 1000) - (minutes * 60 * 1000) - (seconds * 1000)));
-
-        return String.format("%02d:%02d:%02d:%03d", hours, minutes, seconds, mseconds);
-    }
-
-    private long convertTimestampToMS(String timestamp) {
-
-        String[] s = timestamp.split(":");
-        if(s.length == 1){
-            return Long.valueOf(timestamp);
-        }
-        long hours = Long.valueOf(s[0]) * 60 * 60 * 1000;
-        long minutes = Long.valueOf(s[1]) * 60 * 1000;
-        long seconds = Long.valueOf(s[2]) * 1000;
-        long mseconds = Long.valueOf(s[3]);
-
-        return hours + minutes + seconds + mseconds;
-    }
-
-
     @Override
     public String getOffsetString() {
-        return convertMStoTimestamp(offset);
+        return Timestamp.format(offset);
     }
 
     @Override
@@ -117,7 +94,7 @@ public class DatavyuCell implements Cell {
 
     @Override
     public void setOffset(final String newOffset) {
-        setOffset(convertTimestampToMS(newOffset));
+        setOffset(Timestamp.parse(newOffset));
     }
 
     @Override
@@ -132,7 +109,7 @@ public class DatavyuCell implements Cell {
 
     @Override
     public void setOnset(final String newOnset) {
-        setOnset(convertTimestampToMS(newOnset));
+        setOnset(Timestamp.parse(newOnset));
     }
 
     @Override
@@ -146,7 +123,7 @@ public class DatavyuCell implements Cell {
 
     @Override
     public String getOnsetString() {
-        return convertMStoTimestamp(onset);
+        return Timestamp.format(onset);
 
     }
 
