@@ -7,18 +7,6 @@
   <void property="favoritesFolder">
    <string>favorites</string>
   </void>
-  <void property="ignoreVersion">
-   <string></string>
-  </void>
-  <void property="firstStart">
-   <boolean>true</boolean>
-  </void>
-  <void property="shareData">
-   <boolean>false</boolean>
-  </void>
-  <void property="lastChosenDirectory">
-   <string>C:\Users\Florian</string>
-  </void>
   <void property="spreadSheetBackgroundColor">
    <object class="java.awt.Color">
     <int>249</int>
@@ -80,15 +68,6 @@
     <int>90</int>
     <int>255</int>
    </object>
-  </void>
-  <void property="supportSiteUrl">
-   <string>http://www.datavyu.org/support</string>
-  </void>
-  <void property="userGuideUrl">
-   <string>http://www.datavyu.org/user-guide/index.html</string>
-  </void>
-  <void property="downloadUrl">
-   <string>http://www.datavyu.org/download.html</string>
   </void>
   <void property="conversionUrl">
    <string>https://handbrake.fr/</string>

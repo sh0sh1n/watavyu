@@ -2,9 +2,9 @@
 
 ## Scope
 
-This is the Gradle build for the personal macOS fork. It targets local development on macOS 27 / Apple Silicon. It builds and launches the existing Swing application with an OpenJFX Media video player; it does not create an installer, sign an app bundle, or clean up the Maven build.
+This is the Gradle build for the personal macOS fork. It targets local development on macOS 27 / Apple Silicon. It builds and launches the existing Swing application with an OpenJFX Media video player; it does not create an installer or sign an app bundle.
 
-Gradle is the build path to use for this fork. `pom.xml` and the existing Maven scripts remain in the repository unchanged and no longer describe the video backend.
+Gradle is the only build. The Maven build (`pom.xml`, the assembly descriptors, the `compile_*.sh`/`package-macos.sh` scripts and the javafx-maven-plugin/appbundle packaging resources) has been removed.
 
 ## Toolchain
 
@@ -61,11 +61,29 @@ caffeinate -d ./gradlew playbackBenchmark -Pmedia=/path/to/video.mp4 [-Pseeks=20
 - `javafx-media` is not used as published. The `patchedJavafxMedia` task repackages it with `libjfxmedia_avf.dylib` replaced by the patched build in `third_party/openjfx-media-avf` (see [The OpenJFX Patch](#the-openjfx-patch)); everything else in the jar, including `module-info`, is upstream.
 - `run`, `test`, `integrationTest` and `playbackBenchmark` put the OpenJFX jars on the module path (`--add-modules javafx.swing,javafx.media`) and keep the rest of the application on the class path. OpenJFX is only supported from the module path.
 - The `integrationTest` source set (`src/integrationTest`) holds tests and the benchmark that need the real player and a display; `./gradlew test` does not run them.
-- `processResources` copies `Build_Template.properties` into Gradle's generated resource output as `Build.properties`, substituting the Gradle project version. Unlike the old Maven Ant step, this does not rewrite files under `src/main/resources`.
-- `tasks.test` uses the repository's existing TestNG tests and supplies their `testPath` resource directory.
+- `processResources` stamps the Gradle project version into `org/datavyu/version.properties` in the generated resource output. `DatavyuVersion.getVersion()` reads it; the About dialog and the Ruby API's `get_datavyu_version` use it. There is no other version string to keep in sync.
+- `tasks.test` uses the repository's existing TestNG tests and supplies their `testPath` resource directory and the expected project version.
 - Gradle outputs are under `build/`; local Gradle caches are under `.gradle/`. Both are ignored by Git. JavaFX extracts its native libraries to `~/.openjfx/cache/27+30/aarch64` and replaces them there whenever the jar's copy differs.
 
-The Gradle project version is currently `0.1.0-SNAPSHOT`. The legacy UI resource still contains the old `1.5.2` product label/version; updating application identity consistently is separate from proving the build path.
+The Gradle project version is currently `0.1.0-SNAPSHOT`. The window title (`Application.title` in `Datavyu.properties`) is `Watavyu`. `Application.name` stays `Datavyu` because the Swing Application Framework derives the settings directory from it; changing it would move settings to a new, empty directory.
+
+## Lint
+
+[Error Prone](https://errorprone.info) runs inside `javac` on every compile (`net.ltgt.errorprone` Gradle plugin, `error_prone_core` 2.50.0) for all source sets, with its default severities: bug patterns marked ERROR fail the build, WARNING patterns are reported and do not. It replaced `checkstyle.xml`, which held only whitespace rules, was not wired into any build, and had every `value` attribute mangled to `cellValue`. Error Prone was chosen because it finds correctness bugs, which matter more than formatting in a codebase whose checks stand in for code review. Adopting it found two errors, both fixed: a redundant `Comparable<File>` on `FileSystemTreeModel.FileTreeNode`, and a discarded `values()` call in `DatavyuProjectConstructor`. The existing warnings (over 100; javac lists at most 100 per compile task; mostly missing `@Override`, unused variables and Javadoc style) are not yet addressed; promoting a check to ERROR is done with `options.errorprone.error("CheckName")` once its warnings are fixed.
+
+## Network Access
+
+The application makes no network connections of its own. The Datavyu update check (which fetched `version.txt`/`pre_version.txt` from datavyu.org, sending the app, Java and OS versions in its User-Agent) and the Google Analytics telemetry with its first-start opt-in prompt have been removed. `NoNetworkAccessTest` fails the build if compiled application classes reference socket, `URLConnection`, `java.net.http` or analytics APIs. The Help menu's Support Forum, User Guide and Cite Datavyu items (Cite Datavyu is replaced by Cite Watavyu, which links nowhere), their datavyu.org settings, and the datavyu.org link in the unsupported-plugin message have also been removed. The remaining external link is the HandBrake conversion URL (`conversionUrl`), opened only on request.
+
+Settings files written before this change still contain `shareData`, `firstStart`, `ignoreVersion`, `downloadUrl`, `supportSiteUrl` and `userGuideUrl`. `SettingsDecoder` skips properties the application no longer has (logging a warning) instead of discarding the whole file, and the next save drops them.
+
+## Citation
+
+`CITATION.cff` (Citation File Format 1.2.0) at the repository root is the single source for how to cite Watavyu. GitHub reads it for "Cite this repository"; `processResources` bundles it and `Citation` formats it as APA 7 and BibLaTeX `@software` for Help > Cite Watavyu, always with the running build's version. The author is the group "The Watavyu Contributors" (double-braced in BibTeX so it is not split into first and last names); individual authors with `given-names`/`family-names` are formatted per style if added. There is no release yet, so APA shows `(n.d.)` and BibTeX has no year; at the first release, add `version` and `date-released` to the file. For a persistent identifier, connect the GitHub repository to Zenodo, which mints a DOI per release; then add it as `doi:` in the file.
+
+## Settings
+
+Settings live in `~/Library/Application Support/Datavyu/settings.xml`, seeded on first launch from `src/main/resources/settings.xml`. `lastChosenDirectory` is absent until a file chooser is used. File choosers open in that directory if it still exists and otherwise in the current user's home (`ConfigProperties.resolveStartDirectory`); the fallback is never written back, so a missing, empty, deleted or foreign path (for example one from another machine) is handled the same way.
 
 ## Video Playback
 
@@ -151,12 +169,12 @@ Not needed for seeking with this backend. Native exact seeks already complete in
 
 ## Verification On This Machine
 
-- `make build` succeeds on Temurin 25.0.4 / macOS 27 arm64. Remaining compiler warnings are legacy `Object.finalize()` removal.
+- `make build` succeeds on Temurin 25.0.4 / macOS 27 arm64 with Error Prone enabled. Remaining compiler warnings are Error Prone warnings and legacy `Object.finalize()` removal.
 - `make run` reaches the application window. Opening a project that lists the integration fixture loads its track (1280x720, 300 frames, 30 fps), and a `.mov` in the same project shows the conversion message and adds no track.
 - `./gradlew integrationTest`: 14 tests pass. As controls, the same tests fail against stock OpenJFX (6 seek/step tests), against a library without the audio-tap change (start latency), and against a library without the seek-frame fix (stale frame after pause).
-- `./gradlew test` runs 104 tests: 10 fail and 27 are skipped, the same failures and skips as before the playback work (the old Mockito/Byte Buddy stack does not support the current class-file version, and some tests cannot find their resources). All 40 new playback tests pass. This suite is not a green verification gate yet; the failures were not hidden or disabled.
+- `./gradlew test` runs 116 tests: 3 fail and 27 are skipped. The failures are the `setUp` methods of `CellTest`, `DataStoreTest` and `VariableTest`: Mockito 2.10 cannot create mocks on JDK 25 ("Cannot define class using reflection"), and TestNG then skips those classes' 27 tests. `OpenControllerTest` and `SaveControllerTest` pass since their Maven-era paths (a trailing slash on `testPath`, output under `target/`) were fixed. This suite is not a green verification gate yet; the failures were not hidden or disabled.
 - Not verified automatically: audible audio and the volume slider (the volume path changed with the audio-tap removal), and interactive playback driven by the Datavyu clock and keyboard shortcuts. Check these by hand after `make run`.
 
 ## Not Included
 
-No installer/app image or code signing is configured. The Maven build is untouched and still references the removed backends.
+No installer/app image or code signing is configured.

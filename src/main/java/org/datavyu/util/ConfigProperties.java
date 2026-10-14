@@ -90,62 +90,20 @@ public final class ConfigProperties implements Serializable {
     /** Spreadsheet overlap color */
     private Color spreadSheetOverlapColor;
 
-    /** Default for the last chosen directory */
-    private static final String DEFAULT_LAST_CHOSEN_DIRECTORY = System.getProperty("user.home");
-
     /** Last chosen directory */
     private String lastChosenDirectory;
-
-    private static final String DEFAULT_IGNORE_VERSION = "";
-
-    /** Version number to ignore for update reminders */
-    private String ignoreVersion;
 
     /** Default value for warn on column names */
     private static final boolean DO_WARN_ON_COLUMN_NAMES = true;
 
-    private static final boolean DEFAULT_FIRST_START = true;
-
-    private static final boolean DEFAULT_SHARE_DATA = false;
-
     /** True if column name warnings should be displayed */
     private boolean doWarnOnIllegalColumnNames;
-
-    /** True if is the first datavyu launch */
-    private boolean firstStart;
-
-    /** True if is the user acknowledge sharing data */
-    private boolean shareData;
-
-    /** Default on use of pre release */
-    private static final boolean USE_PRE_RELEASE = false;
-
-    /** True if pre releases are preferred */
-    private boolean usePreRelease;
 
     /** Default for favorites folder */
     private static final String DEFAULT_FAVORITES_FOLDER = "favorites";
 
     /** Favorites folder */
     private String favoritesFolder;
-
-    /** Default for support site url */
-    private static final String DEFAULT_SUPPORT_SITE_URL = "http://www.datavyu.org/support";
-
-    /** URL for the support site */
-    private String supportSiteUrl;
-
-    /** Default for the user guide url */
-    private static final String DEFAULT_USER_GUIDE_URL = "http://www.datavyu.org/user-guide/index.html";
-
-    /** URL for the user guide site */
-    private String userGuideUrl;
-
-    /** Default download url */
-    private static final String DEFAULT_DOWNLOAD_URL = "http://www.datavyu.org/download.html";
-
-    /** URL for the download url */
-    private String downloadUrl;
 
     /** Default conversion url */
     private static final String DEFAULT_CONVERSION_URL = "https://handbrake.fr";
@@ -196,9 +154,10 @@ public final class ConfigProperties implements Serializable {
         // Try to load the configuration
         try {
             logger.info("Configuration loaded from directory " + localDirectory);
-            configurationProperties = (ConfigProperties) localStorage.load(Constants.CONFIGURATION_FILE);
+            configurationProperties = (ConfigProperties) SettingsDecoder.decode(
+                localStorage.openInputFile(Constants.CONFIGURATION_FILE));
             logger.info("Loaded configuration properties: " + configurationProperties);
-        } catch (IOException io) {
+        } catch (IOException | RuntimeException io) {
             logger.error("Unable to load configuration file " + io.getMessage());
             logger.info("Setting default properties.");
             configurationProperties = new ConfigProperties();
@@ -217,23 +176,10 @@ public final class ConfigProperties implements Serializable {
         if (!configurationProperties.hasSpreadSheetOverlapColor()) {
             configurationProperties.setSpreadSheetOverlapColor(DEFAULT_SPREAD_SHEET_OVERLAP_COLOR);
         }
-        if (!configurationProperties.hasIgnoreVersion()) {
-            configurationProperties.setIgnoreVersion(DEFAULT_IGNORE_VERSION);
-        }
         configurationProperties.setDoWarnOnIllegalColumnNames(DO_WARN_ON_COLUMN_NAMES);
 
-        configurationProperties.setUsePreRelease(USE_PRE_RELEASE);
         if (!configurationProperties.hasFavoritesFolder()) {
             configurationProperties.setFavoritesFolder(DEFAULT_FAVORITES_FOLDER);
-        }
-        if (!configurationProperties.hasSupportSiteUrl()) {
-            configurationProperties.setSupportSiteUrl(DEFAULT_SUPPORT_SITE_URL);
-        }
-        if (!configurationProperties.hasUserGuideUrl()) {
-            configurationProperties.setUserGuideUrl(DEFAULT_USER_GUIDE_URL);
-        }
-        if (!configurationProperties.hasDownloadUrl()) {
-            configurationProperties.setDownloadUrl(DEFAULT_DOWNLOAD_URL);
         }
         if (!configurationProperties.hasConversionUrl()) {
             configurationProperties.setConversionUrl(DEFAULT_CONVERSION_URL);
@@ -249,9 +195,6 @@ public final class ConfigProperties implements Serializable {
         }
         if (!configurationProperties.hasSpreadSheetForegroundColor()) {
             configurationProperties.setSpreadSheetForegroundColor(DEFAULT_SPREAD_SHEET_FOREGROUND_COLOR);
-        }
-        if (!configurationProperties.hasLastChosenDirectory()) {
-            configurationProperties.setLastChosenDirectory(DEFAULT_LAST_CHOSEN_DIRECTORY);
         }
         try {
             Font defaultFont = Font.createFont(Font.TRUETYPE_FONT,
@@ -526,7 +469,7 @@ public final class ConfigProperties implements Serializable {
     /**
      * Get the last chosen directory.
      *
-     * @return The last chosen directory.
+     * @return The last chosen directory; null if none was ever chosen.
      */
     public String getLastChosenDirectory() {
         return lastChosenDirectory;
@@ -542,39 +485,14 @@ public final class ConfigProperties implements Serializable {
     }
 
     /**
-     * Did we set the last chosen directory?
+     * The directory file choosers open in: the last chosen directory if it still exists, otherwise the user's home.
      *
-     * @return True if the last chosen directory is set; otherwise False.
-     */
-    public boolean hasLastChosenDirectory() {
-        return lastChosenDirectory != null;
-    }
-
-    /**
-     * Get the ignore version.
+     * Not a bean property, so the fallback is never written to the settings file.
      *
-     * @return The ignore version.
+     * @return The directory to start in.
      */
-    public String getIgnoreVersion() {
-        return ignoreVersion;
-    }
-
-    /**
-     * Set the ignore version.
-     *
-     * @param version The ignore version that is set.
-     */
-    public void setIgnoreVersion(final String version) {
-        ignoreVersion = version;
-    }
-
-    /**
-     * Did we set the ignore version?
-     *
-     * @return True if we set the ignore version; otherwise False.
-     */
-    public boolean hasIgnoreVersion() {
-        return ignoreVersion != null;
+    public File resolveStartDirectory() {
+        return FileSystemUtils.existingDirectoryOr(lastChosenDirectory, new File(System.getProperty("user.home")));
     }
 
     /**
@@ -594,54 +512,6 @@ public final class ConfigProperties implements Serializable {
      */    
     public void setDoWarnOnIllegalColumnNames(final boolean doWarn) {
         doWarnOnIllegalColumnNames = doWarn;
-    }
-
-    /**
-     * Get the first launch flag.
-     *
-     * @return whether or not is the first launch
-     */
-    public boolean getFirstStart() {
-        return firstStart;
-    }
-
-    /**
-     * Set the first start flag for first launch.
-     *
-     * @param isFirstStart whether or not to display warnings for illegal column names.
-     */
-    public void setFirstStart(final boolean isFirstStart) {
-        firstStart = isFirstStart;
-    }
-
-    /**
-     */
-    public boolean getShareData() {
-        return shareData;
-    }
-
-    /**
-     */
-    public void setShareData(final boolean share) {
-        shareData = share;
-    }
-
-    /**
-     * Get the user pre-release.
-     *
-     * @return The pre-release preference.
-     */
-    public boolean getUsePreRelease() {
-        return usePreRelease;
-    }
-
-    /**
-     * Set the user pre-release flag.
-     *
-     * @param usePreRelease True if pre-releases are preferred; otherwise False.
-     */
-    public void setUsePreRelease(boolean usePreRelease) {
-        this.usePreRelease = usePreRelease;
     }
 
     /**
@@ -669,87 +539,6 @@ public final class ConfigProperties implements Serializable {
      */
     public boolean hasFavoritesFolder() {
         return favoritesFolder != null;
-    }
-
-    /**
-     * Get the support site URL.
-     *
-     * @return The support site URL.
-     */
-    public String getSupportSiteUrl() {
-        return supportSiteUrl;
-    }
-
-    /**
-     * Set the support site URL.
-     *
-     * @param supportSiteUrl The support site URL.
-     */
-    public void setSupportSiteUrl(String supportSiteUrl) {
-        this.supportSiteUrl = supportSiteUrl;
-    }
-
-    /**
-     * Did we set the support site URL?
-     *
-     * @return True if we set support site ULR; otherwise False.
-     */
-    public boolean hasSupportSiteUrl() {
-        return supportSiteUrl != null;
-    }
-
-    /**
-     * Get the user guide url.
-     *
-     * @return The user guide url.
-     */
-    public String getUserGuideUrl() {
-        return userGuideUrl;
-    }
-
-    /**
-     * Set the user guide url.
-     *
-     * @param userGuideUrl The user guide url.
-     */
-    public void setUserGuideUrl(String userGuideUrl) {
-        this.userGuideUrl = userGuideUrl;
-    }
-
-    /**
-     * Did we set the user guide url?
-     *
-     * @return True if we set the user guide URL; otherwise False.
-     */
-    public boolean hasUserGuideUrl() {
-        return userGuideUrl != null;
-    }
-
-    /**
-     * Get the download url.
-     *
-     * @return Download url.
-     */
-    public String getDownloadUrl() {
-        return downloadUrl;
-    }
-
-    /**
-     * Set the download url.
-     *
-     * @param downloadUrl The download url.
-     */
-    public void setDownloadUrl(String downloadUrl) {
-        this.downloadUrl = downloadUrl;
-    }
-
-    /**
-     * Did we set the download url?
-     *
-     * @return True if the url is set; otherwise false.
-     */
-    public boolean hasDownloadUrl() {
-        return downloadUrl != null;
     }
 
     /**

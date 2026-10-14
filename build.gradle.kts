@@ -1,5 +1,6 @@
 plugins {
     application
+    id("net.ltgt.errorprone") version "5.1.1"
 }
 
 group = "org.datavyu"
@@ -63,13 +64,14 @@ dependencies {
     implementation("com.fasterxml.jackson.core:jackson-databind:2.9.9.2")
     implementation("com.fasterxml.jackson.core:jackson-annotations:2.9.9")
     implementation("com.fasterxml.jackson.core:jackson-core:2.9.9")
-    implementation("com.brsanthu:google-analytics-java:2.0.0")
 
     for (module in javafxModules - "media") {
         implementation("org.openjfx:javafx-$module:$javafxVersion:$javafxPlatform")
     }
     stockJavafxMedia("org.openjfx:javafx-media:$javafxVersion:$javafxPlatform")
     implementation(files(patchedJavafxMedia))
+
+    errorprone("com.google.errorprone:error_prone_core:2.50.0")
 
     testImplementation("org.testng:testng:6.11")
     testImplementation("org.mockito:mockito-core:2.10.0")
@@ -105,18 +107,21 @@ tasks.named<JavaExec>("run") {
     classpath = useJavafxModules(classpath)
 }
 
+// The Gradle project version is the only version; DatavyuVersion reads it from this resource.
 tasks.processResources {
-    exclude("org/datavyu/resources/Build.properties")
-    from("src/main/resources/org/datavyu/resources/Build_Template.properties") {
-        into("org/datavyu/resources")
-        rename { "Build.properties" }
-        expand("buildNumber" to project.version)
+    val version = project.version.toString()
+    inputs.property("version", version)
+    filesMatching("org/datavyu/version.properties") {
+        expand("version" to version)
     }
+    // CITATION.cff at the repository root is what GitHub's "Cite this repository" reads; the app reads the same file.
+    from("CITATION.cff")
 }
 
 tasks.test {
     useTestNG()
     systemProperty("testPath", file("src/test/resources").absolutePath)
+    systemProperty("expectedVersion", project.version.toString())
     classpath = useJavafxModules(classpath)
 }
 

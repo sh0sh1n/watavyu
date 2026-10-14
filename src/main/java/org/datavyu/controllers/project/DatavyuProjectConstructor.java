@@ -57,7 +57,6 @@ public class DatavyuProjectConstructor extends Constructor {
 
             if (projectVersion <= 2) {
                 Map vs = (Map) values.get("viewerSettings");
-                vs.values();
                 project.setViewerSettings(vs.values());
             }
 

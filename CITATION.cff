@@ -1,0 +1,8 @@
+cff-version: 1.2.0
+message: "If you use Watavyu in your research, please cite it as below."
+type: software
+title: "Watavyu"
+authors:
+  - name: "The Watavyu Contributors"
+repository-code: "https://github.com/sh0sh1n/watavyu"
+license: GPL-3.0-or-later
