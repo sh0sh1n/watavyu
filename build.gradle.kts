@@ -1,3 +1,5 @@
+import net.ltgt.gradle.errorprone.errorprone
+
 plugins {
     application
     jacoco
@@ -152,6 +154,19 @@ tasks.register<Test>("integrationTest") {
 // Analysis reports that measure the work in TODO.md. They do not gate the build:
 // Error Prone ERRORs and the tests are the gates. ./gradlew analyze writes all of them under build/reports.
 // ./gradlew compileJava -PallWarnings lists every javac lint and Error Prone warning (javac stops at 100).
+// Error Prone checks that have reached zero findings fail the build, so they stay at zero (AGENTS.md).
+tasks.withType<JavaCompile>().configureEach {
+    options.errorprone.error("MissingOverride")
+}
+
+// ./gradlew compileJava compileTestJava -PerrorpronePatch=CheckA,CheckB rewrites the sources in place with Error
+// Prone's suggested fixes for those checks (R8). Review the result like any other change.
+providers.gradleProperty("errorpronePatch").orNull?.let { checks ->
+    tasks.withType<JavaCompile>().configureEach {
+        options.errorprone.errorproneArgs.addAll("-XepPatchChecks:$checks", "-XepPatchLocation:IN_PLACE")
+    }
+}
+
 if (providers.gradleProperty("allWarnings").isPresent) {
     tasks.withType<JavaCompile>().configureEach {
         options.compilerArgs.addAll(listOf("-Xmaxwarns", "100000", "-Xlint:all,-serial,-processing"))

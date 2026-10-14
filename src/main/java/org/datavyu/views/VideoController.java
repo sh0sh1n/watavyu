@@ -338,6 +338,7 @@ public final class VideoController extends DatavyuDialog
     /**
      * @param clockTime Current clockTimer time in milliseconds.
      */
+    @Override
     public void clockStart(double clockTime) {
         logger.info("Start");
     }
@@ -352,6 +353,8 @@ public final class VideoController extends DatavyuDialog
     public void setShouldBeVisible(boolean v) {
         visible = v;
     }
+
+    @Override
 
     public void clockForceSync(double clockTime) {
         logger.debug("Forced sync to " + clockTime + " milliseconds.");
@@ -389,6 +392,7 @@ public final class VideoController extends DatavyuDialog
      * This method is used only for the JavaFx player, and Native OSX
      * @param clockTime Current clockTimer time in milliseconds.
      */
+    @Override
     public void clockPeriodicSync(double clockTime) {
         // Updates the position of the needle and label
         updateCurrentTimeLabelAndNeedle((long) clockTime);
@@ -397,6 +401,7 @@ public final class VideoController extends DatavyuDialog
     /**
      * @param clockTime Current clockTimer time in milliseconds.
      */
+    @Override
     public void clockStop(double clockTime) {
         logger.debug("Stop Clock at " + clockTime + " milliseconds.");
         // Updates the position of the needle and label
@@ -406,6 +411,7 @@ public final class VideoController extends DatavyuDialog
     /**
      * @param clockTime Current clockTimer time in milliseconds.
      */
+    @Override
     public void clockPause(double clockTime) {
         logger.debug("Pause Clock at " + clockTime + " milliseconds.");
         // Updates the position of the needle and label
@@ -415,6 +421,7 @@ public final class VideoController extends DatavyuDialog
     /**
      * @param rate Current (updated) clockTimer rate.
      */
+    @Override
     public void clockRate(float rate) {
         logger.debug("Update rate speed to " + rate);
         labelSpeed.setText(FloatingPointUtils.doubleToFractionStr(rate));
@@ -652,6 +659,7 @@ public final class VideoController extends DatavyuDialog
         addDataButton.setFocusPainted(false);
         addDataButton.setName("addDataButton");
         addDataButton.addActionListener(new ActionListener() {
+            @Override
             public void actionPerformed(final ActionEvent evt) {
                 openVideoButtonActionPerformed(evt);
             }
@@ -669,6 +677,7 @@ public final class VideoController extends DatavyuDialog
         timeStampLabel.setHorizontalTextPosition(SwingConstants.CENTER);
         timeStampLabel.setName("timeStampLabel");
         timeStampLabel.addMouseListener(new MouseAdapter() {
+            @Override
             public void mouseClicked(MouseEvent e) {
                 // Open a new frame here as i have assumed you have declared "frame" as instance variable
                 if (e.getClickCount() >= 3) {
@@ -723,6 +732,7 @@ public final class VideoController extends DatavyuDialog
         showTracksSmallButton.getAccessibleContext().setAccessibleName(
                 "Show Tracks");
         showTracksSmallButton.addActionListener(new ActionListener() {
+            @Override
             public void actionPerformed(final ActionEvent evt) {
                 showTracksButtonActionPerformed(evt);
             }
@@ -1005,6 +1015,7 @@ public final class VideoController extends DatavyuDialog
      *
      * @param e event
      */
+    @Override
     public void tracksControllerChanged(final TracksControllerEvent e) {
         switch (e.getEventType()) {
             case CARRIAGE_EVENT:

@@ -83,6 +83,8 @@ public class DatavyuDataStore implements DataStore {
         return allVariables;
     }
 
+    @Override
+
     public List<Variable> getVisibleVariables() {
         List<Variable> allVariables = getAllVariables();
         List<Variable> visibleVariables = new ArrayList<Variable>();

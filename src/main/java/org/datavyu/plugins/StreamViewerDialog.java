@@ -227,6 +227,7 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     /**
      * {@inheritDoc}
      */
+    @Override
     public abstract void setCurrentTime(final long time);
 
     protected abstract float getPlayerFramesPerSecond();
@@ -235,6 +236,7 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
      * @return The duration of the movie in milliseconds. If -1 is returned, the
      * movie's duration cannot be determined.
      */
+    @Override
     public abstract long getDuration();
 
     /**
@@ -298,6 +300,7 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     /**
      * @return The playback startTime of the movie in milliseconds.
      */
+    @Override
     public long getOffset() {
         return offset;
     }
@@ -305,6 +308,7 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     /**
      * @param newOffset The playback startTime of the movie in milliseconds.
      */
+    @Override
     public void setOffset(final long newOffset) {
         logger.info("Set offset of stream viewer with " + identifier + " to " + newOffset);
         // TODO: This set is communicated to the TrackController (if it does not come from there)
@@ -314,6 +318,7 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     /**
      * @return The parent JDialog that this data viewer resides within.
      */
+    @Override
     public JDialog getParentJDialog() {
         return this;
     }
@@ -321,6 +326,7 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     /**
      * @return The file used to display this data feed.
      */
+    @Override
     public File getSourceFile() {
         return sourceFile;
     }
@@ -349,6 +355,7 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     /**
      * @return The frames per second.
      */
+    @Override
     public float getFramesPerSecond() {
         return framesPerSecond;
     }
@@ -369,11 +376,13 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     /**
      * {@inheritDoc}
      */
+    @Override
     public abstract long getCurrentTime();
 
     /**
      * {@inheritDoc}
      */
+    @Override
     public TrackPainter getTrackPainter() {
         return new DefaultTrackPainter();
     }
@@ -405,6 +414,8 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
             listener.notifyStateChanged(null, null);
         }
     }
+
+    @Override
 
     public void loadSettings(final InputStream is) {
         Properties settings = new Properties();
@@ -487,6 +498,7 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     private void initComponents() {
         setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE);
         addWindowListener(new WindowAdapter() {
+            @Override
             public void windowClosing(final WindowEvent evt) {
                 formWindowClosing(evt);
             }
@@ -528,6 +540,8 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
         this.isVisible = isVisible;
         setVolume();
     }
+
+    @Override
 
     public boolean isAssumedFramesPerSecond() {
         return isAssumedFramesPerSecond;

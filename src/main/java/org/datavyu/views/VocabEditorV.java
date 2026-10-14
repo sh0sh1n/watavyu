@@ -155,9 +155,12 @@ public final class VocabEditorV extends DatavyuDialog {
 
         addWindowFocusListener(
                 new java.awt.event.WindowAdapter() {
+                    @Override
                     public void windowGainedFocus(java.awt.event.WindowEvent e) {
                         if (!isCurrent()) makeElements();
                     }
+
+                    @Override
 
                     public void windowLostFocus(java.awt.event.WindowEvent e) {
                         //applyChanges(); //update spreadsheet here?

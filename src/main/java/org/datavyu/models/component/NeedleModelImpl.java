@@ -60,6 +60,7 @@ public final class NeedleModelImpl extends MixerComponentModelImpl implements Ne
     /**
      * {@inheritDoc}
      */
+    @Override
     public synchronized long getCurrentTime() {
         return currentTime;
     }
@@ -67,6 +68,7 @@ public final class NeedleModelImpl extends MixerComponentModelImpl implements Ne
     /**
      * {@inheritDoc}
      */
+    @Override
     public void setCurrentTime(final long time) {
         //logger.info("The current time is " + time + " msec.");
         final long oldTime;

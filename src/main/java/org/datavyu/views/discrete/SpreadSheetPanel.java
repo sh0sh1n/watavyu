@@ -169,6 +169,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
         hiddenVariablesButton = makeHiddenVarsButton();
         updateHiddenVars();
         hiddenVariablesButton.addMouseListener(new MouseAdapter() {
+            @Override
             public void mousePressed(MouseEvent e) {
                 dropdown.show(e.getComponent(), e.getX(), e.getY());
             }
@@ -216,6 +217,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
                 hiddensOnly.add(v);
                 dropdown.add(new JMenuItem(
                         new AbstractAction(v.getName()) {
+                            @Override
                             public void actionPerformed(ActionEvent e)
                             {
                                 v.setHidden(false);

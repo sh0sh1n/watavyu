@@ -95,6 +95,8 @@ public final class DatavyuVariable implements Variable {
         return result;
     }
 
+    @Override
+
     public void addCell(Cell cell) {
         if (cell.getCellValue().getArgument() == this.getRootNode()) {
             cells.add(cell);
@@ -104,6 +106,8 @@ public final class DatavyuVariable implements Variable {
             owningDatastore.markAsChanged();
         }
     }
+
+    @Override
 
     public DataStore getOwningDatastore() {
         return owningDatastore;
@@ -226,6 +230,9 @@ public final class DatavyuVariable implements Variable {
     public void setName(final String newName) throws UserWarningException {
         this.setName(newName, false);
     }
+
+
+    @Override
 
 
     public void setName(final String newName, boolean grandfathered) throws UserWarningException {

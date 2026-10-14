@@ -69,6 +69,8 @@ public class DatavyuCell implements Cell {
         return result;
     }
 
+    @Override
+
     public Variable getVariable() {
         return parent;
     }

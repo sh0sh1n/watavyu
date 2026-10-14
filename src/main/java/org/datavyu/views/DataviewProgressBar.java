@@ -95,6 +95,7 @@ public class DataviewProgressBar extends JDialog {
 
         cancelButton.setText("Cancel");
         cancelButton.addActionListener(new java.awt.event.ActionListener() {
+            @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 jButton_cancelActionPerformed(evt);
             }

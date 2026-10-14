@@ -685,6 +685,7 @@ public final class DatavyuView implements FileDropEventListener {
         progressBar = new DataviewProgressBar(this.getFrame(), false);
         task = new OpenTask(fileChooser);
         task.addPropertyChangeListener(new PropertyChangeListener() {
+            @Override
             public void propertyChange(PropertyChangeEvent evt) {
                 String test = "";
                 if ("progress".equals(evt.getPropertyName())) {

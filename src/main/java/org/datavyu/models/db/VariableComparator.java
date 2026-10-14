@@ -8,6 +8,7 @@ import java.util.Comparator;
  * Time: 3:56 PM
  */
 public class VariableComparator implements Comparator<Variable> {
+    @Override
     public int compare(Variable c1, Variable c2) {
         if (c1.getOrderIndex() < c2.getOrderIndex()) {
             return -1;

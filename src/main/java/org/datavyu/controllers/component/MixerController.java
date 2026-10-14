@@ -155,6 +155,7 @@ public final class MixerController implements PropertyChangeListener,
         // Menu buttons
         lockToggle = new JToggleButton("Lock all");
         lockToggle.addActionListener(new ActionListener() {
+            @Override
             public void actionPerformed(final ActionEvent e) {
                 lockToggleHandler(e);
             }
@@ -165,6 +166,7 @@ public final class MixerController implements PropertyChangeListener,
         enableHighlight = new JButton(highlightAndFocusByDefault ? "Disable Cell Highlighting" : "Enable Cell Highlighting");
         enableHighlight.setEnabled(!highlightAndFocusByDefault);
         enableHighlight.addActionListener(new ActionListener() {
+            @Override
             public void actionPerformed(final ActionEvent e) {
                 enableHighlightHandler(e);
             }
@@ -174,6 +176,7 @@ public final class MixerController implements PropertyChangeListener,
         enableHighlightAndFocus = new JButton(
                 highlightAndFocusByDefault ? "Disable Highlight and Focus" : "Enable Highlight and Focus");
         enableHighlightAndFocus.addActionListener(new ActionListener() {
+            @Override
             public void actionPerformed(final ActionEvent e) {
                 Datavyu.getView().toggleHighlightAndFocusMode();
             }
@@ -182,6 +185,7 @@ public final class MixerController implements PropertyChangeListener,
 
         zoomSlide = new JSlider(JSlider.HORIZONTAL, 1, 1000, 1);
         zoomSlide.addChangeListener(new ChangeListener() {
+            @Override
             public void stateChanged(final ChangeEvent e) {
 
                 if (!isUpdatingZoomSlide && zoomSlide.getValueIsAdjusting()) {
@@ -202,6 +206,7 @@ public final class MixerController implements PropertyChangeListener,
         JButton zoomToFitButton = new JButton("", zoomIcon);
         zoomToFitButton.setToolTipText("Zoom to fit all tracks");
         zoomToFitButton.addActionListener(new ActionListener() {
+            @Override
             public void actionPerformed(final ActionEvent e) {
                 zoomToFit();
             }
@@ -590,6 +595,7 @@ public final class MixerController implements PropertyChangeListener,
      *
      * @param e the event to handle
      */
+    @Override
     public void adjustmentValueChanged(final AdjustmentEvent e) {
 
         if (isUpdatingTracksScrollBar) {
@@ -617,6 +623,7 @@ public final class MixerController implements PropertyChangeListener,
      *
      * @param e the event to handle
      */
+    @Override
     public void offsetChanged(final CarriageEvent e) {
         final boolean wasOffsetChanged = tracksEditorController.setTrackOffset(e.getTrackId(), e.getOffset());
         final CarriageEvent newEvent;
@@ -642,6 +649,7 @@ public final class MixerController implements PropertyChangeListener,
      *
      * @param e the event to handle
      */
+    @Override
     public void lockStateChanged(final CarriageEvent e) {
         fireTracksControllerEvent(EventType.CARRIAGE_EVENT, e);
         updateGlobalLockToggle();
@@ -652,9 +660,12 @@ public final class MixerController implements PropertyChangeListener,
      *
      * @param e the event to handle
      */
+    @Override
     public void selectionChanged(final CarriageEvent e) {
         // Selection has no effect on the mixer's own controls
     }
+
+    @Override
 
     public void jumpToTime(final TimescaleEvent e) {
         fireTracksControllerEvent(EventType.TIMESCALE_EVENT, e);

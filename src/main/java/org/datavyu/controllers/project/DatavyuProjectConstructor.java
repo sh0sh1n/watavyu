@@ -49,6 +49,8 @@ public class DatavyuProjectConstructor extends SafeConstructor {
      */
     private class ConstructProject extends AbstractConstruct {
 
+        @Override
+
         public Object construct(final Node node) {
             MappingNode mnode = (MappingNode) node;
             Map values = constructMapping(mnode);
@@ -83,6 +85,8 @@ public class DatavyuProjectConstructor extends SafeConstructor {
      * Used to construct the {@link ViewerSetting} class.
      */
     private class ConstructViewerSetting extends AbstractConstruct {
+
+        @Override
 
         public Object construct(final Node node) {
             MappingNode mnode = (MappingNode) node;
@@ -131,6 +135,8 @@ public class DatavyuProjectConstructor extends SafeConstructor {
      * Used to construct the {@link TrackSettings} class.
      */
     private class ConstructTrackSettings extends AbstractConstruct {
+
+        @Override
 
         public Object construct(final Node node) {
             MappingNode mnode = (MappingNode) node;

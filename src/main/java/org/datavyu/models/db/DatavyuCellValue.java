@@ -84,6 +84,8 @@ public abstract class DatavyuCellValue implements CellValue, Serializable, Compa
         }
     }
 
+    @Override
+
     public Argument getArgument() {
         return arg;
     }
@@ -96,6 +98,8 @@ public abstract class DatavyuCellValue implements CellValue, Serializable, Compa
             return value;
         }
     }
+
+    @Override
 
     public String getPlaceholderString() {
         return "<" + arg.name + ">";

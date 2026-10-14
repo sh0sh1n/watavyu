@@ -144,6 +144,7 @@ public class ViewportModelImpl extends MixerComponentModelImpl implements Viewpo
     /**
      * {@inheritDoc}
      */
+    @Override
     public void resetViewport() {
         final double newWidth;
         synchronized (this) {

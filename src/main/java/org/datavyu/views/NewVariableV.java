@@ -90,6 +90,7 @@ public final class NewVariableV extends DatavyuDialog {
         okButton.setName("okButton");
         okButton.setPreferredSize(new java.awt.Dimension(65, 23));
         okButton.addActionListener(new java.awt.event.ActionListener() {
+            @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 okButtonActionPerformed(evt);
             }
@@ -98,6 +99,7 @@ public final class NewVariableV extends DatavyuDialog {
         cancelButton.setLabel(bundle.getString("cancelButton.text"));
         cancelButton.setName("cancelButton");
         cancelButton.addActionListener(new java.awt.event.ActionListener() {
+            @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 cancelButtonActionPerformed(evt);
             }
