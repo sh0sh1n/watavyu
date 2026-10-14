@@ -88,21 +88,6 @@ public final class DatavyuMatrixCellValue extends DatavyuCellValue implements Ma
         return result;
     }
 
-    public String serialize() {
-        List<CellValue> cellValues = getArguments();
-
-        StringBuilder result = new StringBuilder("(");
-        for (Iterator<CellValue> i = cellValues.iterator(); i.hasNext(); ) {
-            CellValue v = i.next();
-            result.append(v.serialize());
-            if (i.hasNext())
-                result.append(',');
-        }
-        result.append(')');
-
-        return result.toString();
-    }
-
     @Override
     public List<CellValue> getArguments() {
         order(cellValues);

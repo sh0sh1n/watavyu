@@ -18,7 +18,7 @@ import org.datavyu.models.project.Project;
 import org.datavyu.models.project.TrackSettings;
 import org.datavyu.models.project.ViewerSetting;
 import org.yaml.snakeyaml.constructor.AbstractConstruct;
-import org.yaml.snakeyaml.constructor.Constructor;
+import org.yaml.snakeyaml.constructor.SafeConstructor;
 import org.yaml.snakeyaml.nodes.MappingNode;
 import org.yaml.snakeyaml.nodes.Node;
 
@@ -28,9 +28,10 @@ import java.util.UUID;
 
 
 /**
- * Used to construct a datavyu project from its YAML representation.
+ * Used to construct a datavyu project from its YAML representation. It builds on {@link SafeConstructor}, which
+ * refuses tags naming Java classes, so a project file can make only its own three kinds of object.
  */
-public class DatavyuProjectConstructor extends Constructor {
+public class DatavyuProjectConstructor extends SafeConstructor {
 
     /**
      * Default Constructor.

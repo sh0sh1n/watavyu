@@ -1,6 +1,11 @@
 package org.datavyu.plugins.javafx;
 
 import javafx.application.Platform;
+import org.datavyu.Datavyu;
+import org.datavyu.models.Identifier;
+import org.datavyu.plugins.StreamViewer;
+import org.datavyu.util.ClockTimer;
+import org.datavyu.views.VideoController;
 import org.testng.SkipException;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
@@ -8,6 +13,7 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.awt.Dimension;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -16,6 +22,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
@@ -117,6 +125,34 @@ public class PlaybackIntegrationTest {
             fail("Expected frame " + frame + " but the display shows " + probe.read());
         }
         assertEquals(probe.settledFrame(150), frame, "the display moved off the target frame");
+    }
+
+    /** A video window reports what a project file stores about its clip and source. */
+    @Test
+    public void aVideoWindowReportsWhatAProjectFileStores() throws Exception {
+        VideoController videoController = mock(VideoController.class);
+        when(videoController.getClockTimer()).thenReturn(mock(ClockTimer.class));
+        Datavyu.setVideoController(videoController);
+        StreamViewer viewer = JavaFxVideoPlugin.open(Identifier.generateIdentifier(), mp4, null, false);
+        try {
+            assertEquals(viewer.getVideoSize(), new Dimension(1280, 720));
+            assertEquals(viewer.getFramesPerSecond(), (float) FPS, 1e-3);
+            assertEquals(viewer.getDuration(), SECONDS * 1000L);
+
+            JavaFxToolkit.onEdtAndWait(() -> {
+                viewer.setVolumeLevel(0.25f);
+                viewer.setViewerVisible(false);
+                return null;
+            });
+            assertEquals(viewer.getVolumeLevel(), 0.25f);
+            assertFalse(viewer.isViewerVisible());
+        } finally {
+            JavaFxToolkit.onEdtAndWait(() -> {
+                viewer.close();
+                return null;
+            });
+            Datavyu.setVideoController(null);
+        }
     }
 
     @Test

@@ -65,9 +65,7 @@ dependencies {
     implementation("com.google.guava:guava:27.1-jre")
     implementation("org.apache.logging.log4j:log4j-api:2.11.2")
     implementation("org.apache.logging.log4j:log4j-core:2.11.2")
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.9.9.2")
-    implementation("com.fasterxml.jackson.core:jackson-annotations:2.9.9")
-    implementation("com.fasterxml.jackson.core:jackson-core:2.9.9")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.22.3")
 
     for (module in javafxModules - "media") {
         implementation("org.openjfx:javafx-$module:$javafxVersion:$javafxPlatform")
@@ -79,6 +77,11 @@ dependencies {
 
     testImplementation("org.testng:testng:6.11")
     testImplementation("org.mockito:mockito-core:5.24.0")
+    // Validates project files against the published JSON Schema. It uses Jackson 3 (tools.jackson), which does not
+    // clash with the app's Jackson 2; its YAML support is excluded because it would replace SnakeYAML 1.18.
+    testImplementation("com.networknt:json-schema-validator:3.0.7") {
+        exclude(group = "tools.jackson.dataformat", module = "jackson-dataformat-yaml")
+    }
     mockitoAgent("org.mockito:mockito-core:5.24.0")
 }
 

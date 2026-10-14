@@ -22,9 +22,9 @@
  */
 package org.datavyu.plugins;
 
+import java.awt.Dimension;
 import java.io.File;
 import java.io.InputStream;
-import java.io.OutputStream;
 
 import javax.swing.JDialog;
 
@@ -152,18 +152,23 @@ public interface StreamViewer {
     TrackPainter getTrackPainter();
 
     /**
-     * Read settings from the given input stream.
+     * Read settings from the given input stream, as older Datavyu project files stored them.
      *
      * @param is Input stream to load from.
      */
     void loadSettings(InputStream is);
 
-    /**
-     * Write settings to the given output stream.
-     *
-     * @param os Output stream to write to.
-     */
-    void storeSettings(OutputStream os);
+    /** @return the volume set for the video, from 0 to 1, including while it is muted by hiding the window */
+    float getVolumeLevel();
+
+    /** @param volume the volume to set for the video, from 0 to 1 */
+    void setVolumeLevel(float volume);
+
+    /** @return whether the video window is shown */
+    boolean isViewerVisible();
+
+    /** @return the video's size in pixels */
+    Dimension getVideoSize();
 
     /**
      * Adds the given ViewerStateListener to the collection of listeners who

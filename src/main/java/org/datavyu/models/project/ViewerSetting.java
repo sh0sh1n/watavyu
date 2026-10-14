@@ -31,10 +31,6 @@ public final class ViewerSetting {
     /** Logger for this class */
     private static Logger logger = LogManager.getLogger(ViewerSetting.class);
 
-    /** Version number */
-    // TODO: Tie this back to the overall version numbers!! This is a design mistake.
-    public static final int VERSION = 3; // May change it to 4
-
     /** Track settings associated with this data viewer */
     private TrackSettings trackSettings;
 
@@ -60,8 +56,6 @@ public final class ViewerSetting {
     /** The settings data */
     private byte[] settingsData;
 
-    /** Output stream */
-    private ByteArrayOutputStream settingsOutput;
     /** Whether a track can be opened, now that the OpenJFX player is the only one. */
     public enum PlayerMatch {
         /** The track was recorded with the OpenJFX player. */
@@ -82,21 +76,6 @@ public final class ViewerSetting {
             return PlayerMatch.SAME_PLAYER;
         }
         return JavaFxVideoPlugin.NAMESPACE.equals(pluginClassifier) ? PlayerMatch.OTHER_VIDEO_PLAYER : PlayerMatch.NONE;
-    }
-
-    /**
-     * Copy constructor
-     *
-     * @param viewerSetting
-     */
-    private ViewerSetting(final ViewerSetting viewerSetting) {
-        trackSettings = viewerSetting.trackSettings.copy();
-        pluginName = viewerSetting.pluginName;
-        pluginUUID = viewerSetting.pluginUUID;
-        pluginClassifier = viewerSetting.pluginClassifier;
-        filePath = viewerSetting.filePath;
-        offset = viewerSetting.offset;
-        settingsId = viewerSetting.settingsId;
     }
 
     /**
@@ -158,8 +137,6 @@ public final class ViewerSetting {
         }
     }
 
-    public UUID getPluginUUID() { return pluginUUID;}
-
     /**
      * The method will find the plugin name associated with
      * the pluginUUID
@@ -171,13 +148,6 @@ public final class ViewerSetting {
         if (pluginName == null && JavaFxVideoPlugin.PLUGIN_UUID.equals(pluginUUID)) {
             setPluginName(JavaFxVideoPlugin.VIEWER_CLASS_NAME);
         }
-    }
-
-    /**
-     * @return the pluginClassifier
-     */
-    public String getPluginClassifier() {
-        return pluginClassifier;
     }
 
     /**
@@ -221,36 +191,9 @@ public final class ViewerSetting {
     }
 
     /**
-     * Write the viewer settings to the given output stream.
-     *
-     * @param os OutputStream to write to.
-     * @throws IOException If there are problems writing to the given output
-     *                     stream.
-     */
-    public void writeSettings(final OutputStream os) throws IOException {
-        assert os != null;
-
-        if(settingsOutput != null) settingsOutput.writeTo(os);
-    }
-
-    /**
      * @return InputStream to use for reading settings.
      */
     public InputStream getSettingsInputStream() {
         return new ByteArrayInputStream(settingsData);
-    }
-
-    /**
-     * @return OutputStream to use for writing settings.
-     */
-    public OutputStream getSettingsOutputStream() {
-        // Can't re-use the stream, need empty buffer.
-        // TODO: Re-design this part. Don't give out the stream. Need to close the byte array output stream.
-        settingsOutput = new ByteArrayOutputStream();
-        return settingsOutput;
-    }
-
-    public ViewerSetting copy() {
-        return new ViewerSetting(this);
     }
 }

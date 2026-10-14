@@ -23,7 +23,6 @@
 
 package org.datavyu.models.db;
 
-import org.datavyu.util.StringUtils;
 
 import java.io.Serializable;
 import java.util.UUID;
@@ -100,10 +99,5 @@ public abstract class DatavyuCellValue implements CellValue, Serializable, Compa
 
     public String getPlaceholderString() {
         return "<" + arg.name + ">";
-    }
-    
-    public String serialize() {
-        if(value == null) return "";
-        return StringUtils.escapeCSVArgument(value);
     }
 }

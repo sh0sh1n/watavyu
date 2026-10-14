@@ -36,7 +36,6 @@ import java.awt.event.*;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Properties;
@@ -278,16 +277,6 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     }
 
     /**
-     * Get the width of the video image.
-     *
-     * @return
-     */
-    private int getVideoHeight() {
-        // TODO: Have variables for JUST the video size
-        return getHeight() - getInsets().bottom - getInsets().top;
-    }
-
-    /**
      * Set the height of the video.
      *
      * @param height
@@ -459,18 +448,26 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
         }
     }
 
-    public void storeSettings(final OutputStream os) {
-        Properties settings = new Properties();
-        settings.setProperty("offset", Long.toString(getOffset()));
-        settings.setProperty("volume", Float.toString(volume));
-        settings.setProperty("visible", Boolean.toString(isVisible));
-        settings.setProperty("height", Integer.toString(getVideoHeight()));
-        settings.setProperty("framesPerSecond", Float.toString(framesPerSecond));
-        try {
-            settings.store(os, null);
-        } catch (IOException e) {
-            logger.error("Error saving settings", e);
-        }
+    @Override
+    public float getVolumeLevel() {
+        return volume;
+    }
+
+    @Override
+    public void setVolumeLevel(final float level) {
+        volume = level;
+        volumeSlider.setValue(Math.round(level * 100));
+        setVolume();
+    }
+
+    @Override
+    public boolean isViewerVisible() {
+        return isVisible;
+    }
+
+    @Override
+    public Dimension getVideoSize() {
+        return getOriginalVideoSize();
     }
 
     @Override

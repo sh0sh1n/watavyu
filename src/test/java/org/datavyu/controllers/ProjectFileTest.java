@@ -1,24 +1,20 @@
 package org.datavyu.controllers;
 
 import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.datavyu.models.project.Project;
-import org.datavyu.models.project.TrackSettings;
 import org.datavyu.models.project.ViewerSetting;
 import org.datavyu.plugins.javafx.JavaFxVideoPlugin;
 import org.testng.annotations.Test;
 
 /**
- * The project entry of {@code .opf} files: what this version reads from files that older versions wrote, and what
- * it writes.
+ * The project entry of {@code .opf} files: what this version reads from files that older versions wrote.
  */
 public class ProjectFileTest {
 
@@ -48,12 +44,6 @@ public class ProjectFileTest {
             new ByteArrayInputStream(yaml.getBytes(StandardCharsets.UTF_8)));
     }
 
-    private static String save(final Project project) {
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        new SaveProjectFileController().save(out, project);
-        return out.toString(StandardCharsets.UTF_8);
-    }
-
     private static List<ViewerSetting> tracks(final Project project) {
         List<ViewerSetting> settings = new ArrayList<>();
         project.getViewerSettings().forEach(settings::add);
@@ -72,33 +62,13 @@ public class ProjectFileTest {
         assertTrue(track.getTrackSettings().isLocked());
     }
 
+    /** S1: a project entry naming a Java class must not make that class. */
     @Test
-    public void savingWritesNoBookmarks() {
-        String saved = save(open(WITH_BOOKMARKS));
+    public void aProjectEntryCannotMakeArbitraryJavaObjects() {
+        String yaml = WITH_BOOKMARKS.replace("name: study", "name: study\nextra: !!java.io.File [\"/tmp/x\"]");
 
-        assertFalse(saved.contains("bookmark"), saved);
-        assertTrue(saved.contains("locked: true"), saved);
-    }
+        Project project = open(yaml);
 
-    @Test
-    public void aSavedTrackReopensWithTheOpenJfxPlayerAndItsLock() {
-        ViewerSetting track = new ViewerSetting();
-        track.setFilePath("/Users/someone/study/clip.mp4");
-        track.setPluginNameAndUUID(JavaFxVideoPlugin.PLUGIN_UUID);
-        track.setPluginClassifier(JavaFxVideoPlugin.NAMESPACE);
-        track.setSettingsId("1");
-        TrackSettings trackSettings = new TrackSettings();
-        trackSettings.setLocked(true);
-        track.setTrackSettings(trackSettings);
-        Project project = new Project();
-        project.setProjectName("study");
-        project.setViewerSettings(List.of(track));
-
-        ViewerSetting reopened = tracks(open(save(project))).get(0);
-
-        assertEquals(reopened.getFilePath(), "/Users/someone/study/clip.mp4");
-        assertEquals(reopened.getPluginUUID(), JavaFxVideoPlugin.PLUGIN_UUID);
-        assertEquals(reopened.playerMatch(), ViewerSetting.PlayerMatch.SAME_PLAYER);
-        assertTrue(reopened.getTrackSettings().isLocked());
+        assertTrue(tracks(project).isEmpty(), "the entry is refused as a whole");
     }
 }

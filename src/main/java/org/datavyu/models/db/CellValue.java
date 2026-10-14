@@ -60,8 +60,6 @@ public interface CellValue {
      */
     @Override
     String toString();
-    
-    String serialize();
 
     String getPlaceholderString();
 }

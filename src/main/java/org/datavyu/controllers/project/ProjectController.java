@@ -25,23 +25,37 @@ import org.datavyu.models.component.TrackModel;
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.DataStoreFactory;
+import org.datavyu.models.db.UserWarningException;
 import org.datavyu.models.db.Variable;
 import org.datavyu.models.project.Project;
 import org.datavyu.models.project.TrackSettings;
 import org.datavyu.models.project.ViewerSetting;
 import org.datavyu.plugins.StreamViewer;
-import org.datavyu.plugins.javafx.JavaFxVideoPlugin;
+import org.datavyu.projectfile.ProjectDocument;
+import org.datavyu.projectfile.ProjectDocument.Clip;
+import org.datavyu.projectfile.ProjectDocument.AnnotationColumn;
+import org.datavyu.projectfile.ProjectDocument.Column;
+import org.datavyu.projectfile.ProjectDocument.Source;
+import org.datavyu.projectfile.ProjectDocument.MediaColumn;
+import org.datavyu.projectfile.ProjectPaths;
+import org.datavyu.projectfile.SpreadsheetColumns;
+import org.datavyu.projectfile.MediaColumnNames;
 import org.datavyu.util.FileSystemUtils;
 import org.datavyu.views.VideoController;
 import org.datavyu.views.discrete.SpreadSheetPanel;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileFilter;
+import java.awt.Dimension;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 
 
 /**
@@ -323,7 +337,31 @@ public final class ProjectController {
 
         final MixerController mixerController = videoController.getMixerController();
 
-        // Load the viewer settings.
+        // Open the media columns of a project file. Each stays unavailable, and is saved as it was read, until its
+        // media has opened.
+        for (MediaColumn column : project.getMediaColumns()) {
+            showController = true;
+            project.addUnavailableMedia(column);
+            if (column.clips().isEmpty()) {
+                continue;
+            }
+            Clip clip = column.clips().get(0);
+            Path folder = Paths.get(project.getProjectDirectory() == null ? "" : project.getProjectDirectory());
+            File file = ProjectPaths.resolve(folder, clip.source().file()).toFile();
+            if (!file.exists()) {
+                missingFilesList.add(file.getPath());
+                continue;
+            }
+            videoController.openStream(Identifier.generateIdentifier(), file, streamViewer -> {
+                project.mediaOpened(column, streamViewer.getIdentifier());
+                streamViewer.setOffset(clip.onset());
+                streamViewer.setVolumeLevel((float) clip.volume());
+                streamViewer.setViewerVisible(!column.hidden());
+                showViewerWindow(streamViewer);
+            }, streamViewer -> mixerController.setTrackLocked(streamViewer.getIdentifier(), column.locked()));
+        }
+
+        // Load the viewer settings of an older project file.
         for (ViewerSetting setting : project.getViewerSettings()) {
             showController = true;
 
@@ -388,14 +426,7 @@ public final class ProjectController {
                     streamViewer.setOffset(viewerSetting.getOffset());
                 }
 
-                // Make sure that the parent dialog is visible
-                if (streamViewer.getParentJDialog() != null) {
-                    boolean visible = streamViewer.getParentJDialog().isVisible();
-                    Datavyu.getApplication().show(streamViewer.getParentJDialog());
-                    if (!visible) {
-                        streamViewer.getParentJDialog().setVisible(false);
-                    }
-                }
+                showViewerWindow(streamViewer);
             }, streamViewer -> {
                 if (viewerSetting.getTrackSettings() != null) {
                     final TrackSettings ts = viewerSetting.getTrackSettings();
@@ -489,40 +520,74 @@ public final class ProjectController {
 
     }
 
-    /**
-     * Gather and update the various project specific settings.
-     */
-    public void updateProject() {
-
-        VideoController dataController = spreadSheetPanel.getVideoController();
-
-        // Gather the data viewer settings
-        List<ViewerSetting> viewerSettings = new LinkedList<ViewerSetting>();
-
-        int settingsId = 1;
-
-        for (StreamViewer viewer : dataController.getStreamViewers()) {
-            ViewerSetting viewerSetting = new ViewerSetting();
-            viewerSetting.setFilePath(viewer.getSourceFile().getAbsolutePath());
-            viewerSetting.setPluginName(viewer.getClass().getName());
-
-
-            viewerSetting.setPluginNameAndUUID(JavaFxVideoPlugin.PLUGIN_UUID);
-            viewerSetting.setPluginClassifier(JavaFxVideoPlugin.NAMESPACE);
-
-            viewerSetting.setSettingsId(Integer.toString(settingsId++));
-            viewer.storeSettings(viewerSetting.getSettingsOutputStream());
-
-            TrackModel tm = dataController.getMixerController().getTrackModel(viewer.getIdentifier());
-            TrackSettings ts = new TrackSettings();
-            ts.setLocked(tm.isLocked());
-
-            viewerSetting.setTrackSettings(ts);
-
-            viewerSettings.add(viewerSetting);
+    /** Puts a video window where it was last left, keeping it hidden if it was hidden. */
+    private static void showViewerWindow(final StreamViewer streamViewer) {
+        if (streamViewer.getParentJDialog() != null) {
+            boolean visible = streamViewer.getParentJDialog().isVisible();
+            Datavyu.getApplication().show(streamViewer.getParentJDialog());
+            if (!visible) {
+                streamViewer.getParentJDialog().setVisible(false);
+            }
         }
+    }
 
-        project.setViewerSettings(viewerSettings);
+    /**
+     * The project as a project file holds it: a media column for each open video, then the media columns whose media
+     * is not open, then the spreadsheet's columns.
+     *
+     * @param projectFolder the folder the project file is saved in, which video paths are relative to
+     * @return the project
+     * @throws UserWarningException if an open video's details cannot be read
+     */
+    public ProjectDocument toDocument(final Path projectFolder) throws UserWarningException {
+        List<AnnotationColumn> annotationColumns = SpreadsheetColumns.of(dataStore);
+        List<MediaColumn> unavailable = project.getUnavailableMedia();
+        Set<String> names = new HashSet<>();
+        annotationColumns.forEach(column -> names.add(column.name()));
+        unavailable.forEach(column -> names.add(column.name()));
+
+        List<Column> columns = new ArrayList<>();
+        if (spreadSheetPanel != null) {
+            VideoController videoController = spreadSheetPanel.getVideoController();
+            // Media keeps its column's name unless another column has taken it; new media gets the next media_#.
+            Set<String> kept = new HashSet<>();
+            for (StreamViewer viewer : videoController.getStreamViewers()) {
+                String name = project.getMediaName(viewer.getIdentifier());
+                if (name != null && names.add(name)) {
+                    kept.add(name);
+                }
+            }
+            for (StreamViewer viewer : videoController.getStreamViewers()) {
+                String name = project.getMediaName(viewer.getIdentifier());
+                if (name == null || !kept.remove(name)) {
+                    name = MediaColumnNames.next(names);
+                    names.add(name);
+                    project.setMediaName(viewer.getIdentifier(), name);
+                }
+                TrackModel track = videoController.getMixerController().getTrackModel(viewer.getIdentifier());
+                columns.add(new MediaColumn(name, !viewer.isViewerVisible(), track != null && track.isLocked(),
+                    List.of(new Clip(viewer.getOffset(), exact(viewer.getVolumeLevel()), source(projectFolder, viewer)))));
+            }
+        }
+        columns.addAll(unavailable);
+        columns.addAll(annotationColumns);
+        return new ProjectDocument(columns);
+    }
+
+    private static Source source(final Path projectFolder, final StreamViewer viewer) throws UserWarningException {
+        Dimension size = viewer.getVideoSize();
+        float frameRate = viewer.getFramesPerSecond();
+        if (size == null || size.width <= 0 || size.height <= 0 || !(frameRate > 0)) {
+            throw new UserWarningException("Unable to save: the size or frame rate of "
+                + viewer.getSourceFile().getName() + " is unknown.");
+        }
+        return new Source(ProjectPaths.stored(projectFolder, viewer.getSourceFile().toPath()),
+            Math.max(0, viewer.getDuration()), exact(frameRate), size.width, size.height);
+    }
+
+    /** @return the float as written in decimal, so that 0.7f is saved as 0.7 rather than 0.699999988079071 */
+    private static double exact(final float value) {
+        return Double.parseDouble(Float.toString(value));
     }
 
     /**
