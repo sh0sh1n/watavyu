@@ -72,8 +72,8 @@ public final class Datavyu implements TitleNotifier {
 
     static {
         logger.info("Working directory is: " + System.getProperty("user.dir"));
-        logger.info("Class path is: " + System.getProperty("java.class.path"));
-        logger.info("The java library path is: " + System.getProperty("java.library.path"));
+        logger.debug("Class path is: " + System.getProperty("java.class.path"));
+        logger.debug("The java library path is: " + System.getProperty("java.library.path"));
     }
 
     /** This application is ready to open a file */

@@ -63,8 +63,8 @@ dependencies {
     implementation("commons-io:commons-io:2.5")
     implementation("org.apache.commons:commons-lang3:3.6")
     implementation("com.google.guava:guava:27.1-jre")
-    implementation("org.apache.logging.log4j:log4j-api:2.11.2")
-    implementation("org.apache.logging.log4j:log4j-core:2.11.2")
+    implementation("org.apache.logging.log4j:log4j-api:2.26.1")
+    implementation("org.apache.logging.log4j:log4j-core:2.26.1")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.22.3")
 
     for (module in javafxModules - "media") {
@@ -129,6 +129,8 @@ tasks.withType<Test>().configureEach {
     jvmArgumentProviders.add(CommandLineArgumentProvider { listOf("-javaagent:${mockitoAgent.singleFile}") })
     // Tests read and write settings here, never in the user's ~/Library/Application Support/Watavyu.
     systemProperty("watavyu.settingsDir", layout.buildDirectory.dir("test-settings/$name").get().asFile.absolutePath)
+    // and log here, never in the user's ~/Library/Logs/Watavyu.
+    systemProperty("watavyu.logDir", layout.buildDirectory.dir("test-logs/$name").get().asFile.absolutePath)
 }
 
 tasks.test {

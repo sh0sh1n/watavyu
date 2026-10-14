@@ -16,8 +16,8 @@ Updated 2026-10-14. Re-measure with the commands in [BUILDING.md › Analysis Re
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
 | Java source (main) | 242 files, 42.5k lines | 184 files, 31.4k lines |
-| Tests / line coverage | 113 / 9.9% | 281 / 17.2%; still 0% in most views, the timeline and undo |
-| Runtime dependencies / with known vulnerabilities | 28 / 8 | 21 / 5 |
+| Tests / line coverage | 113 / 9.9% | 283 / 17.2%; still 0% in most views, the timeline and undo |
+| Runtime dependencies / with known vulnerabilities | 28 / 8 | 21 / 4 |
 | Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 837 |
 | PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 463 / 97; 15 |
 | Never-invoked methods (`dead-code.py`) | 109+ | 10, all intended: B3's events and test-only accessors |
@@ -25,9 +25,7 @@ Updated 2026-10-14. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 ## Security
 
-**S2. Log4j 2.11.2 evaluates lookups inside log messages.** ready, *verified*. Logging `"${java:version}"` printed `Java version 25.0.4.1`. This is the Log4Shell precondition: a file path containing `${jndi:ldap://…}` makes Log4j open a network connection, which also breaks the no-network property (`NoNetworkAccessTest` only inspects the application's own classes). Upgrade to Log4j 2.26.x, where message lookups no longer exist. While there, move the log from `all.log` in the working directory (DEBUG, overwritten each launch, starts with the full class path) to `~/Library/Logs/Watavyu/` at INFO.
-
-**S3. Other vulnerable libraries.** *verified with OSV.dev*. SnakeYAML 1.18 (8 advisories; opening `.opf` files now uses its `SafeConstructor`, which refuses tags naming Java classes, but the parser's denial-of-service advisories remain), Log4j 2.11.2 (7, including S2), commons-io 2.5 (2), Guava 27.1 (2), commons-lang3 3.6 (1). Fixed by D1.
+**S3. Other vulnerable libraries.** *verified with OSV.dev*. SnakeYAML 1.18 (8 advisories; opening `.opf` files now uses its `SafeConstructor`, which refuses tags naming Java classes, but the parser's denial-of-service advisories remain), commons-io 2.5 (2), Guava 27.1 (2), commons-lang3 3.6 (1). Fixed by D1.
 
 ## Bugs
 
@@ -71,7 +69,6 @@ Updated 2026-10-14. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 | Library | Now → latest stable | Used by | Action |
 |---|---|---|---|
-| Log4j | 2.11.2 → 2.26.1 | most classes | ready: upgrade (S2) |
 | SnakeYAML | 1.18 → 2.7 | opening `.opf` files, citation | drop with `.opf` opening (a migration question, see AGENTS.md › Decisions); the citation can parse its few keys without it. Until then, upgrade |
 | commons-io, commons-lang3, Guava | 2.5 / 3.6 / 27.1 → 2.22 / 3.21 / 33.7 | a few files each | ready: upgrade, or replace the remaining uses with the JDK |
 | TestNG | 6.11 → 7.12.0 | tests | ready: upgrade; JUnit 5 is optional |

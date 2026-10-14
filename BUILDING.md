@@ -43,7 +43,7 @@ make clean
 
 The Makefile is a small convenience layer over the Gradle Wrapper; it does not introduce another build system. It reads the repo-pinned Java location from asdf for the build process. You can also invoke Gradle directly with `./gradlew <task>`.
 
-`make run` starts the desktop UI in the foreground. The application keeps its settings in `~/Library/Application Support/Watavyu/settings.json` (see [Settings](#settings)). `./gradlew run --args=/path/to/study.watavyu.json` opens a project at launch (see [Project Files](#project-files)).
+`make run` starts the desktop UI in the foreground. The application keeps its settings in `~/Library/Application Support/Watavyu/settings.json` (see [Settings](#settings)) and its log in `~/Library/Logs/Watavyu/watavyu.log` (see [Log](#log)). `./gradlew run --args=/path/to/study.watavyu.json` opens a project at launch (see [Project Files](#project-files)).
 
 Playback checks that drive the real player (see [Testing Playback](#testing-playback)):
 
@@ -109,6 +109,10 @@ The `watavyu.settingsDir` system property moves the file to another directory. E
 Spreadsheet colours and fonts are not settings: they are constants in `SpreadsheetTheme`. Zoom changes the cell font size until the application quits.
 
 Before this file existed, settings lived in `~/Library/Application Support/Datavyu` as Java XMLEncoder files (`settings.xml`, `projectHistory.xml` and `*.session.xml`). Nothing reads them any more and they can be deleted.
+
+## Log
+
+Log4j 2.26 writes INFO and above to the console and to `~/Library/Logs/Watavyu/watavyu.log`, which Console.app also shows. Each launch starts a new file and the logs of the five launches before it are kept as `watavyu-1.log` (the last) to `watavyu-5.log`, so the log of a crash survives the next launch. Every line is written at once. Log4j 2.26 does not evaluate `${...}` lookups in messages, so a file path cannot make it act (`LoggingTest`). The `watavyu.logDir` system property moves the folder; every Gradle test task sets it to `build/test-logs/<task>`. The configuration is `src/main/resources/log4j2.xml`.
 
 ## Project Files
 
@@ -219,7 +223,7 @@ Not needed for seeking with this backend. Native exact seeks already complete in
 - `make build` succeeds on Temurin 25.0.4 / macOS 27 arm64 with Error Prone enabled. Remaining compiler warnings are Error Prone warnings.
 - `make run` reaches the application window. Opening a project file that lists the integration fixture loads its track (1280x720, 300 frames, 30 fps) at its onset, volume and lock, and the autosave written a minute later held that video, a second video whose file was missing (unchanged) and the annotation column. A `.mov` shows the conversion message and adds no track.
 - `./gradlew integrationTest`: 15 tests pass. As controls, the same tests fail against stock OpenJFX (6 seek/step tests), against a library without the audio-tap change (start latency), and against a library without the seek-frame fix (stale frame after pause).
-- `./gradlew test` runs 281 tests and all pass, with none skipped. Before the move from Mockito 2.10 to 5.24.0, the `setUp` methods of `CellTest`, `DataStoreTest` and `VariableTest` failed on JDK 25 ("Cannot define class using reflection") and TestNG skipped those classes' 27 tests. `OpenControllerTest` and `SaveControllerTest` pass since their Maven-era paths (a trailing slash on `testPath`, output under `target/`) were fixed. The suite is now a green verification gate.
+- `./gradlew test` runs 283 tests and all pass, with none skipped. Before the move from Mockito 2.10 to 5.24.0, the `setUp` methods of `CellTest`, `DataStoreTest` and `VariableTest` failed on JDK 25 ("Cannot define class using reflection") and TestNG skipped those classes' 27 tests. `OpenControllerTest` and `SaveControllerTest` pass since their Maven-era paths (a trailing slash on `testPath`, output under `target/`) were fixed. The suite is now a green verification gate.
 - Not verified automatically: audible audio and the volume slider (the volume path changed with the audio-tap removal), and interactive playback driven by the Datavyu clock and keyboard shortcuts. Check these by hand after `make run`.
 
 ## Not Included

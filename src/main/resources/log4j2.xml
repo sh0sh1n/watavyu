@@ -1,15 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Configuration status="INFO">
+<!-- The log is ~/Library/Logs/Watavyu/watavyu.log, or watavyu.log in the folder named by the watavyu.logDir system
+     property, which the tests set. Each launch starts a new file; the logs of the five launches before it are kept. -->
+<Configuration status="WARN">
+    <Properties>
+        <Property name="logDir">${sys:watavyu.logDir:-${sys:user.home}/Library/Logs/Watavyu}</Property>
+    </Properties>
     <Appenders>
         <Console name="Console" target="SYSTEM_OUT">
             <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n" />
         </Console>
-        <File name="FileLogger" fileName="all.log" immediateFlush="false" append="false">
-            <PatternLayout pattern="%d{yyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
-        </File>
+        <RollingFile name="FileLogger" fileName="${logDir}/watavyu.log" filePattern="${logDir}/watavyu-%i.log">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+            <Policies>
+                <OnStartupTriggeringPolicy minSize="0"/>
+            </Policies>
+            <DefaultRolloverStrategy max="5" fileIndex="min"/>
+        </RollingFile>
     </Appenders>
     <Loggers>
-        <Root level="debug">
+        <Root level="info">
             <AppenderRef ref="Console" />
             <AppenderRef ref="FileLogger"/>
         </Root>
