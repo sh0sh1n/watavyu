@@ -160,7 +160,7 @@ tasks.withType<JavaCompile>().configureEach {
 }
 
 // ./gradlew compileJava compileTestJava -PerrorpronePatch=CheckA,CheckB rewrites the sources in place with Error
-// Prone's suggested fixes for those checks (R8). Review the result like any other change.
+// Prone's suggested fixes for those checks. Review the result like any other change.
 providers.gradleProperty("errorpronePatch").orNull?.let { checks ->
     tasks.withType<JavaCompile>().configureEach {
         options.errorprone.errorproneArgs.addAll("-XepPatchChecks:$checks", "-XepPatchLocation:IN_PLACE")

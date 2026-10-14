@@ -8,9 +8,10 @@ Watavyu is a personal macOS fork of Datavyu, a tool for coding behaviour in vide
 
 The aim is a smaller app whose every feature was chosen on purpose, with a modern UI and project files a person can read:
 
+- **A C++ rewrite follows.** The app will be rewritten in C++ for interoperability with computer vision and ML/AI libraries. Until then, effort goes into cutting features and fleshing out the behaviour of what stays, pinned by tests that become the rewrite's specification, not into refactoring code that will be replaced. Refactor only where a cut or a behaviour change needs it.
 - **Cut, then keep on purpose.** Unused features go. What stays is kept deliberately and pinned by tests, because each kept behaviour is something the app is then committed to.
 - **Transparent data.** A project is one readable JSON file holding the spreadsheet and the project. Videos are data columns like any other, with explicit onsets (F1).
-- **Fewer windows.** The main window, video controller and video windows are hard to manage; the UI direction (U1) should reduce them.
+- **Fewer windows.** The main window, video controller and video windows are hard to manage. The next big UI change removes the video controller window: media tracks move into the spreadsheet (F4, F6), and the numpad shortcuts become a smaller, configurable key mapping, so coding works on laptops without a numpad (F7).
 - **One platform.** macOS on Apple Silicon, Java 25, Swing with OpenJFX video through a patched media library. The app makes no network connections of its own; the rule keeps traffic off the public internet, and project and video files on mounted or local-network volumes are fine.
 
 ## How to Work Here
@@ -27,13 +28,15 @@ The aim is a smaller app whose every feature was chosen on purpose, with a moder
 
 Newest first. (owner) marks product decisions; the rest are engineering choices that can be revisited with reason.
 
+- **2026-10-14 (owner): playback rates.** Shuttle steps through 0.5, 0.75, 1, 1.25, 1.5 and 2× instead of powers of 2; beyond 2×, people jump or scrub instead (F8).
+- **2026-10-14 (owner): annotation columns have no subtypes.** Text and nominal columns convert to annotation columns when a file opens, and their classes go (F5).
 - **2026-10-14 (owner): work is tracked in TODO.md and AGENTS.md**, not GitHub issues or separate documents. Small bugs found while iterating are logged rather than fixed when the code may be redesigned or dropped.
 - **2026-10-14 (owner): the JSON project format** (F1). One `<name>.watavyu.json` file holds the whole project for now; folders, templates and reusable coding passes come later (U2). Backwards compatibility with `.opf` does not constrain the design: existing users keep Datavyu, and migration is a later question. For now `.opf` and `.csv` files still open, and saving always writes a project file (Save on one of them goes through Save As).
   - Shape: `{"format": "watavyu", "version": 1, "columns": [...]}`. Columns are in spreadsheet order; each has `name`, `type`, `settings` (view state as key-value pairs, every key always written) and `cells` in time order. Times are `HH:MM:SS:mmm`.
   - `annotation` columns replace text, nominal and matrix columns (F5): an ordered `codes` list, and each cell has `onset`, `offset` and `values` aligned with `codes`, an empty value being `""`. A column with no codes holds timing only, since the app lets the last code be deleted. Column settings: `hidden`.
   - A `media` column is one media window (audio is to be supported too), and each cell is a clip in it: `onset`, `offset`, `settings` (`volume`) and `source` (`file`, `duration`, `frameRate`, `width`, `height`). `source` caches what the media file says; the file wins when they differ. Paths are relative to the project file, or absolute outside its folder. Media added in the app gets a column named `media_1`, `media_2` and so on. Column settings: `hidden`, and `locked`, which stops clips being dragged: a missed accidental move would misalign every cell annotated after it.
   - Clips slide but are not trimmed: a clip's offset is its onset plus its source duration, written for readers and never set by the user. Gaps between clips show blank frames; where clips overlap, the later one wins. Until F4, a media column holds one clip.
-  - **Hack:** a clip may start before time zero, because dragging a track in the video controller window already allows it (for a recording that began before the annotated session). The separate controller window is to be phased out (U1); discuss negative times again then.
+  - **Hack:** a clip may start before time zero, because dragging a track in the video controller window already allows it (for a recording that began before the annotated session). The video controller window is to be removed (F6); discuss negative times again then.
   - Every offset is a real time: new cells are point cells (offset = onset), with no "unset" offset. An offset before its onset is allowed, saved as it is, and flagged in the spreadsheet with a red border as in Datavyu (which exempts an offset of `00:00:00:000`, Datavyu's "unset").
   - Not carried over: the project name, original folder and database file name, plugin UUID, namespace and class, per-object version numbers, and the frame-rate override. Video window size and position wait for U1.
 - **2026-10-14 (owner): removed features**: Ruby and R scripting and the script console; the file and favorites drawers; the `.shapa` and `.odb` formats; the Undo History window; the playback region of interest; track bookmarks; snapping while dragging a track. Old `.opf` files with bookmarks still open; the bookmarks are dropped.
@@ -52,7 +55,7 @@ Ask the owner before acting on these.
 
 - Project structure beyond one file: folders, templates, and coding passes reused across experiments (U2).
 - Migration from Datavyu: whether `.opf` files keep opening, or a one-off converter replaces that. Dropping it would also drop SnakeYAML (D1).
-- The UI direction (U1), including docking the video controller in the main window.
+- The rest of the UI direction (U1) beyond removing the video controller window.
 - Whether quick-key mode stays.
 - Whether a scripting shell returns, and in what form. It would start from a clean slate.
 
