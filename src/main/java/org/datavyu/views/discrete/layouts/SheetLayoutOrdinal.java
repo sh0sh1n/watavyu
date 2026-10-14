@@ -15,7 +15,6 @@
 package org.datavyu.views.discrete.layouts;
 
 import org.datavyu.Datavyu;
-import org.datavyu.views.discrete.ColumnDataPanel;
 import org.datavyu.views.discrete.SpreadsheetCell;
 import org.datavyu.views.discrete.SpreadsheetColumn;
 import org.datavyu.views.discrete.SpreadsheetView;

@@ -31,21 +31,4 @@ public final class Constants {
     /** The margin size to use down the sides of the columns. */
     public static final int BORDER_SIZE = 1;
 
-    /** The name of the configuration file */
-    public static final String CONFIGURATION_FILE = "settings.xml";
-
-    /** The name for the project file history */
-    public static final String PROJECT_FILE_HISTORY = "projectHistory.xml";
-
-    /** The name for the script file history */
-    public static final String SCRIPT_FILE_HISTORY = "scriptHistory.xml";
-
-    /** Font file name */
-    public static final String DEFAULT_FONT_FILE = "/fonts/DejaVuSansCondensed.ttf";
-
-    /** Cell Unicode Font file name */
-    public static final String DEFAULT_CELL_FONT_FILE = "/fonts/DejaVuSansCondensed.ttf";
-
-    /** Buffer size when copying files from streams */
-    public static final int BUFFER_COPY_SIZE = 16*1024; // 16 kB
 }

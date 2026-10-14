@@ -21,7 +21,6 @@ import org.datavyu.Datavyu;
 import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.UserWarningException;
 import org.datavyu.util.FileFilters.OpfFilter;
-import org.datavyu.util.FileFilters.ShapaFilter;
 
 import javax.swing.*;
 import java.awt.event.ActionEvent;
@@ -82,9 +81,7 @@ public class AutoSaveController implements ActionListener {
                 saveController.saveProject(file, projController.getProject(),
                         projController.getDataStore(), false);
             } else {
-                if ((projController.getLastSaveOption() instanceof ShapaFilter)
-                        || (projController.getLastSaveOption()
-                        instanceof OpfFilter)) {
+                if (projController.getLastSaveOption() instanceof OpfFilter) {
                     baseName = "~" + projController.getProjectName() + "_";
                     ext = ".opf";
                     file = File.createTempFile(baseName, ext);

@@ -17,8 +17,7 @@ package org.datavyu.models.project;
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.datavyu.plugins.Plugin;
-import org.datavyu.plugins.PluginManager;
+import org.datavyu.plugins.javafx.JavaFxVideoPlugin;
 
 import java.io.*;
 import java.util.UUID;
@@ -27,7 +26,6 @@ import java.util.UUID;
 /**
  * Stores user settings for a data viewer
  */
-// TODO: Can we remove / replace this class by using the Swing Application Framework?
 public final class ViewerSetting {
 
     /** Logger for this class */
@@ -64,7 +62,27 @@ public final class ViewerSetting {
 
     /** Output stream */
     private ByteArrayOutputStream settingsOutput;
+    /** Whether a track can be opened, now that the OpenJFX player is the only one. */
+    public enum PlayerMatch {
+        /** The track was recorded with the OpenJFX player. */
+        SAME_PLAYER,
+        /** The track was recorded with another video player; it opens with the OpenJFX player after a notice. */
+        OTHER_VIDEO_PLAYER,
+        /** The track was recorded with a viewer of another kind, or the project does not say; it cannot open. */
+        NONE
+    }
+
     public ViewerSetting() { }
+
+    /**
+     * @return Whether the OpenJFX player can open this track.
+     */
+    public PlayerMatch playerMatch() {
+        if (JavaFxVideoPlugin.VIEWER_CLASS_NAME.equals(pluginName)) {
+            return PlayerMatch.SAME_PLAYER;
+        }
+        return JavaFxVideoPlugin.NAMESPACE.equals(pluginClassifier) ? PlayerMatch.OTHER_VIDEO_PLAYER : PlayerMatch.NONE;
+    }
 
     /**
      * Copy constructor
@@ -135,13 +153,8 @@ public final class ViewerSetting {
 
     public void setPluginName(final String pluginName) {
         this.pluginName = pluginName;
-        if(pluginUUID == null){
-            for(Plugin p : PluginManager.getInstance().getPlugins()){
-                if(pluginName.equals(p.getViewerClass().getName())){
-                    setPluginNameAndUUID(p.getPluginUUID());
-                    break;
-                }
-            }
+        if (pluginUUID == null && JavaFxVideoPlugin.VIEWER_CLASS_NAME.equals(pluginName)) {
+            setPluginNameAndUUID(JavaFxVideoPlugin.PLUGIN_UUID);
         }
     }
 
@@ -155,13 +168,8 @@ public final class ViewerSetting {
      */
     public void setPluginNameAndUUID(final UUID pluginUUID) {
         this.pluginUUID =  pluginUUID;
-        if(pluginName == null){
-            for(Plugin p : PluginManager.getInstance().getPlugins()){
-                if(pluginUUID.equals(p.getPluginUUID())){
-                    setPluginName(p.getViewerClass().getName());
-                    break;
-                }
-            }
+        if (pluginName == null && JavaFxVideoPlugin.PLUGIN_UUID.equals(pluginUUID)) {
+            setPluginName(JavaFxVideoPlugin.VIEWER_CLASS_NAME);
         }
     }
 

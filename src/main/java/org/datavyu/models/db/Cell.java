@@ -108,11 +108,6 @@ public interface Cell {
     Variable getVariable();
 
     /**
-     * @return The unique identifier of the cell
-     */
-    String getCellId();
-
-    /**
      * @return True if the cell is selected, false otherwise
      */
     boolean isSelected();
@@ -150,13 +145,6 @@ public interface Cell {
      * @return
      */
     CellValue getMatrixValue(final int index);
-
-    /**
-     * Removes an argument from a matrix variable.
-     *
-     * @param index - the index of argument to clear from the matrix
-     */
-    void clearMatrixValue(final int index);
 
     /**
      * Adds a new argument to a matrix variable.

@@ -22,7 +22,6 @@ import org.yaml.snakeyaml.nodes.Tag;
 import org.yaml.snakeyaml.representer.Represent;
 import org.yaml.snakeyaml.representer.Representer;
 
-import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -69,14 +68,11 @@ public class DatavyuProjectRepresenter extends Representer {
 //            map.put("plugin", viewerSetting.0());
             map.put("plugin", viewerSetting.getPluginUUID().toString());
 
-            // BugzID:2108
             map.put("classifier", viewerSetting.getPluginClassifier());
 
-            // BugzID:1806
             map.put("settingsId", viewerSetting.getSettingsId());
             map.put("version", ViewerSetting.VERSION);
 
-            // BugzID:2107
             map.put("trackSettings", viewerSetting.getTrackSettings());
 
             return representMapping(new Tag("!vs"), map, Boolean.FALSE);
@@ -91,22 +87,6 @@ public class DatavyuProjectRepresenter extends Representer {
             TrackSettings interfaceSettings = (TrackSettings) obj;
             Map<String, Object> map = new TreeMap<String, Object>();
             map.put("locked", interfaceSettings.isLocked());
-
-            final List<Long> bookmarks =
-                    interfaceSettings.getMarkers();
-
-            if (bookmarks.isEmpty()) {
-
-                // DEPRECATED - only included for backwards compatibility
-                map.put("bookmark", "-1");
-                map.put("bookmarks", bookmarks);
-            } else {
-
-                // DEPRECATED - only included for backwards compatibility
-                map.put("bookmark", Long.toString(bookmarks.get(0)));
-
-                map.put("bookmarks", bookmarks);
-            }
 
             map.put("version", TrackSettings.VERSION);
 

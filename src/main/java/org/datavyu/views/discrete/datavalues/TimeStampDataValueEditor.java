@@ -122,13 +122,13 @@ public final class TimeStampDataValueEditor extends EditorComponent {
     public void keyPressed(final KeyEvent e) {
         //TimeStampDataValue tdv = (TimeStampDataValue) getModel();
         switch (e.getKeyCode()) {
-            // BugzID:708 - Force the Home key to behave correctly on OSX 10.4
+            // Force the Home key to behave correctly on OSX 10.4
             case KeyEvent.VK_HOME:
                 setCaretPosition(0);
                 e.consume();
                 break;
 
-            // BugzID:708 - Force the End key to behave correctly on OSX 10.4
+            // Force the End key to behave correctly on OSX 10.4
             case KeyEvent.VK_END:
                 setCaretPosition(getText().length());
                 e.consume();

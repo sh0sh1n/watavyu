@@ -236,13 +236,6 @@ public class DatavyuCell implements Cell {
     }
 
     @Override
-    public void clearMatrixValue(final int index) {
-        DatavyuMatrixCellValue val = (DatavyuMatrixCellValue) getCellValue();
-        List<CellValue> cellValues = val.getArguments();
-        cellValues.get(index).clear();
-    }
-
-    @Override
     public void addListener(final CellListener cellListener) {
         getListeners(getID()).add(cellListener);
     }
@@ -254,11 +247,6 @@ public class DatavyuCell implements Cell {
 
     public UUID getID() {
         return id;
-    }
-
-    @Override
-    public String getCellId() {
-        return this.getID().toString();
     }
 
     @Override

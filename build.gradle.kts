@@ -58,17 +58,11 @@ val patchedJavafxMedia = tasks.register<Jar>("patchedJavafxMedia") {
 }
 
 dependencies {
-    implementation("net.java.dev.jna:jna:5.2.0")
-    implementation("org.jruby:jruby-complete:9.1.13.0")
-    implementation("org.jdesktop:appframework:1.0.3")
-    implementation("org.swinglabs:swing-layout:1.0.3")
     implementation("org.yaml:snakeyaml:1.18")
     implementation("com.miglayout:miglayout:3.7.4:swing")
     implementation("commons-io:commons-io:2.5")
     implementation("org.apache.commons:commons-lang3:3.6")
-    implementation("org.apache.commons:commons-text:1.2")
     implementation("com.google.guava:guava:27.1-jre")
-    implementation("com.github.jbytecode:RCaller:3.0")
     implementation("org.apache.logging.log4j:log4j-api:2.11.2")
     implementation("org.apache.logging.log4j:log4j-core:2.11.2")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.9.9.2")
@@ -86,7 +80,6 @@ dependencies {
     testImplementation("org.testng:testng:6.11")
     testImplementation("org.mockito:mockito-core:5.24.0")
     mockitoAgent("org.mockito:mockito-core:5.24.0")
-    testImplementation("org.easytesting:fest-swing:1.2a4")
 }
 
 java {
@@ -131,6 +124,8 @@ tasks.processResources {
 
 tasks.withType<Test>().configureEach {
     jvmArgumentProviders.add(CommandLineArgumentProvider { listOf("-javaagent:${mockitoAgent.singleFile}") })
+    // Tests read and write settings here, never in the user's ~/Library/Application Support/Watavyu.
+    systemProperty("watavyu.settingsDir", layout.buildDirectory.dir("test-settings/$name").get().asFile.absolutePath)
 }
 
 tasks.test {

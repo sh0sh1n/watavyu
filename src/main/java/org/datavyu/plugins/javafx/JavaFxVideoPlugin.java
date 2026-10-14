@@ -14,60 +14,50 @@
  */
 package org.datavyu.plugins.javafx;
 
-import com.google.common.collect.Lists;
-import org.apache.commons.io.IOCase;
-import org.apache.commons.io.filefilter.SuffixFileFilter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.datavyu.Datavyu;
 import org.datavyu.models.Identifier;
-import org.datavyu.plugins.Filter;
-import org.datavyu.plugins.FilterNames;
-import org.datavyu.plugins.Plugin;
 import org.datavyu.plugins.StreamViewer;
 
 import javax.swing.ImageIcon;
+import javax.swing.filechooser.FileFilter;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.Frame;
 import java.io.File;
-import java.io.FileFilter;
 import java.io.IOException;
-import java.util.List;
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 /**
- * Video playback through OpenJFX Media. Accepts only the containers OpenJFX documents for
+ * Video playback through OpenJFX Media, the only video player. Accepts only the containers OpenJFX documents for
  * H.264/AAC; QuickTime .mov is rejected by the player and must be remuxed to MP4.
+ *
+ * <p>Project files identify a track's player by {@link #PLUGIN_UUID}, {@link #NAMESPACE} and
+ * {@link #VIEWER_CLASS_NAME}, values from the plugin system this class used to be part of.
  */
-public final class JavaFxVideoPlugin implements Plugin {
+public final class JavaFxVideoPlugin {
 
     private static final Logger logger = LogManager.getLogger(JavaFxVideoPlugin.class);
 
-    private static final UUID PLUGIN_UUID = UUID.nameUUIDFromBytes("plugin.openjfx".getBytes());
+    /** Player identifier written to project files. */
+    public static final UUID PLUGIN_UUID = UUID.nameUUIDFromBytes("plugin.openjfx".getBytes(StandardCharsets.UTF_8));
+
+    /** Kind of media written to project files; any track of this kind opens with this player. */
+    public static final String NAMESPACE = "datavyu.video";
+
+    /** Viewer class written to project files. */
+    public static final String VIEWER_CLASS_NAME = JavaFxVideoViewer.class.getName();
+
+    /** The files the player opens, for file choosers. */
+    public static final FileFilter VIDEO_FILE_FILTER = new FileNameExtensionFilter("Video files", "mp4", "m4v");
 
     /** Frame rate assumed when a file's frame times cannot be read. */
     private static final double FALLBACK_FRAMES_PER_SECOND = 30;
 
     private static final long OPEN_TIMEOUT_SECONDS = 30;
 
-    private static final Filter VIDEO_FILTER = new Filter() {
-        final List<String> extensions = Lists.newArrayList(".mp4", ".m4v");
-        final SuffixFileFilter fileFilter = new SuffixFileFilter(extensions, IOCase.INSENSITIVE);
-
-        @Override
-        public FileFilter getFileFilter() {
-            return fileFilter;
-        }
-
-        @Override
-        public String getName() {
-            return FilterNames.VIDEO.getFilterName();
-        }
-
-        @Override
-        public Iterable<String> getExtensions() {
-            return extensions;
-        }
-    };
+    private JavaFxVideoPlugin() {
+    }
 
     /**
      * Opens the file and builds its window. Blocks until the media is ready, so callers
@@ -75,9 +65,8 @@ public final class JavaFxVideoPlugin implements Plugin {
      *
      * @throws MediaOpenException With a user-facing message if the file cannot be played.
      */
-    @Override
-    public StreamViewer getNewStreamViewer(final Identifier identifier, final File sourceFile, final Frame parent,
-                                           final boolean modal) {
+    public static StreamViewer open(final Identifier identifier, final File sourceFile, final Frame parent,
+                                    final boolean modal) {
         FxPlaybackEngine engine = FxPlaybackEngine.open(sourceFile, OPEN_TIMEOUT_SECONDS);
         try {
             FrameIndex frames = readFrames(sourceFile, engine.durationMillis());
@@ -103,38 +92,10 @@ public final class JavaFxVideoPlugin implements Plugin {
         }
     }
 
-    @Override
-    public Class<? extends StreamViewer> getViewerClass() {
-        return JavaFxVideoViewer.class;
-    }
-
-    @Override
-    public ImageIcon getTypeIcon() {
-        return new ImageIcon(getClass().getResource("/icons/gstreamerplugin-icon.png"));
-    }
-
-    @Override
-    public String getPluginName() {
-        return "OpenJFX Video";
-    }
-
-    @Override
-    public UUID getPluginUUID() {
-        return PLUGIN_UUID;
-    }
-
-    @Override
-    public String getNamespace() {
-        return "datavyu.video";
-    }
-
-    @Override
-    public Filter[] getFilters() {
-        return new Filter[]{VIDEO_FILTER};
-    }
-
-    @Override
-    public List<Datavyu.Platform> getValidPlatforms() {
-        return Lists.newArrayList(Datavyu.Platform.MAC);
+    /**
+     * @return The icon shown in a video's track header.
+     */
+    public static ImageIcon trackIcon() {
+        return new ImageIcon(JavaFxVideoPlugin.class.getResource("/icons/video-track.png"));
     }
 }

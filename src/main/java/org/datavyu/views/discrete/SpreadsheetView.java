@@ -55,16 +55,6 @@ public class SpreadsheetView extends JPanel implements Scrollable {
     }
     
     /**
-     * Iterates through columns highlighting those, and only those, that should be
-     */    
-    public void hightlightColumns() {
-        for (SpreadsheetColumn sc : columns)
-        {
-            sc.setSelected(sc.isSelected());
-        }
-    }
-
-    /**
      * Removes a column from this spreadsheet view.
      *
      * @param delColumn The column to remove from this spreadsheet view.

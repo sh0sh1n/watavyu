@@ -177,29 +177,6 @@ public abstract class TrackPainter extends JComponent
             g3 = null;
         }
 
-        // paint the bookmarks
-        for (Long bookmark : trackModel.getMarkers()) {
-	        final double bookmarkXPos = viewport.computePixelXOffset(trackModel.getOffset() + bookmark);
-	
-	        GeneralPath bookmarkLine = new GeneralPath();
-	        bookmarkLine.moveTo(bookmarkXPos, carriageYOffset);
-	        bookmarkLine.lineTo(bookmarkXPos, carriageYOffset + carriageHeight);
-	        g2d.draw(bookmarkLine);
-	
-	        final double diamondSize = 10;
-	        GeneralPath bookmarkDiamond = new GeneralPath();
-	        bookmarkDiamond.moveTo(bookmarkXPos, carriageYOffset - diamondSize - 1); // top
-	        bookmarkDiamond.lineTo(bookmarkXPos + diamondSize / 2, carriageYOffset - diamondSize / 2 - 1); // right
-	        bookmarkDiamond.lineTo(bookmarkXPos, carriageYOffset - 1); // bottom
-	        bookmarkDiamond.lineTo(bookmarkXPos - diamondSize / 2, carriageYOffset - diamondSize / 2 - 1); // left
-	        bookmarkDiamond.closePath();
-	
-	        g2d.setColor(carriageColor);
-            g2d.fill(bookmarkDiamond);
-
-            g2d.setColor(outlineColor);
-            g2d.draw(bookmarkDiamond);
-        }
     }
     
     /**

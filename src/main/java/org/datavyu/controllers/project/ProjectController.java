@@ -14,6 +14,7 @@
  */
 package org.datavyu.controllers.project;
 
+import org.datavyu.util.Resources;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.Datavyu;
@@ -29,13 +30,10 @@ import org.datavyu.models.project.Project;
 import org.datavyu.models.project.TrackSettings;
 import org.datavyu.models.project.ViewerSetting;
 import org.datavyu.plugins.StreamViewer;
-import org.datavyu.plugins.Plugin;
-import org.datavyu.plugins.PluginManager;
+import org.datavyu.plugins.javafx.JavaFxVideoPlugin;
 import org.datavyu.util.FileSystemUtils;
 import org.datavyu.views.VideoController;
 import org.datavyu.views.discrete.SpreadSheetPanel;
-import org.jdesktop.application.Application;
-import org.jdesktop.application.ResourceMap;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileFilter;
@@ -69,9 +67,6 @@ public final class ProjectController {
     /** The last list of cells that was selected */
     private List<Cell> lastSelectedCells;
 
-    /** The last list of variables that was selected */
-    private List<Variable> lastSelectedVariables;
-
     /** The last cell that was selected */
     private Cell lastSelectedCell;
 
@@ -103,7 +98,6 @@ public final class ProjectController {
         lastCreatedCell = null;
         lastSelectedCell = null;
         lastCreatedVariable = null;
-        lastSelectedVariables = new ArrayList<>();
         lastSelectedCells = new ArrayList<>();
         dataStore.setTitleNotifier(Datavyu.getApplication());
     }
@@ -216,25 +210,6 @@ public final class ProjectController {
     }
 
     /**
-     * Return a list of last selected variables.
-     *
-     * @return The last selected cells.
-     */
-    public List<Variable> getLastSelectedVariables() {
-        return lastSelectedVariables;
-    }
-
-    /**
-     * Sets the last selected variables, this setter is used to persist the selected cells
-     * before performing actions on the Menu.
-     *
-     * @param lastSelectedVariables The newly selected cell.
-     */
-    public void setLastSelectedVariables(List<Variable> lastSelectedVariables) {
-        this.lastSelectedVariables = lastSelectedVariables;
-    }
-
-    /**
      * Sets the newly created variable to the specified parameter.
      *
      * @param newVariable The newly created variable.
@@ -338,8 +313,6 @@ public final class ProjectController {
      */
     public void loadProject() {
 
-        // Use the plugin manager to load up the data viewers
-        PluginManager pluginManager = PluginManager.getInstance();
         VideoController videoController = spreadSheetPanel.getVideoController();
 
         // Load the plugins required for each media file
@@ -392,25 +365,21 @@ public final class ProjectController {
                 continue;
             }
 
-            Plugin plugin = pluginManager.getAssociatedPlugin(setting.getPluginName());
-
-            if (plugin == null) {
+            ViewerSetting.PlayerMatch match = setting.playerMatch();
+            if (match == ViewerSetting.PlayerMatch.NONE) {
+                missingPluginList.add(setting.getPluginName());
+                continue;
+            }
+            if (match == ViewerSetting.PlayerMatch.OTHER_VIDEO_PLAYER) {
                 JOptionPane.showMessageDialog(Datavyu.getView().getComponent(),
                     "This project uses the video plugin " + setting.getPluginName()
                         + ", which is no longer available.\nThe video will be opened with the default plugin.",
                     "Plugin Not Available", JOptionPane.INFORMATION_MESSAGE);
-
-                plugin = PluginManager.getInstance().getCompatiblePlugin(setting.getPluginClassifier(), file) ;
-            }
-
-            if (plugin == null) {
-                missingPluginList.add(setting.getPluginName());
-                continue;
             }
 
             // Media opens in the background; the track appears once the player is ready.
             final ViewerSetting viewerSetting = setting;
-            videoController.openStream(Identifier.generateIdentifier(), file, plugin, streamViewer -> {
+            videoController.openStream(Identifier.generateIdentifier(), file, streamViewer -> {
                 if (viewerSetting.getSettingsId() != null) {
                     // new project file
                     streamViewer.loadSettings(viewerSetting.getSettingsInputStream());
@@ -430,7 +399,7 @@ public final class ProjectController {
             }, streamViewer -> {
                 if (viewerSetting.getTrackSettings() != null) {
                     final TrackSettings ts = viewerSetting.getTrackSettings();
-                    mixerController.setTrackInterfaceSettings(streamViewer.getIdentifier(), ts.getMarkers(), ts.isLocked());
+                    mixerController.setTrackLocked(streamViewer.getIdentifier(), ts.isLocked());
                 }
             });
         }
@@ -454,7 +423,7 @@ public final class ProjectController {
 
             if (!file.exists()) {
 
-                // BugzID:1804 - If absolute path does not find the file, look
+                // If absolute path does not find the file, look
                 // in the relative path (as long as we are dealing with a newer
                 // project file type).
                 if (project.getOriginalProjectDirectory() != null) {
@@ -474,14 +443,12 @@ public final class ProjectController {
                 continue;
             }
 
-            mixerController.setTrackInterfaceSettings(setting.getFilePath(),
-                    setting.getMarkers(), setting.isLocked());
+            mixerController.setTrackLocked(setting.getFilePath(), setting.isLocked());
         }
 
         if (!missingFilesList.isEmpty() || !missingPluginList.isEmpty()) {
             JFrame mainFrame = Datavyu.getApplication().getMainFrame();
-            ResourceMap rMap = Application.getInstance(Datavyu.class)
-                    .getContext().getResourceMap(Datavyu.class);
+            Resources rMap = Resources.of(Datavyu.class);
 
             StringBuilder sb = new StringBuilder();
 
@@ -540,23 +507,14 @@ public final class ProjectController {
             viewerSetting.setPluginName(viewer.getClass().getName());
 
 
-            // BugzID:2108
-            Plugin p = PluginManager.getInstance().getAssociatedPlugin(viewerSetting.getPluginName());
-            assert p.getNamespace() != null;
-            assert !"".equals(p.getNamespace());
+            viewerSetting.setPluginNameAndUUID(JavaFxVideoPlugin.PLUGIN_UUID);
+            viewerSetting.setPluginClassifier(JavaFxVideoPlugin.NAMESPACE);
 
-            viewerSetting.setPluginNameAndUUID(p.getPluginUUID());
-
-            viewerSetting.setPluginClassifier(p.getNamespace());
-
-            // BugzID:1806
             viewerSetting.setSettingsId(Integer.toString(settingsId++));
             viewer.storeSettings(viewerSetting.getSettingsOutputStream());
 
-            // BugzID:2107
             TrackModel tm = dataController.getMixerController().getTrackModel(viewer.getIdentifier());
             TrackSettings ts = new TrackSettings();
-            ts.setMarkers(tm.getMarkers());
             ts.setLocked(tm.isLocked());
 
             viewerSetting.setTrackSettings(ts);

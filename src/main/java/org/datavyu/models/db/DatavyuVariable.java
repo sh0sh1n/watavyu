@@ -95,13 +95,6 @@ public final class DatavyuVariable implements Variable {
         return result;
     }
 
-    /**
-     * Removes all the listeners for all the variables.
-     */
-    public static void clearListeners() {
-        allListeners.clear();
-    }
-
     public void addCell(Cell cell) {
         if (cell.getCellValue().getArgument() == this.getRootNode()) {
             cells.add(cell);
@@ -176,12 +169,6 @@ public final class DatavyuVariable implements Variable {
     @Deprecated
     public Argument getVariableType() {
         return getRootNode();
-    }
-
-    @Override
-    @Deprecated
-    public void setVariableType(final Argument a) {
-        setRootNode(a);
     }
 
     @Override
@@ -353,11 +340,4 @@ public final class DatavyuVariable implements Variable {
 
     //would like to change the above calls to DatavyuDataStore.markAsChanged to this,
     //but am holding off for now to avoid merge complications
-    private void markDB() {
-        if (owningDatastore != null) {
-            owningDatastore.markAsChanged();
-        } else {
-            logger.error("Failed to mark data store because no owning data store was set.");
-        }
-    }
 }

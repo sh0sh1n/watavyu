@@ -30,7 +30,7 @@ public final class NominalDataValueEditor extends DataValueEditor {
      * String holding the reserved characters - these are characters that are
      * users are unable to enter into a nominal field.
      * <p/>
-     * BugzID:524 - If Character is an escape key - ignore it.
+     * If Character is an escape key - ignore it.
      */
     private static final String RESERVED_CHARS = "\t\u001B";
 
@@ -65,7 +65,7 @@ public final class NominalDataValueEditor extends DataValueEditor {
     // *************************************************************************
     @Override
     public void focusLost(final FocusEvent fe) {
-        // BugzID:581 - Trim trailing spaces from nominal (apparently they are
+        // Trim trailing spaces from nominal (apparently they are
         // not permitted).
         super.focusLost(fe);
         if (!model.isValid(this.getText())) {
@@ -116,7 +116,7 @@ public final class NominalDataValueEditor extends DataValueEditor {
             //ndv.setItsValue(this.getText());
             //updateDatabase();
 
-            // BugzID:668 - The user is reverting back to a 'placeholder' state.
+            // The user is reverting back to a 'placeholder' state.
         } else if (this.getText().equals("")) {
             model.clear();
             //ndv.clearValue();

@@ -17,11 +17,8 @@ package org.datavyu.undoableedits;
 
 import org.datavyu.Datavyu;
 import org.datavyu.controllers.project.ProjectController;
-import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.views.DatavyuView;
-import org.datavyu.views.discrete.SpreadsheetCell;
-import org.datavyu.views.discrete.SpreadsheetColumn;
 import org.datavyu.views.discrete.SpreadSheetPanel;
 
 import javax.swing.undo.AbstractUndoableEdit;
@@ -64,26 +61,6 @@ public abstract class SpreadSheetEdit extends AbstractUndoableEdit {
         super.undo();
     }
 
-    protected SpreadsheetCell getSpreadsheetCell(Cell cell) {
-        for (SpreadsheetColumn sCol : getSpreadsheet().getColumns()) {
-            for (SpreadsheetCell sCell : sCol.getCells()) {
-                if (sCell.getCell().equals(cell)) {
-                    return sCell;
-                }
-            }
-        }
-        return null;
-    }
-
-    protected SpreadsheetColumn getSpreadsheetColumn(String columnName) {
-        for (SpreadsheetColumn sCol : getSpreadsheet().getColumns()) {
-            if (sCol.getColumnName().equals(columnName)) {
-                return sCol;
-            }
-        }
-        return null;
-    }
-
     protected void unselectAll() {
 //        view.getSpreadsheetPanel().clearColumnSelection();
         view.getSpreadsheetPanel().clearCellSelection();
@@ -97,10 +74,6 @@ public abstract class SpreadSheetEdit extends AbstractUndoableEdit {
             this.varName = varName;
             this.ord = index;
         }
-    }
-
-    protected SpreadSheetPanel getSpreadsheet() {
-        return view.getSpreadsheetPanel();
     }
 
     protected String getStyle() {
@@ -133,8 +106,6 @@ public abstract class SpreadSheetEdit extends AbstractUndoableEdit {
             msg = ((RemoveCellEdit) this).getPresentationName();
         } else if (this instanceof RemoveVariableEdit) {
             msg = ((RemoveVariableEdit) this).getPresentationName();
-        } else if (this instanceof RunScriptEdit) {
-            msg = ((RunScriptEdit) this).getPresentationName();
         } else if (this instanceof VocabEditorEdit) {
             msg = ((VocabEditorEdit) this).getPresentationName();
         } else {

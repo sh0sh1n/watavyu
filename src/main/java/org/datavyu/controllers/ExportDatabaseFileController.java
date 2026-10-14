@@ -14,6 +14,7 @@
  */
 package org.datavyu.controllers;
 
+import org.datavyu.util.Resources;
 import com.fasterxml.jackson.core.JsonEncoding;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
@@ -23,13 +24,9 @@ import javax.swing.JOptionPane;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.Datavyu;
-import org.datavyu.Datavyu.Platform;
 import org.datavyu.models.db.*;
 import org.datavyu.util.MacOS;
 import org.datavyu.util.StringUtils;
-import org.datavyu.util.WindowsOS;
-import org.jdesktop.application.Application;
-import org.jdesktop.application.ResourceMap;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -106,15 +103,13 @@ public final class ExportDatabaseFileController {
                 frameRate = 30.0;
                 String defaultOption = "Cancel";
                 String alternativeOption = "OK";
-                String[] options = Datavyu.getPlatform() == Platform.MAC ? MacOS
-                    .getOptions(defaultOption, alternativeOption) :
-                    WindowsOS.getOptions(defaultOption, alternativeOption);
+                String[] options = MacOS.getOptions(defaultOption, alternativeOption);
                 int selectedOption = JOptionPane.showOptionDialog(Datavyu.getView().getComponent(),
                     "Unable to get frame rate. Would you like to export with a 30 frame per second?",
                     e.getMessage(),
                     JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE,
                     null, options, defaultOption);
-                boolean confirmation = (Datavyu.getPlatform() == Platform.MAC) ? (selectedOption == 1) : (selectedOption == 0);
+                boolean confirmation = selectedOption == 1;
                 if (!confirmation) { return; }
                 logger.error("Unable to get frame rate. Assuming value: " + frameRate);
             }
@@ -227,7 +222,7 @@ public final class ExportDatabaseFileController {
             fos.close();
         } catch (IOException ie) {
             logger.error("Export failed. Error: ", ie);
-            ResourceMap rMap = Application.getInstance(Datavyu.class).getContext().getResourceMap(Datavyu.class);
+            Resources rMap = Resources.of(Datavyu.class);
             throw new UserWarningException(rMap.getString("UnableToSave.message", outFile), ie);
         }
     }
@@ -328,59 +323,8 @@ public final class ExportDatabaseFileController {
             outStream.close();
         } catch (IOException ie) {
             logger.error("Export as cells failed. Error: ", ie);
-            ResourceMap rMap = Application.getInstance(Datavyu.class).getContext().getResourceMap(Datavyu.class);
+            Resources rMap = Resources.of(Datavyu.class);
             throw new UserWarningException(rMap.getString("UnableToSave.message", outFile), ie);
-        }
-    }
-
-    /**
-     * Serialize the database to the specified stream in a CSV format.
-     *
-     * @param outStream The stream to use when serializing.
-     * @param ds        The datastore to save as a CSV file.
-     * @throws UserWarningException When unable to save the database as a CSV to
-     *                              disk (usually because of permissions errors).
-     */
-    public void exportAsCSV(final OutputStream outStream, final DataStore ds)
-            throws UserWarningException {
-        logger.info("save database as CSV to stream");
-
-        // Dump out an identifier for the version of file.
-        PrintStream ps = new PrintStream(outStream);
-        ps.println("#4");
-
-        for (Variable variable : ds.getAllVariables()) {
-            ps.printf("%s (%s,%s,%s)",
-                    StringUtils.escapeCSV(variable.getName()),
-                    variable.getRootNode().type,
-                    !variable.isHidden(),
-                    "");
-
-            if (variable.getRootNode().type == Argument.Type.MATRIX) {
-                ps.print('-');
-
-                int numArgs = 0;
-                for (Argument arg : variable.getRootNode().childArguments) {
-                    ps.printf("%s|%s",
-                            StringUtils.escapeCSV(arg.name),
-                            arg.type);
-
-                    if (numArgs < (variable.getRootNode().childArguments.size() - 1)) {
-                        ps.print(',');
-                    }
-                    numArgs++;
-                }
-            }
-
-            ps.println();
-
-            for (Cell cell : variable.getCells()) {
-                ps.printf("%s,%s,%s",
-                        cell.getOnsetString(),
-                        cell.getOffsetString(),
-                        cell.getValueAsString());
-                ps.println();
-            }
         }
     }
 
@@ -465,7 +409,7 @@ public final class ExportDatabaseFileController {
 
         } catch (IOException e) {
             logger.error("Export as JSON failed. Error: ", e);
-            ResourceMap rMap = Application.getInstance(Datavyu.class).getContext().getResourceMap(Datavyu.class);
+            Resources rMap = Resources.of(Datavyu.class);
             throw new UserWarningException(rMap.getString("UnableToSave.message", dbFileName), e);
         }
 

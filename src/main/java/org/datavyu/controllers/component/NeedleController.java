@@ -78,8 +78,7 @@ public final class NeedleController implements PropertyChangeListener {
     }
 
     public void resetNeedlePosition() {
-        final RegionState region = mixerModel.getRegionModel().getRegion();
-        setCurrentTime(region.getRegionStart());
+        setCurrentTime(0);
     }
 
     public NeedleModel getNeedleModel() {

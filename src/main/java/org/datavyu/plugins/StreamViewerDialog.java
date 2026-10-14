@@ -24,6 +24,7 @@ import org.datavyu.models.Identifier;
 import org.datavyu.models.component.TrackModel;
 import org.datavyu.util.ClockTimer;
 import org.datavyu.util.ClockTimer.ClockListener;
+import org.datavyu.views.WindowPlacement;
 import org.datavyu.views.DatavyuDialog;
 import org.datavyu.views.component.DefaultTrackPainter;
 import org.datavyu.views.component.TrackPainter;
@@ -79,9 +80,6 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     /** Did we assume the frames per second? */
     protected boolean isAssumedFramesPerSecond = false;
 
-    /** Original size of the video */
-    private Dimension originalVideoSize;
-
     /** The playback speed */
     protected float playBackRate = 0;
 
@@ -127,9 +125,6 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     /** Identifier of this data viewer */
     private Identifier identifier;
 
-    /** Forwards key presses in this window to the application's shortcuts */
-    private final KeyEventDispatcher keyEventDispatcher = e -> Datavyu.getApplication().dispatchKeyEvent(e);
-
     /** The offset of this stream viewer wrt to the others */
     // Offset gets updated when the user pushes the bar through 'handleCarriageOffsetChangeEvent' in the VideoController
     private long offset;
@@ -140,8 +135,6 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     public StreamViewerDialog(Identifier identifier, final Frame parent, final boolean modal) {
 
         super(parent, modal);
-
-        KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(keyEventDispatcher);
 
         this.identifier = identifier;
         offset = 0;
@@ -224,10 +217,6 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
 
     public void setVolume(float volume) {
         setPlayerVolume(volume);
-    }
-
-    public float getVolume() {
-        return volume;
     }
 
     protected abstract void setPlayerVolume(float volume);
@@ -354,8 +343,8 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
         pack();
         invalidate();
 
-        // Need to make the window visible before we know the
-        // dimensions because of a QTJava bug
+        // Each video's window comes back where the user last left a window showing a file of the same name.
+        WindowPlacement.restoreAndTrack(this, getName(), true);
         setViewerVisible(true);
 
         if (framesPerSecond == -1) {
@@ -373,11 +362,6 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
      */
     public float getFramesPerSecond() {
         return framesPerSecond;
-    }
-
-    public void setFramesPerSecond(float framesPerSecond) {
-        this.framesPerSecond = framesPerSecond;
-        isAssumedFramesPerSecond = false;
     }
 
     @Override
@@ -411,7 +395,7 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
      * #handleActionButtonEvent1(java.awt.event.ActionEvent)
      */
     private void handleActionButtonEvent1(final ActionEvent event) {
-        // BugzID:1400 - We don't allow volume changes while the track is hidden.
+        // We don't allow volume changes while the track is hidden.
         if (isVisible) {
             volumeDialog.setLocation(volumeButton.getLocationOnScreen());
             volumeDialog.setVisible(true);
@@ -537,7 +521,6 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     public void close() {
         stop();
         cleanUp();
-        KeyboardFocusManager.getCurrentKeyboardFocusManager().removeKeyEventDispatcher(keyEventDispatcher);
         volumeDialog.dispose();
         dispose();
     }
@@ -676,8 +659,7 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
         // TODO: Ensure that there is a return valuey tying offset/duration directly to the object
         if (trackModel != null
                 && clockTime >= trackModel.getOffset()
-                && clockTime < mixerController.getRegionController().getModel().getRegion().getRegionEnd()
-                && clockTime >= mixerController.getRegionController().getModel().getRegion().getRegionStart()) {
+                && clockTime < mixerController.getMixerModel().getViewportModel().getViewport().getMaxEnd()) {
             logger.info("Clock Start Starts track: " + getIdentifier() + " at time: " + clockTime);
             start();
         }

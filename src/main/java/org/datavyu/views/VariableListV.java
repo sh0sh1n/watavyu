@@ -14,6 +14,7 @@
  */
 package org.datavyu.views;
 
+import org.datavyu.util.Resources;
 import com.google.common.collect.HashBiMap;
 import net.miginfocom.swing.MigLayout;
 import org.apache.logging.log4j.LogManager;
@@ -23,8 +24,6 @@ import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.DataStoreListener;
 import org.datavyu.models.db.UserWarningException;
 import org.datavyu.models.db.Variable;
-import org.jdesktop.application.Application;
-import org.jdesktop.application.ResourceMap;
 
 import javax.swing.*;
 import javax.swing.event.TableModelEvent;
@@ -83,9 +82,7 @@ public final class VariableListV extends DatavyuDialog
     /**
      * Resource map holding all the string information.
      */
-    private ResourceMap rMap = Application.getInstance(Datavyu.class)
-            .getContext()
-            .getResourceMap(VariableListV.class);
+    private Resources rMap = Resources.of(VariableListV.class);
 
     /**
      * Creates new form ListVariablesView.
@@ -183,15 +180,6 @@ public final class VariableListV extends DatavyuDialog
         dataStore.addListener(this);
     }
 
-    /**
-     * Cleans up this dialog by removing this from the list of stuff that needs
-     * to notify us when things change in the user interface.
-     */
-    public void deRegisterListeners() {
-        tableModel.removeTableModelListener(this);
-        dataStore.removeListener(this);
-    }
-
     @Override
     public void tableChanged(TableModelEvent e) {
         int row = e.getFirstRow();
@@ -238,7 +226,7 @@ public final class VariableListV extends DatavyuDialog
      * @param variable The variable to add to the list.
      * @param rMap     The resource map - used to find localised string bundles
      */
-    public void insertRow(final Variable variable, final ResourceMap rMap) {
+    public void insertRow(final Variable variable, final Resources rMap) {
         insertRow(variable, rMap, -1);
     }
 
@@ -250,7 +238,7 @@ public final class VariableListV extends DatavyuDialog
      * @param position The position to place the new row.
      */
     public void insertRow(final Variable variable,
-                          final ResourceMap rMap,
+                          final Resources rMap,
                           int position) {
         Object[] vals = new Object[TOTAL_COLUMNS];
 

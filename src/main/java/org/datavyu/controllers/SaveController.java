@@ -14,16 +14,15 @@
  */
 package org.datavyu.controllers;
 
+import org.datavyu.util.Resources;
+import org.datavyu.util.Settings;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.Datavyu;
-import org.datavyu.FileHistory;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.UserWarningException;
 import org.datavyu.models.project.Project;
 import org.datavyu.models.project.ViewerSetting;
-import org.jdesktop.application.Application;
-import org.jdesktop.application.ResourceMap;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -66,7 +65,8 @@ public final class SaveController {
         SaveDataStoreFileController controller = new SaveDataStoreFileController();
         controller.saveDataStore(databaseFile, dataStore);
         if (remember) {
-            FileHistory.rememberProject(databaseFile);
+            Settings.get().rememberProject(databaseFile);
+            Settings.get().save();
         }
     }
 
@@ -112,7 +112,6 @@ public final class SaveController {
             new SaveDataStoreFileController().saveAsCsv(zos, dataStore);
             zos.closeEntry();
 
-            // BugzID:1806
             for (ViewerSetting vs : project.getViewerSettings()) {
                 ZipEntry vsEntry = new ZipEntry(vs.getSettingsId());
                 zos.putNextEntry(vsEntry);
@@ -126,11 +125,12 @@ public final class SaveController {
             fos.close();
 
             if (remember) {
-                FileHistory.rememberProject(projectFile);
+                Settings.get().rememberProject(projectFile);
+                Settings.get().save();
             }
 
         } catch (IOException e) {
-            ResourceMap rMap = Application.getInstance(Datavyu.class).getContext().getResourceMap(Datavyu.class);
+            Resources rMap = Resources.of(Datavyu.class);
             logger.error("Failed to save project. Error: ", e);
             throw new UserWarningException(rMap.getString("UnableToSave.message", projectFile), e);
         }

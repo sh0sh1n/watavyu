@@ -28,10 +28,6 @@ public interface MixerModel extends MixerComponentModel {
 	 */
 	ViewportModel getViewportModel();
 	
-	/**
-	 * @return model object for the start back region boundaries
-	 */
-	RegionModel getRegionModel();
 
 	/**
 	 * @return model object for the start back needle

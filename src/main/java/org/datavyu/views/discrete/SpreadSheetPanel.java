@@ -14,10 +14,10 @@
  */
 package org.datavyu.views.discrete;
 
+import org.datavyu.util.Resources;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.Datavyu;
-import org.datavyu.Datavyu.Platform;
 import org.datavyu.controllers.CreateNewCellController;
 import org.datavyu.controllers.NewVariableController;
 import org.datavyu.controllers.project.ProjectController;
@@ -32,9 +32,6 @@ import org.datavyu.views.VideoController;
 import org.datavyu.views.discrete.layouts.SheetLayout;
 import org.datavyu.views.discrete.layouts.SheetLayoutFactory;
 import org.datavyu.views.discrete.layouts.SheetLayoutFactory.SheetLayoutType;
-import org.jdesktop.application.Action;
-import org.jdesktop.application.Application;
-import org.jdesktop.application.ResourceMap;
 
 import javax.swing.*;
 import javax.swing.Box.Filler;
@@ -49,13 +46,10 @@ import java.awt.dnd.DropTargetDropEvent;
 import java.awt.event.*;
 import java.io.File;
 import java.io.IOException;
-import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.stream.Collectors;
-import javax.swing.text.BadLocationException;
 import javax.swing.undo.UndoableEdit;
 
 
@@ -67,12 +61,6 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
 
     /** The logger for this class */
     private static Logger logger = LogManager.getLogger(SpreadSheetPanel.class);
-
-    /** Use when navigating left */
-    private static final int LEFT_DIR = -1;
-
-    /** Use when navigating right */
-    private static final int RIGHT_DIR = 1;
 
     /** List containing listeners interested in file drop events */
     private final transient CopyOnWriteArrayList<FileDropEventListener> fileDropListeners;
@@ -156,8 +144,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
         rightCorner.setBorder(BorderFactory.createMatteBorder(1, 1, 1, 0, Color.BLACK));
         scrollPane.setCorner(ScrollPaneConstants.UPPER_RIGHT_CORNER, rightCorner);
 
-        ResourceMap rMap = Application.getInstance(Datavyu.class).getContext()
-                .getResourceMap(SpreadSheetPanel.class);
+        Resources rMap = Resources.of(SpreadSheetPanel.class);
 
         
         // Set up the add new variable button
@@ -165,9 +152,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
         newVariableButton.setName("newVarPlusButton");
         newVariableButton.setToolTipText(rMap.getString("add.tooltip"));
         
-        ActionMap aMap = Application.getInstance(Datavyu.class).getContext()
-                .getActionMap(SpreadSheetPanel.class, this);
-        newVariableButton.setAction(aMap.get("openNewVarMenu"));
+        newVariableButton.addActionListener(e -> openNewVarMenu());
         newVariableButton.setText(" + ");
         headerView.add(newVariableButton);
 
@@ -564,53 +549,6 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
     }
 
     /**
-     * Highlights a cell in an adjacent column.
-     *
-     * @param direction The direction in which you wish to highlight an
-     *                  adjacent column.
-     */
-    private void highlightAdjacentCell(final int direction) {
-
-        // No cell selected - simply return, can't move left or right.
-        if (highlightedCell == null) {
-            System.out.println("null");
-            return;
-        }
-
-        for (int colID = 0; colID < columns.size(); colID++) {
-
-            for (int cellID = 0; cellID < columns.get(colID).getCells().size();
-                 cellID++) {
-
-                // For each of the cells in the columns - look for the
-                // highlighted cell.
-                SpreadsheetCell cell = columns.get(colID).getCells().get(cellID);
-
-                if (cell.getCell().equals(highlightedCell.getCell())) {
-
-                    // Find column in the desired direction
-                    int newColID = colID + direction;
-
-                    if ((newColID >= 0) && (newColID < columns.size())) {
-
-                        // Find the most appopriate cell in the new
-                        // column.
-                        int newCellID = Math.min(cellID,
-                                (columns.get(newColID).getCells().size() - 1));
-
-                        SpreadsheetCell newCell = columns.get(newColID)
-                                .getCells().get(newCellID);
-                        newCell.requestFocus();
-                        setHighlightedCell(newCell);
-
-                        return;
-                    }
-                }
-            }
-        }
-    }
-
-    /**
      * @param dir The direction in which to search for adjacent cells (left or
      *            right).
      * @return An indication of the columns adjacent of the current cell
@@ -643,23 +581,6 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
     }
 
     /**
-     * Mark a cell as highlighted in the spreadsheet panel.
-     *
-     * @param cell The cell to mark as highlighted.
-     */
-    public void highlightCell(final Cell cell) {
-        for (SpreadsheetColumn col : getColumns()) {
-            for (SpreadsheetCell spreadsheetCell : col.getCells()) {
-                if (cell != null && spreadsheetCell.getCell().equals(cell)) {
-                    setHighlightedCell(spreadsheetCell);
-
-                    return;
-                }
-            }
-        }
-    }
-
-    /**
      * Set the layout type for the spreadsheet.
      *
      * @param type SheetLayoutType to set.
@@ -675,18 +596,8 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
      * Method to invoke when the user clicks on the "+" icon in the spreadsheet
      * header.
      */
-    @Action
     public void openNewVarMenu() {
         new NewVariableController();
-    }
-
-    public void updateColumnIndex() {
-        // What index does the given column sit at
-
-        int columnIndex = -1;
-        for (int i = 0; i < columns.size(); i++) {
-            columns.get(i).getVariable().setOrderIndex(i);
-        }
     }
 
     /**
@@ -842,18 +753,6 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
         lastSelectedCell = cell;
     }
 
-    @Override
-    public void removeCellFromSelection(final SpreadsheetCell cell) {
-
-        if (highlightedCell != null) {
-            highlightedCell.getCell().setSelected(false);
-            highlightedCell.getCell().setHighlighted(false);
-            highlightedCell = null;
-        }
-
-//        lastSelectedCell = cell;
-    }
-
     /**
      * Set the currently highlighted cell.
      *
@@ -921,15 +820,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
      */
     private boolean platformCellMovementMask(final KeyEvent e) {
 
-        if ((Datavyu.getPlatform() == Platform.MAC)
-                && (e.getModifiers() == Toolkit.getDefaultToolkit ().getMenuShortcutKeyMask())) {
-            return true;
-        } else if ((Datavyu.getPlatform() == Platform.WINDOWS)
-                && (e.getModifiers() == InputEvent.CTRL_MASK)) {
-            return true;
-        }
-
-        return false;
+        return e.getModifiers() == Toolkit.getDefaultToolkit().getMenuShortcutKeyMask();
     }
 
     public void reorientView(SpreadsheetCell cell) {
@@ -979,17 +870,6 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
                 listener.filesDropped(event);
             }
         }
-    }
-
-    public SpreadsheetCell getSpreadsheetCell(Cell c) {
-        for (SpreadsheetColumn v : getColumns()) {
-            for (SpreadsheetCell sc : v.getCells()) {
-                if (sc.getCell().getCellId().equals(c.getCellId())) {
-                    return sc;
-                }
-            }
-        }
-        return null;
     }
 
     public SpreadsheetColumn getSelectedColumn() {

@@ -17,7 +17,6 @@ package org.datavyu.undoableedits;
 import org.datavyu.Datavyu;
 import org.datavyu.models.db.Cell;
 import org.datavyu.util.Constants;
-import org.datavyu.views.discrete.SpreadsheetCell;
 
 /**
  * An undoable edit for changing the onset of a cell.
@@ -48,11 +47,6 @@ public class ChangeValCellEdit extends ChangeCellEdit {
         cell.getCellValue().set(cellValue);
         this.cellValue = currentCellValue;
         Datavyu.getProjectController().getSpreadSheetPanel().redrawCells();
-    }
-
-    @Override
-    protected void selectField(SpreadsheetCell sCell) {
-        sCell.selectVal();
     }
 
     @Override

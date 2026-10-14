@@ -43,25 +43,6 @@ public class MacOS {
     }
 
     /**
-     * Get version for the MacOS.
-     *
-     * @return Version number.
-     */
-    public static int getOSVersion() {
-        try {
-            String[] versionParts = System.getProperty("os.version").split("\\.");
-            int firstPart = Integer.parseInt(versionParts[0]);
-            if (firstPart == 10 && versionParts.length > 1) {
-                return Integer.parseInt(versionParts[1]);
-            }
-            return firstPart;
-        } catch (Exception e) {
-            logger.error("Could not get major version number", e);
-        }
-        return -1;
-    }
-
-    /**
      * Test whether the Apple press and hold functionality is enable.d
      *
      * @return True if press and hold is enabled; otherwise false.

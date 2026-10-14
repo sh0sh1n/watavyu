@@ -78,9 +78,6 @@ public interface Variable {
     @Deprecated
     Argument getVariableType();
     
-    @Deprecated
-    void setVariableType(final Argument newType);
-
     /**
      * @return All the cells stored in the variable using a temporal alignment.
      */

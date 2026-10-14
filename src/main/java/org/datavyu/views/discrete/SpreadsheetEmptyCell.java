@@ -14,14 +14,11 @@
  */
 package org.datavyu.views.discrete;
 
+import org.datavyu.util.Resources;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.datavyu.Datavyu;
 import org.datavyu.controllers.CreateNewCellController;
 import org.datavyu.models.db.Variable;
-import org.datavyu.util.ConfigProperties;
-import org.jdesktop.application.Application;
-import org.jdesktop.application.ResourceMap;
 
 import javax.swing.*;
 import javax.swing.Box.Filler;
@@ -52,7 +49,7 @@ public class SpreadsheetEmptyCell extends JPanel implements MouseListener {
     /**
      * Border to use for normal cell. No extra information to show.
      */
-    private static final Border NORMAL_BORDER = new MatteBorder(0, 0, 1, 1, ConfigProperties.DEFAULT_BORDER_COLOUR);
+    private static final Border NORMAL_BORDER = new MatteBorder(0, 0, 1, 1, SpreadsheetTheme.BORDER_COLOR);
 
     /**
      * The panel that displays the cell.
@@ -111,8 +108,7 @@ public class SpreadsheetEmptyCell extends JPanel implements MouseListener {
     public SpreadsheetEmptyCell(final Variable newCol) {
         setName(this.getClass().getSimpleName());
 
-        ResourceMap rMap = Application.getInstance(Datavyu.class).getContext()
-                .getResourceMap(SpreadsheetCell.class);
+        Resources rMap = Resources.of(SpreadsheetCell.class);
 
         cellPanel = new JPanel();
         cellPanel.addMouseListener(this);
@@ -128,36 +124,36 @@ public class SpreadsheetEmptyCell extends JPanel implements MouseListener {
         topPanel = new JPanel();
         topPanel.addMouseListener(this);
         ord = new JLabel("+");
-        ord.setFont(ConfigProperties.getInstance().getSpreadSheetLabelFont());
-        ord.setForeground(addAlpha(ConfigProperties.getInstance().getSpreadSheetOrdinalForegroundColor(), ALPHA));
+        ord.setFont(SpreadsheetTheme.labelFont());
+        ord.setForeground(addAlpha(SpreadsheetTheme.ORDINAL_FOREGROUND_COLOR, ALPHA));
         ord.setToolTipText(rMap.getString("ord.tooltip"));
         ord.addMouseListener(this);
         ord.setFocusable(true);
 
         onset = new JLabel("--:--:--:---");
-        onset.setFont(ConfigProperties.getInstance().getSpreadSheetLabelFont());
-        onset.setForeground(addAlpha(ConfigProperties.getInstance().getSpreadSheetTimeStampForegroundColor(), ALPHA));
+        onset.setFont(SpreadsheetTheme.labelFont());
+        onset.setForeground(addAlpha(SpreadsheetTheme.TIMESTAMP_FOREGROUND_COLOR, ALPHA));
         onset.setToolTipText(rMap.getString("onset.tooltip"));
         onset.addMouseListener(this);
         onset.setName("onsetTextField");
 
         offset = new JLabel("--:--:--:---");
-        offset.setFont(ConfigProperties.getInstance().getSpreadSheetLabelFont());
-        offset.setForeground(addAlpha(ConfigProperties.getInstance().getSpreadSheetTimeStampForegroundColor(), ALPHA));
+        offset.setFont(SpreadsheetTheme.labelFont());
+        offset.setForeground(addAlpha(SpreadsheetTheme.TIMESTAMP_FOREGROUND_COLOR, ALPHA));
         offset.setToolTipText(rMap.getString("offset.tooltip"));
         offset.addMouseListener(this);
         offset.setName("offsetTextField");
 
         dataPanel = new JLabel(rMap.getString("empty.text"));
-        dataPanel.setFont(ConfigProperties.getInstance().getSpreadSheetLabelFont());
-        dataPanel.setForeground(addAlpha(ConfigProperties.getInstance().getSpreadSheetForegroundColor(), ALPHA));
+        dataPanel.setFont(SpreadsheetTheme.labelFont());
+        dataPanel.setForeground(addAlpha(SpreadsheetTheme.FOREGROUND_COLOR, ALPHA));
 
         dataPanel.setOpaque(false);
         dataPanel.addMouseListener(this);
         dataPanel.setName("cellValue");
 
         // Set the appearance of the spreadsheet cell.
-        cellPanel.setBackground(addAlpha(ConfigProperties.getInstance().getSpreadSheetBackgroundColor(), ALPHA));
+        cellPanel.setBackground(addAlpha(SpreadsheetTheme.BACKGROUND_COLOR, ALPHA));
         cellPanel.setBorder(NORMAL_BORDER);
         cellPanel.setLayout(new BorderLayout());
 
@@ -300,9 +296,9 @@ public class SpreadsheetEmptyCell extends JPanel implements MouseListener {
      */
     @Override
     public void paint(final Graphics g) {
-        // BugzID:474 - Set the size at paint time - somewhere else may have
+        // Set the size at paint time - somewhere else may have
         // altered the font.
-        dataPanel.setFont(ConfigProperties.getInstance().getSpreadSheetDataFont());
+        dataPanel.setFont(SpreadsheetTheme.dataFont());
         super.paint(g);
     }
 }

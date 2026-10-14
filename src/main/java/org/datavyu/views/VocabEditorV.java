@@ -14,6 +14,7 @@
  */
 package org.datavyu.views;
 
+import org.datavyu.util.Resources;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.Datavyu;
@@ -22,12 +23,12 @@ import org.datavyu.models.db.Argument;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.UserWarningException;
 import org.datavyu.models.db.Variable;
+import org.datavyu.util.StringUtils;
 import org.datavyu.undoableedits.AddVariableEdit;
 import org.datavyu.undoableedits.RemoveVariableEdit;
 import org.datavyu.views.discrete.SpreadSheetPanel;
 import org.datavyu.views.discrete.datavalues.vocabelements.FormalArgEditor;
 import org.datavyu.views.discrete.datavalues.vocabelements.VocabElementV;
-import org.jdesktop.application.Action;
 
 import javax.swing.*;
 import javax.swing.undo.UndoableEdit;
@@ -38,7 +39,6 @@ import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.apache.commons.text.StringEscapeUtils.escapeHtml4;
 
 /**
  * A view for editing the database vocab.
@@ -217,7 +217,6 @@ public final class VocabEditorV extends DatavyuDialog {
     /**
      * The action to invoke when the user clicks on the add matrix button.
      */
-    @Action
     public void addColumn() {
         String varName = "column" + getMatNameNum();
         try {
@@ -250,16 +249,9 @@ public final class VocabEditorV extends DatavyuDialog {
         }
     }
 
-    public void disposeAll() {
-        KeyboardFocusManager kfm = KeyboardFocusManager.getCurrentKeyboardFocusManager();
-        kfm.removeKeyEventDispatcher(ked);
-        dispose();
-    }
-
     /**
      * The action to invoke when the user clicks on the move arg left button.
      */
-    @Action
     public void moveArgumentLeft() {
         LOGGER.error("vocEd - move code left");
         Argument va = selectedVocabElement.getModel().childArguments.get(selectedArgumentI);
@@ -279,7 +271,6 @@ public final class VocabEditorV extends DatavyuDialog {
     /**
      * The action to invoke when the user clicks on the move arg right button.
      */
-    @Action
     public void moveArgumentRight() {
         LOGGER.error("vocEd - move code right");
         Argument va = selectedVocabElement.getModel().childArguments.get(selectedArgumentI);
@@ -299,7 +290,6 @@ public final class VocabEditorV extends DatavyuDialog {
     /**
      * The action to invoke when the user clicks the move variable up button.
      */
-    @Action
     public void moveVariableUp(){
         LOGGER.error("vocEd - move column up");
         Variable var = selectedVocabElement.getVariable();
@@ -321,7 +311,6 @@ public final class VocabEditorV extends DatavyuDialog {
     /**
      * The action to invoke when the user clicks the move variable up button.
      */
-    @Action
     public void moveVariableDown(){
         LOGGER.error("vocEd - move column up");
         Variable var = selectedVocabElement.getVariable();
@@ -343,7 +332,6 @@ public final class VocabEditorV extends DatavyuDialog {
     /**
      * The action to invoke when the user clicks on the add code button.
      */
-    @Action
     public void addCode() {
         Variable var = selectedVocabElement.getVariable();
         Argument fa = var.addArgument(Argument.Type.NOMINAL);
@@ -366,7 +354,6 @@ public final class VocabEditorV extends DatavyuDialog {
     /**
      * The action to invoke when the user presses the delete button.
      */
-    @Action
     public void delete() {
 
         UndoableEdit edit = null;
@@ -416,7 +403,6 @@ public final class VocabEditorV extends DatavyuDialog {
     /**
      * The action to invoke when the user presses the apply button.
      */
-    @Action
     public int applyChanges() {
         LOGGER.info("vocEd - apply");
 
@@ -446,24 +432,8 @@ public final class VocabEditorV extends DatavyuDialog {
     }
 
     /**
-     * The action to invoke when the user presses the OK button.
-     */
-    @Action
-    public void ok() {
-        LOGGER.info("vocEd - ok");
-        if (applyChanges() == 0) {
-            try {
-                dispose();
-            } catch (Throwable e) {
-                LOGGER.error("Unable to destroy vocab editor view.", e);
-            }
-        }
-    }
-
-    /**
      * The action to invoke when the user presses the cancel button.
      */
-    @Action
     public void closeWindow() {
         LOGGER.info("vocEd - close");
         try {
@@ -583,9 +553,8 @@ public final class VocabEditorV extends DatavyuDialog {
         setName("Form");
         getContentPane().setLayout(new java.awt.GridBagLayout());
 
-        javax.swing.ActionMap actionMap = org.jdesktop.application.Application.getInstance(org.datavyu.Datavyu.class).getContext().getActionMap(VocabEditorV.class, this);
 
-        addCodeButton.setAction(actionMap.get("addCode"));
+        addCodeButton.addActionListener(e -> addCode());
         addCodeButton.setText(bundle.getString("addCodeButton.text"));
         addCodeButton.setToolTipText(bundle.getString("addCodeButton.tip"));
         addCodeButton.setName("addCodeButton");
@@ -598,7 +567,7 @@ public final class VocabEditorV extends DatavyuDialog {
         getContentPane().add(addCodeButton, gridBagConstraints);
 
 
-        addColumnButton.setAction(actionMap.get("addColumn"));
+        addColumnButton.addActionListener(e -> addColumn());
         addColumnButton.setText(bundle.getString("addColumnButton.text"));
         addColumnButton.setToolTipText(bundle.getString("addColumnButton.tip"));
         addColumnButton.setName("addColumnButton");
@@ -611,8 +580,8 @@ public final class VocabEditorV extends DatavyuDialog {
         gridBagConstraints.insets = new java.awt.Insets(5, 5, 0, 0);
         getContentPane().add(addColumnButton, gridBagConstraints);
 
-        moveCodeLeftButton.setAction(actionMap.get("moveArgumentLeft"));
-        org.jdesktop.application.ResourceMap resourceMap = org.jdesktop.application.Application.getInstance(org.datavyu.Datavyu.class).getContext().getResourceMap(VocabEditorV.class);
+        moveCodeLeftButton.addActionListener(e -> moveArgumentLeft());
+        Resources resourceMap = Resources.of(VocabEditorV.class);
         moveCodeLeftButton.setIcon(resourceMap.getIcon("moveCodeLeftButton.icon"));
         moveCodeLeftButton.setText(bundle.getString("moveCodeLeftButton.text"));
         moveCodeLeftButton.setToolTipText(bundle.getString("moveCodeLeftButton.tip"));
@@ -625,7 +594,7 @@ public final class VocabEditorV extends DatavyuDialog {
         gridBagConstraints.insets = new java.awt.Insets(5, 0, 5, 0);
         getContentPane().add(moveCodeLeftButton, gridBagConstraints);
 
-        moveCodeRightButton.setAction(actionMap.get("moveArgumentRight"));
+        moveCodeRightButton.addActionListener(e -> moveArgumentRight());
         moveCodeRightButton.setIcon(resourceMap.getIcon("moveCodeRightButton.icon"));
         moveCodeRightButton.setText(bundle.getString("moveCodeRightButton.text"));
         moveCodeRightButton.setToolTipText(bundle.getString("moveCodeRightButton.tip"));
@@ -639,7 +608,7 @@ public final class VocabEditorV extends DatavyuDialog {
         gridBagConstraints.insets = new java.awt.Insets(5, 0, 5, 5);
         getContentPane().add(moveCodeRightButton, gridBagConstraints);
 
-        moveVariableUpButton.setAction(actionMap.get("moveVariableUp"));
+        moveVariableUpButton.addActionListener(e -> moveVariableUp());
         moveVariableUpButton.setIcon(resourceMap.getIcon("moveVariableUpButton.icon"));
         moveVariableUpButton.setText(bundle.getString("moveVariableUpButton.text"));
         moveVariableUpButton.setToolTipText(bundle.getString("moveVariableUpButton.tip"));
@@ -653,7 +622,7 @@ public final class VocabEditorV extends DatavyuDialog {
         gridBagConstraints.insets = new java.awt.Insets(5, 0, 5, 5);
         getContentPane().add(moveVariableUpButton, gridBagConstraints);
 
-        moveVariableDownButton.setAction(actionMap.get("moveVariableDown"));
+        moveVariableDownButton.addActionListener(e -> moveVariableDown());
         moveVariableDownButton.setIcon(resourceMap.getIcon("moveVariableDownButton.icon"));
         moveVariableDownButton.setText(bundle.getString("moveVariableDownButton.text"));
         moveVariableDownButton.setToolTipText(bundle.getString("moveVariableDownButton.tip"));
@@ -667,7 +636,7 @@ public final class VocabEditorV extends DatavyuDialog {
         gridBagConstraints.insets = new java.awt.Insets(5, 0, 5, 5);
         getContentPane().add(moveVariableDownButton, gridBagConstraints);
 
-        deleteButton.setAction(actionMap.get("delete"));
+        deleteButton.addActionListener(e -> delete());
         deleteButton.setText(bundle.getString("deleteButton.text"));
         deleteButton.setToolTipText(bundle.getString("deleteButton.tip"));
         deleteButton.setMaximumSize(new java.awt.Dimension(100, 23));
@@ -709,7 +678,7 @@ public final class VocabEditorV extends DatavyuDialog {
         gridBagConstraints.insets = new java.awt.Insets(0, 5, 5, 0);
         getContentPane().add(nameWarningsLabel, gridBagConstraints);
 
-        closeButton.setAction(actionMap.get("closeWindow"));
+        closeButton.addActionListener(e -> closeWindow());
         closeButton.setText(bundle.getString("closeButton.closeText"));
         closeButton.setToolTipText(bundle.getString("closeButton.closeTip"));
         closeButton.setName("closeButton");
@@ -835,7 +804,7 @@ public final class VocabEditorV extends DatavyuDialog {
                 String curString = i.getCurrentNameDisplay();
                 if (!s.isEmpty()) s += ", ";
                 if (curString.isEmpty()) s += "<i>(empty string)</i>";
-                s += "<i>" + escapeHtml4(i.getCurrentNameDisplay()) + "</i>  ";
+                s += "<i>" + StringUtils.escapeHtml(i.getCurrentNameDisplay()) + "</i>  ";
                 //s += "remains '"+i.getLastValid()+"'. "; //this would include a reminder of what the last valid name was
             }
 

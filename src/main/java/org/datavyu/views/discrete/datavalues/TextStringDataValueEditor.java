@@ -28,7 +28,7 @@ public final class TextStringDataValueEditor extends DataValueEditor {
      * String holding the reserved characters - these are characters that are
      * users are unable to enter into a text field.
      * <p/>
-     * BugzID:524 - If Character is an escape key - ignore it.
+     * If Character is an escape key - ignore it.
      */
     private static final String RESERVED_CHARS = "\u001B\t";
 
@@ -95,7 +95,7 @@ public final class TextStringDataValueEditor extends DataValueEditor {
             e.consume();
 
             // Push the character changes into the database.
-            // BugzID:668 - The user is reverting back to a 'placeholder' state.
+            // The user is reverting back to a 'placeholder' state.
             if (this.getText().equals("")) {
                 model.clear();
             } else {

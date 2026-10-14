@@ -34,8 +34,6 @@ public interface CellSelectionListener {
      */
     void addCellToContinousSelection(SpreadsheetCell cell);
 
-    void removeCellFromSelection(SpreadsheetCell cell);
-
     /**
      * Sets the currently selected cell.
      *

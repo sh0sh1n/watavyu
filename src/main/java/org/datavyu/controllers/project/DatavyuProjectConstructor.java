@@ -103,7 +103,6 @@ public class DatavyuProjectConstructor extends Constructor {
                 vs.setOffset(Long.parseLong(offset));
             }
 
-            // BugzID:1806
             Object versionObj = values.get("version");
 
             if (versionObj == null) {
@@ -148,28 +147,6 @@ public class DatavyuProjectConstructor extends Constructor {
             }
 
             ts.setLocked((Boolean) values.get("locked"));
-
-            if (values.containsKey("bookmark")) {
-
-                // DEPRECATED - only included for backwards compatibility
-                ts.addMarkerPosition(Long.parseLong(
-                        (String) values.get("bookmark")));
-            }
-
-            if (values.containsKey("bookmarks")) {
-                List bookmarks = (List) values.get("bookmarks");
-
-                for (Object time : bookmarks) {
-
-                    // Ugly; the deserializer chooses the smallest data
-                    // type which can represent the value.
-                    if (time instanceof Integer) {
-                        ts.addMarkerPosition((Integer) time);
-                    } else if (time instanceof Long) {
-                        ts.addMarkerPosition((Long) time);
-                    }
-                }
-            }
 
             return ts;
         }

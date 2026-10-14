@@ -19,7 +19,6 @@ import org.apache.logging.log4j.Logger;
 import org.datavyu.Datavyu;
 import org.datavyu.models.db.UserWarningException;
 import org.datavyu.models.db.Variable;
-import org.datavyu.views.discrete.SpreadsheetColumn;
 
 import javax.swing.undo.CannotRedoException;
 import javax.swing.undo.CannotUndoException;
@@ -85,8 +84,4 @@ public class ChangeNameVariableEdit extends SpreadSheetEdit {
         }
     }
 
-    private void selectVarName(String varName) {
-        SpreadsheetColumn sCol = this.getSpreadsheetColumn(varName);
-        if (sCol != null) sCol.setSelected(true);
-    }
 }

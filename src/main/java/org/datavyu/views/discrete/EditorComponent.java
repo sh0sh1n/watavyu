@@ -16,7 +16,6 @@ package org.datavyu.views.discrete;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.datavyu.util.ConfigProperties;
 
 import javax.swing.text.JTextComponent;
 import java.awt.*;
@@ -88,7 +87,7 @@ public abstract class EditorComponent implements ClipboardOwner {
     public EditorComponent(final JTextComponent tc) {
         this();
         parentComp = tc;
-        parentComp.setBackground(ConfigProperties.getInstance().getSpreadSheetBackgroundColor());
+        parentComp.setBackground(SpreadsheetTheme.BACKGROUND_COLOR);
     }
 
     /**
@@ -177,13 +176,6 @@ public abstract class EditorComponent implements ClipboardOwner {
      */
     public final boolean isReturnKeyAccepted() {
         return acceptsReturnKey;
-    }
-
-    /**
-     * @return pos the start location in the JTextComponent for this editor.
-     */
-    public final int getStartPos() {
-        return startPos;
     }
 
     /**
@@ -308,15 +300,6 @@ public abstract class EditorComponent implements ClipboardOwner {
         if (parentComp != null) {
             parentComp.select(startPos, startPos + editorText.length());
         }
-    }
-
-    /**
-     * @return True if the all of the text in this editor component is selected,
-     * false otherwise.
-     */
-    public final boolean isAllSelected() {
-        int selectionLength = this.getSelectionEnd() - this.getSelectionStart();
-        return (selectionLength == this.getText().length());
     }
 
     /**
@@ -532,7 +515,7 @@ public abstract class EditorComponent implements ClipboardOwner {
             }
         }
 
-        // BugzID:747 - If all we have is preserved chars clear everything.
+        // If all we have is preserved chars clear everything.
         String newValue = cValue.toString();
         boolean foundNonPreserved = false;
         for (int i = 0; i < newValue.length(); i++) {

@@ -14,15 +14,13 @@
  */
 package org.datavyu.views.discrete.datavalues.vocabelements;
 
+import org.datavyu.util.Resources;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.datavyu.Datavyu;
 import org.datavyu.models.db.Argument;
 import org.datavyu.models.db.Variable;
 import org.datavyu.views.VocabEditorV;
 import org.datavyu.views.discrete.EditorComponent;
-import org.jdesktop.application.Application;
-import org.jdesktop.application.ResourceMap;
 
 import javax.swing.*;
 import javax.swing.border.Border;
@@ -66,15 +64,10 @@ public class VocabElementV extends JPanel {
      * the light blue colour used for backgrounds
      */
     private static Color lightBlue = new Color(224, 248, 255, 255);
-    private static Color lightRed = new Color(255, 200, 200, 255);
     /**
      * The label to use for if this vocab element has changed.
      */
     private JLabel invalidBangIcon;
-    /**
-     * The label to use for if this vocab element is marked for removal.
-     */
-    private JLabel deleteIcon;
     /**
      * The rootView of the VocabElement.
      */
@@ -88,10 +81,6 @@ public class VocabElementV extends JPanel {
      * Is the name currently displayed for this column invalid
      */
     private boolean invalidState;
-    /**
-     * Most recent valid name - the name currently stored in model
-     */
-    private String lastValidState;
     /**
      * Is this vocab element view marked for removal?
      */
@@ -107,9 +96,7 @@ public class VocabElementV extends JPanel {
 
     public VocabElementV(Argument vocabArgument, Variable var, VocabEditorV vev) {
 
-        ResourceMap rMap = Application.getInstance(Datavyu.class)
-                .getContext()
-                .getResourceMap(VocabElementV.class);
+        Resources rMap = Resources.of(VocabElementV.class);
 
         URL iconURL = getClass().getResource(rMap.getString("delta.icon"));
         bangIconText = rMap.getString("delta.tooltip");
@@ -176,7 +163,6 @@ public class VocabElementV extends JPanel {
 
     public final void setInvalid(final boolean invalid, final String lastValidName) {
         invalidState = invalid;
-        lastValidState = lastValidName;
 
         if (invalid) {
             invalidBangIcon.setIcon(bangIcon);
@@ -191,10 +177,6 @@ public class VocabElementV extends JPanel {
 
     public boolean getInvalid() {
         return invalidState;
-    }
-
-    public String getLastValid() {
-        return lastValidState;
     }
 
     public String getCurrentNameDisplay() {
@@ -281,23 +263,6 @@ public class VocabElementV extends JPanel {
     }
 
     /**
-     * Sets the deleted flag for this vocab element.
-     *
-     * @param delete True if this entire vocab element is flagged for deletion,
-     *               false otherwise.
-     */
-    public final void setDeleted(final boolean delete) {
-        if (delete) {
-            setBG(lightRed);
-        } else {
-            setBG(Color.WHITE);
-        }
-        deleteVE = delete;
-
-        this.rebuildContents();
-    }
-
-    /**
      * @return True if this entire vocab element is flagged for deletion, false
      * otherwise.
      */
@@ -310,13 +275,6 @@ public class VocabElementV extends JPanel {
      */
     public final VocabElementRootView getDataView() {
         return veRootView;
-    }
-
-    /**
-     * @return JLabel change/delta icon.
-     */
-    public final JLabel getInvalidIcon() {
-        return invalidBangIcon;
     }
 
     public final void setBG(Color col) {

@@ -3,11 +3,9 @@ package org.datavyu.models.component;
 public class NeedleStateImpl implements NeedleState {
 
     private long time;
-    private boolean dragged;
 
-    NeedleStateImpl(long time, boolean dragged) {
+    NeedleStateImpl(long time) {
         this.time = time;
-        this.dragged = dragged;
     }
 
     @Override
@@ -15,8 +13,4 @@ public class NeedleStateImpl implements NeedleState {
         return time;
     }
 
-    @Override
-    public boolean wasDragged() {
-        return dragged;
-    }
 }

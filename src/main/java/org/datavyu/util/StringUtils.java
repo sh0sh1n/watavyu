@@ -43,6 +43,27 @@ public final class StringUtils {
         return resultSB.toString().replaceAll("[\u0000-\u0001]", "");
     }
     
+    /**
+     * @param text Plain text.
+     * @return The text with the characters that are special in HTML replaced by entities, for showing user text in
+     * an HTML label.
+     */
+    public static String escapeHtml(final String text) {
+        StringBuilder escaped = new StringBuilder(text.length());
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            switch (c) {
+                case '&' -> escaped.append("&amp;");
+                case '<' -> escaped.append("&lt;");
+                case '>' -> escaped.append("&gt;");
+                case '"' -> escaped.append("&quot;");
+                case '\'' -> escaped.append("&#39;");
+                default -> escaped.append(c);
+            }
+        }
+        return escaped.toString();
+    }
+
     public static String escapeCSVQuotes(String s){ //for actual CSV export, not our misnomer "CSV"s
         return "\"" + s.replaceAll("\"", "\"\"") + "\"";
     }
