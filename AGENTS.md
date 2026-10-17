@@ -28,6 +28,14 @@ The aim is a smaller app whose every feature was chosen on purpose, with a moder
 
 Newest first. (owner) marks product decisions; the rest are engineering choices that can be revisited with reason.
 
+- **2026-10-17 (owner): media columns in the spreadsheet** (F4). Rules for clips are under the JSON project format below.
+  - A media column's clips are cells laid out like annotation cells. The spreadsheet opens in temporal layout by default (today it opens ordinal, with temporal alignment a toggle).
+  - The spreadsheet is a view on the media system. Adding a clip may later mean processing a large media file, so a clip cell shows missing or not-yet-available media gracefully.
+  - Clips are added by dropping a file on the column and by a menu command: two entry points to one action, the simpler built first.
+  - Clips move by editing their onset first; dragging comes later.
+  - One floating media window per media column, for now.
+  - A clip is one media container: video without audio and audio without video are the same to a media column. Audio alone shows a black window; splitting audio and video playback is a later discussion. Gaps between clips are black.
+  - Idea for F6: a timeline with a draggable needle down the left edge of the spreadsheet, like the controller's timeline.
 - **2026-10-14 (owner): playback rates.** Shuttle steps through 0.5, 0.75, 1, 1.25, 1.5 and 2× instead of powers of 2; beyond 2×, people jump or scrub instead (F8).
 - **2026-10-14 (owner): annotation columns have no subtypes.** The app has one kind of column, a list of codes. Datavyu's text and nominal columns, from `.opf`, `.csv` and JSON import, open as annotation columns with one code named `var`, as Datavyu named their value; JSON export writes every column as Datavyu's matrix of nominal codes.
 - **2026-10-14 (owner): work is tracked in TODO.md and AGENTS.md**, not GitHub issues or separate documents. Small bugs found while iterating are logged rather than fixed when the code may be redesigned or dropped.
