@@ -96,13 +96,8 @@ public final class DatavyuMatrixCellValue extends DatavyuCellValue implements Ma
 
     @Override
     public CellValue createArgument(Argument arg) {
-        CellValue val = null;
         String name = String.format("code%02d", getArguments().size() + 1);
-        if (arg.type == Argument.Type.NOMINAL) {
-            val = new DatavyuNominalCellValue(this.id, name, getArguments().size(), arg, parent);
-        } else if (arg.type == Argument.Type.TEXT) {
-            val = new DatavyuTextCellValue(this.id, name, getArguments().size(), arg, parent);
-        }
+        CellValue val = new DatavyuNominalCellValue(this.id, name, getArguments().size(), arg, parent);
         this.getArguments().add(val);
         return val;
     }
@@ -126,8 +121,8 @@ public final class DatavyuMatrixCellValue extends DatavyuCellValue implements Ma
         String[] args = value.split(",", -1);
         List<CellValue> cellValues = getArguments();
 
-        // Handle legacy variable types
-        if (cellValues.size() == 1 && cellValues.get(0).getArgument().type != Argument.Type.MATRIX) {
+        // A single code takes the whole value, commas included
+        if (cellValues.size() == 1) {
             cellValues.get(0).set(value);
         } else {
             if (args.length != cellValues.size()) {

@@ -17,7 +17,6 @@ package org.datavyu.undoableedits;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.controllers.DeleteColumnController;
-import org.datavyu.models.db.Argument;
 import org.datavyu.models.db.UserWarningException;
 import org.datavyu.models.db.Variable;
 
@@ -35,12 +34,10 @@ public class AddVariableEdit extends VocabEditorEdit {
      */
     private static final Logger LOGGER = LogManager.getLogger(AddVariableEdit.class);
     private String varName;
-    private Argument.Type varType;
 
-    public AddVariableEdit(String variableName, Argument.Type variableType) {
+    public AddVariableEdit(String variableName) {
         super();
         this.varName = variableName;
-        this.varType = variableType;
     }
 
     @Override
@@ -53,7 +50,7 @@ public class AddVariableEdit extends VocabEditorEdit {
         super.redo();
         try {
             unselectAll();
-            model.createVariable(varName, varType);
+            model.createVariable(varName);
 
         } catch (UserWarningException e) {
             LOGGER.error("Unable to redo New Column.", e);

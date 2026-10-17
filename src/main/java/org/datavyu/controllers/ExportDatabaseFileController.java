@@ -117,13 +117,8 @@ public final class ExportDatabaseFileController {
                 header += "," + v.getName() + ".onset";
                 header += "," + v.getName() + ".offset";
 
-                // Test if the variable is a matrix. If it is, then we have to print out all of its arguments.
-                if (v.getRootNode().type == Argument.Type.MATRIX) {
-                    for (Argument a : v.getRootNode().childArguments) {
-                        header += "," + v.getName() + "." + a.name;
-                    }
-                } else {
-                    header += "," + v.getName() + ".value";
+                for (Argument a : v.getRootNode().childArguments) {
+                    header += "," + v.getName() + "." + a.name;
                 }
                 header += ',';
             }
@@ -163,44 +158,27 @@ public final class ExportDatabaseFileController {
                                         current_time >= cell.getOnset() &&
                                         cell.getOnset() < current_time + 1000.0 / frameRate - 1)) {
 
-                            CellValue cellValue = cell.getCellValue();
+                            MatrixCellValue mv = (MatrixCellValue) cell.getCellValue();
 
                             // Print ordinal, onset, offset
                             row += Integer.toString(currentIndex[i] + 1) + "," +
                                     Long.toString(cell.getOnset()) + "," +
                                     Long.toString(cell.getOffset());
 
-
-                            if (cellValue instanceof MatrixCellValue) {
-                                // Then this is a matrix cellValue, get the sub arguments
-                                MatrixCellValue mv = (MatrixCellValue) cellValue;
-                                for (CellValue v : mv.getArguments()) {
-                                    // Loop over each cellValue and print it with a comma separator
-                                    row += "," + StringUtils.escapeCSVQuotes(v.toString());
-                                }
-                            } else {
-                                // Otherwise just print the single argument
-                                row += "," + StringUtils.escapeCSVQuotes(cell.getCellValue().toString());
+                            for (CellValue v : mv.getArguments()) {
+                                // Loop over each cellValue and print it with a comma separator
+                                row += "," + StringUtils.escapeCSVQuotes(v.toString());
                             }
                             row += ",";
 
                         } else {
                             // Figure out what to print if we don't have a cell here
-                            CellValue cellValue = cell.getCellValue();
+                            MatrixCellValue mv = (MatrixCellValue) cell.getCellValue();
 
                             // Print ordinal, onset, offset
                             row += ",,";
 
-
-                            if (cellValue instanceof MatrixCellValue) {
-                                // Then this is a matrix cellValue, get the sub arguments
-                                MatrixCellValue mv = (MatrixCellValue) cellValue;
-                                for (CellValue v : mv.getArguments()) {
-                                    // Loop over each cellValue and print it with a comma separator
-                                    row += ",";
-                                }
-                            } else {
-                                // Otherwise just print the single argument
+                            for (int k = 0; k < mv.getArguments().size(); k++) {
                                 row += ",";
                             }
                             row += ",";
@@ -257,17 +235,10 @@ public final class ExportDatabaseFileController {
                 header += "," + v.getName() + ".onset";
                 header += "," + v.getName() + ".offset,";
 
-                // Test if the variable is a matrix. If it is, then
-                // we have to print out all of its arguments.
-                if (v.getRootNode().type == Argument.Type.MATRIX) {
-                    for (Argument a : v.getRootNode().childArguments) {
-                        header += v.getName() + "." + a.name + ",";
-                    }
-                    arglengths.add(v.getRootNode().childArguments.size() + 3);
-                } else {
-                    header += v.getName() + ".value,";
-                    arglengths.add(4);
+                for (Argument a : v.getRootNode().childArguments) {
+                    header += v.getName() + "." + a.name + ",";
                 }
+                arglengths.add(v.getRootNode().childArguments.size() + 3);
             }
             header = header.trim();
 
@@ -291,14 +262,8 @@ public final class ExportDatabaseFileController {
                         row.append(",");
                         row.append(c.getOffset());
                         row.append(",");
-                        if (v.getRootNode().type == Argument.Type.MATRIX) {
-                            for (int k = 0; k < v.getRootNode().childArguments.size(); k++) {
-                                row.append(StringUtils.escapeCSVQuotes(c.getMatrixValue(k).toString()));
-                                row.append(",");
-                            }
-                        }
-                        else{
-                            row.append(StringUtils.escapeCSVQuotes(c.getCellValue().toString()));
+                        for (int k = 0; k < v.getRootNode().childArguments.size(); k++) {
+                            row.append(StringUtils.escapeCSVQuotes(c.getMatrixValue(k).toString()));
                             row.append(",");
                         }
                     } else {
@@ -349,13 +314,14 @@ public final class ExportDatabaseFileController {
                 // Pass(Column/Variable) name
                 g.writeStringField("name", column.getName());
 
-                g.writeStringField("type",column.getRootNode().type.toString());
+                // Datavyu's names: every column is a matrix of nominal codes.
+                g.writeStringField("type", "MATRIX");
 
                 g.writeObjectFieldStart("arguments");
 
                 column.getRootNode().childArguments.forEach(argument -> {
                     try {
-                        g.writeStringField(argument.name, argument.type.name());
+                        g.writeStringField(argument.name, "NOMINAL");
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
@@ -374,12 +340,8 @@ public final class ExportDatabaseFileController {
                     g.writeStringField("offset", cell.getOffsetString());
                     g.writeArrayFieldStart("values");
 
-                    if (column.getRootNode().type == Argument.Type.MATRIX) {
-                        for (int k = 0; k < column.getRootNode().childArguments.size(); k++) {
-                            g.writeString(cell.getMatrixValue(k).toString());
-                        }
-                    } else {
-                        g.writeString(cell.getCellValue().toString());
+                    for (int k = 0; k < column.getRootNode().childArguments.size(); k++) {
+                        g.writeString(cell.getMatrixValue(k).toString());
                     }
 
                     g.writeEndArray();

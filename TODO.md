@@ -11,15 +11,15 @@ Items are in priority order within each section.
 
 ## Measures
 
-Updated 2026-10-14. Re-measure with the commands in [BUILDING.md › Analysis Reports](BUILDING.md#analysis-reports).
+Updated 2026-10-17. Re-measure with the commands in [BUILDING.md › Analysis Reports](BUILDING.md#analysis-reports).
 
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
-| Java source (main) | 242 files, 42.5k lines | 185 files, 31.4k lines |
-| Tests / line coverage | 113 / 9.9% | 305 / 17.3%; still 0% in most views, the timeline and undo |
+| Java source (main) | 242 files, 42.5k lines | 183 files, 31.3k lines |
+| Tests / line coverage | 113 / 9.9% | 306 / 19.8%; still 0% in most views, the timeline and undo |
 | Runtime dependencies / with known vulnerabilities | 28 / 8 | 12 / 0 |
-| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 763 |
-| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 464 / 82; 15 |
+| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 753 |
+| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 461 / 82; 15 |
 | Never-invoked methods (`dead-code.py`) | 109+ | 4, all test-only accessors |
 | Static global access (`Datavyu.getView()` and friends) | about 330 call sites | 272 |
 
@@ -36,8 +36,6 @@ Updated 2026-10-14. Re-measure with the commands in [BUILDING.md › Analysis Re
 ## Features
 
 **F4. Media columns.** ready. A media column is one media track, shown in the spreadsheet once the video controller window goes (F6), and its cells are clips that replace each other in it: gaps show blank frames, the later clip wins where clips overlap, and clips slide without trimming (rules in [AGENTS.md › Decisions](AGENTS.md#decisions)). Today each video is its own window and track (`VideoController`, `MixerController`), and opening a project file with more than one clip in a media column is refused (`OpenController.openProjectFile`). Audio files are to be supported as media too.
-
-**F5. One kind of annotation column in the app.** ready, *verified by `SpreadsheetColumnsTest`*. Annotation columns have no subtypes (AGENTS.md › Decisions). New Column already makes only matrix columns (`NewVariableV.getVariableType`); text and nominal columns come only from Datavyu's `.opf`/`.csv` files and JSON import, and reopen from a project file as matrix columns shown as `(value)`. Convert them to annotation columns when they open, then remove the text and nominal column types, values and editors (`Argument.Type`, `DatavyuTextCellValue`, `DatavyuNominalCellValue`, `TextStringDataValueEditor`, `NominalDataValueEditor`).
 
 **F6. Remove the video controller window.** ready. The next big UI change (AGENTS.md › North Star): media tracks move into the spreadsheet as media columns (F4), and the transport and timeline controls the window holds find a place in the main window or go. Media clips starting before time zero (a hack today) are discussed again here.
 

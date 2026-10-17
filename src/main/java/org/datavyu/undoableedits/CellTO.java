@@ -22,7 +22,6 @@
  */
 package org.datavyu.undoableedits;
 
-import org.datavyu.models.db.Argument;
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.Variable;
 
@@ -53,9 +52,7 @@ public final class CellTO {
         onset = newCell.getOnset();
         offset = newCell.getOffset();
         value = newCell.getValueAsString();
-        if(newCell.getCellValue().getArgument().type == Argument.Type.MATRIX) {
-            value = value.substring(1, value.length() - 1);
-        }
+        value = value.substring(1, value.length() - 1);
 
         cell = newCell;
         variable = parentVariable;

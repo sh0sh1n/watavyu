@@ -161,12 +161,12 @@ public class DatavyuDataStore implements DataStore {
     }
 
     @Override
-    public Variable createVariable(final String name, final Argument.Type type) throws UserWarningException {
-        return createVariable(name, type, false);
+    public Variable createVariable(final String name) throws UserWarningException {
+        return createVariable(name, false);
     }
 
     @Override
-    public Variable createVariable(final String name, final Argument.Type type, boolean grandfathered)
+    public Variable createVariable(final String name, boolean grandfathered)
             throws UserWarningException {
         // Check to make sure the variable name is not already in use:
         Variable varTest = getVariable(name);
@@ -175,9 +175,7 @@ public class DatavyuDataStore implements DataStore {
                     + "', one with the same name already exists.");
         }
 
-        Argument rootNode;
-        if (type == Argument.Type.MATRIX) rootNode = new Argument(name + name.hashCode(), type);
-        else rootNode = new Argument("var", type);
+        Argument rootNode = Argument.column(name + name.hashCode());
 
         Variable v = new DatavyuVariable(name, rootNode, grandfathered, this);
         variables.put(name, v);

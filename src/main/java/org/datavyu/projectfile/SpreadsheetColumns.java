@@ -12,12 +12,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Converts between the spreadsheet's columns and a project file's annotation columns.
- *
- * <p>The spreadsheet still has text, nominal and matrix columns; the file has only annotation columns. A text or
- * nominal column is saved as an annotation column with one code, named after its value, and every annotation column
- * opens as a matrix
- * column of nominal codes, which edit the same way.
+ * Converts between the spreadsheet's columns and a project file's annotation columns: a column's codes, in order, and
+ * its cells' values, one for each code.
  */
 public final class SpreadsheetColumns {
 
@@ -33,23 +29,13 @@ public final class SpreadsheetColumns {
     public static List<AnnotationColumn> of(final DataStore dataStore) {
         List<AnnotationColumn> columns = new ArrayList<>();
         for (Variable variable : dataStore.getAllVariables()) {
-            Argument root = variable.getRootNode();
-            boolean matrix = root.type == Argument.Type.MATRIX;
             List<String> codes = new ArrayList<>();
-            if (matrix) {
-                root.childArguments.forEach(code -> codes.add(code.name));
-            } else {
-                codes.add(root.name);
-            }
+            variable.getRootNode().childArguments.forEach(code -> codes.add(code.name));
             List<AnnotationCell> cells = new ArrayList<>();
             for (Cell cell : variable.getCellsTemporally()) {
                 List<String> values = new ArrayList<>();
-                if (matrix) {
-                    for (int i = 0; i < codes.size(); i++) {
-                        values.add(cell.getMatrixValue(i).toString());
-                    }
-                } else {
-                    values.add(cell.getCellValue().toString());
+                for (int i = 0; i < codes.size(); i++) {
+                    values.add(cell.getMatrixValue(i).toString());
                 }
                 cells.add(new AnnotationCell(cell.getOnset(), cell.getOffset(), values));
             }
@@ -69,14 +55,14 @@ public final class SpreadsheetColumns {
     public static void addTo(final DataStore dataStore, final List<AnnotationColumn> columns) throws UserWarningException {
         int order = dataStore.getAllVariables().size();
         for (AnnotationColumn column : columns) {
-            Variable variable = dataStore.createVariable(column.name(), Argument.Type.MATRIX, true);
+            Variable variable = dataStore.createVariable(column.name(), true);
             variable.setHidden(column.hidden());
             variable.setOrderIndex(order);
             order++;
             Argument root = variable.getRootNode();
             root.clearChildArguments();
             for (String code : column.codes()) {
-                root.childArguments.add(new Argument(code, Argument.Type.NOMINAL));
+                root.childArguments.add(new Argument(code));
             }
             variable.setRootNode(root);
             for (AnnotationCell annotated : column.cells()) {

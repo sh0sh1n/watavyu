@@ -178,12 +178,6 @@ public final class DatavyuVariable implements Variable {
     }
 
     @Override
-    @Deprecated
-    public Argument getVariableType() {
-        return getRootNode();
-    }
-
-    @Override
     public List<Cell> getCellsTemporally() {
         Collections.sort(cells, CellComparator);
         return cells;
@@ -267,9 +261,9 @@ public final class DatavyuVariable implements Variable {
     }
 
     @Override
-    public Argument addArgument(final Argument.Type type) {
+    public Argument addArgument() {
         Argument arg = getRootNode();
-        Argument child = arg.addChildArgument(type);
+        Argument child = arg.addChildArgument();
 
         for (Cell cell : getCells()) {
             cell.addMatrixValue(child);

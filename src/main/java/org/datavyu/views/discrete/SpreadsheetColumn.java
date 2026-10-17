@@ -147,9 +147,7 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
         setPreferredSize(this.getHeaderSize());
         setMaximumSize(this.getHeaderSize());
 
-        String typeString = "";
-        if (var.getRootNode().type != Argument.Type.MATRIX) typeString = "  (" + var.getRootNode().type + ")";
-        setText(var.getName() + typeString); //typeString for matrices is empty. Only displayed for non-matrix types (Text, Nominal)
+        setText(var.getName());
 
         datapanel = new ColumnDataPanel(this, width, var, cellSelL);
         this.setVisible(!var.isHidden());
@@ -451,9 +449,7 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
     // *************************************************************************
     @Override
     public void nameChanged(final String newName) {
-        String headerText = newName;
-        if (variable.getRootNode().type != Argument.Type.MATRIX) headerText += variable.getRootNode().type;
-        this.setText(headerText);
+        this.setText(newName);
     }
 
     @Override

@@ -18,7 +18,6 @@ import org.datavyu.util.Resources;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.Datavyu;
-import org.datavyu.models.db.Argument;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.UserWarningException;
 import org.datavyu.models.db.Variable;
@@ -149,12 +148,12 @@ public final class NewVariableV extends DatavyuDialog {
      */
     private void okButtonActionPerformed(final java.awt.event.ActionEvent evt) {// GEN-FIRST:event_okButtonActionPerformed
         try {
-            logger.info("newVar - create column:" + getVariableType());
-            Variable var = dataStore.createVariable(getVariableName(), getVariableType());
+            logger.info("newVar - create column:" + getVariableName());
+            Variable var = dataStore.createVariable(getVariableName());
             Datavyu.getProjectController().setLastCreatedVariable(var);
 
             // record the effect
-            UndoableEdit edit = new AddVariableEdit(getVariableName(), getVariableType());
+            UndoableEdit edit = new AddVariableEdit(getVariableName());
 
             // Display any changes.
             Datavyu.getView().getComponent().validate();
@@ -187,11 +186,5 @@ public final class NewVariableV extends DatavyuDialog {
         return nameField.getText();
     }
 
-    /**
-     * @return The type of variable the user has selected to use.
-     */
-    public Argument.Type getVariableType() {
-        return Argument.Type.MATRIX; //this is now the only allowed
-    }
     // End of variables declaration//GEN-END:variables
 }

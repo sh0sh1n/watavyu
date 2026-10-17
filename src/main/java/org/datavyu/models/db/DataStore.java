@@ -86,24 +86,22 @@ public interface DataStore {
      * Creates and adds a variable to this datastore.
      *
      * @param name The name of the variable to add to the datastore.
-     * @param type The type of variable to add to the datastore.
      *
-     * @return The new variable that was added to the datastore.
+     * @return The new variable that was added to the datastore, with one code.
      * @throws UserWarningException
      */
-    Variable createVariable(final String name, final Argument.Type type) throws UserWarningException;
+    Variable createVariable(final String name) throws UserWarningException;
 
     /**
      * Creates and adds a variable to this datastore.
      *
      * @param name The name of the variable to add to the datastore.
-     * @param type The type of variable to add to the datastore.
      * @param grandfathered Flag to exempt variable from naming rules.
      *
-     * @return The new variable that was added to the datastore.
+     * @return The new variable that was added to the datastore, with one code.
      * @throws UserWarningException
      */
-    Variable createVariable(final String name, final Argument.Type type, boolean grandfathered)
+    Variable createVariable(final String name, boolean grandfathered)
         throws UserWarningException;
 
     /**

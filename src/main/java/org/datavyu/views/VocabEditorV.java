@@ -179,12 +179,9 @@ public final class VocabEditorV extends DatavyuDialog {
         verticalFrame.setLayout(new BoxLayout(verticalFrame, BoxLayout.Y_AXIS));
 
         for (Variable var : dataStore.getAllVariables()) {
-            Argument argument = var.getRootNode();
-            if (argument.type.equals(Argument.Type.MATRIX)) {
-                VocabElementV matrixV = new VocabElementV(argument, var, this);
-                verticalFrame.add(matrixV);
-                veViews.add(matrixV);
-            }
+            VocabElementV matrixV = new VocabElementV(var.getRootNode(), var, this);
+            verticalFrame.add(matrixV);
+            veViews.add(matrixV);
         }
 
         // Add a pad cell to fill out the bottom of the vertical frame.
@@ -226,17 +223,16 @@ public final class VocabEditorV extends DatavyuDialog {
             LOGGER.info("vocEd - add column");
 
             // perform the action
-            Variable v = dataStore.createVariable(varName, Argument.Type.MATRIX);
+            Variable v = dataStore.createVariable(varName);
             // Need to get the template from the variable.
             //Matrix m = v.getCellValue();
-            //m.createArgument(Argument.type.NOMINAL);
 
             VocabElementV matrixV = new VocabElementV(v.getRootNode(), v, this);
             verticalFrame.add(matrixV);
             veViews.add(matrixV);
 
             // record the effect
-            UndoableEdit edit = new AddVariableEdit(varName, Argument.Type.MATRIX);
+            UndoableEdit edit = new AddVariableEdit(varName);
             Datavyu.getView().getUndoSupport().postEdit(edit);
 
             matrixV.requestFocus();
@@ -337,7 +333,7 @@ public final class VocabEditorV extends DatavyuDialog {
      */
     public void addCode() {
         Variable var = selectedVocabElement.getVariable();
-        Argument fa = var.addArgument(Argument.Type.NOMINAL);
+        Argument fa = var.addArgument();
         selectedVocabElement.setModel(var.getRootNode());
 
         String type = "Nominal"; //Hardcoded. Was previously (String) argTypeComboBox.getSelectedItem() but this form element is now removed
@@ -786,14 +782,7 @@ public final class VocabEditorV extends DatavyuDialog {
      * Determine the number of the next matrix added to the vocab list
      */
     private int getMatNameNum() {
-        int max = 0;
-        for (VocabElementV vev : veViews) {
-            if (vev.getModel().type.equals(Argument.Type.MATRIX)) {
-                max += 1;
-            }
-        }
-
-        return max + 1;
+        return veViews.size() + 1;
     }
 
     public void refreshNameWarnings() {

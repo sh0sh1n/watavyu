@@ -48,6 +48,22 @@ public final class OpenDataStoreFileController {
     /** The logger instance for this class */
     private static Logger logger = LogManager.getLogger(OpenDataStoreFileController.class);
 
+    /**
+     * The one code of an annotation column converted from a Datavyu text or nominal column, named as Datavyu named
+     * that column's value.
+     */
+    static final String VALUE_CODE = "var";
+
+    /**
+     * Datavyu's column types. Watavyu has only annotation columns (Datavyu's matrix columns): a text or nominal column
+     * opens as an annotation column with one code, {@value #VALUE_CODE}, holding its values.
+     */
+    private enum ColumnKind {
+        TEXT,
+        NOMINAL,
+        MATRIX
+    }
+
     /** The number of variables that were parsed */
     private int numVariablesParsed = 0;
 
@@ -186,7 +202,7 @@ public final class OpenDataStoreFileController {
                                     token = parser.nextToken();
                                     if (JsonToken.FIELD_NAME.equals(token) && "type".equals(parser.currentName())) {
                                         token = parser.nextToken();
-                                        Argument.Type variableType = getVarType(parser.getValueAsString());
+                                        ColumnKind variableType = getVarType(parser.getValueAsString());
 
                                         if (variableType != null) {
                                             token = parser.nextToken();
@@ -196,10 +212,12 @@ public final class OpenDataStoreFileController {
                                                 if (token == null) { break; }
                                                 if (!JsonToken.START_OBJECT.equals(token)) { break; }
 
-                                                Variable newColumn = dataStore.createVariable(columnName,
-                                                        variableType, true);
+                                                Variable newColumn = dataStore.createVariable(columnName, true);
                                                 Argument variableArg = newColumn.getRootNode();
                                                 variableArg.clearChildArguments();
+                                                if (variableType != ColumnKind.MATRIX) {
+                                                    variableArg.childArguments.add(new Argument(VALUE_CODE));
+                                                }
 
                                                 while (!JsonToken.END_OBJECT.equals(token)) {
                                                     token = parser.nextToken();
@@ -210,17 +228,10 @@ public final class OpenDataStoreFileController {
                                                     }
 
                                                     token = parser.nextToken();
-                                                    if (variableType == Argument.Type.TEXT) {
-                                                        variableArg.name = parser.getValueAsString();
-                                                    }
-                                                    if (variableType == Argument.Type.NOMINAL) {
-                                                        variableArg.name = parser.getValueAsString();
-                                                    }
-                                                    if (variableType == Argument.Type.MATRIX) {
+                                                    if (variableType == ColumnKind.MATRIX) {
                                                         if (getVarType(parser.getValueAsString()) != null) {
                                                             variableArg.childArguments.add(new Argument(parser
-                                                                    .currentName(), getVarType(parser
-                                                                    .getValueAsString())));
+                                                                    .currentName()));
                                                         } else {
                                                             logger.warn("Unknown argument ('" + parser.currentName
                                                                     () + "' line " + parser.currentLocation()
@@ -280,16 +291,9 @@ public final class OpenDataStoreFileController {
                                                                         while (!JsonToken.END_ARRAY.equals(token)) {
                                                                             if (token == null) { break; }
 
-                                                                            if (newColumn.getRootNode().type ==
-                                                                                    Argument.Type.MATRIX) {
-
-                                                                                newCell.setMatrixValue(k, parser
-                                                                                        .getValueAsString());
-                                                                                k++;
-                                                                            } else {
-                                                                                newCell.getCellValue().set(parser
-                                                                                        .getValueAsString());
-                                                                            }
+                                                                            newCell.setMatrixValue(k, parser
+                                                                                    .getValueAsString());
+                                                                            k++;
                                                                             token = parser.nextToken();
                                                                         }
                                                                     } else {
@@ -628,7 +632,8 @@ public final class OpenDataStoreFileController {
                 // Set the onset and offset from tokens in the line
                 newCell.setOnset(tokens[DATA_ONSET]);
                 newCell.setOffset(tokens[DATA_OFFSET]);
-                populateEntry.populate(tokens, newCell.getCellValue());
+                populateEntry.populate(tokens,
+                        ((MatrixCellValue) newCell.getCellValue()).getArguments().get(0));
 
                 // Get the next line in the file for reading
                 line = csvReader.readLine();
@@ -687,15 +692,15 @@ public final class OpenDataStoreFileController {
 
         } else if (formalArgument[1].equalsIgnoreCase("integer")) {
             // Add integer formal argument.
-            argument = new Argument(formalArgument[0], Argument.Type.NOMINAL);
+            argument = new Argument(formalArgument[0]);
 
         } else if (formalArgument[1].equalsIgnoreCase("float")) {
             // Add float formal argument.
-            argument = new Argument(formalArgument[0], Argument.Type.NOMINAL);
+            argument = new Argument(formalArgument[0]);
 
         } else {
             // Add nominal formal argument.
-            argument = new Argument(formalArgument[0], Argument.Type.NOMINAL);
+            argument = new Argument(formalArgument[0]);
         }
 
         return argument;
@@ -769,22 +774,28 @@ public final class OpenDataStoreFileController {
         }
 
         // Create variable to put cells within.
-        Argument.Type variableType = getVarType(varType);
-        Variable newVar = dataStore.createVariable(varName, variableType, true);
+        ColumnKind variableType = getVarType(varType);
+        Variable newVar = dataStore.createVariable(varName, true);
+        if (variableType != ColumnKind.MATRIX) {
+            Argument root = newVar.getRootNode();
+            root.clearChildArguments();
+            root.childArguments.add(new Argument(VALUE_CODE));
+            newVar.setRootNode(root);
+        }
         
         newVar.setHidden(!varVisible);
 
         newVar.setOrderIndex(numVariablesParsed);
         numVariablesParsed++;
         // Read text variable.
-        if (variableType == Argument.Type.TEXT) {
+        if (variableType == ColumnKind.TEXT) {
             return parseEntries(csvFile, newVar, new PopulateText());
 
-        } else if (variableType == Argument.Type.NOMINAL) {
+        } else if (variableType == ColumnKind.NOMINAL) {
             // Read nominal variable.
             return parseEntries(csvFile, newVar, new PopulateNominal());
 
-        } else if (variableType == Argument.Type.MATRIX) {
+        } else if (variableType == ColumnKind.MATRIX) {
             if(tokens.length > 1) {
                 // Read matrix variable - Build vocab for matrix.
                 String[] vocabString = tokens[1].split("(?<!\\\\)-");
@@ -815,20 +826,20 @@ public final class OpenDataStoreFileController {
      * @param type The string containing the variable type.
      * @return The type of the variable.
      */
-    private Argument.Type getVarType(final String type) {
+    private ColumnKind getVarType(final String type) {
 
         if (type.equalsIgnoreCase("text")) {
-            return Argument.Type.TEXT;
+            return ColumnKind.TEXT;
 
         } else if (type.equalsIgnoreCase("nominal")) {
-            return Argument.Type.NOMINAL;
+            return ColumnKind.NOMINAL;
 
         } else if (type.equalsIgnoreCase("predicate")) {
             // TODO - support predicate types.
             return null;
 
         } else if (type.equalsIgnoreCase("matrix")) {
-            return Argument.Type.MATRIX;
+            return ColumnKind.MATRIX;
 
         } else if (type.equalsIgnoreCase("integer")) {
             // TODO - support integer types.

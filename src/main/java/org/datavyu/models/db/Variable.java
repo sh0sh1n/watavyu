@@ -83,9 +83,6 @@ public interface Variable {
      */
     void setRootNode(final Argument newType);
 
-    @Deprecated
-    Argument getVariableType();
-    
     /**
      * @return All the cells stored in the variable using a temporal alignment.
      */
@@ -142,11 +139,11 @@ public interface Variable {
     void setName(final String newName, final boolean grandfathered) throws UserWarningException;
 
     /**
-     * Adds a new argument to a matrix variable.
+     * Adds a code to the variable, named {@code codeNN} after the codes added before it.
      *
-     * @param type of argument to add to the matrix
+     * @return the new code
      */
-    Argument addArgument(final Argument.Type type);
+    Argument addArgument();
 
     /**
      * Moves an argument left

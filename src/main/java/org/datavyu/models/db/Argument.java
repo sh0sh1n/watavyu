@@ -27,21 +27,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The arguments held within a matrix.
+ * A column's codes, or one code. A column's root argument holds its codes as children, in order; a code has none.
  */
 public final class Argument implements Serializable {
 
-    public enum Type {
-        MATRIX,
-        TEXT,
-        NOMINAL
-    }
-
     // The name of argument
     public String name;
-
-    // The type of argument
-    public Type type;
 
     // The child arguments
     public List<Argument> childArguments;
@@ -54,29 +45,28 @@ public final class Argument implements Serializable {
     /**
      * Constructor.
      *
-     * @param newName  The new name to use for the argument
-     * @param newType  The new type to use for the argument
+     * @param newName The name of the code, or of the column's root
      */
-    public Argument(final String newName, final Type newType) {
-
+    public Argument(final String newName) {
         id = this.hashCode();
         name = newName;
-        type = newType;
         childArguments = new ArrayList<>();
-
-        // Matrix arguments default with a single child nominal.
-        if (type == Type.MATRIX) {
-            addChildArgument(Type.NOMINAL);
-        }
     }
 
-    public Argument(final String newName, final Type newType, final long id) {
-        this(newName, newType);
-        this.id = id;
+    /**
+     * Makes a column's root argument holding one code, {@code code01}, as a new column has.
+     *
+     * @param name the root's name
+     * @return the root
+     */
+    public static Argument column(final String name) {
+        Argument root = new Argument(name);
+        root.addChildArgument();
+        return root;
     }
 
-    protected Argument addChildArgument(final Type newType) {
-        Argument child = new Argument(String.format("code%02d", lastCodeNumber + 1), newType);
+    protected Argument addChildArgument() {
+        Argument child = new Argument(String.format("code%02d", lastCodeNumber + 1));
         lastCodeNumber++;
         childArguments.add(child);
         return child;

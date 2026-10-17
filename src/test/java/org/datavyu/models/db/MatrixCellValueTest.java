@@ -50,7 +50,7 @@ public class MatrixCellValueTest {
     @BeforeMethod
     public void setUp() throws UserWarningException {
         ds = DataStoreFactory.newDataStore();
-        var = ds.createVariable("test", Argument.Type.MATRIX);
+        var = ds.createVariable("test");
         cell = var.createCell();
         model = cell.getCellValue();
     }
@@ -69,7 +69,7 @@ public class MatrixCellValueTest {
         assertEquals(var.getRootNode().childArguments.get(0).name, "code01");
         assertEquals(((MatrixCellValue) cell.getCellValue()).getArguments().size(), 1);
 
-        var.addArgument(Argument.Type.NOMINAL);
+        var.addArgument();
 
         assertEquals(var.getRootNode().childArguments.size(), 2);
         assertEquals(var.getRootNode().childArguments.get(0).name, "code01");
@@ -79,8 +79,8 @@ public class MatrixCellValueTest {
 
     @Test
     public void testMoveArgument() {
-        var.addArgument(Argument.Type.NOMINAL);
-        var.addArgument(Argument.Type.NOMINAL);
+        var.addArgument();
+        var.addArgument();
 
         cell.setMatrixValue(0, "foo1");
         cell.setMatrixValue(1, "foo2");
@@ -131,7 +131,7 @@ public class MatrixCellValueTest {
         assertEquals(var.getRootNode().childArguments.get(0).name, "code01");
         assertEquals(((MatrixCellValue) cell.getCellValue()).getArguments().size(), 1);
 
-        var.addArgument(Argument.Type.NOMINAL);
+        var.addArgument();
 
         assertEquals(var.getRootNode().childArguments.size(), 2);
         assertEquals(var.getRootNode().childArguments.get(0).name, "code01");
