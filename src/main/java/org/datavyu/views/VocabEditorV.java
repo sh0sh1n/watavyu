@@ -179,6 +179,9 @@ public final class VocabEditorV extends DatavyuDialog {
         verticalFrame.setLayout(new BoxLayout(verticalFrame, BoxLayout.Y_AXIS));
 
         for (Variable var : dataStore.getAllVariables()) {
+            if (var.isMedia()) {
+                continue;
+            }
             VocabElementV matrixV = new VocabElementV(var.getRootNode(), var, this);
             verticalFrame.add(matrixV);
             veViews.add(matrixV);
@@ -198,7 +201,8 @@ public final class VocabEditorV extends DatavyuDialog {
     }
 
     private boolean isCurrent() {
-        List<Variable> varList = Datavyu.getProjectController().getDataStore().getAllVariables();
+        List<Variable> varList = new ArrayList<>(Datavyu.getProjectController().getDataStore().getAllVariables());
+        varList.removeIf(Variable::isMedia);
         java.util.ListIterator<Variable> varIt = varList.listIterator();
         for (VocabElementV v : veViews) //wish i could map...
         {

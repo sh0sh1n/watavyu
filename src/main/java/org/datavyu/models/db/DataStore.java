@@ -93,6 +93,16 @@ public interface DataStore {
     Variable createVariable(final String name) throws UserWarningException;
 
     /**
+     * Creates and adds a media column, with no clips. Its name is not held to the naming rules for new columns.
+     *
+     * @param name The name of the column.
+     *
+     * @return The new media column.
+     * @throws UserWarningException if a column of that name exists
+     */
+    Variable createMediaVariable(String name) throws UserWarningException;
+
+    /**
      * Creates and adds a variable to this datastore.
      *
      * @param name The name of the variable to add to the datastore.

@@ -24,7 +24,6 @@ package org.datavyu.plugins;
 
 import java.awt.Dimension;
 import java.io.File;
-import java.io.InputStream;
 
 import javax.swing.JDialog;
 
@@ -150,13 +149,6 @@ public interface StreamViewer {
      * return {@link DefaultTrackPainter}.
      */
     TrackPainter getTrackPainter();
-
-    /**
-     * Read settings from the given input stream, as older Datavyu project files stored them.
-     *
-     * @param is Input stream to load from.
-     */
-    void loadSettings(InputStream is);
 
     /** @return the volume set for the video, from 0 to 1, including while it is muted by hiding the window */
     float getVolumeLevel();

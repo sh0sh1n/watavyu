@@ -22,7 +22,6 @@ import org.datavyu.models.db.UserWarningException;
 import org.datavyu.models.project.Project;
 import org.datavyu.models.project.ViewerSetting;
 import org.datavyu.projectfile.ProjectDocument;
-import org.datavyu.projectfile.ProjectDocument.AnnotationColumn;
 import org.datavyu.projectfile.ProjectDocument.Column;
 import org.datavyu.projectfile.ProjectDocument.MediaColumn;
 import org.datavyu.projectfile.ProjectFileException;
@@ -30,8 +29,6 @@ import org.datavyu.projectfile.ProjectJson;
 import org.datavyu.projectfile.SpreadsheetColumns;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -138,30 +135,21 @@ public final class OpenController {
     public void openProjectFile(final File projectFile) {
         try {
             ProjectDocument document = ProjectJson.read(projectFile.toPath());
-            List<AnnotationColumn> annotationColumns = new ArrayList<>();
-            List<MediaColumn> mediaColumns = new ArrayList<>();
             for (Column column : document.columns()) {
-                if (column instanceof AnnotationColumn annotation) {
-                    annotationColumns.add(annotation);
-                } else if (column instanceof MediaColumn media) {
-                    if (media.clips().size() > 1) {
-                        throw new ProjectFileException("The media column \"" + media.name() + "\" has "
-                            + media.clips().size() + " clips. This version of Watavyu shows one clip per media column.");
-                    }
-                    mediaColumns.add(media);
+                if (column instanceof MediaColumn media && media.clips().size() > 1) {
+                    throw new ProjectFileException("The media column \"" + media.name() + "\" has "
+                        + media.clips().size() + " clips. This version of Watavyu shows one clip per media column.");
                 }
             }
             DataStore openedDataStore = DataStoreFactory.newDataStore();
-            SpreadsheetColumns.addTo(openedDataStore, annotationColumns);
+            SpreadsheetColumns.addColumns(openedDataStore, document.columns(),
+                projectFile.getAbsoluteFile().getParentFile().toPath());
             openedDataStore.setName(projectFile.getName());
             openedDataStore.deselectAll();
             openedDataStore.markAsUnchanged();
 
-            Project openedProject = new Project();
-            openedProject.setMediaColumns(mediaColumns);
-
             dataStore = openedDataStore;
-            project = openedProject;
+            project = new Project();
         } catch (ProjectFileException | UserWarningException e) {
             logger.error("Unable to open project file " + projectFile, e);
             error = "Unable to open " + projectFile.getName() + ".\n" + e.getMessage();

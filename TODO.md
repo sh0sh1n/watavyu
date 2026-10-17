@@ -15,27 +15,27 @@ Updated 2026-10-17. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
-| Java source (main) | 242 files, 42.5k lines | 183 files, 31.3k lines |
-| Tests / line coverage | 113 / 9.9% | 306 / 19.8%; still 0% in most views, the timeline and undo |
+| Java source (main) | 242 files, 42.5k lines | 185 files, 31.8k lines |
+| Tests / line coverage | 113 / 9.9% | 331 / 22.0%; still 0% in most views, the timeline and undo |
 | Runtime dependencies / with known vulnerabilities | 28 / 8 | 12 / 0 |
-| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 753 |
-| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 461 / 82; 15 |
-| Never-invoked methods (`dead-code.py`) | 109+ | 4, all test-only accessors |
+| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 763 |
+| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 466 / 82; 17 (`MediaPlayers` and `DatavyuCell` joined) |
+| Never-invoked methods (`dead-code.py`) | 109+ | 6, all test-only accessors |
 | Static global access (`Datavyu.getView()` and friends) | about 330 call sites | 272 |
 
 ## Bugs
 
 **B2. The app changes a global macOS setting.** ready (owner: scope it to the app), *from reading*. At startup `Datavyu` runs `defaults write -g ApplePressAndHoldEnabled -bool false` for every application on the Mac, and restores it only on a clean shutdown; a crash or force-quit leaves it changed. (It used to run when the class loaded, so every test run turned the setting off and never restored it.) The intent is key repeat instead of the accent popup while holding keys. Scope it to the app: in-app key repeat, or a per-app defaults domain once there is an app bundle; then delete the global write.
 
-**B9. Typing in a cell of a column with no codes shows text that is not kept.** ready, *verified by the owner*. In a column whose codes have all been deleted, typed text appears outside the parentheses but is not in the cell's value, so it is not saved. With no codes the cell has no value editor (`DataValueEditorFactory`), so `MatrixRootView`'s text area takes the keys itself (`EditorTracker`). Typing there should be refused (owner).
-
-**B10. A media column's saved "hidden" follows window visibility, not the user's choice.** after-F6, *from reading* (code review). `ProjectController.toDocument` saves `hidden` from `StreamViewer.isViewerVisible`, but switching tabs or closing the video controller hides and shows every video window, so a save can record hidden videos as shown or the reverse. `.opf` saving did the same. Removing the controller window (F6) changes what hiding a media column means; settle it there.
-
 **B7. Playback edges at time 0.** ready, *from reading*; not intended (owner). `ClockTimer` boundary checks pause playback at time 0, and shuttle does nothing at exactly 0 (`VideoController.shuttle` requires a time above 0). Both are bugs.
 
 ## Features
 
-**F4. Media columns.** ready. A media column is one media track whose cells are clips that replace each other in its window: gaps are black, the later clip wins where clips overlap, and clips slide without trimming. Clip cells look like annotation cells, clips are added by file drop and a menu command, and they move by editing their onset; dragging comes later. Video, audio, or both are one kind of clip. Make temporal layout the spreadsheet's default (`SpreadSheetPanel`, `DatavyuView.getSheetLayout`). Rules: [AGENTS.md › Decisions](AGENTS.md#decisions). Today each video is its own window and track (`VideoController`, `MixerController`), and opening a project file with more than one clip in a media column is refused (`OpenController.openProjectFile`).
+**F4. Media columns.** ready. Done: media columns are spreadsheet columns whose cells are clips; a clip's onset is typed in its cell (unless the column is locked) or set by dragging its track, and its offset follows its length. Left:
+- Several clips in one media column, playing in one window: gaps are black, the later clip wins where clips overlap. Today each clip has its own player, window and track (`MediaPlayers`), and opening a project file with more than one clip in a media column is refused (`OpenController.openProjectFile`).
+- Adding media by dropping a file on the spreadsheet and by a menu command, both through `MediaPlayers.addMedia`; today only the video controller's Add Data button adds media.
+- Audio files, as clips like any other: video, audio, or both are one kind of clip, and audio alone shows a black window. The project file's rules require a clip's width, height and frame rate, so audio needs a format decision.
+- Saving while a clip's file is still opening is refused, as its length, size and frame rate are unknown (`SpreadsheetColumns.columns`); the format has no way to say "not yet known".
 
 **F6. Remove the video controller window.** ready. The next big UI change (AGENTS.md › North Star): media tracks move into the spreadsheet as media columns (F4), and the transport and timeline controls the window holds find a place in the main window or go. One idea (owner): a timeline with a draggable needle down the left edge of the spreadsheet. Media clips starting before time zero (a hack today) are discussed again here.
 

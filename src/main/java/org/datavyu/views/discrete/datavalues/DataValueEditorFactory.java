@@ -18,6 +18,8 @@ import org.datavyu.models.db.*;
 import org.datavyu.views.discrete.EditorComponent;
 
 import javax.swing.text.JTextComponent;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -46,6 +48,12 @@ public class DataValueEditorFactory {
 
         List<EditorComponent> eds = new ArrayList<EditorComponent>();
 
+        MediaClip clip = c.getClip();
+        if (clip != null) {
+            eds.add(new FixedText(ta, clipLabel(clip)));
+            return eds;
+        }
+
         MatrixCellValue mv = (MatrixCellValue) c.getCellValue();
         if (mv != null) {
             eds.add(new FixedText(ta, "("));
@@ -62,6 +70,16 @@ public class DataValueEditorFactory {
         }
 
         return eds;
+    }
+
+    /**
+     * Names what a media cell plays: its file's name, and whether the file is missing.
+     *
+     * @param clip a media cell's clip
+     * @return the cell's text
+     */
+    public static String clipLabel(final MediaClip clip) {
+        return Files.exists(Path.of(clip.file())) ? clip.fileName() : clip.fileName() + " (missing)";
     }
 
     /**

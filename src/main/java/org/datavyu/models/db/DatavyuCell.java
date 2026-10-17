@@ -30,6 +30,8 @@ public class DatavyuCell implements Cell {
     private Variable parent;
     private Map<String, CellValue> arguments = new HashMap<String, CellValue>();
     private CellValue cellValue;
+    /** What a media column's cell plays; null in an annotation column. */
+    private MediaClip clip;
 
     public DatavyuCell() {
     }
@@ -45,6 +47,14 @@ public class DatavyuCell implements Cell {
 
         // One value for each of the column's codes
         this.cellValue = new DatavyuMatrixCellValue(getID(), type, this);
+    }
+
+    /** A media column's cell, which plays a clip from its onset for the clip's duration. */
+    DatavyuCell(Variable parent, Argument type, long onset, MediaClip clip) {
+        this(parent, type);
+        this.clip = clip;
+        this.onset = onset;
+        this.offset = onset + clip.duration();
     }
 
     /**
@@ -80,6 +90,10 @@ public class DatavyuCell implements Cell {
 
     @Override
     public void setOffset(final long newOffset) {
+        // A clip's offset is its onset plus its duration, never set on its own.
+        if (clip != null) {
+            return;
+        }
         if (newOffset != offset) parent.getOwningDatastore().markAsChanged();
         offset = newOffset;
         for (CellListener cl : getListeners(getID())) {
@@ -109,10 +123,47 @@ public class DatavyuCell implements Cell {
 
     @Override
     public void setOnset(final long newOnset) {
+        // A locked media column's clips stay where they are.
+        if (clip != null && parent.isLocked()) {
+            return;
+        }
         if (newOnset != onset) parent.getOwningDatastore().markAsChanged();
         onset = newOnset;
         for (CellListener cl : getListeners(getID())) {
             cl.onsetChanged(onset);
+        }
+        if (clip != null) {
+            clipOffsetChanged();
+        }
+    }
+
+    @Override
+    public MediaClip getClip() {
+        return clip;
+    }
+
+    @Override
+    public void setClip(final MediaClip newClip) {
+        if (clip == null) {
+            throw new IllegalStateException("An annotation cell has no clip");
+        }
+        if (!newClip.equals(clip)) {
+            parent.getOwningDatastore().markAsChanged();
+        }
+        clip = newClip;
+        for (CellListener cl : getListeners(getID())) {
+            cl.valueChange(cellValue);
+        }
+        clipOffsetChanged();
+    }
+
+    private void clipOffsetChanged() {
+        long newOffset = onset + clip.duration();
+        if (newOffset != offset) {
+            offset = newOffset;
+            for (CellListener cl : getListeners(getID())) {
+                cl.offsetChanged(offset);
+            }
         }
     }
 

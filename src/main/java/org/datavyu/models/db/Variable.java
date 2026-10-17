@@ -41,6 +41,10 @@ public interface Variable {
      *
      * @return The newly created cell.
      */
+    /**
+     * @return a new cell from 0 to 0
+     * @throws IllegalStateException if this is a media column, whose cells are clips
+     */
     Cell createCell();
 
     /**
@@ -180,4 +184,32 @@ public interface Variable {
     void setOrderIndex(int newIndex);
 
     DataStore getOwningDatastore();
+
+    /**
+     * @return whether this is a media column, whose cells are clips made with {@link #createClip}; an annotation
+     * column's cells are made with {@link #createCell}
+     */
+    boolean isMedia();
+
+    /**
+     * @return whether a media column's clips are kept from moving; always false for an annotation column
+     */
+    boolean isLocked();
+
+    /**
+     * Keeps a media column's clips from moving, or lets them move.
+     *
+     * @param locked whether the clips are kept from moving
+     */
+    void setLocked(boolean locked);
+
+    /**
+     * Adds a clip to a media column. Its offset is its onset plus the clip's duration.
+     *
+     * @param onset when the clip starts, in milliseconds
+     * @param clip  what it plays
+     * @return the clip's cell
+     * @throws IllegalStateException if this is an annotation column
+     */
+    Cell createClip(long onset, MediaClip clip);
 }

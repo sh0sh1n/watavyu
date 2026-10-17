@@ -98,6 +98,9 @@ public final class MixerController implements PropertyChangeListener,
     /** Controller managing tracks */
     private TracksEditorController tracksEditorController;
 
+    /** Runs after the lock toggle for all tracks changes them. */
+    private Runnable locksChanged = () -> { };
+
     /** Button for locking and unlocking all tracks */
     private JToggleButton lockToggle;
 
@@ -408,6 +411,15 @@ public final class MixerController implements PropertyChangeListener,
      * @param trackId Track identifier.
      * @param lock True if track movement is locked, false otherwise.
      */
+    /**
+     * Sets what runs after the lock toggle for all tracks changes them.
+     *
+     * @param listener what to run, on the EDT
+     */
+    public void setLocksChangedListener(final Runnable listener) {
+        locksChanged = listener;
+    }
+
     public void setTrackLocked(final Identifier trackId, final boolean lock) {
         runInEDT(() -> tracksEditorController.setMovementLock(trackId, lock));
     }
@@ -588,6 +600,7 @@ public final class MixerController implements PropertyChangeListener,
         JToggleButton toggle = (JToggleButton) e.getSource();
         tracksEditorController.setLockedState(toggle.isSelected());
         updateGlobalLockToggle();
+        locksChanged.run();
     }
 
     /**

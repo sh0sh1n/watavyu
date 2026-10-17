@@ -38,6 +38,7 @@ import org.datavyu.util.FileFilters.*;
 import org.datavyu.views.discrete.SpreadSheetPanel;
 import org.datavyu.views.discrete.SpreadsheetTheme;
 import org.datavyu.views.discrete.SpreadsheetColumn;
+import org.datavyu.views.discrete.layouts.SheetLayoutFactory;
 import org.datavyu.views.discrete.layouts.SheetLayoutFactory.SheetLayoutType;
 
 import javax.swing.*;
@@ -1449,6 +1450,7 @@ public final class DatavyuView implements FileDropEventListener {
         weakTemporalAlignmentMenuItem = withAccelerator(
                 new JCheckBoxMenuItem(command("weakTemporalAlignmentMenuItem.text")),
                 command("weakTemporalAlignmentMenuItem.text"));
+        weakTemporalAlignmentMenuItem.setSelected(SheetLayoutFactory.DEFAULT_LAYOUT == SheetLayoutType.WeakTemporal);
         spreadsheetMenu.add(weakTemporalAlignmentMenuItem);
         JMenu zoomMenu = new JMenu(resources.getString("zoomMenu.text"));
         zoomMenu.add(item("zoomInMenuItem.text"));

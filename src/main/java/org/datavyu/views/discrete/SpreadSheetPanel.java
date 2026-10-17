@@ -14,6 +14,7 @@
  */
 package org.datavyu.views.discrete;
 
+import org.datavyu.controllers.project.MediaPlayers;
 import org.datavyu.util.Resources;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -70,6 +71,9 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
 
     /** Video controller */
     private VideoController videoController;
+
+    /** Plays this spreadsheet's media columns; set with the video controller. */
+    private MediaPlayers mediaPlayers;
 
     /** Scrollable view inserted into the JScrollPane */
     private SpreadsheetView mainView;
@@ -131,7 +135,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
 
 
         // Default layout is ordinal.
-        setLayoutType(SheetLayoutType.Ordinal);
+        setLayoutType(SheetLayoutFactory.DEFAULT_LAYOUT);
 
         // set strut for headerView - necessary while there are no col headers
         Dimension dimension = new Dimension(0, SpreadsheetColumn.DEFAULT_HEADER_HEIGHT);
@@ -256,12 +260,19 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
         return projectController;
     }
 
+    /** @return what plays this spreadsheet's media columns, or null before the video controller is set */
+    public MediaPlayers getMediaPlayers() {
+        return mediaPlayers;
+    }
+
     public VideoController getVideoController() {
         return videoController;
     }
 
     public void setVideoController(VideoController videoController) {
         this.videoController = videoController;
+        mediaPlayers = new MediaPlayers(projectController.getDataStore(), videoController);
+        videoController.setMediaPlayers(mediaPlayers);
     }
 
     /**
@@ -515,7 +526,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
                     (Character.isAlphabetic(e.getKeyChar()) || Character.isDigit(e.getKeyChar()))
             )) {
 
-                if(selectedColumn != null) {
+                if(selectedColumn != null && !selectedColumn.getVariable().isMedia()) {
                     CreateNewCellController controller = new CreateNewCellController();
                     Cell c = controller.createCell(selectedColumn.getVariable());
 

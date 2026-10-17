@@ -34,11 +34,8 @@ import javax.swing.event.ChangeEvent;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Properties;
 
 /**
  * This dialog supports basic viewing operations that all video viewers have in common. These are
@@ -279,25 +276,6 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     }
 
     /**
-     * Set the height of the video.
-     *
-     * @param height
-     */
-    private void setVideoHeight(final int height) {
-
-        // TODO: How can that happen?
-        if (!(getAspectRatio() > 0)) {
-            return;
-        }
-
-        int newWidth = (int) (height * getAspectRatio()) + getInsets().left + getInsets().right;
-        int newHeight = height + getInsets().bottom + getInsets().top;
-
-        setSize(newWidth, newHeight);
-        validate();
-    }
-
-    /**
      * @return The playback startTime of the movie in milliseconds.
      */
     @Override
@@ -412,50 +390,6 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     protected void notifyChange() {
         for (ViewerStateListener listener : viewerListeners) {
             listener.notifyStateChanged(null, null);
-        }
-    }
-
-    @Override
-
-    public void loadSettings(final InputStream is) {
-        Properties settings = new Properties();
-        try {
-            settings.load(is);
-
-            // TODO: How does this offset get propagated to the TracksEditorController
-            String property = settings.getProperty("offset");
-            if ((property != null) && !property.equals("")) {
-                setOffset(Long.parseLong(property));
-            }
-
-            property = settings.getProperty("volume");
-            if ((property != null) && !property.equals("")) {
-                volumeSlider.setValue((int) (Float.parseFloat(property) * 100));
-            }
-
-            property = settings.getProperty("visible");
-            if ((property != null) && !property.equals("")) {
-                setViewerVisible(Boolean.parseBoolean(property));
-                setVolume();
-            }
-
-            property = settings.getProperty("height");
-            if ((property != null) && !property.equals("")) {
-                setVideoHeight(Integer.parseInt(property));
-            }
-
-            property = settings.getProperty("framesPerSecond");
-            if ((property != null) && !property.equals("")) {
-                framesPerSecond = Float.parseFloat(property);
-            }
-
-            // make Sure that we have a valid FPS
-            // Otherwise seek and jogging won't work
-            if (framesPerSecond <= 0) {
-                framesPerSecond = getPlayerFramesPerSecond();
-            }
-        } catch (IOException e) {
-            logger.error("Error loading settings", e);
         }
     }
 

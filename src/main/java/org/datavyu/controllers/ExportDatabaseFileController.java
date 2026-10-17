@@ -43,6 +43,13 @@ public final class ExportDatabaseFileController {
     /** Logger for this class */
     private static Logger logger = LogManager.getLogger(ExportDatabaseFileController.class);
 
+    /** @return the spreadsheet's annotation columns, which are what is exported; media columns are not */
+    private static List<Variable> annotationColumns(final DataStore dataStore) {
+        List<Variable> columns = new ArrayList<>(dataStore.getAllVariables());
+        columns.removeIf(Variable::isMedia);
+        return columns;
+    }
+
     /**
      * Saves the database to the specified destination in a CSV format.
      *
@@ -56,7 +63,7 @@ public final class ExportDatabaseFileController {
             FileOutputStream fos = new FileOutputStream(outFile);
             PrintStream ps = new PrintStream(fos);
 
-            List<Variable> variables = dataStore.getAllVariables();
+            List<Variable> variables = annotationColumns(dataStore);
 
             ArrayList<List<Cell>> cellCache = new ArrayList<>();
             int[] currentIndex = new int[variables.size()];
@@ -206,7 +213,7 @@ public final class ExportDatabaseFileController {
             PrintStream ps = new PrintStream(outStream);
 
             // Get the variables, sort them, and cache the cells
-            List<Variable> variables = ds.getAllVariables();
+            List<Variable> variables = annotationColumns(ds);
             Collections.sort(variables, new Comparator<Variable>() {
                 @Override
                 public int compare(Variable o1, Variable o2) {
@@ -308,7 +315,7 @@ public final class ExportDatabaseFileController {
 
             //Start an Array of Passes (Column(Spreadsheet)/Variable(DataStore))
             g.writeArrayFieldStart("passes");
-            for (Variable column : dataStore.getAllVariables()) {
+            for (Variable column : annotationColumns(dataStore)) {
                 // Start an Object for each Pass(Column/Variable)
                 g.writeStartObject();
                 // Pass(Column/Variable) name

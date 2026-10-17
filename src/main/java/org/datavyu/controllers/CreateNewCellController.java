@@ -79,7 +79,8 @@ public final class CreateNewCellController {
                     i = i + direction.getModifier();
 
                     // Only create the cell if a valid column exists.
-                    if ((i >= 0) && (i < model.getVisibleVariables().size())) {
+                    if ((i >= 0) && (i < model.getVisibleVariables().size())
+                            && !model.getVisibleVariables().get(i).isMedia()) {
                         Variable var = model.getVisibleVariables().get(i);
                         newCell = var.createCell();
                         newCell.setOnset(sourceCell.getOnset());
@@ -115,7 +116,7 @@ public final class CreateNewCellController {
             if(model.getSelectedVariables().size() == 1){
                 //We know that we have only one selected column
                 Cell cellToEdit = findClosestCell(model.getSelectedVariables().get(0),milliseconds);
-                if(cellToEdit != null) {
+                if(cellToEdit != null && cellToEdit.getClip() == null) {
                     UndoableEdit edit = new ChangeOffsetCellEdit(cellToEdit, cellToEdit.getOffset(),
                             milliseconds - 1, ChangeCellEdit.Granularity.FINEGRAINED);
                     Datavyu.getView().getUndoSupport().postEdit(edit);
@@ -126,6 +127,10 @@ public final class CreateNewCellController {
                 if(Datavyu.getProjectController().getLastSelectedCell() != null){
                     Variable columnToParse = model.getVariable(Datavyu.getProjectController().getLastSelectedCell());
                     Cell cellToEdit = findClosestCell(columnToParse, milliseconds);
+                    if (cellToEdit == null || cellToEdit.getClip() != null) {
+                        createNewCell(milliseconds);
+                        return;
+                    }
                     UndoableEdit edit = new ChangeOffsetCellEdit(cellToEdit, cellToEdit.getOffset(),
                             milliseconds - 1, ChangeCellEdit.Granularity.FINEGRAINED);
                     Datavyu.getView().getUndoSupport().postEdit(edit);
@@ -182,7 +187,13 @@ public final class CreateNewCellController {
      * @param v The variable that we want to add a cell too.
      * @return The cell that was just inserted.
      */
+    /**
+     * @return a new point cell at the current time, or null in a media column, whose cells are clips
+     */
     public Cell createCell(final Variable v) {
+        if (v.isMedia()) {
+            return null;
+        }
         logger.info("create cell in selected column");
 
         // perform the operation
@@ -204,6 +215,9 @@ public final class CreateNewCellController {
      * @param v The variable we are adding a cell to the end of.
      */
     public void createDefaultCell(final Variable v) {
+        if (v.isMedia()) {
+            return;
+        }
         model.deselectAll();
         Cell c = createCell(v);
 
@@ -231,7 +245,7 @@ public final class CreateNewCellController {
             }
         }
 
-        if (v != null) {
+        if (v != null && !v.isMedia()) {
             newCell = createCell(v);
 
             // record the effect
@@ -300,6 +314,9 @@ public final class CreateNewCellController {
         model = Datavyu.getProjectController().getDataStore();
 
         for (Variable var : model.getSelectedVariables()) {
+            if (var.isMedia()) {
+                continue;
+            }
             logger.info("create cell in selected column");
             newCell = var.createPointCell(onset);
             Datavyu.getProjectController().setLastCreatedCell(newCell);
@@ -325,6 +342,9 @@ public final class CreateNewCellController {
                 // recasting to DataCell without checking as the iterator
                 // only returns DataCells (no ref cells allowed so far)
                 Variable var = model.getVariable(cell);
+                if (var.isMedia()) {
+                    continue;
+                }
                 newCell = var.createPointCell(onset);
                 Datavyu.getProjectController().setLastCreatedCell(newCell);
                 Datavyu.getProjectController().setLastCreatedVariable(var);
@@ -347,7 +367,7 @@ public final class CreateNewCellController {
             if (Datavyu.getProjectController().getLastSelectedCell() != null) {
                 logger.info("create cell while editing existing cell");
                 Variable var = model.getVariable(Datavyu.getProjectController().getLastCreatedCell());
-                if (var != null) {
+                if (var != null && !var.isMedia()) {
                     newCell = var.createPointCell(onset);
                     Datavyu.getProjectController().setLastCreatedCell(newCell);
                     Datavyu.getProjectController().setLastCreatedVariable(var);
@@ -371,8 +391,15 @@ public final class CreateNewCellController {
                 return;
             }
 
-            if (Datavyu.getProjectController().getLastCreatedVariable() == null) {
-                Datavyu.getProjectController().setLastCreatedVariable(model.getAllVariables().get(0));
+            Variable last = Datavyu.getProjectController().getLastCreatedVariable();
+            if (last == null || last.isMedia()) {
+                // Media columns' cells are clips; a new cell goes in the first annotation column.
+                last = model.getAllVariables().stream().filter(variable -> !variable.isMedia()).findFirst()
+                    .orElse(null);
+                if (last == null) {
+                    return;
+                }
+                Datavyu.getProjectController().setLastCreatedVariable(last);
             }
 
             newCell = Datavyu.getProjectController().getLastCreatedVariable().createPointCell(onset);

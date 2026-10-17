@@ -14,6 +14,8 @@
  */
 package org.datavyu.views;
 
+import org.datavyu.controllers.project.MediaPlayers;
+import org.datavyu.models.db.UserWarningException;
 import net.miginfocom.swing.MigLayout;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -115,6 +117,9 @@ public final class VideoController extends DatavyuDialog
 
     /** The controller for manipulating tracks */
     private MixerController mixerController = new MixerController();
+
+    /** Keeps the tracks and the spreadsheet's media columns in step; null until a spreadsheet is set. */
+    private MediaPlayers mediaPlayers;
 
     /** Button to create a new cell */
     private JButton createNewCell;
@@ -283,10 +288,28 @@ public final class VideoController extends DatavyuDialog
      * @param videoFile Video file.
      * @return The identifier of the new track.
      */
-    public Identifier openVideo(final File videoFile) {
-        Identifier id = Identifier.generateIdentifier();
-        openStream(id, videoFile, streamViewer -> { }, streamViewer -> { });
-        return id;
+    public void openVideo(final File videoFile) {
+        if (mediaPlayers == null) {
+            logger.error("No spreadsheet to add " + videoFile + " to");
+            return;
+        }
+        try {
+            mediaPlayers.addMedia(videoFile);
+        } catch (UserWarningException e) {
+            logger.error("Unable to add " + videoFile, e);
+            JOptionPane.showMessageDialog(Datavyu.getApplication().getMainFrame(), e.getMessage(),
+                "Cannot Open Video", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /**
+     * Sets what keeps this controller's tracks and the spreadsheet's media columns in step.
+     *
+     * @param mediaPlayers the spreadsheet's media players
+     */
+    public void setMediaPlayers(final MediaPlayers mediaPlayers) {
+        this.mediaPlayers = mediaPlayers;
+        mixerController.setLocksChangedListener(mediaPlayers::syncLocks);
     }
 
     /**
@@ -301,6 +324,16 @@ public final class VideoController extends DatavyuDialog
      */
     public void openStream(final Identifier id, final File file,
                            final Consumer<StreamViewer> beforeAdd, final Consumer<StreamViewer> afterAdd) {
+        openStream(id, file, beforeAdd, afterAdd, () -> { });
+    }
+
+    /**
+     * Opens a stream as {@link #openStream(Identifier, File, Consumer, Consumer)} does.
+     *
+     * @param failed Runs on the EDT if the file does not open, after the player's error message.
+     */
+    public void openStream(final Identifier id, final File file, final Consumer<StreamViewer> beforeAdd,
+                           final Consumer<StreamViewer> afterAdd, final Runnable failed) {
         Thread opener = new Thread(() -> {
             final StreamViewer streamViewer;
             try {
@@ -308,9 +341,12 @@ public final class VideoController extends DatavyuDialog
                 streamViewer = JavaFxVideoPlugin.open(id, file, Datavyu.getApplication().getMainFrame(), false);
             } catch (Throwable t) {
                 logger.error("Unable to open " + file, t);
-                SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(Datavyu.getApplication().getMainFrame(),
-                        t.getMessage() != null ? t.getMessage() : "Unable to open " + file.getName(),
-                        "Cannot Open Video", JOptionPane.ERROR_MESSAGE));
+                SwingUtilities.invokeLater(() -> {
+                    JOptionPane.showMessageDialog(Datavyu.getApplication().getMainFrame(),
+                            t.getMessage() != null ? t.getMessage() : "Unable to open " + file.getName(),
+                            "Cannot Open Video", JOptionPane.ERROR_MESSAGE);
+                    failed.run();
+                });
                 return;
             }
             SwingUtilities.invokeLater(() -> {
@@ -534,6 +570,10 @@ public final class VideoController extends DatavyuDialog
 
         // Data viewer removed, mark project as changed
         Datavyu.getProjectController().projectChanged();
+
+        if (mediaPlayers != null) {
+            mediaPlayers.playerRemoved(id);
+        }
     }
 
     public void shutdown(final Identifier id){
@@ -1059,6 +1099,9 @@ public final class VideoController extends DatavyuDialog
                 break;
 
             case CARRIAGE_LOCK:
+                if (mediaPlayers != null) {
+                    mediaPlayers.syncLocks();
+                }
                 Datavyu.getProjectController().projectChanged();
                 break;
 
@@ -1076,6 +1119,9 @@ public final class VideoController extends DatavyuDialog
         StreamViewer viewer = getStreamViewer(e.getTrackId());
         if (viewer != null) {
             viewer.setOffset(e.getOffset());
+        }
+        if (mediaPlayers != null) {
+            mediaPlayers.playerMoved(e.getTrackId(), e.getOffset());
         }
 
         Datavyu.getProjectController().projectChanged();

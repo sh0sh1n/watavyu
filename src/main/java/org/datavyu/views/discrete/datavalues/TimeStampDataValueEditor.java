@@ -118,8 +118,38 @@ public final class TimeStampDataValueEditor extends EditorComponent {
      *
      * @param e The KeyEvent that triggered this action.
      */
+    /**
+     * @return whether this time can be edited: a clip's offset never can, as it follows from the clip's onset and
+     * length, and neither can the onset of a clip in a locked media column
+     */
+    public boolean isTypingAllowed() {
+        if (parentCell.getClip() == null) {
+            return true;
+        }
+        return dataSourceType == TimeStampSource.Onset && !parentCell.getVariable().isLocked();
+    }
+
+    @Override
+    public void cut() {
+        if (isTypingAllowed()) {
+            super.cut();
+        }
+    }
+
+    @Override
+    public void paste() {
+        if (isTypingAllowed()) {
+            super.paste();
+        }
+    }
+
     @Override
     public void keyPressed(final KeyEvent e) {
+        if (!isTypingAllowed()
+                && (e.getKeyCode() == KeyEvent.VK_BACK_SPACE || e.getKeyCode() == KeyEvent.VK_DELETE)) {
+            e.consume();
+            return;
+        }
         //TimeStampDataValue tdv = (TimeStampDataValue) getModel();
         switch (e.getKeyCode()) {
             // Force the Home key to behave correctly on OSX 10.4
@@ -242,6 +272,10 @@ public final class TimeStampDataValueEditor extends EditorComponent {
      */
     @Override
     public void keyTyped(final KeyEvent e) {
+        if (!isTypingAllowed()) {
+            e.consume();
+            return;
+        }
         // Key stoke is number - insert stroke at current caret position
         // but only if their is room in the editor for the new digit.
         if (Character.isDigit(e.getKeyChar()) && getCaretPosition() <= getText().length()) {

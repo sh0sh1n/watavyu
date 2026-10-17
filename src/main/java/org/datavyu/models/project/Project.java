@@ -15,24 +15,19 @@
 package org.datavyu.models.project;
 
 import org.apache.commons.io.FilenameUtils;
-import org.datavyu.models.Identifier;
-import org.datavyu.projectfile.ProjectDocument.MediaColumn;
 import org.datavyu.projectfile.ProjectPaths;
 
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 
 
 /**
  * This class represents a project in Datavyu. A project manages the different
  * files used by Datavyu, such as database files and media files.
  *
- * <p>Media come from a {@code .watavyu.json} file as media columns, or from an older {@code .opf} file as viewer
- * settings.
+ * <p>A project file's media columns are spreadsheet columns; an older {@code .opf} file's videos come as viewer
+ * settings, which become media columns when the project loads.
  */
 public final class Project {
 
@@ -62,18 +57,6 @@ public final class Project {
 
     @Deprecated
     private List<TrackSettings> interfaceSettings;
-
-    /** Media columns read from a project file, to open when the project loads. */
-    private List<MediaColumn> mediaColumns = List.of();
-
-    /**
-     * Media columns whose media is not open: its file is missing, failed to open or is still opening. They are saved
-     * as they were read, so media that cannot be played is not dropped from the project.
-     */
-    private final List<MediaColumn> unavailableMedia = new ArrayList<>();
-
-    /** The column name of each open media file. */
-    private final Map<Identifier, String> mediaNames = new HashMap<>();
 
     /**
      * Constructor.
@@ -193,52 +176,5 @@ public final class Project {
     public void setOriginalProjectDirectory(
             final String originalProjectDirectory) {
         this.originalProjectDirectory = originalProjectDirectory;
-    }
-
-    /** @return the media columns read from a project file, to open when the project loads */
-    public List<MediaColumn> getMediaColumns() {
-        return mediaColumns;
-    }
-
-    /** @param columns the media columns read from a project file */
-    public void setMediaColumns(final List<MediaColumn> columns) {
-        mediaColumns = List.copyOf(columns);
-    }
-
-    /** @return the media columns whose media is not open, in the order they were read */
-    public List<MediaColumn> getUnavailableMedia() {
-        return List.copyOf(unavailableMedia);
-    }
-
-    /** @param column a media column whose media is not open, or not open yet */
-    public void addUnavailableMedia(final MediaColumn column) {
-        unavailableMedia.add(column);
-    }
-
-    /**
-     * Records that a media column's media has opened.
-     *
-     * @param column the column
-     * @param media  the identifier of its open media
-     */
-    public void mediaOpened(final MediaColumn column, final Identifier media) {
-        unavailableMedia.remove(column);
-        mediaNames.put(media, column.name());
-    }
-
-    /**
-     * @param media the identifier of open media
-     * @return the name of its column, or null if it has not been named yet
-     */
-    public String getMediaName(final Identifier media) {
-        return mediaNames.get(media);
-    }
-
-    /**
-     * @param media the identifier of open media
-     * @param name  the name of its column
-     */
-    public void setMediaName(final Identifier media, final String name) {
-        mediaNames.put(media, name);
     }
 }

@@ -1,16 +1,25 @@
 package org.datavyu.projectfile;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNull;
+import static org.testng.Assert.expectThrows;
 import static org.testng.Assert.assertTrue;
 
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.DataStoreFactory;
 import org.datavyu.models.db.Variable;
+import org.datavyu.models.db.MediaClip;
+import org.datavyu.models.db.UserWarningException;
 import org.datavyu.projectfile.ProjectDocument.AnnotationCell;
 import org.datavyu.projectfile.ProjectDocument.AnnotationColumn;
+import org.datavyu.projectfile.ProjectDocument.Clip;
+import org.datavyu.projectfile.ProjectDocument.Column;
+import org.datavyu.projectfile.ProjectDocument.MediaColumn;
+import org.datavyu.projectfile.ProjectDocument.Source;
 import org.testng.annotations.Test;
 
+import java.nio.file.Path;
 import java.util.List;
 
 public class SpreadsheetColumnsTest {
@@ -94,5 +103,64 @@ public class SpreadsheetColumnsTest {
             List.of())));
 
         assertTrue(dataStore.getVariable("2nd pass (mother)") != null);
+    }
+
+    private static final Path FOLDER = Path.of("/Users/someone/study");
+
+    /** Media and annotation columns open in the file's order, which is the spreadsheet's, and save the same. */
+    @Test
+    public void mediaColumnsOpenAndSaveInTheFilesOrder() throws Exception {
+        List<Column> columns = List.of(
+            new AnnotationColumn("notes", List.of("code01"), false, List.of()),
+            new MediaColumn("media_2", true, true, List.of(
+                new Clip(-2_500, 0.7, new Source("media/cam 1.mp4", 60_000, 29.97, 1920, 1080)))),
+            new MediaColumn("media_1", false, false, List.of(
+                new Clip(1_000, 1, new Source("/Volumes/Share/room.mp4", 5_000, 25, 640, 480)))));
+        DataStore dataStore = DataStoreFactory.newDataStore();
+
+        SpreadsheetColumns.addColumns(dataStore, columns, FOLDER);
+
+        Variable media = dataStore.getVariable("media_2");
+        assertTrue(media.isMedia());
+        assertTrue(media.isLocked());
+        assertTrue(media.isHidden());
+        Cell clip = media.getCells().get(0);
+        assertEquals(clip.getClip(),
+            new MediaClip("/Users/someone/study/media/cam 1.mp4", 60_000, 29.97, 1920, 1080, 0.7));
+        assertEquals(clip.getOffset(), 57_500L);
+        assertEquals(SpreadsheetColumns.columns(dataStore, FOLDER), columns);
+        assertEquals(SpreadsheetColumns.of(dataStore), List.of(columns.get(0)));
+    }
+
+    /** The spreadsheet holds media paths absolute, so a project saved to another folder still finds its media. */
+    @Test
+    public void mediaPathsFollowTheFolderSavedTo() throws Exception {
+        DataStore dataStore = DataStoreFactory.newDataStore();
+        SpreadsheetColumns.addColumns(dataStore, List.of(new MediaColumn("media_1", false, false, List.of(
+            new Clip(0, 1, new Source("media/cam.mp4", 5_000, 25, 640, 480))))), FOLDER);
+
+        MediaColumn saved = (MediaColumn) SpreadsheetColumns.columns(dataStore, Path.of("/Users/someone/copy")).get(0);
+
+        assertEquals(saved.clips().get(0).source().file(), "/Users/someone/study/media/cam.mp4");
+    }
+
+    @Test
+    public void aClipWhoseFileHasNotOpenedCannotBeSaved() throws Exception {
+        DataStore dataStore = DataStoreFactory.newDataStore();
+        dataStore.createMediaVariable("media_1").createClip(0, MediaClip.of("/Users/someone/study/cam.mp4"));
+
+        UserWarningException e = expectThrows(UserWarningException.class,
+            () -> SpreadsheetColumns.columns(dataStore, FOLDER));
+
+        assertTrue(e.getMessage().contains("cam.mp4"), e.getMessage());
+    }
+
+    @Test
+    public void anAnnotationCellHasNoClip() throws Exception {
+        DataStore dataStore = DataStoreFactory.newDataStore();
+        SpreadsheetColumns.addColumns(dataStore, List.of(new AnnotationColumn("notes", List.of("x"), false,
+            List.of(new AnnotationCell(0, 0, List.of("a"))))), FOLDER);
+
+        assertNull(dataStore.getVariable("notes").getCells().get(0).getClip());
     }
 }
