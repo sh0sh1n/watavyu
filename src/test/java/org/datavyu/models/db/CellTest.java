@@ -55,7 +55,7 @@ public class CellTest {
     public void setUp() throws UserWarningException {
         ds = DataStoreFactory.newDataStore();
         Datavyu.setProjectController(new ProjectController(new Project(), ds));
-        var = ds.createVariable("test", Argument.Type.TEXT);
+        var = ds.createVariable("test");
         model = var.createCell();
 
         modelListener = mock(CellListener.class);

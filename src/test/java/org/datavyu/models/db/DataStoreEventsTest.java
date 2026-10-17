@@ -18,7 +18,7 @@ public class DataStoreEventsTest {
     @Test
     public void renamingAColumnTellsListenersItsNewName() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
-        Variable column = dataStore.createVariable("before", Argument.Type.MATRIX);
+        Variable column = dataStore.createVariable("before");
         DataStoreListener listener = mock(DataStoreListener.class);
         List<String> seen = new ArrayList<>();
         doAnswer(call -> seen.add(((Variable) call.getArgument(0)).getName()))
@@ -34,7 +34,7 @@ public class DataStoreEventsTest {
     @Test
     public void keepingAColumnsNameTellsNoOne() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
-        Variable column = dataStore.createVariable("same", Argument.Type.MATRIX);
+        Variable column = dataStore.createVariable("same");
         DataStoreListener listener = mock(DataStoreListener.class);
         dataStore.addListener(listener);
 

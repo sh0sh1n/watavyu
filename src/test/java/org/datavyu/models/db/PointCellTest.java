@@ -11,7 +11,7 @@ public class PointCellTest {
 
     @Test
     public void aNewCellIsAPointCell() throws Exception {
-        Variable column = DataStoreFactory.newDataStore().createVariable("Column", Argument.Type.TEXT);
+        Variable column = DataStoreFactory.newDataStore().createVariable("Column");
 
         Cell cell = column.createPointCell(5_000);
 
@@ -22,7 +22,7 @@ public class PointCellTest {
 
     @Test
     public void anOffsetBeforeTheOnsetIsKept() throws Exception {
-        Cell cell = DataStoreFactory.newDataStore().createVariable("Column", Argument.Type.TEXT).createPointCell(5_000);
+        Cell cell = DataStoreFactory.newDataStore().createVariable("Column").createPointCell(5_000);
 
         cell.setOffset(1_000);
         assertEquals(cell.getOffset(), 1_000L);

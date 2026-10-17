@@ -46,63 +46,22 @@ public class DataValueEditorFactory {
 
         List<EditorComponent> eds = new ArrayList<EditorComponent>();
 
-        CellValue val = c.getCellValue();
+        MatrixCellValue mv = (MatrixCellValue) c.getCellValue();
+        if (mv != null) {
+            eds.add(new FixedText(ta, "("));
 
-        if (val != null) {
-            if (val instanceof MatrixCellValue) {
-                MatrixCellValue mv = (MatrixCellValue) val;
-                eds.add(new FixedText(ta, "("));
+            for (int i = 0; i < mv.getArguments().size(); i++) {
+                eds.add(buildNominal(ta, (NominalCellValue) mv.getArguments().get(i)));
 
-                for (int i = 0; i < mv.getArguments().size(); i++) {
-                    // TODO update.
-                    eds.add(buildMatrixArg(ta, mv.getArguments().get(i)));
-
-                    if ((mv.getArguments().size() > 1) && (i < (mv.getArguments().size() - 1))) {
-                        eds.add(new FixedText(ta, ", "));
-                    }
+                if ((mv.getArguments().size() > 1) && (i < (mv.getArguments().size() - 1))) {
+                    eds.add(new FixedText(ta, ", "));
                 }
-
-                eds.add(new FixedText(ta, ")"));
-
-            } else if (val instanceof TextCellValue) {
-                eds.add(buildTextString(ta, (TextCellValue) val));
-
-            } else {
-                eds.add(buildNominal(ta, (NominalCellValue) val));
             }
+
+            eds.add(new FixedText(ta, ")"));
         }
 
         return eds;
-    }
-
-    /**
-     * Creates a vector of editor components to represent an argument of a
-     * data cell's matrix.
-     *
-     * @param ta The parent JTextComponent the editor is in.
-     * @param v  The value that we are building an editor for.
-     * @return The editor component that represents the supplied value
-     */
-    public static EditorComponent buildMatrixArg(final JTextComponent ta,
-                                                 final CellValue v) {
-
-        if (v instanceof TextCellValue) {
-            return buildTextString(ta, (TextCellValue) v);
-        } else {
-            return buildNominal(ta, (NominalCellValue) v);
-        }
-    }
-
-    /**
-     * Creates a data value view from the specified data value within a matrix.
-     *
-     * @param ta The parent JTextComponent the editor is in.
-     * @param v  The value this editor manipulates
-     * @return An editor component to represent the specified data value.
-     */
-    public static EditorComponent buildTextString(final JTextComponent ta,
-                                                  final TextCellValue v) {
-        return new TextStringDataValueEditor(ta, v);
     }
 
     /**

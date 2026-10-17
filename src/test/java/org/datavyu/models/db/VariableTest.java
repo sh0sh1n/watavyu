@@ -52,7 +52,7 @@ public class VariableTest {
     public void setUp() throws UserWarningException {
         ds = DataStoreFactory.newDataStore();
         Datavyu.setProjectController(new ProjectController(new Project(), ds));        
-        model = (DatavyuVariable) ds.createVariable("test", Argument.Type.TEXT);
+        model = (DatavyuVariable) ds.createVariable("test");
         modelListener = mock(VariableListener.class);
         model.addListener(modelListener);
         ds.markAsUnchanged();
@@ -106,11 +106,6 @@ public class VariableTest {
         verify(modelListener, times(0)).nameChanged(null);
         verify(modelListener, times(0)).cellInserted(null);
         verify(modelListener, times(0)).cellRemoved(null);
-    }
-
-    @Test
-    public void testGetVariableType() {
-        assertEquals(model.getRootNode().type, Argument.Type.TEXT);
     }
 
     @Test
@@ -186,52 +181,52 @@ public class VariableTest {
 
     @Test(expectedExceptions = UserWarningException.class)
     public void uniqueVariableNames() throws UserWarningException {
-        ds.createVariable("test", Argument.Type.TEXT);
+        ds.createVariable("test");
     }
 
     @Test(expectedExceptions = UserWarningException.class)
     public void nameWithCharacters() throws UserWarningException {
-        ds.createVariable("", Argument.Type.TEXT);
+        ds.createVariable("");
     }
 
     @Test(expectedExceptions = UserWarningException.class)
     public void badCharacterSpace() throws UserWarningException {
-        ds.createVariable(" blah ", Argument.Type.TEXT);
+        ds.createVariable(" blah ");
     }
 
 
     @Test(expectedExceptions = UserWarningException.class)
     public void badCharacter1() throws UserWarningException {
-        ds.createVariable("as)ds", Argument.Type.TEXT);
+        ds.createVariable("as)ds");
     }
 
     @Test(expectedExceptions = UserWarningException.class)
     public void badCharacter2() throws UserWarningException {
-        ds.createVariable("ac(dc", Argument.Type.TEXT);
+        ds.createVariable("ac(dc");
     }
 
     @Test(expectedExceptions = UserWarningException.class)
     public void badCharacter3() throws UserWarningException {
-        ds.createVariable("ac>dc", Argument.Type.TEXT);
+        ds.createVariable("ac>dc");
     }
 
     @Test(expectedExceptions = UserWarningException.class)
     public void badCharacter4() throws UserWarningException {
-        ds.createVariable("ac<dc", Argument.Type.TEXT);
+        ds.createVariable("ac<dc");
     }
 
     @Test(expectedExceptions = UserWarningException.class)
     public void badCharacter5() throws UserWarningException {
-        ds.createVariable("ac,dc", Argument.Type.TEXT);
+        ds.createVariable("ac,dc");
     }
 
     @Test(expectedExceptions = UserWarningException.class)
     public void badCharacter6() throws UserWarningException {
-        ds.createVariable("ac\"dc", Argument.Type.TEXT);
+        ds.createVariable("ac\"dc");
     }
 
     @Test(expectedExceptions = UserWarningException.class)
     public void startsWithNumber() throws UserWarningException {
-        ds.createVariable("1acdc", Argument.Type.TEXT);
+        ds.createVariable("1acdc");
     }
 }

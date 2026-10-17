@@ -8,7 +8,6 @@ import static org.testng.Assert.expectThrows;
 import org.datavyu.controllers.component.MixerController;
 import org.datavyu.models.Identifier;
 import org.datavyu.models.component.TrackModel;
-import org.datavyu.models.db.Argument;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.DataStoreFactory;
 import org.datavyu.models.db.UserWarningException;
@@ -90,13 +89,13 @@ public class ProjectControllerDocumentTest {
     @Test
     public void mediaComesBeforeTheSpreadsheetsColumns() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
-        dataStore.createVariable("Notes", Argument.Type.TEXT);
+        dataStore.createVariable("Notes");
         video("/Volumes/Share/cam.mp4", 0, false);
 
         ProjectDocument document = controller(new Project(), dataStore).toDocument(FOLDER);
 
         assertEquals(((MediaColumn) document.columns().get(0)).clips().get(0).source().file(), "/Volumes/Share/cam.mp4");
-        assertEquals(document.columns().get(1), new AnnotationColumn("Notes", List.of("var"), false, List.of()));
+        assertEquals(document.columns().get(1), new AnnotationColumn("Notes", List.of("code01"), false, List.of()));
     }
 
     @Test
@@ -106,7 +105,7 @@ public class ProjectControllerDocumentTest {
         Project project = new Project();
         project.addUnavailableMedia(ProjectPaths.absolutePaths(missing, FOLDER));
         DataStore dataStore = DataStoreFactory.newDataStore();
-        dataStore.createVariable("test", Argument.Type.TEXT);
+        dataStore.createVariable("test");
         video("/Users/someone/study/test.mp4", 0, false);
         video("/Users/someone/study/other.mp4", 0, false);
 
@@ -135,7 +134,7 @@ public class ProjectControllerDocumentTest {
     @Test
     public void mediaNamedLikeAnotherColumnIsRenumbered() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
-        dataStore.createVariable("media_1", Argument.Type.TEXT);
+        dataStore.createVariable("media_1");
         Project project = new Project();
         StreamViewer viewer = video("/Users/someone/study/cam.mp4", 0, false);
         project.setMediaName(viewer.getIdentifier(), "media_1");
@@ -168,7 +167,7 @@ public class ProjectControllerDocumentTest {
         Project project = new Project();
         project.addUnavailableMedia(missing);
         DataStore dataStore = DataStoreFactory.newDataStore();
-        dataStore.createVariable("media_1", Argument.Type.TEXT);
+        dataStore.createVariable("media_1");
 
         ProjectDocument document = controller(project, dataStore).toDocument(FOLDER);
 

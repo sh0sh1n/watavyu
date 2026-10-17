@@ -43,15 +43,8 @@ public class DatavyuCell implements Cell {
         this.selected = true;
         this.highlighted = true;
 
-        // Build argument list from the argument given
-
-        if (type.type == Argument.Type.NOMINAL) {
-            this.cellValue = new DatavyuNominalCellValue(getID(), type, this);
-        } else if (type.type == Argument.Type.TEXT) {
-            this.cellValue = new DatavyuTextCellValue(getID(), type, this);
-        } else {
-            this.cellValue = new DatavyuMatrixCellValue(getID(), type, this);
-        }
+        // One value for each of the column's codes
+        this.cellValue = new DatavyuMatrixCellValue(getID(), type, this);
     }
 
     /**

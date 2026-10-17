@@ -17,7 +17,6 @@ package org.datavyu.views.discrete.datavalues;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.models.db.*;
-import org.datavyu.models.db.TextCellValue;
 import org.datavyu.models.db.CellValue;
 import org.datavyu.views.discrete.EditorComponent;
 
@@ -64,9 +63,7 @@ public abstract class DataValueEditor extends EditorComponent {
         setEditable(true);
         model = cellValue;
 
-        if (cellValue instanceof TextCellValue) {
-            modelType = TextCellValue.class;
-        } else if (cellValue instanceof NominalCellValue) {
+        if (cellValue instanceof NominalCellValue) {
             modelType = NominalCellValue.class;
         } else {
             modelType = MatrixCellValue.class;

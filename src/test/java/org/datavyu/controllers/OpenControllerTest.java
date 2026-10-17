@@ -17,7 +17,6 @@ package org.datavyu.controllers;
 import static org.testng.Assert.assertEquals;
 
 import org.apache.logging.log4j.LogManager;
-import org.datavyu.models.db.Argument;
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.Variable;
@@ -32,7 +31,8 @@ import java.util.List;
 
 
 /**
- * Tests for opening Datavyu project and CSV files.
+ * Tests for opening Datavyu project and CSV files. Datavyu's text and nominal columns open as annotation columns with
+ * one code, {@code var}.
  */
 public class OpenControllerTest {
 
@@ -58,14 +58,14 @@ public class OpenControllerTest {
         List<Variable> vars = ds.getAllVariables();
         assertEquals(vars.size(), 1);
         assertEquals(vars.get(0).getName(), "TestColumn");
-        assertEquals(vars.get(0).getRootNode().type, Argument.Type.TEXT);
+        assertEquals(codes(vars.get(0)), List.of("var"));
         assertEquals(vars.get(0).isHidden(), false);
 
         List<Cell> cells = vars.get(0).getCells();
         assertEquals(cells.size(), 1);
         assertEquals(cells.get(0).getOnsetString(), "00:01:00:000");
         assertEquals(cells.get(0).getOffsetString(), "00:02:00:000");
-        assertEquals(cells.get(0).getValueAsString(), "This is a test cell.");
+        assertEquals(cells.get(0).getValueAsString(), "(This is a test cell.)");
     }
 
     @Test
@@ -78,14 +78,14 @@ public class OpenControllerTest {
         List<Variable> vars = ds.getAllVariables();
         assertEquals(vars.size(), 1);
         assertEquals(vars.get(0).getName(), "TestColumn");
-        assertEquals(vars.get(0).getRootNode().type, Argument.Type.TEXT);
+        assertEquals(codes(vars.get(0)), List.of("var"));
         assertEquals(vars.get(0).isHidden(), false);
 
         List<Cell> cells = vars.get(0).getCells();
         assertEquals(cells.size(), 1);
         assertEquals(cells.get(0).getOnsetString(), "00:01:00:000");
         assertEquals(cells.get(0).getOffsetString(), "00:02:00:000");
-        assertEquals(cells.get(0).getValueAsString(), "This is a test cell.");
+        assertEquals(cells.get(0).getValueAsString(), "(This is a test cell.)");
     }
 
     @Test
@@ -110,30 +110,30 @@ public class OpenControllerTest {
         
         Variable var = vars.get(0);
         assertEquals(var.getName(), "hiddenColumn");
-        assertEquals(var.getRootNode().type, Argument.Type.TEXT);
+        assertEquals(codes(var), List.of("var"));
         assertEquals(var.isHidden(), true);
         List<Cell> cells = var.getCells();
         assertEquals(cells.size(), 0);
         
         var = vars.get(1);
         assertEquals(var.getName(), "testColumn");
-        assertEquals(var.getRootNode().type, Argument.Type.TEXT);
+        assertEquals(codes(var), List.of("var"));
         assertEquals(var.isHidden(), false);
         cells = var.getCells();
         assertEquals(cells.size(), 1);
-        assertEquals(cells.get(0).getValueAsString(), "cellA");
+        assertEquals(cells.get(0).getValueAsString(), "(cellA)");
 
         var = vars.get(2);
         assertEquals(var.getName(), "testColumn2");
-        assertEquals(var.getRootNode().type, Argument.Type.NOMINAL);
+        assertEquals(codes(var), List.of("var"));
         assertEquals(var.isHidden(), false);
         cells = var.getCells();
         assertEquals(cells.size(), 1);
-        assertEquals(cells.get(0).getValueAsString(), "cellB");
+        assertEquals(cells.get(0).getValueAsString(), "(cellB)");
 
         var = vars.get(3);
         assertEquals(var.getName(), "testColumn3");
-        assertEquals(var.getRootNode().type, Argument.Type.MATRIX);
+        assertEquals(codes(var), List.of("code01"));
         assertEquals(var.isHidden(), false);
         cells = var.getCells();
         assertEquals(cells.size(), 1);
@@ -153,5 +153,9 @@ public class OpenControllerTest {
 
         List<Cell> cells = vars.get(0).getCells();
         assertEquals(cells.size(), 1);
+    }
+
+    private static List<String> codes(final Variable variable) {
+        return variable.getRootNode().childArguments.stream().map(code -> code.name).toList();
     }
 }
