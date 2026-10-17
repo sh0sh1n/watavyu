@@ -27,6 +27,8 @@ import org.datavyu.event.component.FileDropEvent;
 import org.datavyu.event.component.FileDropEventListener;
 import org.datavyu.models.db.*;
 import org.datavyu.plugins.StreamViewer;
+import org.datavyu.projectfile.ProjectDocument;
+import org.datavyu.projectfile.ProjectPaths;
 import org.datavyu.undoableedits.RemoveCellEdit;
 import org.datavyu.undoableedits.RemoveVariableEdit;
 import org.datavyu.undoableedits.SpreadsheetUndoManager;
@@ -53,6 +55,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -257,19 +260,23 @@ public final class DatavyuView implements FileDropEventListener {
                 for (File f : listOfFiles) {
                     // the last time datavyu crashed
                     if ((f.isFile()) &&
-                            ((FilenameUtils.wildcardMatchOnSystem(f.getName(), "~*.opf")) ||
+                            ((FilenameUtils.wildcardMatchOnSystem(f.getName(), "~*" + ProjectDocument.EXTENSION)) ||
+                                    (FilenameUtils.wildcardMatchOnSystem(f.getName(), "~*.opf")) ||
                                     (FilenameUtils.wildcardMatchOnSystem(f.getName(), "~*.csv")))) {
 
-                        // Show the Dialog
+                        // The autosave is deleted once it has opened, or if the user does not want it.
                         if (JOptionPane.showConfirmDialog(null,
-                                "Datavyu has detected an unsaved file. Would you like recover this file ?",
-                                "Datavyu",
+                                "Watavyu quit before \"" + recoveredName(f.getName())
+                                    + "\" was saved. Recover the unsaved project?",
+                                "Watavyu",
                                 JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
-                            openRecoveredFile(f);
-                            this.saveAs();
+                            if (recover(f)) {
+                                f.delete();
+                                saveAs();
+                            }
+                        } else {
+                            f.delete();
                         }
-                        // delete the recovered file
-                        f.delete();
                     }
                 }
             }
@@ -292,7 +299,9 @@ public final class DatavyuView implements FileDropEventListener {
         String extension = "";
         final FileFilter lastSaveOption = projectController.getLastSaveOption();
 
-        if (lastSaveOption instanceof CsvFilter) {
+        if (lastSaveOption instanceof ProjectFileFilter) {
+            extension = ProjectDocument.EXTENSION;
+        } else if (lastSaveOption instanceof CsvFilter) {
             extension = ".csv";
         } else if (lastSaveOption instanceof OpfFilter) {
             extension = ".opf";
@@ -345,76 +354,77 @@ public final class DatavyuView implements FileDropEventListener {
     }
 
     /**
-     * Action for saving the current database as a file.
+     * Action for saving the current project. A project not yet saved as a project file, including one opened from an
+     * older Datavyu file, is saved through {@link #saveAs()}.
+     *
+     * @return whether the project was saved
      */
-    public void save() {
-
-        try {
-            SaveController saveC = new SaveController();
-
-            // If the user has not saved before - invoke the saveAs()
-            // controller to force the user to nominate a destination file.
-            ProjectController projectController = Datavyu.getProjectController();
-            if (projectController.isNewProject() || (projectController.getProjectName() == null)) {
-                saveAs();
-            } else {
-                SaveController saveController = new SaveController();
-
-                // Force people to use new
-                if (projectController.getLastSaveOption() instanceof OpfFilter) {
-
-                    // Need to store the original absolute path of
-                    // the
-                    // project file so that we can build relative paths to
-                    // search when
-                    // loading, if the project file is moved around.
-                    projectController.setOriginalProjectDirectory(projectController.getProjectDirectory());
-
-                    projectController.updateProject();
-                    projectController.setLastSaveOption(OpfFilter.INSTANCE);
-
-                    saveController.saveProject(
-                            new File(projectController.getProjectDirectory(),
-                                    projectController.getProjectName() + ".opf"),
-                            projectController.getProject(),
-                            projectController.getDataStore()
-                    );
-
-                    projectController.markProjectAsUnchanged();
-                    projectController.getDataStore().markAsUnchanged();
-
-                    // Save content just as a database.
-                } else {
-                    File file = new File(projectController.getProjectDirectory(),
-                            projectController.getDatabaseFileName());
-                    saveC.saveDataStore(file, projectController.getDataStore());
-                    projectController.markProjectAsUnchanged();
-                    projectController.getDataStore().markAsUnchanged();
-                }
-            }
-        } catch (UserWarningException e) {
-            logger.error("Save failed. Error: ", e);
-            Datavyu.getApplication().showWarningDialog(e);
+    public boolean save() {
+        ProjectController projectController = Datavyu.getProjectController();
+        if (projectController.isNewProject() || (projectController.getProjectName() == null)
+                || !(projectController.getLastSaveOption() instanceof ProjectFileFilter)) {
+            return saveAs();
         }
+        return saveProject(new File(projectController.getProjectDirectory(), projectController.getDatabaseFileName()));
     }
 
     /**
-     * Action for saving the current project as a particular file.
+     * Action for saving the current project as a particular project file.
+     *
+     * @return whether the project was saved
      */
-    public void saveAs() {
+    public boolean saveAs() {
         DatavyuFileChooser fileChooser = new DatavyuFileChooser();
 
-        fileChooser.addChoosableFileFilter(OpfFilter.INSTANCE);
+        fileChooser.addChoosableFileFilter(ProjectFileFilter.INSTANCE);
 
         fileChooser.setAcceptAllFileFilterUsed(false);
-        fileChooser.setFileFilter(OpfFilter.INSTANCE);
+        fileChooser.setFileFilter(ProjectFileFilter.INSTANCE);
 
         int result = fileChooser.showSaveDialog(getComponent());
 
+        boolean saved = false;
         if (result == JFileChooser.APPROVE_OPTION) {
-            save(fileChooser);
+            String fileName = fileChooser.getSelectedFile().getName();
+            if (!fileName.endsWith(ProjectDocument.EXTENSION)) {
+                fileName = fileName.concat(ProjectDocument.EXTENSION);
+            }
+            String folder = fileChooser.getSelectedFile().getParent();
+
+            // Only save if the project file does not exist or the user confirms overwriting it.
+            saved = canSave(folder, fileName) && saveProject(new File(folder, fileName));
+            if (saved) {
+                ProjectController projectController = Datavyu.getProjectController();
+                projectController.setProjectName(fileName);
+                projectController.setProjectDirectory(folder);
+                projectController.setDatabaseFileName(fileName);
+                projectController.setLastSaveOption(ProjectFileFilter.INSTANCE);
+                projectController.getDataStore().setName(fileName);
+            }
         }
         updateTitle();
+        return saved;
+    }
+
+    /**
+     * Saves the current project to a project file.
+     *
+     * @param file the project file
+     * @return whether it was saved
+     */
+    private boolean saveProject(final File file) {
+        ProjectController projectController = Datavyu.getProjectController();
+        try {
+            new SaveController().saveProject(file, projectController.toDocument(file.getAbsoluteFile().getParentFile()
+                .toPath()));
+            projectController.markProjectAsUnchanged();
+            projectController.getDataStore().markAsUnchanged();
+            return true;
+        } catch (UserWarningException e) {
+            logger.error("Save failed. Error: ", e);
+            Datavyu.getApplication().showWarningDialog(e);
+            return false;
+        }
     }
 
     public void toggleQuickKeys() {
@@ -452,8 +462,6 @@ public final class DatavyuView implements FileDropEventListener {
 
     private void exportJSON(DatavyuFileChooser fc){
         ProjectController projectController = Datavyu.getProjectController();
-        //TODO: why the project controller can't update (Have to Check it!)
-//        projectController.updateProject();
 
         try{
             ExportDatabaseFileController exportJSON = new ExportDatabaseFileController();
@@ -498,8 +506,6 @@ public final class DatavyuView implements FileDropEventListener {
 
     private void importJSON(DatavyuFileChooser fc){
         ProjectController projectController = Datavyu.getProjectController();
-        //TODO: why the project controller can't update (Have to Check it!)
-//        projectController.updateProject();
 
         try{
             OpenDataStoreFileController importJSON = new OpenDataStoreFileController();
@@ -544,7 +550,6 @@ public final class DatavyuView implements FileDropEventListener {
 
     private void exportToCSV(final DatavyuFileChooser fc) {
         ProjectController projectController = Datavyu.getProjectController();
-        projectController.updateProject();
 
         try {
             ExportDatabaseFileController exportC = new ExportDatabaseFileController();
@@ -585,7 +590,6 @@ public final class DatavyuView implements FileDropEventListener {
 
     private void exportToCSVByFrame(final DatavyuFileChooser fc) {
         ProjectController projController = Datavyu.getProjectController();
-        projController.updateProject();
 
         try {
             ExportDatabaseFileController exportC = new ExportDatabaseFileController();
@@ -613,80 +617,6 @@ public final class DatavyuView implements FileDropEventListener {
         return (newFile.exists() && Datavyu.getApplication().overwriteExisting()) || !newFile.exists();
     }
 
-    private void save(final DatavyuFileChooser fc) {
-        ProjectController projectController = Datavyu.getProjectController();
-        projectController.updateProject();
-
-        try {
-            SaveController saveController = new SaveController();
-
-            FileFilter filter = fc.getFileFilter();
-
-            if (filter instanceof CsvFilter) {
-                String dbFileName = fc.getSelectedFile().getName();
-
-                if (!dbFileName.endsWith(".csv")) {
-                    dbFileName = dbFileName.concat(".csv");
-                }
-
-                // Only save if the project file does not exists or if the user
-                // confirms a file overwrite in the case that the file exists.
-                if (!canSave(fc.getSelectedFile().getParent(), dbFileName)) {
-                    return;
-                }
-
-                File file = new File(fc.getSelectedFile().getParent(), dbFileName);
-                saveController.saveDataStore(file, projectController.getDataStore());
-
-                projectController.getDataStore().setName(dbFileName);
-                projectController.setProjectName(dbFileName);
-                projectController.setProjectDirectory(fc.getSelectedFile().getParent());
-                projectController.setDatabaseFileName(dbFileName);
-
-                // Save as a project
-            } else if (filter instanceof OpfFilter) {
-                String archiveName = fc.getSelectedFile().getName();
-
-                if (!archiveName.endsWith(".opf")) {
-                    archiveName = archiveName.concat(".opf");
-                }
-
-                // Only save if the project file does not exists or if the user
-                // confirms a file overwrite in the case that the file exists.
-                if (!canSave(fc.getSelectedFile().getParent(), archiveName)) {
-                    return;
-                }
-
-                // Send it off to the controller
-                projectController.setProjectName(archiveName);
-
-                // Need to store the original absolute path of the
-                // project file so that we can build relative paths to search
-                // when
-                // loading, if the project file is moved around.
-                projectController.setOriginalProjectDirectory(fc.getSelectedFile().getParent());
-
-                projectController.updateProject();
-
-                saveController.saveProject(new File(fc.getSelectedFile().getParent(), archiveName),
-                        projectController.getProject(),
-                        projectController.getDataStore());
-                projectController.getDataStore().setName(fc.getSelectedFile().getName());
-                projectController.setProjectDirectory(fc.getSelectedFile().getParent());
-                projectController.setDatabaseFileName(archiveName);
-            }
-
-            projectController.setLastSaveOption(filter);
-            projectController.markProjectAsUnchanged();
-            projectController.getDataStore().markAsUnchanged();
-            this.tabbedPane.setTitleAt(this.tabbedPane.getSelectedIndex(), projectController.getDataStore().getName());
-
-        } catch (UserWarningException e) {
-            logger.error("Failed save. Error: ", e);
-            Datavyu.getApplication().showWarningDialog(e);
-        }
-    }
-
     /**
      * Loading a Datavyu project
      */
@@ -694,9 +624,10 @@ public final class DatavyuView implements FileDropEventListener {
 
         DatavyuFileChooser fileChooser = new DatavyuFileChooser();
 
+        fileChooser.addChoosableFileFilter(ProjectFileFilter.INSTANCE);
         fileChooser.addChoosableFileFilter(OpfFilter.INSTANCE);
 
-        fileChooser.setFileFilter(OpfFilter.INSTANCE);
+        fileChooser.setFileFilter(ProjectFileFilter.INSTANCE);
         int result = fileChooser.showOpenDialog(getComponent());
 
         if (result == JFileChooser.APPROVE_OPTION) {
@@ -723,14 +654,27 @@ public final class DatavyuView implements FileDropEventListener {
             logger.error("Error when opening file: ", e);
         }
 
-        String ext = FilenameUtils.getExtension(file.getAbsolutePath());
-        if ("csv".equalsIgnoreCase(ext)) {
-            fc.setFileFilter(CsvFilter.INSTANCE);
-            open(fc);
-        } else if ("opf".equalsIgnoreCase(ext)) {
-            fc.setFileFilter(OpfFilter.INSTANCE);
+        FileFilter filter = filterFor(file);
+        if (filter != null) {
+            fc.setFileFilter(filter);
             open(fc);
         }
+    }
+
+    /**
+     * @param file a file to open
+     * @return the filter for its kind, judged by its name, or null if it is not a kind Watavyu opens
+     */
+    private static FileFilter filterFor(final File file) {
+        String name = file.getName().toLowerCase(Locale.ROOT);
+        if (name.endsWith(ProjectDocument.EXTENSION)) {
+            return ProjectFileFilter.INSTANCE;
+        } else if (name.endsWith(".opf")) {
+            return OpfFilter.INSTANCE;
+        } else if (name.endsWith(".csv")) {
+            return CsvFilter.INSTANCE;
+        }
+        return null;
     }
 
     /**
@@ -742,6 +686,7 @@ public final class DatavyuView implements FileDropEventListener {
         progressBar = new DataviewProgressBar(this.getFrame(), false);
         task = new OpenTask(fileChooser);
         task.addPropertyChangeListener(new PropertyChangeListener() {
+            @Override
             public void propertyChange(PropertyChangeEvent evt) {
                 String test = "";
                 if ("progress".equals(evt.getPropertyName())) {
@@ -788,26 +733,40 @@ public final class DatavyuView implements FileDropEventListener {
     public void openExternalFile(final File f) {
         DatavyuFileChooser fileChooser = new DatavyuFileChooser();
         fileChooser.setSelectedFile(f);
-        fileChooser.setFileFilter(OpfFilter.INSTANCE);
+        FileFilter filter = filterFor(f);
+        fileChooser.setFileFilter(filter != null ? filter : ProjectFileFilter.INSTANCE);
         open(fileChooser);
     }
 
     /**
-     * Method for opening a recovered file from disk.
+     * Opens an autosaved project in a new tab as an unsaved project named after the original, so that saving it goes
+     * through Save As and quitting asks about it.
      *
-     * @param f The file to open.
+     * @param autosave the autosaved file
+     * @return whether it opened
      */
-    public void openRecoveredFile(final File f) {
-        // Clear the current spreadsheet before loading the new content - we need to clean up resources
-        String ext = FilenameUtils.getExtension(f.getAbsolutePath());
-        // Opening a project or project archive file
-        if (ext.equalsIgnoreCase("opf")) {
-            openProject(f);
-        } else {
-            openDatabase(f);
+    private boolean recover(final File autosave) {
+        open(autosave);
+        ProjectController projectController = Datavyu.getProjectController();
+        if (projectController == null || !autosave.getName().equals(projectController.getDatabaseFileName())) {
+            return false;
         }
-        // Default is to highlight cells when created - clear selection on load.
-        panel.clearCellSelection();
+        projectController.setLastSaveOption(null);
+        projectController.setProjectName(recoveredName(autosave.getName()));
+        projectController.projectChanged();
+        return true;
+    }
+
+    /**
+     * @param autosave the name of an autosaved file: {@code ~}, the project's name, {@code _} and a number, then the
+     *                 extension
+     * @return the project's name
+     */
+    static String recoveredName(final String autosave) {
+        String name = ProjectPaths.isProjectFile(autosave)
+            ? autosave.substring(0, autosave.length() - ProjectDocument.EXTENSION.length())
+            : FilenameUtils.removeExtension(autosave);
+        return name.replaceFirst("^~", "").replaceFirst("_\\d+$", "");
     }
 
     private OpenController openDatabase(final File databaseFile) {
@@ -821,6 +780,12 @@ public final class DatavyuView implements FileDropEventListener {
             return openController;
         }
         return null;
+    }
+
+    private OpenController openProjectFile(final File projectFile) {
+        OpenController openController = new OpenController();
+        openController.openProjectFile(projectFile);
+        return openController;
     }
 
     private OpenController openProject(final File projectFile) {
@@ -1043,19 +1008,6 @@ public final class DatavyuView implements FileDropEventListener {
 
     public void setRedraw(boolean b) {
         redraw = b;
-    }
-
-    public boolean checkAllTabsForChanges() {
-        boolean changes = false;
-        for (Component tab : tabbedPane.getComponents()) {
-            if (tab instanceof SpreadSheetPanel) {
-                SpreadSheetPanel sp = (SpreadSheetPanel) tab;
-                if (sp.getProjectController().isChanged()) {
-                    changes = true;
-                }
-            }
-        }
-        return changes;
     }
 
     public boolean checkIfFileAlreadyOpen(String filepath) {
@@ -1601,12 +1553,20 @@ public final class DatavyuView implements FileDropEventListener {
             setProgress(10);
             OpenController openController;
 
-            if (filter == OpfFilter.INSTANCE) {
-                // Opening a project or project archive file
+            if (filter == ProjectFileFilter.INSTANCE) {
+                openController = openProjectFile(fileChooser.getSelectedFile());
+            } else if (filter == OpfFilter.INSTANCE) {
+                // Opening an older Datavyu project file
                 openController = openProject(fileChooser.getSelectedFile());
             } else {
                 // Opening a database file
                 openController = openDatabase(fileChooser.getSelectedFile());
+            }
+
+            if (openController != null && openController.getError() != null) {
+                final String error = openController.getError();
+                SwingUtilities.invokeLater(() -> Datavyu.getApplication().showWarningDialog(error));
+                openController = null;
             }
 
             if (openController == null) {

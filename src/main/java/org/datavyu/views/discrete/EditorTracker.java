@@ -318,11 +318,13 @@ public final class EditorTracker
         switch (e.getKeyCode()) {
 
             case KeyEvent.VK_BACK_SLASH:
+                // ⌘\ deletes the selected cells; a backslash on its own is typed.
                 if (e.getModifiers() == KeyEvent.META_MASK) {
                     Datavyu.getView().deleteCells();
                     e.consume();
-                    break;
                 }
+                break;
+
             case KeyEvent.VK_BACK_SPACE:
                 if (!gotKeyUp) {
                     resetEditorText();

@@ -95,6 +95,8 @@ public final class DatavyuVariable implements Variable {
         return result;
     }
 
+    @Override
+
     public void addCell(Cell cell) {
         if (cell.getCellValue().getArgument() == this.getRootNode()) {
             cells.add(cell);
@@ -104,6 +106,8 @@ public final class DatavyuVariable implements Variable {
             owningDatastore.markAsChanged();
         }
     }
+
+    @Override
 
     public DataStore getOwningDatastore() {
         return owningDatastore;
@@ -129,6 +133,14 @@ public final class DatavyuVariable implements Variable {
 
         owningDatastore.markAsChanged();
         return c;
+    }
+
+    @Override
+    public Cell createPointCell(final long time) {
+        Cell cell = createCell();
+        cell.setOnset(time);
+        cell.setOffset(time);
+        return cell;
     }
 
     @Override
@@ -220,6 +232,9 @@ public final class DatavyuVariable implements Variable {
     }
 
 
+    @Override
+
+
     public void setName(final String newName, boolean grandfathered) throws UserWarningException {
         // Pre-conditions, the newName must have at least one character.
         if (newName.length() < 1) {
@@ -235,10 +250,12 @@ public final class DatavyuVariable implements Variable {
             owningDatastore.addExemptionVariable(newName);
         }
 
-        if (name != null && owningDatastore != null) {
-            owningDatastore.updateVariableName(name, newName, this);
-        }
+        // The name is set first, so the data store's listeners see the new one.
+        String oldName = name;
         this.name = newName;
+        if (oldName != null && owningDatastore != null) {
+            owningDatastore.updateVariableName(oldName, newName, this);
+        }
         for (VariableListener vl : getListeners(getID())) {
             vl.nameChanged(newName);
         }

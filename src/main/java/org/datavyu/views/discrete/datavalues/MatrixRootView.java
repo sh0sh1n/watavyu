@@ -83,6 +83,7 @@ public final class MatrixRootView extends JTextArea implements FocusListener {
 
         // Funny behavior for the return key
         addKeyListener(new KeyListener() {
+                   @Override
                    public void keyPressed(KeyEvent e) {
                        if ((Character.isLetter(e.getKeyChar()) || Character.isDigit(e.getKeyChar())
                                || Character.isSpaceChar(e.getKeyChar())) && !e.isAltDown() && !e.isControlDown() && !e.isMetaDown()) {
@@ -93,7 +94,9 @@ public final class MatrixRootView extends JTextArea implements FocusListener {
                            e.consume();
                        }
                     }
+                   @Override
                    public void keyTyped(KeyEvent e) {}
+                   @Override
                    public void keyReleased(KeyEvent e)
                    {
                         if (e.getKeyCode() == KeyEvent.VK_ENTER)

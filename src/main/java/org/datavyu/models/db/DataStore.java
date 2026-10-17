@@ -164,6 +164,11 @@ public interface DataStore {
     void updateVariableName(String oldname, String newName, Variable variable);
 
     /**
+     * Tells listeners that the columns' order indices have changed.
+     */
+    void columnsReordered();
+
+    /**
      * Sets the title notifier that needs to be informed when the title of the
      * application needs to be updated.
      */

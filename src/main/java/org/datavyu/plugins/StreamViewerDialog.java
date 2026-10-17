@@ -36,7 +36,6 @@ import java.awt.event.*;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Properties;
@@ -72,19 +71,19 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     private final List<ViewerStateListener> viewerListeners = new LinkedList<>();
 
     /** Volume for start back in dB? */
-    protected float volume = 1f;
+    protected volatile float volume = 1f;
 
     /** Controls visibility */
-    protected boolean isVisible = true;
+    protected volatile boolean isVisible = true;
 
     /** Did we assume the frames per second? */
     protected boolean isAssumedFramesPerSecond = false;
 
     /** The playback speed */
-    protected float playBackRate = 0;
+    protected volatile float playBackRate = 0;
 
     /** Frames per second */
-    private float framesPerSecond = -1;
+    private volatile float framesPerSecond = -1;
 
     /** The current video file */
     protected File sourceFile;
@@ -127,7 +126,7 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
 
     /** The offset of this stream viewer wrt to the others */
     // Offset gets updated when the user pushes the bar through 'handleCarriageOffsetChangeEvent' in the VideoController
-    private long offset;
+    private volatile long offset;
 
     /**
      * Constructs a base data video viewer.
@@ -228,6 +227,7 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     /**
      * {@inheritDoc}
      */
+    @Override
     public abstract void setCurrentTime(final long time);
 
     protected abstract float getPlayerFramesPerSecond();
@@ -236,6 +236,7 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
      * @return The duration of the movie in milliseconds. If -1 is returned, the
      * movie's duration cannot be determined.
      */
+    @Override
     public abstract long getDuration();
 
     /**
@@ -278,16 +279,6 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     }
 
     /**
-     * Get the width of the video image.
-     *
-     * @return
-     */
-    private int getVideoHeight() {
-        // TODO: Have variables for JUST the video size
-        return getHeight() - getInsets().bottom - getInsets().top;
-    }
-
-    /**
      * Set the height of the video.
      *
      * @param height
@@ -309,6 +300,7 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     /**
      * @return The playback startTime of the movie in milliseconds.
      */
+    @Override
     public long getOffset() {
         return offset;
     }
@@ -316,6 +308,7 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     /**
      * @param newOffset The playback startTime of the movie in milliseconds.
      */
+    @Override
     public void setOffset(final long newOffset) {
         logger.info("Set offset of stream viewer with " + identifier + " to " + newOffset);
         // TODO: This set is communicated to the TrackController (if it does not come from there)
@@ -325,6 +318,7 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     /**
      * @return The parent JDialog that this data viewer resides within.
      */
+    @Override
     public JDialog getParentJDialog() {
         return this;
     }
@@ -332,6 +326,7 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     /**
      * @return The file used to display this data feed.
      */
+    @Override
     public File getSourceFile() {
         return sourceFile;
     }
@@ -360,6 +355,7 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     /**
      * @return The frames per second.
      */
+    @Override
     public float getFramesPerSecond() {
         return framesPerSecond;
     }
@@ -380,11 +376,13 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     /**
      * {@inheritDoc}
      */
+    @Override
     public abstract long getCurrentTime();
 
     /**
      * {@inheritDoc}
      */
+    @Override
     public TrackPainter getTrackPainter() {
         return new DefaultTrackPainter();
     }
@@ -416,6 +414,8 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
             listener.notifyStateChanged(null, null);
         }
     }
+
+    @Override
 
     public void loadSettings(final InputStream is) {
         Properties settings = new Properties();
@@ -459,18 +459,26 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
         }
     }
 
-    public void storeSettings(final OutputStream os) {
-        Properties settings = new Properties();
-        settings.setProperty("offset", Long.toString(getOffset()));
-        settings.setProperty("volume", Float.toString(volume));
-        settings.setProperty("visible", Boolean.toString(isVisible));
-        settings.setProperty("height", Integer.toString(getVideoHeight()));
-        settings.setProperty("framesPerSecond", Float.toString(framesPerSecond));
-        try {
-            settings.store(os, null);
-        } catch (IOException e) {
-            logger.error("Error saving settings", e);
-        }
+    @Override
+    public float getVolumeLevel() {
+        return volume;
+    }
+
+    @Override
+    public void setVolumeLevel(final float level) {
+        volume = level;
+        volumeSlider.setValue(Math.round(level * 100));
+        setVolume();
+    }
+
+    @Override
+    public boolean isViewerVisible() {
+        return isVisible;
+    }
+
+    @Override
+    public Dimension getVideoSize() {
+        return getOriginalVideoSize();
     }
 
     @Override
@@ -490,6 +498,7 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     private void initComponents() {
         setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE);
         addWindowListener(new WindowAdapter() {
+            @Override
             public void windowClosing(final WindowEvent evt) {
                 formWindowClosing(evt);
             }
@@ -531,6 +540,8 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
         this.isVisible = isVisible;
         setVolume();
     }
+
+    @Override
 
     public boolean isAssumedFramesPerSecond() {
         return isAssumedFramesPerSecond;

@@ -83,6 +83,8 @@ public class DatavyuDataStore implements DataStore {
         return allVariables;
     }
 
+    @Override
+
     public List<Variable> getVisibleVariables() {
         List<Variable> allVariables = getAllVariables();
         List<Variable> visibleVariables = new ArrayList<Variable>();
@@ -237,7 +239,19 @@ public class DatavyuDataStore implements DataStore {
     public void updateVariableName(String oldName, String newName, Variable variable) {
         this.variables.remove(oldName);
         this.variables.put(newName, variable);
-        if (!oldName.equals(newName)) markAsChanged();
+        if (!oldName.equals(newName)) {
+            markAsChanged();
+            for (DataStoreListener listener : this.dataStoreListeners) {
+                listener.variableNameChange(variable);
+            }
+        }
+    }
+
+    @Override
+    public void columnsReordered() {
+        for (DataStoreListener listener : this.dataStoreListeners) {
+            listener.variableOrderChanged();
+        }
     }
 
     @Override

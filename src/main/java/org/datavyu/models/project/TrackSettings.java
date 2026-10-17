@@ -24,27 +24,13 @@ package org.datavyu.models.project;
 // TODO: Could this functionality be in track model?
 public final class TrackSettings {
 
-    /** TrackSettings specification version. */
-    public static final int VERSION = 2; // TODO: Why is this different from the main datavyu version?
-
     /** Absolute file path to the data source */
     @Deprecated private String filePath;
 
     /** Is the track's movement locked on the interface */
     private boolean isLocked;
 
-
     public TrackSettings() {
-    }
-
-    /**
-     * Private copy constructor.
-     *
-     * @param other
-     */
-    private TrackSettings(final TrackSettings other) {
-        filePath = other.filePath;
-        isLocked = other.isLocked;
     }
 
     /**
@@ -74,14 +60,5 @@ public final class TrackSettings {
      */
     @Deprecated public void setFilePath(final String filePath) {
         this.filePath = filePath;
-    }
-
-    /**
-     * Copy constructor that makes a deep copy.
-     *
-     * @return A new instance of track settings.
-     */
-    public TrackSettings copy() {
-        return new TrackSettings(this);
     }
 }

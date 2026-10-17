@@ -42,9 +42,6 @@ import java.awt.event.*;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.File;
-import java.text.DateFormat;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.function.Consumer;
 
@@ -87,31 +84,13 @@ public final class VideoController extends DatavyuDialog
     private static final Font TEXT_LABEL_FONT = new Font("Arial", Font.PLAIN, 10);
 
     /** Format for time */
-    private static final DateFormat CLOCK_FORMAT;
-
-    private static final DateFormat CLOCK_FORMAT_HTML;
-
     private static int timeStampFontSize = 15;
 
-    // initialize standard date format for clockTimer display.
-    static {
-        CLOCK_FORMAT = new SimpleDateFormat("HH:mm:ss:SSS");
-        CLOCK_FORMAT.setTimeZone(new SimpleTimeZone(0, "NO_ZONE"));
-
-        Color hoursColor = TimescaleConstants.HOURS_COLOR;
-        Color minutesColor = TimescaleConstants.MINUTES_COLOR;
-        Color secondsColor = TimescaleConstants.SECONDS_COLOR;
-        Color millisecondsColor = TimescaleConstants.MILLISECONDS_COLOR;
-
-        CLOCK_FORMAT_HTML = new SimpleDateFormat("'<html>" + "<font color=\""
-                + toRGBString(hoursColor) + "\">'HH'</font>':"
-                + "'<font color=\"" + toRGBString(minutesColor)
-                + "\">'mm'</font>':" + "'<font color=\""
-                + toRGBString(secondsColor) + "\">'ss'</font>':"
-                + "'<font color=\"" + toRGBString(millisecondsColor)
-                + "\">'SSS'</font>" + "</html>'");
-        CLOCK_FORMAT_HTML.setTimeZone(new SimpleTimeZone(0, "NO_ZONE"));
-    }
+    /** Colours of the hours, minutes, seconds and milliseconds in the current time label. */
+    private static final Color[] CLOCK_COLORS = {
+        TimescaleConstants.HOURS_COLOR, TimescaleConstants.MINUTES_COLOR,
+        TimescaleConstants.SECONDS_COLOR, TimescaleConstants.MILLISECONDS_COLOR
+    };
 
     private static RateController shuttleRates = new RateController();
 
@@ -268,7 +247,24 @@ public final class VideoController extends DatavyuDialog
      * @return
      */
     public static String formatTime(final long time) {
-        return CLOCK_FORMAT.format(new Date(time));
+        return Timestamp.format(time);
+    }
+
+    /**
+     * @param time a time in milliseconds
+     * @return the time as {@code HH:MM:SS:mmm} in HTML, each field in its timescale colour
+     */
+    static String formatTimeHtml(final long time) {
+        String[] fields = Timestamp.format(time).split(":");
+        StringBuilder html = new StringBuilder("<html>");
+        for (int i = 0; i < fields.length; i++) {
+            if (i > 0) {
+                html.append(':');
+            }
+            html.append("<font color=\"").append(toRGBString(CLOCK_COLORS[i])).append("\">")
+                .append(fields[i]).append("</font>");
+        }
+        return html.append("</html>").toString();
     }
 
     /**
@@ -342,6 +338,7 @@ public final class VideoController extends DatavyuDialog
     /**
      * @param clockTime Current clockTimer time in milliseconds.
      */
+    @Override
     public void clockStart(double clockTime) {
         logger.info("Start");
     }
@@ -356,6 +353,8 @@ public final class VideoController extends DatavyuDialog
     public void setShouldBeVisible(boolean v) {
         visible = v;
     }
+
+    @Override
 
     public void clockForceSync(double clockTime) {
         logger.debug("Forced sync to " + clockTime + " milliseconds.");
@@ -393,6 +392,7 @@ public final class VideoController extends DatavyuDialog
      * This method is used only for the JavaFx player, and Native OSX
      * @param clockTime Current clockTimer time in milliseconds.
      */
+    @Override
     public void clockPeriodicSync(double clockTime) {
         // Updates the position of the needle and label
         updateCurrentTimeLabelAndNeedle((long) clockTime);
@@ -401,6 +401,7 @@ public final class VideoController extends DatavyuDialog
     /**
      * @param clockTime Current clockTimer time in milliseconds.
      */
+    @Override
     public void clockStop(double clockTime) {
         logger.debug("Stop Clock at " + clockTime + " milliseconds.");
         // Updates the position of the needle and label
@@ -410,6 +411,7 @@ public final class VideoController extends DatavyuDialog
     /**
      * @param clockTime Current clockTimer time in milliseconds.
      */
+    @Override
     public void clockPause(double clockTime) {
         logger.debug("Pause Clock at " + clockTime + " milliseconds.");
         // Updates the position of the needle and label
@@ -419,6 +421,7 @@ public final class VideoController extends DatavyuDialog
     /**
      * @param rate Current (updated) clockTimer rate.
      */
+    @Override
     public void clockRate(float rate) {
         logger.debug("Update rate speed to " + rate);
         labelSpeed.setText(FloatingPointUtils.doubleToFractionStr(rate));
@@ -441,8 +444,7 @@ public final class VideoController extends DatavyuDialog
     private void updateCurrentTimeLabelAndNeedle(long currentTime) {
         long currentTimeInRange = clockTimer.toRange(currentTime);
 
-        timeStampLabel.setText(tracksPanelVisible ? CLOCK_FORMAT_HTML.format(currentTimeInRange)
-                                                  : CLOCK_FORMAT_HTML.format(currentTimeInRange));
+        timeStampLabel.setText(formatTimeHtml(currentTimeInRange));
         mixerController.getMixerModel().getNeedleModel().setCurrentTime(currentTimeInRange);
     }
 
@@ -569,15 +571,8 @@ public final class VideoController extends DatavyuDialog
      */
     private boolean shouldRemove() {
         Resources rMap = Resources.of(Datavyu.class);
-        String defaultOption = "Cancel";
-        String alternativeOption = "OK";
-        String[] options = MacOS.getOptions(defaultOption, alternativeOption);
-        int selectedOption = JOptionPane.showOptionDialog(this,
-                rMap.getString("ClosePluginDialog.message"),
-                rMap.getString("ClosePluginDialog.title"),
-                JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE,
-                null, options, defaultOption);
-        return selectedOption == 1;
+        return Dialogs.confirm(this, rMap.getString("ClosePluginDialog.message"),
+                rMap.getString("ClosePluginDialog.title"), "OK");
     }
 
     /**
@@ -664,6 +659,7 @@ public final class VideoController extends DatavyuDialog
         addDataButton.setFocusPainted(false);
         addDataButton.setName("addDataButton");
         addDataButton.addActionListener(new ActionListener() {
+            @Override
             public void actionPerformed(final ActionEvent evt) {
                 openVideoButtonActionPerformed(evt);
             }
@@ -681,6 +677,7 @@ public final class VideoController extends DatavyuDialog
         timeStampLabel.setHorizontalTextPosition(SwingConstants.CENTER);
         timeStampLabel.setName("timeStampLabel");
         timeStampLabel.addMouseListener(new MouseAdapter() {
+            @Override
             public void mouseClicked(MouseEvent e) {
                 // Open a new frame here as i have assumed you have declared "frame" as instance variable
                 if (e.getClickCount() >= 3) {
@@ -735,6 +732,7 @@ public final class VideoController extends DatavyuDialog
         showTracksSmallButton.getAccessibleContext().setAccessibleName(
                 "Show Tracks");
         showTracksSmallButton.addActionListener(new ActionListener() {
+            @Override
             public void actionPerformed(final ActionEvent evt) {
                 showTracksButtonActionPerformed(evt);
             }
@@ -1017,6 +1015,7 @@ public final class VideoController extends DatavyuDialog
      *
      * @param e event
      */
+    @Override
     public void tracksControllerChanged(final TracksControllerEvent e) {
         switch (e.getEventType()) {
             case CARRIAGE_EVENT:
@@ -1262,7 +1261,7 @@ public final class VideoController extends DatavyuDialog
      * @param milliseconds The time to use when populating the find field.
      */
     public void setOnsetField(final long milliseconds) {
-        onsetTextField.setText(CLOCK_FORMAT.format(milliseconds));
+        onsetTextField.setText(Timestamp.format(milliseconds));
     }
 
     /**
@@ -1271,7 +1270,7 @@ public final class VideoController extends DatavyuDialog
      * @param milliseconds The time to use when populating the find field.
      */
     public void setOffsetField(final long milliseconds) {
-        offsetTextField.setText(CLOCK_FORMAT.format(milliseconds));
+        offsetTextField.setText(Timestamp.format(milliseconds));
     }
 
     /**
@@ -1283,10 +1282,10 @@ public final class VideoController extends DatavyuDialog
         } else {
 
             try {
-                logger.info("Finding to " + onsetTextField.getText() + " "
-                        + CLOCK_FORMAT.parse(onsetTextField.getText()).getTime());
-                clockTimer.setForceTime(CLOCK_FORMAT.parse(onsetTextField.getText()).getTime());
-            } catch (ParseException e) {
+                long onset = Timestamp.parse(onsetTextField.getText());
+                logger.info("Finding to " + onsetTextField.getText() + " " + onset);
+                clockTimer.setForceTime(onset);
+            } catch (IllegalArgumentException e) {
                 logger.error("unable to find within video", e);
             }
         }
@@ -1297,8 +1296,8 @@ public final class VideoController extends DatavyuDialog
      */
     public void findOffsetAction() {
         try {
-            clockTimer.setForceTime(CLOCK_FORMAT.parse(offsetTextField.getText()).getTime());
-        } catch (ParseException e) {
+            clockTimer.setForceTime(Timestamp.parse(offsetTextField.getText()));
+        } catch (IllegalArgumentException e) {
             logger.error("Unable to find offset " + e);
         }
     }
@@ -1324,12 +1323,12 @@ public final class VideoController extends DatavyuDialog
      */
     public void jumpByAction() {
         try {
-            long backTime = jumpDirection * CLOCK_FORMAT.parse(jumpByTextField.getText()).getTime();
+            long backTime = jumpDirection * Timestamp.parse(jumpByTextField.getText());
             long newTime = (long) clockTimer.getClockTime() + backTime;
             logger.info("Jump back by " +  backTime + " From: " + clockTimer.getStreamTime() + " To: " + newTime);
             clockTimer.setForceTime(newTime);
 
-        } catch (ParseException e) {
+        } catch (IllegalArgumentException e) {
             logger.error("Unable to jump back " + e);
         }
     }

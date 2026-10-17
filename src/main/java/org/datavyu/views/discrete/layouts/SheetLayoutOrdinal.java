@@ -163,6 +163,8 @@ public class SheetLayoutOrdinal extends SheetLayout {
         }
     }
 
+    @Override
+
     public void reorientView(SpreadsheetCell cell) {
         // Set the new position of the scroll window.
 

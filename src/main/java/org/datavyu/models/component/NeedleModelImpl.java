@@ -53,13 +53,14 @@ public final class NeedleModelImpl extends MixerComponentModelImpl implements Ne
     }
 
     @Override
-    public NeedleState getNeedle() {
+    public synchronized NeedleState getNeedle() {
         return new NeedleStateImpl(currentTime);
     }
 
     /**
      * {@inheritDoc}
      */
+    @Override
     public synchronized long getCurrentTime() {
         return currentTime;
     }
@@ -67,6 +68,7 @@ public final class NeedleModelImpl extends MixerComponentModelImpl implements Ne
     /**
      * {@inheritDoc}
      */
+    @Override
     public void setCurrentTime(final long time) {
         //logger.info("The current time is " + time + " msec.");
         final long oldTime;
@@ -140,7 +142,8 @@ public final class NeedleModelImpl extends MixerComponentModelImpl implements Ne
      * {@inheritDoc}
      */
     @Override
-    public synchronized boolean equals(final Object obj) {
+    public boolean equals(final Object obj) {
+        // Each getter takes one model's lock at a time, so two models compared from two threads cannot deadlock.
 
         if (this == obj)
             return true;
@@ -153,16 +156,16 @@ public final class NeedleModelImpl extends MixerComponentModelImpl implements Ne
 
         NeedleModelImpl other = (NeedleModelImpl) obj;
 
-        if (currentTime != other.currentTime)
+        if (getCurrentTime() != other.getCurrentTime())
             return false;
 
-        if (!needleColor.equals(other.needleColor))
+        if (!getNeedleColor().equals(other.getNeedleColor()))
             return false;
 
-        if (timescaleTransitionHeight != other.timescaleTransitionHeight)
+        if (getTimescaleTransitionHeight() != other.getTimescaleTransitionHeight())
             return false;
 
-        if (zoomIndicatorHeight != other.zoomIndicatorHeight)
+        if (getZoomIndicatorHeight() != other.getZoomIndicatorHeight())
             return false;
 
         return true;

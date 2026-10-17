@@ -1,10 +1,12 @@
+import net.ltgt.gradle.errorprone.errorprone
+
 plugins {
     application
     jacoco
     pmd
-    id("net.ltgt.errorprone") version "5.1.1"
-    id("com.github.spotbugs") version "6.5.13"
-    id("com.github.ben-manes.versions") version "0.66.0"
+    alias(libs.plugins.errorprone)
+    alias(libs.plugins.spotbugs)
+    alias(libs.plugins.versions)
 }
 
 group = "org.datavyu"
@@ -12,7 +14,7 @@ version = "0.1.0-SNAPSHOT"
 
 // OpenJFX Media is the video backend. This fork targets Apple Silicon macOS only:
 // the patched native library in third_party/openjfx-media-avf is arm64.
-val javafxVersion = "27"
+val javafxVersion = libs.versions.javafx.get()
 val javafxPlatform = "mac-aarch64"
 val javafxModules = listOf("base", "graphics", "media", "swing")
 check(System.getProperty("os.name").startsWith("Mac") && System.getProperty("os.arch") == "aarch64") {
@@ -58,16 +60,12 @@ val patchedJavafxMedia = tasks.register<Jar>("patchedJavafxMedia") {
 }
 
 dependencies {
-    implementation("org.yaml:snakeyaml:1.18")
-    implementation("com.miglayout:miglayout:3.7.4:swing")
-    implementation("commons-io:commons-io:2.5")
-    implementation("org.apache.commons:commons-lang3:3.6")
-    implementation("com.google.guava:guava:27.1-jre")
-    implementation("org.apache.logging.log4j:log4j-api:2.11.2")
-    implementation("org.apache.logging.log4j:log4j-core:2.11.2")
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.9.9.2")
-    implementation("com.fasterxml.jackson.core:jackson-annotations:2.9.9")
-    implementation("com.fasterxml.jackson.core:jackson-core:2.9.9")
+    implementation(libs.snakeyaml)
+    implementation(variantOf(libs.miglayout) { classifier("swing") })
+    implementation(libs.commons.io)
+    implementation(libs.log4j.api)
+    implementation(libs.log4j.core)
+    implementation(libs.jackson.databind)
 
     for (module in javafxModules - "media") {
         implementation("org.openjfx:javafx-$module:$javafxVersion:$javafxPlatform")
@@ -75,11 +73,16 @@ dependencies {
     stockJavafxMedia("org.openjfx:javafx-media:$javafxVersion:$javafxPlatform")
     implementation(files(patchedJavafxMedia))
 
-    errorprone("com.google.errorprone:error_prone_core:2.50.0")
+    errorprone(libs.errorprone.core)
 
-    testImplementation("org.testng:testng:6.11")
-    testImplementation("org.mockito:mockito-core:5.24.0")
-    mockitoAgent("org.mockito:mockito-core:5.24.0")
+    testImplementation(libs.testng)
+    testImplementation(libs.mockito.core)
+    // Validates project files against the published JSON Schema. It uses Jackson 3 (tools.jackson), which does not
+    // clash with the app's Jackson 2; its YAML support is excluded because the schema is JSON.
+    testImplementation(libs.json.schema.validator) {
+        exclude(group = "tools.jackson.dataformat", module = "jackson-dataformat-yaml")
+    }
+    mockitoAgent(libs.mockito.core)
 }
 
 java {
@@ -126,6 +129,8 @@ tasks.withType<Test>().configureEach {
     jvmArgumentProviders.add(CommandLineArgumentProvider { listOf("-javaagent:${mockitoAgent.singleFile}") })
     // Tests read and write settings here, never in the user's ~/Library/Application Support/Watavyu.
     systemProperty("watavyu.settingsDir", layout.buildDirectory.dir("test-settings/$name").get().asFile.absolutePath)
+    // and log here, never in the user's ~/Library/Logs/Watavyu.
+    systemProperty("watavyu.logDir", layout.buildDirectory.dir("test-logs/$name").get().asFile.absolutePath)
 }
 
 tasks.test {
@@ -149,6 +154,19 @@ tasks.register<Test>("integrationTest") {
 // Analysis reports that measure the work in TODO.md. They do not gate the build:
 // Error Prone ERRORs and the tests are the gates. ./gradlew analyze writes all of them under build/reports.
 // ./gradlew compileJava -PallWarnings lists every javac lint and Error Prone warning (javac stops at 100).
+// Error Prone checks that have reached zero findings fail the build, so they stay at zero (AGENTS.md).
+tasks.withType<JavaCompile>().configureEach {
+    options.errorprone.error("MissingOverride")
+}
+
+// ./gradlew compileJava compileTestJava -PerrorpronePatch=CheckA,CheckB rewrites the sources in place with Error
+// Prone's suggested fixes for those checks. Review the result like any other change.
+providers.gradleProperty("errorpronePatch").orNull?.let { checks ->
+    tasks.withType<JavaCompile>().configureEach {
+        options.errorprone.errorproneArgs.addAll("-XepPatchChecks:$checks", "-XepPatchLocation:IN_PLACE")
+    }
+}
+
 if (providers.gradleProperty("allWarnings").isPresent) {
     tasks.withType<JavaCompile>().configureEach {
         options.compilerArgs.addAll(listOf("-Xmaxwarns", "100000", "-Xlint:all,-serial,-processing"))
@@ -156,7 +174,7 @@ if (providers.gradleProperty("allWarnings").isPresent) {
 }
 
 pmd {
-    toolVersion = "7.17.0"
+    toolVersion = libs.versions.pmd.get()
     sourceSets = listOf(project.sourceSets.main.get())
     ruleSets = emptyList()
     ruleSetFiles = files("config/pmd/ruleset.xml")

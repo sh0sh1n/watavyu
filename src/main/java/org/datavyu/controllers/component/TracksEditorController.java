@@ -14,7 +14,6 @@
  */
 package org.datavyu.controllers.component;
 
-import com.google.common.collect.Maps;
 import org.datavyu.event.component.CarriageEvent;
 import org.datavyu.event.component.CarriageEventAdapter;
 import org.datavyu.event.component.CarriageEventListener;
@@ -27,6 +26,7 @@ import org.datavyu.views.component.TracksEditorPainter;
 
 import javax.swing.*;
 import java.io.File;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -51,7 +51,7 @@ public final class TracksEditorController {
      * Create a new tracks editor controller
      */
     TracksEditorController(final MixerModel mixerModel) {
-        tracks = Maps.newLinkedHashMap();
+        tracks = new LinkedHashMap<>();
         this.mixerModel = mixerModel;
         selectionHandler = new CarriageSelection();
         initView();

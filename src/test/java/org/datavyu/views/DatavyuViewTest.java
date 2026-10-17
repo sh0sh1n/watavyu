@@ -15,4 +15,13 @@ public class DatavyuViewTest {
     public void theTitleShowsQuickKeyMode() {
         assertEquals(DatavyuView.windowTitle("Watavyu", "study.opf  ", true), "Watavyu - study.opf   <QUICK KEY MODE>");
     }
+
+    /** B8: a recovered project is named after the project that was autosaved. */
+    @Test
+    public void aRecoveredProjectIsNamedAfterTheOriginal() {
+        assertEquals(DatavyuView.recoveredName("~study_12005522346316252883.watavyu.json"), "study");
+        assertEquals(DatavyuView.recoveredName("~session_04_5415962468724307690.watavyu.json"), "session_04");
+        assertEquals(DatavyuView.recoveredName("~noname_42.watavyu.json"), "noname");
+        assertEquals(DatavyuView.recoveredName("~old_7.opf"), "old");
+    }
 }

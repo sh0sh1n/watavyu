@@ -161,7 +161,7 @@ public final class OpenDataStoreFileController {
                 if (JsonToken.START_OBJECT.equals(token)) {
 
                     token = parser.nextToken();
-                    if (JsonToken.FIELD_NAME.equals(token) && "passes".equals(parser.getCurrentName())) {
+                    if (JsonToken.FIELD_NAME.equals(token) && "passes".equals(parser.currentName())) {
 
                         DataStore dataStore = spreadSheet.getDataStore();
 
@@ -175,7 +175,7 @@ public final class OpenDataStoreFileController {
                             if (!JsonToken.START_OBJECT.equals(token)) { break; }
 
                             token = parser.nextToken();
-                            if (JsonToken.FIELD_NAME.equals(token) && "name".equals(parser.getCurrentName())) {
+                            if (JsonToken.FIELD_NAME.equals(token) && "name".equals(parser.currentName())) {
 
                                 token = parser.nextToken();
                                 String columnName = parser.getValueAsString();
@@ -184,14 +184,14 @@ public final class OpenDataStoreFileController {
                                 if (spreadSheet.getDataStore().getVariable(columnName) == null) {
 
                                     token = parser.nextToken();
-                                    if (JsonToken.FIELD_NAME.equals(token) && "type".equals(parser.getCurrentName())) {
+                                    if (JsonToken.FIELD_NAME.equals(token) && "type".equals(parser.currentName())) {
                                         token = parser.nextToken();
                                         Argument.Type variableType = getVarType(parser.getValueAsString());
 
                                         if (variableType != null) {
                                             token = parser.nextToken();
                                             if (JsonToken.FIELD_NAME.equals(token) && "arguments".equals(parser
-                                                    .getCurrentName())) {
+                                                    .currentName())) {
                                                 token = parser.nextToken();
                                                 if (token == null) { break; }
                                                 if (!JsonToken.START_OBJECT.equals(token)) { break; }
@@ -219,11 +219,11 @@ public final class OpenDataStoreFileController {
                                                     if (variableType == Argument.Type.MATRIX) {
                                                         if (getVarType(parser.getValueAsString()) != null) {
                                                             variableArg.childArguments.add(new Argument(parser
-                                                                    .getCurrentName(), getVarType(parser
+                                                                    .currentName(), getVarType(parser
                                                                     .getValueAsString())));
                                                         } else {
-                                                            logger.warn("Unknown argument ('" + parser.getCurrentName
-                                                                    () + "' line " + parser.getCurrentLocation()
+                                                            logger.warn("Unknown argument ('" + parser.currentName
+                                                                    () + "' line " + parser.currentLocation()
                                                                     .getLineNr() + " ): was expecting " + "argument "
                                                                     + "(NOMINAL, TEXT or MATRIX)" + " field name");
                                                             break;
@@ -234,7 +234,7 @@ public final class OpenDataStoreFileController {
 
                                                 token = parser.nextToken();
                                                 if (JsonToken.FIELD_NAME.equals(token) && "cells".equals(parser
-                                                        .getCurrentName())) {
+                                                        .currentName())) {
 
                                                     token = parser.nextToken();
                                                     if (!JsonToken.START_ARRAY.equals(token)) { break; }
@@ -250,25 +250,25 @@ public final class OpenDataStoreFileController {
 
                                                         token = parser.nextToken();
                                                         if (JsonToken.FIELD_NAME.equals(token) && "id".equals(parser
-                                                                .getCurrentName())) {
+                                                                .currentName())) {
                                                             token = parser.nextToken(); // we skip the id value
                                                             token = parser.nextToken();
                                                             if (JsonToken.FIELD_NAME.equals(token) && "onset".equals
-                                                                    (parser.getCurrentName())) {
+                                                                    (parser.currentName())) {
                                                                 token = parser.nextToken();
                                                                 String cellONSET = parser.getValueAsString();
                                                                 newCell.setOnset(cellONSET);
 
                                                                 token = parser.nextToken();
                                                                 if (JsonToken.FIELD_NAME.equals(token) && "offset"
-                                                                        .equals(parser.getCurrentName())) {
+                                                                        .equals(parser.currentName())) {
                                                                     token = parser.nextToken();
                                                                     String cellOFFSET = parser.getValueAsString();
                                                                     newCell.setOffset(cellOFFSET);
 
                                                                     token = parser.nextToken();
                                                                     if (JsonToken.FIELD_NAME.equals(token) &&
-                                                                            "values".equals(parser.getCurrentName())) {
+                                                                            "values".equals(parser.currentName())) {
                                                                         token = parser.nextToken();
                                                                         if (!JsonToken.START_ARRAY.equals(token)) {
                                                                             break;
@@ -295,8 +295,8 @@ public final class OpenDataStoreFileController {
                                                                     } else {
                                                                         dataStore.removeVariable(newColumn);
                                                                         String msg = "Unexpected character ('" +
-                                                                                parser.getCurrentName() + "' line " +
-                                                                                parser.getCurrentLocation().getLineNr
+                                                                                parser.currentName() + "' line " +
+                                                                                parser.currentLocation().getLineNr
                                                                                         () + " ): " + "was expecting " +
                                                                                 "" + "values field name";
                                                                         logger.warn(msg);
@@ -306,8 +306,8 @@ public final class OpenDataStoreFileController {
                                                                 } else {
                                                                     dataStore.removeVariable(newColumn);
                                                                     String msg = "Unexpected character ('" + parser
-                                                                            .getCurrentName() + "' line " + parser
-                                                                            .getCurrentLocation().getLineNr() + " ): " +
+                                                                            .currentName() + "' line " + parser
+                                                                            .currentLocation().getLineNr() + " ): " +
                                                                             "" + "was " + "expecting offset field " +
                                                                             "name";
                                                                     logger.warn(msg);
@@ -317,8 +317,8 @@ public final class OpenDataStoreFileController {
                                                             } else {
                                                                 dataStore.removeVariable(newColumn);
                                                                 String msg = "Unexpected character ('" + parser
-                                                                        .getCurrentName() + "' line " + parser
-                                                                        .getCurrentLocation().getLineNr() + " ): was " +
+                                                                        .currentName() + "' line " + parser
+                                                                        .currentLocation().getLineNr() + " ): was " +
                                                                         "" + "" + "expecting onset field name";
                                                                 logger.warn(msg);
                                                                 Datavyu.getApplication().showWarningDialog(msg);
@@ -327,8 +327,8 @@ public final class OpenDataStoreFileController {
                                                         } else {
                                                             dataStore.removeVariable(newColumn);
                                                             String msg = "Unexpected character ('" + parser
-                                                                    .getCurrentName() + "' line " + parser
-                                                                    .getCurrentLocation().getLineNr() + " ): was " +
+                                                                    .currentName() + "' line " + parser
+                                                                    .currentLocation().getLineNr() + " ): was " +
                                                                     "expecting " + "id field name";
                                                             logger.warn(msg);
                                                             Datavyu.getApplication().showWarningDialog(msg);
@@ -338,32 +338,32 @@ public final class OpenDataStoreFileController {
                                                     }
                                                 } else {
                                                     dataStore.removeVariable(newColumn);
-                                                    String msg = "Unexpected character ('" + parser.getCurrentName() +
-                                                            "' line " + parser.getCurrentLocation().getLineNr() + " )" +
+                                                    String msg = "Unexpected character ('" + parser.currentName() +
+                                                            "' line " + parser.currentLocation().getLineNr() + " )" +
                                                             ": was expecting cells " + "field name";
                                                     logger.warn(msg);
                                                     Datavyu.getApplication().showWarningDialog(msg);
                                                     break;
                                                     }
                                             } else {
-                                                String msg = "Unexpected character ('" + parser.getCurrentName() + "' "
-                                                        + "line " + parser.getCurrentLocation().getLineNr() +
+                                                String msg = "Unexpected character ('" + parser.currentName() + "' "
+                                                        + "line " + parser.currentLocation().getLineNr() +
                                                         " ):" + " was expecting arguments field name";
                                                 logger.warn(msg);
                                                 Datavyu.getApplication().showWarningDialog(msg);
                                                 break;
                                             }
                                         } else {
-                                            String msg = "Unknown argument ('" + parser.getCurrentName() + "' line " +
-                                                    parser.getCurrentLocation().getLineNr() + " ): was expecting " +
+                                            String msg = "Unknown argument ('" + parser.currentName() + "' line " +
+                                                    parser.currentLocation().getLineNr() + " ): was expecting " +
                                                     "argument (NOMINAL, TEXT or MATRIX) field name";
                                             logger.warn(msg);
                                             Datavyu.getApplication().showWarningDialog(msg);
                                             break;
                                         }
                                     } else {
-                                        String msg = "Unexpected character ('" + parser.getCurrentName() + "' line " +
-                                                parser.getCurrentLocation().getLineNr() + " ): was expecting type " +
+                                        String msg = "Unexpected character ('" + parser.currentName() + "' line " +
+                                                parser.currentLocation().getLineNr() + " ): was expecting type " +
                                                 "field name";
                                         logger.warn(msg);
                                         Datavyu.getApplication().showWarningDialog(msg);
@@ -377,8 +377,8 @@ public final class OpenDataStoreFileController {
                                     break;
                                 }
                             } else {
-                                String msg = "Unexpected character ('" + parser.getCurrentName() + "' line " + parser
-                                        .getCurrentLocation().getLineNr() + " ): was expecting name field name";
+                                String msg = "Unexpected character ('" + parser.currentName() + "' line " + parser
+                                        .currentLocation().getLineNr() + " ): was expecting name field name";
                                 logger.warn(msg);
                                 Datavyu.getApplication().showWarningDialog(msg);
                                 break;
@@ -387,15 +387,15 @@ public final class OpenDataStoreFileController {
                         }
                         parser.close();
                     } else {
-                        String msg = "Unexpected character ('" + parser.getCurrentName() + "' line " + parser
-                                .getCurrentLocation().getLineNr() + " ): was expecting passes field name";
+                        String msg = "Unexpected character ('" + parser.currentName() + "' line " + parser
+                                .currentLocation().getLineNr() + " ): was expecting passes field name";
                         logger.error(msg);
                         Datavyu.getApplication().showWarningDialog(msg);
                         break;
                     }
                 } else {
-                    String msg ="Unexpected character ('" + parser.getCurrentName() + "' line " + parser
-                            .getCurrentLocation().getLineNr() + " ): was expecting '{'";
+                    String msg ="Unexpected character ('" + parser.currentName() + "' line " + parser
+                            .currentLocation().getLineNr() + " ): was expecting '{'";
                     logger.error(msg);
                     Datavyu.getApplication().showWarningDialog(msg);
                     break;
@@ -917,6 +917,8 @@ public final class OpenDataStoreFileController {
         {
             this.names = names;
         }
+        
+        @Override
         
         public void run() {
             if (warnOnIllegalColumnNames) {

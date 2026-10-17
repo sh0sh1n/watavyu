@@ -31,18 +31,6 @@ public class MacOS {
     }
 
     /**
-     * Get options for dialog on Mac with two responses.
-     *
-     * @param defaultOption The default option.
-     * @param alternativeOption The alternative option.
-     *
-     * @return A string array with two options in the order: defaultOption, alternativeOption.
-     */
-    public static String[] getOptions(String defaultOption, String alternativeOption) {
-        return new String[]{defaultOption, alternativeOption};
-    }
-
-    /**
      * Test whether the Apple press and hold functionality is enable.d
      *
      * @return True if press and hold is enabled; otherwise false.

@@ -32,6 +32,8 @@ public final class TracksEditorPainter extends JPanel {
         setOpaque(false);
     }
 
+    @Override
+
     public void paint(final Graphics g) {
         g.setColor(PANEL_BG_COLOR);
         g.fillRect(0, 0, getWidth(), getHeight());

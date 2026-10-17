@@ -28,9 +28,12 @@ import org.datavyu.views.VariableListV;
 import org.datavyu.views.VideoController;
 import org.datavyu.views.WindowPlacement;
 import org.datavyu.views.discrete.SpreadSheetPanel;
+import org.datavyu.util.Dialogs;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.io.File;
 
 /**
@@ -72,13 +75,8 @@ public final class Datavyu implements TitleNotifier {
 
     static {
         logger.info("Working directory is: " + System.getProperty("user.dir"));
-        logger.info("Class path is: " + System.getProperty("java.class.path"));
-        logger.info("The java library path is: " + System.getProperty("java.library.path"));
-
-        if (MacOS.isOSXPressAndHoldEnabled()) {
-            osxPressAndHoldEnabled = true;
-            MacOS.setOSXPressAndHoldValue(false);
-        }
+        logger.debug("Class path is: " + System.getProperty("java.class.path"));
+        logger.debug("The java library path is: " + System.getProperty("java.library.path"));
     }
 
     /** This application is ready to open a file */
@@ -222,87 +220,50 @@ public final class Datavyu implements TitleNotifier {
      * @return True for quit, false otherwise.
      */
     public boolean safeQuit() {
-        JFrame mainFrame = Datavyu.getApplication().getMainFrame();
-        Resources resourceMap = Resources.of(Datavyu.class);
-        if (getView().checkAllTabsForChanges()) {
-            for (Component tab : getView().getTabbedPane().getComponents()) {
-                if (tab instanceof SpreadSheetPanel) {
-                    SpreadSheetPanel sp = (SpreadSheetPanel) tab;
-                    getView().getTabbedPane().setSelectedComponent(sp);
-                    // Ask to save if this spreadsheet has been changed
-                    if (sp.getProjectController().isChanged()) {
-                        String cancelOption = "Cancel";
-                        String noOption = "Don't save";
-                        String yesOption = "Save";
-
-                        String[] options = MacOS.getOptions(yesOption, noOption, cancelOption);
-
-                        // Get name of spreadsheet.  Check in both project and datastore.
-                        String projectName = sp.getProjectController().getProjectName();
-
-                        if (projectName == null) {
-                            projectName = sp.getDataStore().getName();
-                        }
-
-                        int selectedOption = JOptionPane.showOptionDialog(mainFrame,
-                                resourceMap.getString("UnsavedDialog.message",projectName),
-                                resourceMap.getString("UnsavedDialog.title"),
-                                JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE,
-                                null, options, yesOption);
-
-                        if (selectedOption == 0) {
-                            getView().save();
-                        }
-
-                        return !(selectedOption == 1);
-                    }
-                }
+        List<SpreadSheetPanel> spreadsheets = new ArrayList<>();
+        for (Component tab : getView().getTabbedPane().getComponents()) {
+            if (tab instanceof SpreadSheetPanel) {
+                spreadsheets.add((SpreadSheetPanel) tab);
             }
-            // User has been asked whether or not to save each file, we can return now
-            return true;
-        } else {
-            // Project hasn't been changed.
-            return true;
         }
+        return mayClose(spreadsheets, "UnsavedDialog.message");
     }
 
     /**
      * Function to check whether or not it is OK to close this tab
      */
     public boolean safeQuit(Component tab) {
+        return mayClose(List.of((SpreadSheetPanel) tab), "UnsavedDialog.tabmessage");
+    }
+
+    /**
+     * Asks about each spreadsheet with unsaved changes whether to save it, discard its changes or cancel.
+     *
+     * @param spreadsheets the spreadsheets to close
+     * @param message      the resource key of the question
+     * @return whether they may close: false if the user cancelled or a save did not happen
+     */
+    private boolean mayClose(final List<SpreadSheetPanel> spreadsheets, final String message) {
         JFrame mainFrame = Datavyu.getApplication().getMainFrame();
         Resources resourceMap = Resources.of(Datavyu.class);
-        SpreadSheetPanel spreadsheetPanel = (SpreadSheetPanel) tab;
-        if (spreadsheetPanel.getProjectController().isChanged()) {
-            getView().getTabbedPane().setSelectedComponent(spreadsheetPanel);
-
-            String cancelOption = "Cancel";
-            String noOption = "Don't save";
-            String yesOption = "Save";
-
-            String[] options = MacOS.getOptions(yesOption, noOption, cancelOption);
-
-            // Get project name.
-            String projName = spreadsheetPanel.getProjectController().getProjectName();
-            if (projName == null) {
-                projName = spreadsheetPanel.getDataStore().getName();
-            }
-            
-            int selectedOption = JOptionPane.showOptionDialog(mainFrame,
-                    resourceMap.getString("UnsavedDialog.tabmessage", projName),
+        String saveOption = "Save";
+        String discardOption = "Don't save";
+        String[] options = MacOS.getOptions(saveOption, discardOption, Dialogs.CANCEL);
+        return UnsavedWork.mayClose(spreadsheets, spreadsheet -> spreadsheet.getProjectController().isChanged(),
+            spreadsheet -> {
+                getView().getTabbedPane().setSelectedComponent(spreadsheet);
+                String projectName = spreadsheet.getProjectController().getProjectName();
+                if (projectName == null) {
+                    projectName = spreadsheet.getDataStore().getName();
+                }
+                int selected = JOptionPane.showOptionDialog(mainFrame,
+                    resourceMap.getString(message, projectName),
                     resourceMap.getString("UnsavedDialog.title"),
                     JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE,
-                    null, options, yesOption);
-
-            if (selectedOption == 0) {
-                getView().save();
-            }
-
-            // Options are ordered yes | cancel | no
-            return !(selectedOption == 1);
-        } else {
-            return true;
-        }
+                    null, options, saveOption);
+                return UnsavedWork.choice(selected, options, saveOption, discardOption);
+            },
+            spreadsheet -> getView().save());
     }
 
     /**
@@ -312,29 +273,21 @@ public final class Datavyu implements TitleNotifier {
      * @return True for overwrite, false otherwise.
      */
     public boolean overwriteExisting() {
-        JFrame mainFrame = Datavyu.getApplication().getMainFrame();
         Resources resourceMap = Resources.of(Datavyu.class);
-        String defaultOption = "Cancel";
-        String alternativeOption = "Overwrite";
-        String[] options = MacOS.getOptions(defaultOption, alternativeOption);
-
-        int selectedOption = JOptionPane.showOptionDialog(
-                mainFrame,
+        return Dialogs.confirm(Datavyu.getApplication().getMainFrame(),
                 resourceMap.getString("OverwriteDialog.message"),
-                resourceMap.getString("OverwriteDialog.title"),
-                JOptionPane.OK_CANCEL_OPTION,
-                JOptionPane.QUESTION_MESSAGE,
-                null,
-                options,
-                defaultOption);
-
-        return selectedOption == 1;
+                resourceMap.getString("OverwriteDialog.title"), "Overwrite");
     }
 
     /**
      * Creates and shows the main window and the video controller, then opens the file given on the command line.
      */
     private void start(final String[] args) {
+        // Key repeat instead of the accent popup while holding keys (B2: this changes the setting for every app).
+        if (MacOS.isOSXPressAndHoldEnabled()) {
+            osxPressAndHoldEnabled = true;
+            MacOS.setOSXPressAndHoldValue(false);
+        }
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (ReflectiveOperationException | UnsupportedLookAndFeelException e) {

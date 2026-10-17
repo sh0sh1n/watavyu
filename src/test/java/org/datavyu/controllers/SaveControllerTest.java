@@ -14,191 +14,51 @@
  */
 package org.datavyu.controllers;
 
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
+import static org.testng.Assert.expectThrows;
 
-import org.apache.commons.io.IOUtils;
-import org.datavyu.models.db.*;
-import org.datavyu.models.project.Project;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
+import org.datavyu.models.db.UserWarningException;
+import org.datavyu.projectfile.ProjectDocument;
+import org.datavyu.projectfile.ProjectDocument.AnnotationCell;
+import org.datavyu.projectfile.ProjectDocument.AnnotationColumn;
+import org.datavyu.projectfile.ProjectJson;
+import org.datavyu.util.Settings;
 import org.testng.annotations.Test;
 
-import java.io.*;
-
+import java.io.File;
+import java.nio.file.Files;
+import java.util.List;
 
 /**
- * Tests for saving Datavyu project and CSV files.
+ * Tests for saving project files.
  */
 public class SaveControllerTest {
-    // The location of the test files.
-    private static final String TEST_FOLDER = System.getProperty("testPath");
 
-    // Where saved files are written.
-    private static final File OUTPUT_FOLDER = new File(System.getProperty("java.io.tmpdir"));
+    private static final ProjectDocument PROJECT = new ProjectDocument(List.of(
+        new AnnotationColumn("TestColumn", List.of("var"), false,
+            List.of(new AnnotationCell(60_000, 120_000, List.of("This is a test cell."))))));
 
+    @Test
+    public void aSavedProjectReopensAndIsARecentProject() throws Exception {
+        File file = Files.createTempDirectory("save").resolve("study" + ProjectDocument.EXTENSION).toFile();
 
-    /** BLOCK_SIZE for files */
-    private static final int BLOCK_SIZE = 65536;
+        new SaveController().saveProject(file, PROJECT);
 
-    /**
-     * Checks two files for byte equality
-     *
-     * @param file1 First file
-     * @param file2 Second file
-     * @return True if they are equal; otherwise false
-     * @throws IOException exception
-     */
-    public static Boolean areFilesSameByteComp(final File file1, final File file2) throws IOException {
-
-        // Check file sizes first
-        if (file1.length() != file2.length()) {
-            return false;
-        }
-
-        // Compare bytes
-        InputStream i1 = new FileInputStream(file1);
-        InputStream i2 = new FileInputStream(file2);
-        byte[] stream1Block = new byte[BLOCK_SIZE];
-        byte[] stream2Block = new byte[BLOCK_SIZE];
-        int b1, b2;
-
-        do {
-            b1 = i1.read(stream1Block);
-            b2 = i2.read(stream2Block);
-        } while ((b1 == b2) && (b1 != -1));
-
-        i1.close();
-        i2.close();
-
-        // Check if we've reached the end of the file. If we have, they're identical
-        return b1 == -1;
-    }
-
-    /**
-     * Checks if two text files are equal.
-     *
-     * @param file1 First file
-     * @param file2 Second file
-     * @return true if equal, else false
-     * @throws IOException on file read error
-     */
-    public static Boolean areFilesSameLineComp(final File file1, final File file2) throws IOException {
-        FileReader fr1 = new FileReader(file1);
-        FileReader fr2 = new FileReader(file2);
-
-        BufferedReader r1 = new BufferedReader(fr1);
-        BufferedReader r2 = new BufferedReader(fr2);
-
-        String line1 = r1.readLine();
-        String line2 = r2.readLine();
-
-        if ((line1 != null) && !line1.equals(line2)) {
-            return false;
-        }
-
-        while ((line1 != null) || (line2 != null)) {
-
-            if ((line1 != null) && !line1.equals(line2)) {
-                return false;
-            }
-
-            line1 = r1.readLine();
-            line2 = r2.readLine();
-        }
-
-        IOUtils.closeQuietly(r1);
-        IOUtils.closeQuietly(r2);
-
-        IOUtils.closeQuietly(fr1);
-        IOUtils.closeQuietly(fr2);
-
-        return true;
-    }
-
-    @BeforeClass
-    public void spinUp() {
-    }
-
-    @AfterClass
-    public void spinDown() {
+        assertEquals(ProjectJson.read(file.toPath()), PROJECT);
+        assertEquals(Settings.get().getRecentProjects().get(0), file.getAbsoluteFile());
     }
 
     @Test
-    public void testSaveCSV() throws UserWarningException, IOException {
-        File outFile = new File(OUTPUT_FOLDER, "test1.csv");
-        // Clean up the out file only if it exists.
-        if (outFile.exists()) {
-            outFile.delete();
-        }
-        File demoFile = new File(TEST_FOLDER, "IO/simple1.csv");
+    public void aProjectThatCannotBeSavedSaysWhy() throws Exception {
+        File file = Files.createTempDirectory("save").resolve("study" + ProjectDocument.EXTENSION).toFile();
+        ProjectDocument tooManyValues = new ProjectDocument(List.of(new AnnotationColumn("TestColumn", List.of("var"),
+            false, List.of(new AnnotationCell(1_000, 2_000, List.of("a", "b"))))));
 
-        DataStore ds = DataStoreFactory.newDataStore();
-        Variable var = ds.createVariable("TestColumn", Argument.Type.TEXT);
-        Cell c = var.createCell();
-        c.setOnset("00:01:00:000");
-        c.setOffset("00:02:00:000");
-        c.getCellValue().set("This is a test cell.");
+        UserWarningException e = expectThrows(UserWarningException.class,
+            () -> new SaveController().saveProject(file, tooManyValues));
 
-        SaveController savec = new SaveController();
-        savec.saveDataStore(outFile, ds);
-
-        assertTrue(areFilesSameLineComp(outFile, demoFile));
-    }
-
-    @Test
-    public void testLoadOPF() throws UserWarningException, IOException {
-        File outFile = new File(OUTPUT_FOLDER, "test2.opf");
-        if (outFile.exists()) {
-            outFile.delete();
-        }
-        File demoFile = new File(TEST_FOLDER, "IO/simple2.opf");
-
-        Project p = new Project();
-        p.setProjectName("simple2");
-        p.setDatabaseFileName("simple1.csv");
-        p.setOriginalProjectDirectory("Z:\\datavyu\\src\\test\\resources\\IO");
-        DataStore ds = DataStoreFactory.newDataStore();
-        Variable var = ds.createVariable("TestColumn", Argument.Type.TEXT);
-        Cell c = var.createCell();
-        c.setOnset("00:01:00:000");
-        c.setOffset("00:02:00:000");
-        c.getCellValue().set("This is a test cell.");
-
-        SaveController savec = new SaveController();
-        savec.saveProject(outFile, p, ds);
-        assertTrue(areFilesSameByteComp(outFile, demoFile));
-    }
-
-    @Test
-    public void testLoadOPF2() throws UserWarningException, IOException {
-        File outFile = new File(OUTPUT_FOLDER, "test3.opf");
-        if (outFile.exists()) {
-            outFile.delete();
-        }
-        File demoFile = new File(TEST_FOLDER, "IO/simple3.opf");
-
-        Project p = new Project();
-        p.setProjectName("simple3");
-        p.setOriginalProjectDirectory("Z:\\datavyu\\src\\test\\resources\\IO");
-
-        DataStore ds = DataStoreFactory.newDataStore();
-        Variable var = ds.createVariable("testColumn", Argument.Type.TEXT);
-        Cell c = var.createCell();
-        c.getCellValue().set("cellA");
-
-        var = ds.createVariable("testColumn2", Argument.Type.NOMINAL);
-        c = var.createCell();
-        c.getCellValue().set("cellB");
-
-        var = ds.createVariable("testColumn3", Argument.Type.MATRIX);
-        c = var.createCell();
-        c.getCellValue().set("(cellC)");
-
-        var = ds.createVariable("hiddenColumn", Argument.Type.TEXT);
-        var.setHidden(true);
-
-        SaveController savec = new SaveController();
-        savec.saveProject(outFile, p, ds);
-        assertTrue(areFilesSameByteComp(outFile, demoFile));
+        assertTrue(e.getMessage().contains("columns[0].cells[0].values"), e.getMessage());
+        assertTrue(!file.exists());
     }
 }

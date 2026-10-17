@@ -15,7 +15,6 @@
 package org.datavyu.views;
 
 import org.datavyu.util.Resources;
-import com.google.common.collect.HashBiMap;
 import net.miginfocom.swing.MigLayout;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -30,6 +29,8 @@ import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableModel;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * The dialog to list database variables.
@@ -77,7 +78,7 @@ public final class VariableListV extends DatavyuDialog
     /**
      * Mapping between database column identifier - to the table model.
      */
-    private HashBiMap<Variable, Integer> dbToTableMap;
+    private Map<Variable, Integer> dbToTableMap;
 
     /**
      * Resource map holding all the string information.
@@ -96,7 +97,7 @@ public final class VariableListV extends DatavyuDialog
                          final DataStore ds) {
         super(parent, modal);
         tableModel = new VListTableModel();
-        dbToTableMap = HashBiMap.create();
+        dbToTableMap = new HashMap<>();
         initComponents();
         setName(this.getClass().getSimpleName());
         dataStore = ds;
@@ -164,6 +165,16 @@ public final class VariableListV extends DatavyuDialog
         }
     }
 
+    /** @return the column shown in a row of the table, or null */
+    private Variable variableAtRow(final int row) {
+        for (Map.Entry<Variable, Integer> entry : dbToTableMap.entrySet()) {
+            if (entry.getValue() == row) {
+                return entry.getKey();
+            }
+        }
+        return null;
+    }
+
     public void recreateMap() {
         dbToTableMap.clear();
         for (int i = 0; i < tableModel.getRowCount(); i++) {
@@ -190,7 +201,7 @@ public final class VariableListV extends DatavyuDialog
             String columnName = model.getColumnName(column);
             Object data = model.getValueAt(row, column);
 
-            Variable var = dbToTableMap.inverse().get(row);
+            Variable var = variableAtRow(row);
 
             if (columnName.equals(rMap.getString("Table.visibleColumn"))) {
                 LOGGER.info("Editied Variable Visbility from VariableList");

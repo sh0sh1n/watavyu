@@ -57,6 +57,7 @@ public class TransparentPanel extends JPanel {
      *
      * @param g Graphic object.
      */
+    @Override
     public void paintComponent(Graphics g) {
         if (image == null) {
             return;

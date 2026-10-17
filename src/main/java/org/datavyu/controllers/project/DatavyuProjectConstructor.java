@@ -17,8 +17,9 @@ package org.datavyu.controllers.project;
 import org.datavyu.models.project.Project;
 import org.datavyu.models.project.TrackSettings;
 import org.datavyu.models.project.ViewerSetting;
+import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.constructor.AbstractConstruct;
-import org.yaml.snakeyaml.constructor.Constructor;
+import org.yaml.snakeyaml.constructor.SafeConstructor;
 import org.yaml.snakeyaml.nodes.MappingNode;
 import org.yaml.snakeyaml.nodes.Node;
 
@@ -28,14 +29,16 @@ import java.util.UUID;
 
 
 /**
- * Used to construct a datavyu project from its YAML representation.
+ * Used to construct a datavyu project from its YAML representation. It builds on {@link SafeConstructor}, which
+ * refuses tags naming Java classes, so a project file can make only its own three kinds of object.
  */
-public class DatavyuProjectConstructor extends Constructor {
+public class DatavyuProjectConstructor extends SafeConstructor {
 
     /**
      * Default Constructor.
      */
     public DatavyuProjectConstructor() {
+        super(new LoaderOptions());
         yamlMultiConstructors.put("!vs", new ConstructViewerSetting());
         yamlMultiConstructors.put("!project", new ConstructProject());
         yamlMultiConstructors.put("!ts", new ConstructTrackSettings());
@@ -45,6 +48,8 @@ public class DatavyuProjectConstructor extends Constructor {
      * Used to construct the {@link Project} class.
      */
     private class ConstructProject extends AbstractConstruct {
+
+        @Override
 
         public Object construct(final Node node) {
             MappingNode mnode = (MappingNode) node;
@@ -80,6 +85,8 @@ public class DatavyuProjectConstructor extends Constructor {
      * Used to construct the {@link ViewerSetting} class.
      */
     private class ConstructViewerSetting extends AbstractConstruct {
+
+        @Override
 
         public Object construct(final Node node) {
             MappingNode mnode = (MappingNode) node;
@@ -128,6 +135,8 @@ public class DatavyuProjectConstructor extends Constructor {
      * Used to construct the {@link TrackSettings} class.
      */
     private class ConstructTrackSettings extends AbstractConstruct {
+
+        @Override
 
         public Object construct(final Node node) {
             MappingNode mnode = (MappingNode) node;

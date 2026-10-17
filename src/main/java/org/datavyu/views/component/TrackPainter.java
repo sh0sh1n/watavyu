@@ -117,11 +117,15 @@ public abstract class TrackPainter extends JComponent
         return carriagePolygon;
     }
 
-    @Override public final boolean isOpaque() {
+    @Override
+
+    public final boolean isOpaque() {
         return true;
     }
 
-    @Override protected final void paintComponent(final Graphics g) {
+    @Override
+
+    protected final void paintComponent(final Graphics g) {
         final ViewportState viewport = mixerModel.getViewportModel().getViewport();
         final Graphics2D g2d = (Graphics2D) g;
 
@@ -185,6 +189,8 @@ public abstract class TrackPainter extends JComponent
      * @param g Graphics object.
      */
     protected abstract void paintCustom(final Graphics g);
+
+    @Override
 
     public void propertyChange(final PropertyChangeEvent evt) {
         if (evt.getSource() == mixerModel.getViewportModel()) {

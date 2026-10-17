@@ -43,13 +43,13 @@ make clean
 
 The Makefile is a small convenience layer over the Gradle Wrapper; it does not introduce another build system. It reads the repo-pinned Java location from asdf for the build process. You can also invoke Gradle directly with `./gradlew <task>`.
 
-`make run` starts the desktop UI in the foreground. The application keeps its settings in `~/Library/Application Support/Watavyu/settings.json` (see [Settings](#settings)). `./gradlew run --args=/path/to/project.opf` opens a project at launch.
+`make run` starts the desktop UI in the foreground. The application keeps its settings in `~/Library/Application Support/Watavyu/settings.json` (see [Settings](#settings)) and its log in `~/Library/Logs/Watavyu/watavyu.log` (see [Log](#log)). `./gradlew run --args=/path/to/study.watavyu.json` opens a project at launch (see [Project Files](#project-files)).
 
 Playback checks that drive the real player (see [Testing Playback](#testing-playback)):
 
 ```sh
-caffeinate -d ./gradlew integrationTest
-caffeinate -d ./gradlew playbackBenchmark -Pmedia=/path/to/video.mp4 [-Pseeks=200]
+caffeinate -u -d ./gradlew integrationTest
+caffeinate -u -d ./gradlew playbackBenchmark -Pmedia=/path/to/video.mp4 [-Pseeks=200]
 ```
 
 ## How the Gradle Build Works
@@ -58,11 +58,13 @@ caffeinate -d ./gradlew playbackBenchmark -Pmedia=/path/to/video.mp4 [-Pseeks=20
 - `build.gradle.kts` applies Gradle's `application` plugin, selects `org.datavyu.Datavyu` as the main class, and sets the 1 GB application heap. The build stops early on anything other than Apple Silicon macOS.
 - The Java toolchain requests JDK 25, so compiler selection is explicit rather than inherited from whichever JDK happens to be on `PATH`.
 - Dependencies resolve from Maven Central only. OpenJFX 27 (`javafx-base`, `-graphics`, `-media`, `-swing`, `mac-aarch64` classifier) is the video stack. The x86_64-only `ffmpeg-plugin` and `libNativeOSXCanvas` artifacts and their dead legacy repositories are gone.
+- Every dependency and plugin version is in `gradle/libs.versions.toml`. Gradle checks the SHA-256 of every downloaded artifact against `gradle/verification-metadata.xml` and fails the build on a mismatch or an unknown artifact; the wrapper checks the Gradle distribution against `distributionSha256Sum` in `gradle/wrapper/gradle-wrapper.properties`. To add or change a dependency, edit the catalog, then run `caffeinate -u -d ./gradlew --write-verification-metadata sha256 build analyze integrationTest` and review the new checksums in the diff before committing. `dependencyUpdates` turns verification off for its own lookups of newer versions.
 - `javafx-media` is not used as published. The `patchedJavafxMedia` task repackages it with `libjfxmedia_avf.dylib` replaced by the patched build in `third_party/openjfx-media-avf` (see [The OpenJFX Patch](#the-openjfx-patch)); everything else in the jar, including `module-info`, is upstream.
 - `run`, `test`, `integrationTest` and `playbackBenchmark` put the OpenJFX jars on the module path (`--add-modules javafx.swing,javafx.media`) and keep the rest of the application on the class path. OpenJFX is only supported from the module path.
 - The `integrationTest` source set (`src/integrationTest`) holds tests and the benchmark that need the real player and a display; `./gradlew test` does not run them.
 - `processResources` stamps the Gradle project version into `org/datavyu/version.properties` in the generated resource output. `DatavyuVersion.getVersion()` reads it; the About dialog and the citation use it. There is no other version string to keep in sync.
 - `tasks.test` uses the repository's existing TestNG tests and supplies their `testPath` resource directory and the expected project version.
+- Tests validate project files against the published JSON Schema with `com.networknt:json-schema-validator` 3.0.7, a test-only dependency. It uses Jackson 3 (`tools.jackson`), which does not clash with the app's Jackson 2; its YAML module is excluded because it would replace SnakeYAML 1.18, which opening `.opf` files still needs.
 - Every test task loads Mockito 5 (`mockito-core` 5.24.0) as a `-javaagent` from the `mockitoAgent` configuration. Mockito 5 mocks through an inline agent; JDK 21+ warns when an agent attaches itself at runtime, and future JDKs will refuse it, so it is loaded at JVM start as Mockito documents.
 - Gradle outputs are under `build/`; local Gradle caches are under `.gradle/`. Both are ignored by Git. JavaFX extracts its native libraries to `~/.openjfx/cache/27+30/aarch64` and replaces them there whenever the jar's copy differs.
 
@@ -70,7 +72,7 @@ The Gradle project version is currently `0.1.0-SNAPSHOT`. The window title (`App
 
 ## Lint
 
-[Error Prone](https://errorprone.info) runs inside `javac` on every compile (`net.ltgt.errorprone` Gradle plugin, `error_prone_core` 2.50.0) for all source sets, with its default severities: bug patterns marked ERROR fail the build, WARNING patterns are reported and do not. It replaced `checkstyle.xml`, which held only whitespace rules, was not wired into any build, and had every `value` attribute mangled to `cellValue`. Error Prone was chosen because it finds correctness bugs, which matter more than formatting in a codebase whose checks stand in for code review. Adopting it found two errors, both fixed: a redundant `Comparable<File>` on `FileSystemTreeModel.FileTreeNode`, and a discarded `values()` call in `DatavyuProjectConstructor`. The existing warnings are not yet addressed; promoting a check to ERROR is done with `options.errorprone.error("CheckName")` once its warnings are fixed. javac lists at most 100 warnings per compile task; `./gradlew compileJava -PallWarnings` lifts that limit and adds every javac `-Xlint` category (853 warnings in all on 2026-10-14, mostly Javadoc style and missing `@Override`).
+[Error Prone](https://errorprone.info) runs inside `javac` on every compile (`net.ltgt.errorprone` Gradle plugin, `error_prone_core` 2.50.0) for all source sets, with its default severities: bug patterns marked ERROR fail the build, WARNING patterns are reported and do not. It replaced `checkstyle.xml`, which held only whitespace rules, was not wired into any build, and had every `value` attribute mangled to `cellValue`. Error Prone was chosen because it finds correctness bugs, which matter more than formatting in a codebase whose checks stand in for code review. Adopting it found two errors, both fixed: a redundant `Comparable<File>` on `FileSystemTreeModel.FileTreeNode`, and a discarded `values()` call in `DatavyuProjectConstructor`. Once a check has no findings it is made an error in `build.gradle.kts` (`options.errorprone.error("CheckName")`), so it stays at zero; `MissingOverride` is the first. `-PerrorpronePatch=CheckA,CheckB` rewrites the sources with Error Prone's suggested fixes for those checks. javac lists at most 100 warnings per compile task; `./gradlew compileJava -PallWarnings` lifts that limit and adds every javac `-Xlint` category (763 warnings in the main sources on 2026-10-14, mostly Javadoc style).
 
 ### Analysis Reports
 
@@ -109,9 +111,25 @@ Spreadsheet colours and fonts are not settings: they are constants in `Spreadshe
 
 Before this file existed, settings lived in `~/Library/Application Support/Datavyu` as Java XMLEncoder files (`settings.xml`, `projectHistory.xml` and `*.session.xml`). Nothing reads them any more and they can be deleted.
 
+## Log
+
+Log4j 2.26 writes INFO and above to the console and to `~/Library/Logs/Watavyu/watavyu.log`, which Console.app also shows. Each launch starts a new file and the logs of the five launches before it are kept as `watavyu-1.log` (the last) to `watavyu-5.log`, so the log of a crash survives the next launch. Every line is written at once. Log4j 2.26 does not evaluate `${...}` lookups in messages, so a file path cannot make it act (`LoggingTest`). The `watavyu.logDir` system property moves the folder; every Gradle test task sets it to `build/test-logs/<task>`. The configuration is `src/main/resources/log4j2.xml`.
+
+## Project Files
+
+A project is one `<name>.watavyu.json` file: UTF-8 JSON that people and other tools can read. The format is decided in [AGENTS.md › Decisions](AGENTS.md#decisions); `src/main/resources/org/datavyu/projectfile/watavyu-project.schema.json` is its JSON Schema (draft 2020-12), and `src/test/resources/projectfile/example.watavyu.json` is a complete example.
+
+- `org.datavyu.projectfile` holds the format: `ProjectDocument` (the project as records), `ProjectJson` (read and write), `ProjectFileReader` and `JsonFields` (keys and types), `ProjectRules` (rules across fields), `ProjectFileWriter` (layout), `ProjectPaths` (video paths) and `SpreadsheetColumns` (to and from the spreadsheet's columns).
+- Reading is strict. An unknown or missing key, a duplicate key, a value of the wrong type, a time not written as `HH:MM:SS:mmm` or a broken rule is refused with a message naming the place, such as `columns[1].cells[0].offset: must be the onset plus the source's duration (00:00:11:500)`. A file written by a newer Watavyu says so.
+- Writing checks the same rules first, so Watavyu never writes a file it would refuse. The layout is fixed (two-space indent, keys in schema order, cells in time order, one line per annotation cell), so saving an unchanged project rewrites the same bytes and diffs show only real changes. The new file is written next to the old one and renamed over it, so a failed save leaves the old file whole; it keeps the old file's permissions, and saving through a symbolic link keeps the link.
+- The schema checks every field; three rules across fields are the reader's alone: column names are unique, an annotation cell has one value per code, and a clip's offset is its onset plus its source's duration. `ProjectJsonTest` keeps the schema and the reader in agreement on every refused file.
+- Media paths are relative to the project file's folder when the file is inside it, and absolute otherwise. Media whose file is missing, or fails to open, keeps its column: it is saved back as it was read, with its paths made relative to wherever the project is saved, and renumbered if a spreadsheet column has taken its name. Media columns keep the project file's order. Media added in the app gets a column named `media_1`, `media_2` and so on, skipping names already in use.
+- File > Open offers project files and Datavyu's `.opf` files; `.csv` data files open from the command line or by dragging. Save on a project opened from `.opf` or `.csv` goes through Save As, which writes a project file.
+- Autosave writes `~<name>_<number>.watavyu.json` to the temporary folder every minute and deletes it on a clean quit. At the next launch after a crash, Watavyu offers to recover it: it opens in a new tab as an unsaved project named after the original, Save As follows, and the autosave is deleted once it has opened (or if recovery is declined). See R9 in [TODO.md](TODO.md).
+
 ## Application Structure
 
-- `Datavyu.main` starts the application on the Swing EDT: the system look-and-feel, the main window (`DatavyuView`) and the video controller, then the file named on the command line, if any. `Datavyu.exit()` asks about unsaved changes and then saves settings and quits; closing the main window and the macOS Quit command both go through it.
+- `Datavyu.main` starts the application on the Swing EDT: the system look-and-feel, the main window (`DatavyuView`) and the video controller, then the file named on the command line, if any. `Datavyu.exit()` asks about unsaved changes and then saves settings and quits; closing the main window and the macOS Quit command both go through it. Every spreadsheet with changes is asked about in turn (`UnsavedWork`); Cancel, closing the dialog, or a save that does not happen (a failed save, or a cancelled Save As) stops the quit or the closing of the tab.
 - UI text and icons come from `resources/<ClassName>.properties` next to each view, read through `Resources.of(Class)`, which falls back to `org/datavyu/resources/Datavyu.properties`.
 - `Shortcuts` is the one table of keyboard shortcuts. Menu items take their accelerators from it, Help > Keyboard Shortcuts List shows it, and its key dispatcher runs the shortcuts:
   - Menu shortcuts are handled by the menu bar while the main window has focus, and by the dispatcher from other windows, such as the video controller, if the menu item is enabled.
@@ -160,7 +178,7 @@ To rebuild the library (needs Xcode command line tools and network access), then
 
 ```sh
 third_party/openjfx-media-avf/build.sh
-caffeinate -d ./gradlew integrationTest
+caffeinate -u -d ./gradlew integrationTest
 ```
 
 The build is reproducible on this machine: rebuilding produces the same SHA-256 as the checked-in library. To move to a newer OpenJFX, update `javafxVersion` in `build.gradle.kts` and the tag in `build.sh`, re-apply the patch, rebuild, and run the integration tests; they fail against a library without these fixes.
@@ -168,8 +186,8 @@ The build is reproducible on this machine: rebuilding produces the same SHA-256 
 ## Testing Playback
 
 - **Unit tests** (`./gradlew test`, `src/test/java/org/datavyu/plugins/javafx`): the adapter's time/rate/state conversions, seek coalescing, stepping, end-of-media, error and dispose paths against a fake engine and a queued executor (no window or display); MP4/MOV frame tables against tiny fixtures in `src/test/resources/video` (regenerate with `tools/playback/make-unit-fixtures.sh`); user-facing error messages; the reverse-free shuttle rates.
-- **Integration tests** (`caffeinate -d ./gradlew integrationTest`): drive the real patched player through the production adapter on a 10 s, 30 fps, 1280x720 H.264/AAC MP4 that `ffmpeg` generates into `build/playback-fixtures` on first run. Each frame carries its own number as a 16-bit barcode in the top-left corner, read back from a snapshot of what the player displays. They cover paused seeks, seek after play/pause, seeks immediately after pausing, onset-to-play, prompt playback start, 2x playback, end-of-file seek and playing to the end, frame stepping both ways, rapid scrubbing, dispose, MOV rejection, and refusing to open media on a UI thread. They need `ffmpeg` and an awake display: JavaFX receives no video frames while the display sleeps.
-- **Benchmark** (`caffeinate -d ./gradlew playbackBenchmark -Pmedia=FILE`): cold/warm open, random paused seeks, repeated seeks, seek after play/pause, onset-to-play, rapid scrubbing, stepping, end-of-file seek, and playback CPU in a visible 960 px window. With a barcoded file every measurement also checks the displayed frame; with any other file, latency is the time until the picture changes. Latencies include a few milliseconds of snapshot polling.
+- **Integration tests** (`caffeinate -u -d ./gradlew integrationTest`): drive the real patched player through the production adapter on a 10 s, 30 fps, 1280x720 H.264/AAC MP4 that `ffmpeg` generates into `build/playback-fixtures` on first run. Each frame carries its own number as a 16-bit barcode in the top-left corner, read back from a snapshot of what the player displays. They cover paused seeks, seek after play/pause, seeks immediately after pausing, onset-to-play, prompt playback start, 2x playback, end-of-file seek and playing to the end, frame stepping both ways, rapid scrubbing, dispose, MOV rejection, refusing to open media on a UI thread, and what a video window reports for its project file (size, frame rate, duration, volume, visibility). They need `ffmpeg` and an awake display: JavaFX receives no video frames while the display sleeps. `caffeinate -d` only keeps an awake display from sleeping; `-u` also wakes one that is already asleep.
+- **Benchmark** (`caffeinate -u -d ./gradlew playbackBenchmark -Pmedia=FILE`): cold/warm open, random paused seeks, repeated seeks, seek after play/pause, onset-to-play, rapid scrubbing, stepping, end-of-file seek, and playback CPU in a visible 960 px window. With a barcoded file every measurement also checks the displayed frame; with any other file, latency is the time until the picture changes. Latencies include a few milliseconds of snapshot polling.
 - **Fixtures for the benchmark:** `tools/playback/make-fixtures.sh SOURCE OUT_DIR [SECONDS]` writes a lossless MP4 remux of SOURCE plus barcoded re-encodes (`libx264 -preset fast -crf 18`, AAC 192k, source resolution and frame rate) with keyframes every 1.9 s (like OBS), 1 s and 0.5 s. Media files stay outside the repository.
 
 ## Playback Measurements
@@ -204,9 +222,9 @@ Not needed for seeking with this backend. Native exact seeks already complete in
 ## Verification On This Machine
 
 - `make build` succeeds on Temurin 25.0.4 / macOS 27 arm64 with Error Prone enabled. Remaining compiler warnings are Error Prone warnings.
-- `make run` reaches the application window. Opening a project that lists the integration fixture loads its track (1280x720, 300 frames, 30 fps), and a `.mov` in the same project shows the conversion message and adds no track.
-- `./gradlew integrationTest`: 14 tests pass. As controls, the same tests fail against stock OpenJFX (6 seek/step tests), against a library without the audio-tap change (start latency), and against a library without the seek-frame fix (stale frame after pause).
-- `./gradlew test` runs 154 tests and all pass, with none skipped. Before the move from Mockito 2.10 to 5.24.0, the `setUp` methods of `CellTest`, `DataStoreTest` and `VariableTest` failed on JDK 25 ("Cannot define class using reflection") and TestNG skipped those classes' 27 tests. `OpenControllerTest` and `SaveControllerTest` pass since their Maven-era paths (a trailing slash on `testPath`, output under `target/`) were fixed. The suite is now a green verification gate.
+- `make run` reaches the application window. Opening a project file that lists the integration fixture loads its track (1280x720, 300 frames, 30 fps) at its onset, volume and lock, and the autosave written a minute later held that video, a second video whose file was missing (unchanged) and the annotation column. A `.mov` shows the conversion message and adds no track.
+- `./gradlew integrationTest`: 15 tests pass. As controls, the same tests fail against stock OpenJFX (6 seek/step tests), against a library without the audio-tap change (start latency), and against a library without the seek-frame fix (stale frame after pause).
+- `./gradlew test` runs 305 tests and all pass, with none skipped. Before the move from Mockito 2.10 to 5.24.0, the `setUp` methods of `CellTest`, `DataStoreTest` and `VariableTest` failed on JDK 25 ("Cannot define class using reflection") and TestNG skipped those classes' 27 tests. `OpenControllerTest` and `SaveControllerTest` pass since their Maven-era paths (a trailing slash on `testPath`, output under `target/`) were fixed. The suite is now a green verification gate.
 - Not verified automatically: audible audio and the volume slider (the volume path changed with the audio-tap removal), and interactive playback driven by the Datavyu clock and keyboard shortcuts. Check these by hand after `make run`.
 
 ## Not Included

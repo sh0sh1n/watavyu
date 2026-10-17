@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Watavyu project",
+  "description": "A Watavyu project file (.watavyu.json): a spreadsheet of annotation columns and media columns. Rules this schema cannot express, which Watavyu also enforces: column names are unique; a coded cell has one value per code of its column; a video cell's offset is its onset plus its source's duration.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "version", "columns"],
+  "properties": {
+    "format": { "const": "watavyu" },
+    "version": { "const": 1 },
+    "columns": {
+      "description": "The columns, in spreadsheet order.",
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "$ref": "#/$defs/annotationColumn" },
+          { "$ref": "#/$defs/mediaColumn" }
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "time": {
+      "description": "A time in HH:MM:SS:mmm. Hours have at least two digits and do not wrap at 24.",
+      "type": "string",
+      "pattern": "^[0-9]{2,}:[0-5][0-9]:[0-5][0-9]:[0-9]{3}$"
+    },
+    "signedTime": {
+      "description": "A time in HH:MM:SS:mmm that may be negative, with a leading minus sign. There is no negative zero.",
+      "type": "string",
+      "pattern": "^(-(?!0+:00:00:000$))?[0-9]{2,}:[0-5][0-9]:[0-5][0-9]:[0-9]{3}$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "annotationColumn": {
+      "description": "A column whose cells hold one value per code.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "type", "codes", "settings", "cells"],
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "type": { "const": "annotation" },
+        "codes": {
+          "description": "The names of the column's codes, in order. A column with no codes holds timing only.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/name" }
+        },
+        "settings": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["hidden"],
+          "properties": {
+            "hidden": { "type": "boolean" }
+          }
+        },
+        "cells": {
+          "description": "The column's cells. Watavyu writes them in time order.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/annotationCell" }
+        }
+      }
+    },
+    "annotationCell": {
+      "description": "An annotation cell. New cells are point cells, with the two times equal. An offset before the onset is allowed; Watavyu flags it in the spreadsheet.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["onset", "offset", "values"],
+      "properties": {
+        "onset": { "$ref": "#/$defs/time" },
+        "offset": { "$ref": "#/$defs/time" },
+        "values": {
+          "description": "One value per code, in the order of the column's codes. An empty value is \"\".",
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "mediaColumn": {
+      "description": "A column that is one media window. Its cells are clips: each shows its source from its onset for the source's duration. Gaps show blank frames; where clips overlap, the later one wins.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "type", "settings", "cells"],
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "type": { "const": "media" },
+        "settings": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["hidden", "locked"],
+          "properties": {
+            "hidden": { "description": "Whether the media window is hidden.", "type": "boolean" },
+            "locked": { "description": "Whether the clips are protected from being dragged.", "type": "boolean" }
+          }
+        },
+        "cells": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/clip" }
+        }
+      }
+    },
+    "clip": {
+      "description": "A media clip. It may start before time zero, when a recording began before the annotated session (a stopgap while the video controller window exists; see AGENTS.md).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["onset", "offset", "settings", "source"],
+      "properties": {
+        "onset": { "$ref": "#/$defs/signedTime" },
+        "offset": {
+          "description": "The onset plus the source's duration. Written for readers; it cannot be set.",
+          "$ref": "#/$defs/signedTime"
+        },
+        "settings": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["volume"],
+          "properties": {
+            "volume": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        },
+        "source": {
+          "description": "The media file and what Watavyu last read from it. The file wins when they disagree.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["file", "duration", "frameRate", "width", "height"],
+          "properties": {
+            "file": {
+              "description": "The file's path: relative to the folder holding the project file, or absolute. Separators are /.",
+              "type": "string",
+              "minLength": 1
+            },
+            "duration": { "$ref": "#/$defs/time" },
+            "frameRate": { "description": "Nominal frames per second.", "type": "number", "exclusiveMinimum": 0 },
+            "width": { "type": "integer", "minimum": 1 },
+            "height": { "type": "integer", "minimum": 1 }
+          }
+        }
+      }
+    }
+  }
+}

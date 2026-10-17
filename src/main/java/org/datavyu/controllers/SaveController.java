@@ -14,125 +14,55 @@
  */
 package org.datavyu.controllers;
 
-import org.datavyu.util.Resources;
-import org.datavyu.util.Settings;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.datavyu.Datavyu;
-import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.UserWarningException;
-import org.datavyu.models.project.Project;
-import org.datavyu.models.project.ViewerSetting;
+import org.datavyu.projectfile.ProjectDocument;
+import org.datavyu.projectfile.ProjectFileException;
+import org.datavyu.projectfile.ProjectJson;
+import org.datavyu.util.Settings;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 
 /**
- * Master controller for handling project and database file saving logic.
+ * Saves project files.
  */
 public final class SaveController {
 
     /** The logger instance for this class */
-    private static Logger logger = LogManager.getLogger(SaveController.class);
+    private static final Logger logger = LogManager.getLogger(SaveController.class);
 
     /**
-     * Saves only a data store to disk
+     * Saves a project file and adds it to the recent projects.
      *
-     * @param databaseFile The location to save the data store too
-     * @param dataStore    The dataStore to save to disk
-     * @throws UserWarningException If unable to save the data store
+     * @param projectFile where to save
+     * @param document    the project
+     * @throws UserWarningException if the project cannot be saved
      */
-    public void saveDataStore(final File databaseFile, final DataStore dataStore)
-            throws UserWarningException {
-        saveDataStore(databaseFile, dataStore, true);
+    public void saveProject(final File projectFile, final ProjectDocument document) throws UserWarningException {
+        saveProject(projectFile, document, true);
     }
 
     /**
-     * Saves only the data store to disk
+     * Saves a project file.
      *
-     * @param databaseFile The location to save the database too
-     * @param dataStore The dataStore to save to disk
-     * @param remember Add this project to the rememberProject list
-     * @throws UserWarningException If unable to save the data store
+     * @param projectFile where to save
+     * @param document    the project
+     * @param remember    whether to add the file to the recent projects
+     * @throws UserWarningException if the project cannot be saved
      */
-    public void saveDataStore(final File databaseFile, final DataStore dataStore, boolean remember)
+    public void saveProject(final File projectFile, final ProjectDocument document, final boolean remember)
             throws UserWarningException {
-        logger.info("Saving data store to: '" + databaseFile.getAbsolutePath() + "'.");
-
-        SaveDataStoreFileController controller = new SaveDataStoreFileController();
-        controller.saveDataStore(databaseFile, dataStore);
-        if (remember) {
-            Settings.get().rememberProject(databaseFile);
-            Settings.get().save();
-        }
-    }
-
-
-    /**
-     * Saves an entire project with the data store to disk.
-     *
-     * @param projectFile The destination to save the project too
-     * @param project The project to save to disk
-     * @param dataStore The dataStore to save to disk
-     * @throws UserWarningException If unable to save the entire project to disk
-     */
-    public void saveProject(final File projectFile, final Project project, final DataStore dataStore)
-            throws UserWarningException {
-        saveProject(projectFile, project, dataStore, true);
-    }
-
-    /**
-     * Saves an entire project, including database to disk.
-     *
-     * @param projectFile The destination to save the project too
-     * @param project The project to save to disk
-     * @param dataStore The dataStore to save to disk
-     * @param remember Add this project to the rememberProject list
-     * @throws UserWarningException If unable to save the entire project to disk
-     */
-    protected void saveProject(final File projectFile, final Project project, final DataStore dataStore, boolean remember)
-            throws UserWarningException {
-
+        logger.info("Saving project to " + projectFile.getAbsolutePath());
         try {
-            logger.info("Save project.");
-
-            FileOutputStream fos = new FileOutputStream(projectFile);
-            ZipOutputStream zos = new ZipOutputStream(fos);
-
-            ZipEntry projectEntry = new ZipEntry("project");
-            zos.putNextEntry(projectEntry);
-            new SaveProjectFileController().save(zos, project);
-            zos.closeEntry();
-
-            ZipEntry dbEntry = new ZipEntry("db");
-            zos.putNextEntry(dbEntry);
-            new SaveDataStoreFileController().saveAsCsv(zos, dataStore);
-            zos.closeEntry();
-
-            for (ViewerSetting vs : project.getViewerSettings()) {
-                ZipEntry vsEntry = new ZipEntry(vs.getSettingsId());
-                zos.putNextEntry(vsEntry);
-                vs.writeSettings(zos);
-            }
-
-            zos.finish();
-            zos.close();
-
-            fos.flush();
-            fos.close();
-
-            if (remember) {
-                Settings.get().rememberProject(projectFile);
-                Settings.get().save();
-            }
-
-        } catch (IOException e) {
-            Resources rMap = Resources.of(Datavyu.class);
+            ProjectJson.write(projectFile.toPath(), document);
+        } catch (ProjectFileException e) {
             logger.error("Failed to save project. Error: ", e);
-            throw new UserWarningException(rMap.getString("UnableToSave.message", projectFile), e);
+            throw new UserWarningException("Unable to save " + projectFile.getName() + ".\n" + e.getMessage(), e);
+        }
+        if (remember) {
+            Settings.get().rememberProject(projectFile);
+            Settings.get().save();
         }
     }
 }

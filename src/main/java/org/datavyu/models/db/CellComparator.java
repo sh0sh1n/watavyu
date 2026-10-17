@@ -8,6 +8,7 @@ import java.util.Comparator;
  * Time: 3:56 PM
  */
 public class CellComparator implements Comparator<Cell> {
+    @Override
     public int compare(Cell c1, Cell c2) {
         if (c1.getOnset() < c2.getOnset()) {
             return -1;

@@ -187,6 +187,8 @@ public class SheetLayoutWeakTemporal extends SheetLayout {
 //        System.err.println(String.format("Aligned.  Time: %d.", System.currentTimeMillis() - startTime));
     }
 
+    @Override
+
     public void reorientView(SpreadsheetCell cell) {
         double viewMax = pane.getViewport().getViewRect().getY() + pane.getViewport().getViewRect().getHeight();
         double viewMin = pane.getViewport().getViewRect().getY();
