@@ -20,6 +20,8 @@ import org.datavyu.projectfile.ProjectDocument.Column;
 import org.datavyu.projectfile.ProjectDocument.AnnotationColumn;
 import org.datavyu.projectfile.ProjectDocument.Source;
 import org.datavyu.projectfile.ProjectDocument.MediaColumn;
+import org.datavyu.projectfile.ProjectJson;
+import org.datavyu.projectfile.ProjectPaths;
 import org.datavyu.views.VideoController;
 import org.datavyu.views.discrete.SpreadSheetPanel;
 import org.testng.annotations.BeforeMethod;
@@ -102,7 +104,7 @@ public class ProjectControllerDocumentTest {
         MediaColumn missing = new MediaColumn("media_1", true, false, List.of(
             new Clip(1_000, 0.5, new Source("media/missing.mp4", 5_000, 25, 640, 480))));
         Project project = new Project();
-        project.addUnavailableMedia(missing);
+        project.addUnavailableMedia(ProjectPaths.absolutePaths(missing, FOLDER));
         DataStore dataStore = DataStoreFactory.newDataStore();
         dataStore.createVariable("test", Argument.Type.TEXT);
         video("/Users/someone/study/test.mp4", 0, false);
@@ -141,6 +143,58 @@ public class ProjectControllerDocumentTest {
         ProjectDocument document = controller(project, dataStore).toDocument(FOLDER);
 
         assertEquals(document.columns().get(0).name(), "media_2");
+    }
+
+    /** Review #2: media that is not open is held with absolute paths, so it is saved right from any folder. */
+    @Test
+    public void mediaThatIsNotOpenIsSavedRelativeToTheNewFolder() throws Exception {
+        MediaColumn missing = new MediaColumn("media_1", false, false, List.of(
+            new Clip(0, 1, new Source("media/missing.mp4", 5_000, 25, 640, 480))));
+        Project project = new Project();
+        project.addUnavailableMedia(ProjectPaths.absolutePaths(missing, FOLDER));
+        ProjectController controller = controller(project, DataStoreFactory.newDataStore());
+
+        MediaColumn here = (MediaColumn) controller.toDocument(FOLDER).columns().get(0);
+        MediaColumn elsewhere = (MediaColumn) controller.toDocument(Paths.get("/Users/someone/copy")).columns().get(0);
+
+        assertEquals(here, missing);
+        assertEquals(elsewhere.clips().get(0).source().file(), "/Users/someone/study/media/missing.mp4");
+    }
+
+    /** Review #1: a spreadsheet column taking the name of media that is not open does not stop saving. */
+    @Test
+    public void mediaThatIsNotOpenGivesWayToASpreadsheetColumnsName() throws Exception {
+        MediaColumn missing = new MediaColumn("media_1", false, false, List.of());
+        Project project = new Project();
+        project.addUnavailableMedia(missing);
+        DataStore dataStore = DataStoreFactory.newDataStore();
+        dataStore.createVariable("media_1", Argument.Type.TEXT);
+
+        ProjectDocument document = controller(project, dataStore).toDocument(FOLDER);
+
+        assertEquals(document.columns().stream().map(Column::name).toList(), List.of("media_2", "media_1"));
+        ProjectJson.toJson(document);
+    }
+
+    /** Review #6: media columns keep the project file's order, whichever video opens first. */
+    @Test
+    public void mediaColumnsKeepTheFilesOrder() throws Exception {
+        MediaColumn first = new MediaColumn("media_1", false, false, List.of());
+        MediaColumn second = new MediaColumn("media_2", false, false, List.of());
+        MediaColumn third = new MediaColumn("media_3", false, false, List.of());
+        Project project = new Project();
+        project.setMediaColumns(List.of(first, second, third));
+        project.addUnavailableMedia(first);
+        StreamViewer openedFirst = video("/Users/someone/study/c.mp4", 0, false);
+        project.mediaOpened(third, openedFirst.getIdentifier());
+        StreamViewer openedSecond = video("/Users/someone/study/b.mp4", 0, false);
+        project.mediaOpened(second, openedSecond.getIdentifier());
+        video("/Users/someone/study/new.mp4", 0, false);
+
+        ProjectDocument document = controller(project, DataStoreFactory.newDataStore()).toDocument(FOLDER);
+
+        assertEquals(document.columns().stream().map(Column::name).toList(),
+            List.of("media_1", "media_2", "media_3", "media_4"));
     }
 
     @Test

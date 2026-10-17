@@ -66,19 +66,27 @@ public class AutoSaveController implements ActionListener {
     /** Saves the current project to a project file in the temporary folder, replacing the last one saved there. */
     @Override
     public void actionPerformed(ActionEvent evt) {
+        File next = null;
         try {
+            ProjectController projController = Datavyu.getProjectController();
+            String name = projController.getProjectName() == null ? "noname" : projController.getProjectName();
+            next = File.createTempFile("~" + name + "_", ProjectDocument.EXTENSION);
+            next.deleteOnExit();
+            new SaveController().saveProject(next, projController.toDocument(next.getParentFile().toPath()), false);
+            // The previous autosave goes only once this one is written, so a failure or crash leaves one behind.
             if (file != null) {
                 file.delete();
             }
-            ProjectController projController = Datavyu.getProjectController();
-            String name = projController.getProjectName() == null ? "noname" : projController.getProjectName();
-            file = File.createTempFile("~" + name + "_", ProjectDocument.EXTENSION);
-            file.deleteOnExit();
-            new SaveController().saveProject(file, projController.toDocument(file.getParentFile().toPath()), false);
+            file = next;
+            next = null;
         } catch (UserWarningException lee) {
             logger.error("UserWarningException: Unable to autosave.", lee);
         } catch (IOException ioe) {
             logger.error("IOException: Unable to autosave.", ioe);
+        } finally {
+            if (next != null) {
+                next.delete();
+            }
         }
     }
 }

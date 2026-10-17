@@ -52,6 +52,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -338,16 +339,17 @@ public final class ProjectController {
         final MixerController mixerController = videoController.getMixerController();
 
         // Open the media columns of a project file. Each stays unavailable, and is saved as it was read, until its
-        // media has opened.
-        for (MediaColumn column : project.getMediaColumns()) {
+        // media has opened. Its paths are held absolute, so it can be saved to another folder.
+        Path folder = Paths.get(project.getProjectDirectory() == null ? "" : project.getProjectDirectory());
+        for (MediaColumn read : project.getMediaColumns()) {
             showController = true;
+            MediaColumn column = ProjectPaths.absolutePaths(read, folder);
             project.addUnavailableMedia(column);
             if (column.clips().isEmpty()) {
                 continue;
             }
             Clip clip = column.clips().get(0);
-            Path folder = Paths.get(project.getProjectDirectory() == null ? "" : project.getProjectDirectory());
-            File file = ProjectPaths.resolve(folder, clip.source().file()).toFile();
+            File file = new File(clip.source().file());
             if (!file.exists()) {
                 missingFilesList.add(file.getPath());
                 continue;
@@ -541,12 +543,12 @@ public final class ProjectController {
      */
     public ProjectDocument toDocument(final Path projectFolder) throws UserWarningException {
         List<AnnotationColumn> annotationColumns = SpreadsheetColumns.of(dataStore);
-        List<MediaColumn> unavailable = project.getUnavailableMedia();
         Set<String> names = new HashSet<>();
         annotationColumns.forEach(column -> names.add(column.name()));
-        unavailable.forEach(column -> names.add(column.name()));
 
-        List<Column> columns = new ArrayList<>();
+        List<MediaColumn> unavailable = unavailableMedia(names, projectFolder);
+
+        List<MediaColumn> media = new ArrayList<>();
         if (spreadSheetPanel != null) {
             VideoController videoController = spreadSheetPanel.getVideoController();
             // Media keeps its column's name unless another column has taken it; new media gets the next media_#.
@@ -565,13 +567,49 @@ public final class ProjectController {
                     project.setMediaName(viewer.getIdentifier(), name);
                 }
                 TrackModel track = videoController.getMixerController().getTrackModel(viewer.getIdentifier());
-                columns.add(new MediaColumn(name, !viewer.isViewerVisible(), track != null && track.isLocked(),
+                media.add(new MediaColumn(name, !viewer.isViewerVisible(), track != null && track.isLocked(),
                     List.of(new Clip(viewer.getOffset(), exact(viewer.getVolumeLevel()), source(projectFolder, viewer)))));
             }
         }
-        columns.addAll(unavailable);
+        media.addAll(unavailable);
+        List<Column> columns = new ArrayList<>(inFileOrder(media));
         columns.addAll(annotationColumns);
         return new ProjectDocument(columns);
+    }
+
+    /**
+     * The media columns whose media is not open, as a project file in a folder holds them. Each keeps its name unless
+     * a spreadsheet column has taken it.
+     *
+     * @param names         the names taken so far, to which these columns' names are added
+     * @param projectFolder the folder the project file is saved in
+     * @return the columns
+     */
+    private List<MediaColumn> unavailableMedia(final Set<String> names, final Path projectFolder) {
+        List<MediaColumn> unavailable = new ArrayList<>();
+        for (MediaColumn column : project.getUnavailableMedia()) {
+            String name = names.add(column.name()) ? column.name() : MediaColumnNames.next(names);
+            names.add(name);
+            unavailable.add(ProjectPaths.storedPaths(
+                new MediaColumn(name, column.hidden(), column.locked(), column.clips()), projectFolder));
+        }
+        return unavailable;
+    }
+
+    /**
+     * Sorts media columns into the order of the project file, whatever order their media opened in; new media follows.
+     *
+     * @param media the media columns
+     * @return them in order
+     */
+    private List<MediaColumn> inFileOrder(final List<MediaColumn> media) {
+        List<String> order = project.getMediaColumns().stream().map(MediaColumn::name).toList();
+        List<MediaColumn> sorted = new ArrayList<>(media);
+        sorted.sort(Comparator.comparingInt(column -> {
+            int index = order.indexOf(column.name());
+            return index < 0 ? Integer.MAX_VALUE : index;
+        }));
+        return sorted;
     }
 
     private static Source source(final Path projectFolder, final StreamViewer viewer) throws UserWarningException {

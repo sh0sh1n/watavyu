@@ -6,6 +6,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
+import java.util.Set;
 
 /**
  * Reads and writes {@code .watavyu.json} project files.
@@ -18,6 +21,9 @@ import java.nio.file.StandardCopyOption;
  * nothing changed.
  */
 public final class ProjectJson {
+
+    /** The permissions of a project file saved for the first time, as with the usual umask of 022. */
+    private static final Set<PosixFilePermission> NEW_FILE_PERMISSIONS = PosixFilePermissions.fromString("rw-r--r--");
 
     private ProjectJson() {
     }
@@ -52,7 +58,8 @@ public final class ProjectJson {
     }
 
     /**
-     * Writes a project file, replacing any file already there only once the new one is complete.
+     * Writes a project file, replacing any file already there only once the new one is complete. The file keeps its
+     * permissions, and a symbolic link to it stays a link.
      *
      * @param file     where to write
      * @param document the project
@@ -60,12 +67,15 @@ public final class ProjectJson {
      */
     public static void write(final Path file, final ProjectDocument document) throws ProjectFileException {
         String text = toJson(document);
-        Path folder = file.toAbsolutePath().getParent();
         Path temporary = null;
         try {
-            temporary = Files.createTempFile(folder, "." + file.getFileName(), ".tmp");
+            // A symbolic link stays a link: the file it points to is the one replaced.
+            Path target = Files.isSymbolicLink(file) ? file.toRealPath() : file.toAbsolutePath();
+            temporary = Files.createTempFile(target.getParent(), "." + target.getFileName(), ".tmp");
             Files.writeString(temporary, text, StandardCharsets.UTF_8);
-            Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            Files.setPosixFilePermissions(temporary, Files.exists(target)
+                ? Files.getPosixFilePermissions(target) : NEW_FILE_PERMISSIONS);
+            Files.move(temporary, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
         } catch (IOException e) {
             throw new ProjectFileException("Unable to save " + file.getFileName() + ": " + e.getMessage(), e);
         } finally {

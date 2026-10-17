@@ -142,7 +142,8 @@ public final class NeedleModelImpl extends MixerComponentModelImpl implements Ne
      * {@inheritDoc}
      */
     @Override
-    public synchronized boolean equals(final Object obj) {
+    public boolean equals(final Object obj) {
+        // Each getter takes one model's lock at a time, so two models compared from two threads cannot deadlock.
 
         if (this == obj)
             return true;
@@ -155,16 +156,16 @@ public final class NeedleModelImpl extends MixerComponentModelImpl implements Ne
 
         NeedleModelImpl other = (NeedleModelImpl) obj;
 
-        if (currentTime != other.getCurrentTime())
+        if (getCurrentTime() != other.getCurrentTime())
             return false;
 
-        if (!needleColor.equals(other.needleColor))
+        if (!getNeedleColor().equals(other.getNeedleColor()))
             return false;
 
-        if (timescaleTransitionHeight != other.getTimescaleTransitionHeight())
+        if (getTimescaleTransitionHeight() != other.getTimescaleTransitionHeight())
             return false;
 
-        if (zoomIndicatorHeight != other.getZoomIndicatorHeight())
+        if (getZoomIndicatorHeight() != other.getZoomIndicatorHeight())
             return false;
 
         return true;

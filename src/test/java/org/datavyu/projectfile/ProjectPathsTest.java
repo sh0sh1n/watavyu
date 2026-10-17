@@ -1,6 +1,7 @@
 package org.datavyu.projectfile;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 
 import org.testng.annotations.Test;
 
@@ -45,5 +46,13 @@ public class ProjectPathsTest {
     public void theProjectNameIsTheFileNameWithoutTheExtension() {
         assertEquals(ProjectPaths.projectName(Paths.get("/a/session-04.watavyu.json")), "session-04");
         assertEquals(ProjectPaths.projectName(Paths.get("/a/notes.json")), "notes.json");
+    }
+
+    /** Review #9: macOS file names match in any case, so the extension does too. */
+    @Test
+    public void theExtensionMatchesInAnyCase() {
+        assertEquals(ProjectPaths.projectName(Paths.get("/a/Study.WATAVYU.JSON")), "Study");
+        assertFalse(ProjectPaths.isProjectFile("study.json"));
+        assertFalse(ProjectPaths.isProjectFile(".json"));
     }
 }

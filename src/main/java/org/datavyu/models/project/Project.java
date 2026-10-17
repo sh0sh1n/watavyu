@@ -16,7 +16,6 @@ package org.datavyu.models.project;
 
 import org.apache.commons.io.FilenameUtils;
 import org.datavyu.models.Identifier;
-import org.datavyu.projectfile.ProjectDocument;
 import org.datavyu.projectfile.ProjectDocument.MediaColumn;
 import org.datavyu.projectfile.ProjectPaths;
 
@@ -117,7 +116,7 @@ public final class Project {
 
         // Set the name of the project.
         String fileName = FilenameUtils.getName(newProjectName);
-        String name = fileName.endsWith(ProjectDocument.EXTENSION)
+        String name = ProjectPaths.isProjectFile(fileName)
                 ? ProjectPaths.projectName(Paths.get(fileName))
                 : FilenameUtils.removeExtension(fileName);
 

@@ -25,6 +25,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -319,5 +320,33 @@ public class ProjectJsonTest {
         try (Stream<Path> files = Files.list(folder)) {
             assertFalse(files.anyMatch(path -> !path.equals(file)));
         }
+    }
+
+    @Test
+    public void savingKeepsTheFilesPermissions() throws Exception {
+        Path file = Files.createTempDirectory("project").resolve("p" + ProjectDocument.EXTENSION);
+        ProjectDocument document = new ProjectDocument(List.of());
+
+        ProjectJson.write(file, document);
+        assertEquals(PosixFilePermissions.toString(Files.getPosixFilePermissions(file)), "rw-r--r--");
+
+        Files.setPosixFilePermissions(file, PosixFilePermissions.fromString("rw-rw----"));
+        ProjectJson.write(file, document);
+        assertEquals(PosixFilePermissions.toString(Files.getPosixFilePermissions(file)), "rw-rw----");
+    }
+
+    @Test
+    public void savingThroughALinkKeepsTheLink() throws Exception {
+        Path folder = Files.createTempDirectory("project");
+        Path real = folder.resolve("real" + ProjectDocument.EXTENSION);
+        Path link = Files.createSymbolicLink(folder.resolve("link" + ProjectDocument.EXTENSION), real);
+        ProjectDocument document = new ProjectDocument(List.of(new AnnotationColumn("A", List.of("x"), false,
+            List.of())));
+        ProjectJson.write(real, new ProjectDocument(List.of()));
+
+        ProjectJson.write(link, document);
+
+        assertTrue(Files.isSymbolicLink(link));
+        assertEquals(ProjectJson.read(real), document);
     }
 }

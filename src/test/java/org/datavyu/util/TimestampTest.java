@@ -53,13 +53,19 @@ public class TimestampTest {
     }
 
     @Test
+    public void parseReadsNegativeTimesAsDatavyuWroteThem() {
+        assertEquals(Timestamp.parse("-1:59:59:999"), -1L);
+        assertEquals(Timestamp.parse("-01:00:00:000"), -3_600_000L);
+    }
+
+    @Test
     public void parseTakesAPlainNumberAsMilliseconds() {
         assertEquals(Timestamp.parse("1500"), 1_500L);
     }
 
     @DataProvider
     public Object[][] notTimes() {
-        return new Object[][] {{null}, {""}, {"abc"}, {"00:00:00"}, {"00:00:00:000:000"}, {"-00:00:01:000"},
+        return new Object[][] {{null}, {""}, {"abc"}, {"00:00:00"}, {"00:00:00:000:000"}, {"00:-1:01:000"},
             {"00:00:0a:000"}, {"99999999999999999999:00:00:000"}};
     }
 

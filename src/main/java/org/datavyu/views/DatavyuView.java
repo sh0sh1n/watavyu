@@ -28,6 +28,7 @@ import org.datavyu.event.component.FileDropEventListener;
 import org.datavyu.models.db.*;
 import org.datavyu.plugins.StreamViewer;
 import org.datavyu.projectfile.ProjectDocument;
+import org.datavyu.projectfile.ProjectPaths;
 import org.datavyu.undoableedits.RemoveCellEdit;
 import org.datavyu.undoableedits.RemoveVariableEdit;
 import org.datavyu.undoableedits.SpreadsheetUndoManager;
@@ -762,7 +763,7 @@ public final class DatavyuView implements FileDropEventListener {
      * @return the project's name
      */
     static String recoveredName(final String autosave) {
-        String name = autosave.endsWith(ProjectDocument.EXTENSION)
+        String name = ProjectPaths.isProjectFile(autosave)
             ? autosave.substring(0, autosave.length() - ProjectDocument.EXTENSION.length())
             : FilenameUtils.removeExtension(autosave);
         return name.replaceFirst("^~", "").replaceFirst("_\\d+$", "");

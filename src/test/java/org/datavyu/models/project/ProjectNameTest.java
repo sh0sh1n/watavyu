@@ -13,6 +13,9 @@ public class ProjectNameTest {
         project.setProjectName("/Users/someone/study/session-04.watavyu.json");
         assertEquals(project.getProjectName(), "session-04");
 
+        project.setProjectName("Study.WATAVYU.JSON");
+        assertEquals(project.getProjectName(), "Study");
+
         project.setProjectName("old.opf");
         assertEquals(project.getProjectName(), "old");
     }

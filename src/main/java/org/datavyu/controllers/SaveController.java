@@ -16,12 +16,10 @@ package org.datavyu.controllers;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.datavyu.Datavyu;
 import org.datavyu.models.db.UserWarningException;
 import org.datavyu.projectfile.ProjectDocument;
 import org.datavyu.projectfile.ProjectFileException;
 import org.datavyu.projectfile.ProjectJson;
-import org.datavyu.util.Resources;
 import org.datavyu.util.Settings;
 
 import java.io.File;
@@ -60,8 +58,7 @@ public final class SaveController {
             ProjectJson.write(projectFile.toPath(), document);
         } catch (ProjectFileException e) {
             logger.error("Failed to save project. Error: ", e);
-            throw new UserWarningException(Resources.of(Datavyu.class).getString("UnableToSave.message", projectFile)
-                + "\n" + e.getMessage(), e);
+            throw new UserWarningException("Unable to save " + projectFile.getName() + ".\n" + e.getMessage(), e);
         }
         if (remember) {
             Settings.get().rememberProject(projectFile);

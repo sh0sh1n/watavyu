@@ -14,8 +14,11 @@ public final class Timestamp {
     private static final long MINUTE = 60 * SECOND;
     private static final long HOUR = 60 * MINUTE;
 
-    /** Any digits in each field, as typed into a timestamp field. */
-    private static final Pattern LENIENT = Pattern.compile("(\\d+):(\\d+):(\\d+):(\\d+)");
+    /**
+     * Any digits in each field, as typed into a timestamp field. The hours may be negative, as Datavyu wrote negative
+     * times: whole hours below zero plus positive minutes, seconds and milliseconds ({@code -1:59:59:999} is -1 ms).
+     */
+    private static final Pattern LENIENT = Pattern.compile("(-?\\d+):(\\d+):(\\d+):(\\d+)");
 
     /** Exactly what {@link #format(long)} writes. */
     private static final Pattern CANONICAL = Pattern.compile("(-?)(\\d{2,}):([0-5]\\d):([0-5]\\d):(\\d{3})");
@@ -38,7 +41,7 @@ public final class Timestamp {
     /**
      * Parses a time typed by a person or read from an old Datavyu file. Each field may hold any number of digits and
      * carries into the next, so {@code 00:75:00:000} is 1 hour 15 minutes. A plain number is taken as milliseconds,
-     * which old Datavyu files use.
+     * which old Datavyu files use, and negative hours are read as Datavyu wrote them.
      *
      * @param text the time
      * @return the time in milliseconds

@@ -16,10 +16,10 @@ Updated 2026-10-14. Re-measure with the commands in [BUILDING.md › Analysis Re
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
 | Java source (main) | 242 files, 42.5k lines | 185 files, 31.4k lines |
-| Tests / line coverage | 113 / 9.9% | 298 / 17.3%; still 0% in most views, the timeline and undo |
+| Tests / line coverage | 113 / 9.9% | 305 / 17.3%; still 0% in most views, the timeline and undo |
 | Runtime dependencies / with known vulnerabilities | 28 / 8 | 12 / 0 |
 | Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 763 |
-| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 463 / 82; 15 |
+| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 464 / 82; 15 |
 | Never-invoked methods (`dead-code.py`) | 109+ | 4, all test-only accessors |
 | Static global access (`Datavyu.getView()` and friends) | about 330 call sites | 272 |
 
@@ -28,6 +28,8 @@ Updated 2026-10-14. Re-measure with the commands in [BUILDING.md › Analysis Re
 **B2. The app changes a global macOS setting.** ready (owner: scope it to the app), *from reading*. At startup `Datavyu` runs `defaults write -g ApplePressAndHoldEnabled -bool false` for every application on the Mac, and restores it only on a clean shutdown; a crash or force-quit leaves it changed. (It used to run when the class loaded, so every test run turned the setting off and never restored it.) The intent is key repeat instead of the accent popup while holding keys. Scope it to the app: in-app key repeat, or a per-app defaults domain once there is an app bundle; then delete the global write.
 
 **B9. Typing in a cell of a column with no codes shows text that is not kept.** ready, *verified by the owner*. In a column whose codes have all been deleted, typed text appears outside the parentheses but is not in the cell's value, so it is not saved. With no codes the cell has no value editor (`DataValueEditorFactory`), so `MatrixRootView`'s text area takes the keys itself (`EditorTracker`). Typing there should be refused (owner).
+
+**B10. A media column's saved "hidden" follows window visibility, not the user's choice.** after-F6, *from reading* (code review). `ProjectController.toDocument` saves `hidden` from `StreamViewer.isViewerVisible`, but switching tabs or closing the video controller hides and shows every video window, so a save can record hidden videos as shown or the reverse. `.opf` saving did the same. Removing the controller window (F6) changes what hiding a media column means; settle it there.
 
 **B7. Playback edges at time 0.** ready, *from reading*; not intended (owner). `ClockTimer` boundary checks pause playback at time 0, and shuttle does nothing at exactly 0 (`VideoController.shuttle` requires a time above 0). Both are bugs.
 
