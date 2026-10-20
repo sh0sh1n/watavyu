@@ -2,8 +2,12 @@ package org.datavyu.views;
 
 import org.datavyu.controllers.project.MediaPlayers;
 
+import javax.swing.ImageIcon;
 import javax.swing.JDialog;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JSlider;
+import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -11,12 +15,14 @@ import java.awt.Frame;
 import java.awt.Point;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.DoubleConsumer;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
  * The window of a media column. It shows the video of the clip in play, and black where no clip is: in the gaps
- * between clips, and for a clip whose file is missing or has no video.
+ * between clips, and for a clip whose file is missing or has no video. Under the picture, a volume control sets the
+ * volume of the clip in play; it is disabled while no clip is.
  */
 public final class MediaWindow extends JDialog implements MediaPlayers.ColumnWindow {
 
@@ -36,6 +42,14 @@ public final class MediaWindow extends JDialog implements MediaPlayers.ColumnWin
     private final Map<Object, Component> videos = new HashMap<>();
     private int nextName = 0;
 
+    /** The volume of the clip in play, in percent. */
+    private final JSlider volume = new JSlider(0, 100, 100);
+
+    /** Whether the volume control is being set to the clip in play's, rather than by the user. */
+    private boolean showingVolume;
+
+    private DoubleConsumer volumeListener = level -> { };
+
     /**
      * @param owner  the main window
      * @param column the media column's name, which titles the window and keys where it is put back
@@ -48,7 +62,19 @@ public final class MediaWindow extends JDialog implements MediaPlayers.ColumnWin
         gap.setBackground(Color.BLACK);
         content.setBackground(Color.BLACK);
         content.add(gap, GAP);
-        getContentPane().add(content);
+        getContentPane().add(content, BorderLayout.CENTER);
+        JPanel controls = new JPanel(new BorderLayout(4, 0));
+        controls.add(new JLabel(new ImageIcon(MediaWindow.class.getResource("/icons/volume.png"))), BorderLayout.WEST);
+        volume.setName("volume");
+        volume.setToolTipText("Volume of the clip in play");
+        volume.setEnabled(false);
+        volume.addChangeListener(e -> {
+            if (!showingVolume) {
+                volumeListener.accept(volume.getValue() / 100.0);
+            }
+        });
+        controls.add(volume, BorderLayout.CENTER);
+        getContentPane().add(controls, BorderLayout.SOUTH);
         setDefaultCloseOperation(HIDE_ON_CLOSE);
         if (!WindowPlacement.restoreAndTrack(this, getName(), true)) {
             // Below and to the right of the media windows already open, so none hides another.
@@ -83,9 +109,28 @@ public final class MediaWindow extends JDialog implements MediaPlayers.ColumnWin
     }
 
     @Override
-    public void showClip(final Object clip) {
+    public void showClip(final Object clip, final Double clipVolume) {
         String name = clip == null ? null : names.get(clip);
         cards.show(content, name == null ? GAP : name);
+        showingVolume = true;
+        try {
+            volume.setEnabled(clipVolume != null);
+            if (clipVolume != null) {
+                volume.setValue((int) Math.round(clipVolume * 100));
+            }
+        } finally {
+            showingVolume = false;
+        }
+    }
+
+    @Override
+    public void setVolumeListener(final DoubleConsumer listener) {
+        volumeListener = listener;
+    }
+
+    /** @return the volume control, for tests */
+    JSlider volumeControl() {
+        return volume;
     }
 
     @Override

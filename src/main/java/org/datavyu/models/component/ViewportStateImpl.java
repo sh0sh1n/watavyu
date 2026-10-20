@@ -119,52 +119,6 @@ public final class ViewportStateImpl implements ViewportState {
         return getZoomSettingFor(getResolution());
     }
 
-    public ViewportStateImpl zoomViewport(final double zoomLevel,
-                                          final long centerTime) {
-        final double millisecondsPerPixel = getMillisecondsPerPixelFor(zoomLevel);
-
-        // preserve the needle position
-        long centerPositionTime = Math.min(Math.max(centerTime, 0), getMaxEnd());
-
-        long zoomCenterTime;
-        double dxZoomCenterRatio = 0.5;
-
-        if ((centerTime >= 0) && isTimeInViewport(centerTime)) {
-
-            long zoomWindowStart = getViewStart();
-
-            dxZoomCenterRatio = (double) (centerPositionTime - zoomWindowStart) / getViewDuration();
-
-            zoomCenterTime = centerPositionTime;
-        } else {
-            zoomCenterTime = (getViewStart() + getViewEnd()) / 2;
-        }
-
-        dxZoomCenterRatio = Math.min(Math.max(dxZoomCenterRatio, 0.0), 1.0);
-
-        long newZoomWindowTimeRange = Math.round(millisecondsPerPixel * getViewWidth());
-        newZoomWindowTimeRange = Math.max(newZoomWindowTimeRange, 1);
-        newZoomWindowTimeRange = Math.min(newZoomWindowTimeRange, getMaxEnd() + 1);
-
-        assert (newZoomWindowTimeRange >= 1) && (newZoomWindowTimeRange <= (getMaxEnd() + 1));
-
-        long newStart = Math.round(zoomCenterTime - (dxZoomCenterRatio * newZoomWindowTimeRange));
-
-        if ((newStart + newZoomWindowTimeRange) > getMaxEnd()) {
-            newStart = getMaxEnd() - newZoomWindowTimeRange + 1;
-        }
-
-        newStart = Math.max(0, newStart);
-
-        assert (newStart <= getMaxEnd());
-
-        long newEnd = newStart + newZoomWindowTimeRange - 1;
-
-        assert (0 <= newEnd) && (newEnd <= getMaxEnd());
-
-        return new ViewportStateImpl(getMaxEnd(), getViewWidth(), newStart, newEnd);
-    }
-
     private double getMillisecondsPerPixelFor(final double zoomSettingValue) {
         double value = (lowerMsPerPixel()
                 * Math.exp(

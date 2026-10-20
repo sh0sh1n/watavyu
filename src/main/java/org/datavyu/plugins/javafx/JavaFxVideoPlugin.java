@@ -19,7 +19,6 @@ import org.apache.logging.log4j.Logger;
 import org.datavyu.models.Identifier;
 import org.datavyu.plugins.StreamViewer;
 
-import javax.swing.ImageIcon;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.Frame;
@@ -109,12 +108,5 @@ public final class JavaFxVideoPlugin {
                     + " fps and disabling frame stepping", e);
             return FrameIndex.assumed(FALLBACK_FRAMES_PER_SECOND, durationMillis);
         }
-    }
-
-    /**
-     * @return The icon shown in a video's track header.
-     */
-    public static ImageIcon trackIcon() {
-        return new ImageIcon(JavaFxVideoPlugin.class.getResource("/icons/video-track.png"));
     }
 }

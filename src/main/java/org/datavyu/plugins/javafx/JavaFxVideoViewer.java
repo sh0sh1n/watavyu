@@ -33,7 +33,6 @@ import java.awt.Dimension;
 import java.awt.Frame;
 import java.awt.GraphicsEnvironment;
 import java.awt.Rectangle;
-import java.awt.Window;
 import java.io.File;
 
 /**
@@ -111,16 +110,6 @@ public final class JavaFxVideoViewer extends StreamViewerDialog {
     @Override
     protected Dimension getOriginalVideoSize() {
         return new Dimension(engine.width(), engine.height());
-    }
-
-    @Override
-    protected void setViewerSize(final int width, final int height) {
-        panel.setPreferredSize(new Dimension(width, height));
-        // The video may be shown in its media column's window rather than this one.
-        Window window = SwingUtilities.getWindowAncestor(panel);
-        if (window != null) {
-            window.pack();
-        }
     }
 
     @Override

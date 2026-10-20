@@ -111,4 +111,18 @@ public class SettingsTest {
         assertTrue(configured != null && !configured.isEmpty(), "build.gradle.kts must set " + Settings.DIRECTORY_PROPERTY);
         assertEquals(Settings.defaultFile(), new File(configured, "settings.json").toPath());
     }
+
+    /** Playback stops at the end of the last media clip unless the setting is turned off. */
+    @Test
+    public void playbackStopsAtTheEndOfMediaByDefault() throws IOException {
+        Settings settings = Settings.load(file);
+        assertTrue(settings.isStopAtEndOfMedia());
+
+        settings.setStopAtEndOfMedia(false);
+        settings.save();
+        assertFalse(Settings.load(file).isStopAtEndOfMedia());
+
+        Files.write(file, "{ \"recentProjects\": [] }".getBytes(StandardCharsets.UTF_8));
+        assertTrue(Settings.load(file).isStopAtEndOfMedia());
+    }
 }

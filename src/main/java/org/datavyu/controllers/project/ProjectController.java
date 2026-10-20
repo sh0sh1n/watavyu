@@ -465,9 +465,6 @@ public final class ProjectController {
      * @throws UserWarningException if a clip's file has not opened yet, so what it holds is unknown
      */
     public ProjectDocument toDocument(final Path projectFolder) throws UserWarningException {
-        if (spreadSheetPanel != null && spreadSheetPanel.getMediaPlayers() != null) {
-            spreadSheetPanel.getMediaPlayers().updateClips();
-        }
         return new ProjectDocument(SpreadsheetColumns.columns(dataStore, projectFolder));
     }
 

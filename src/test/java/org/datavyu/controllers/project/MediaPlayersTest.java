@@ -12,10 +12,7 @@ import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertSame;
 import static org.testng.Assert.assertTrue;
 
-import org.datavyu.controllers.component.MixerController;
-import org.datavyu.controllers.component.TracksEditorController;
 import org.datavyu.models.Identifier;
-import org.datavyu.models.component.TrackModel;
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.DataStoreFactory;
@@ -36,19 +33,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.function.DoubleConsumer;
 
 /**
  * The spreadsheet's media columns and their players stay in step: clips added, moved or removed in the spreadsheet
- * open, move or close players, and tracks dragged, locked or removed move, lock or remove clips. Players here open at
- * once; in the app they open in the background.
+ * open, move or close players, and each column's window shows the clip in play and sets its volume. Players here open
+ * at once; in the app they open in the background.
  */
 public class MediaPlayersTest {
 
     private Path folder;
     private DataStore dataStore;
     private VideoController videoController;
-    private MixerController mixer;
-    private TracksEditorController tracks;
     private List<StreamViewer> opened;
     private boolean failToOpen;
     private Map<Variable, FakeWindow> windows;
@@ -58,6 +54,8 @@ public class MediaPlayersTest {
     private static final class FakeWindow implements MediaPlayers.ColumnWindow {
         final List<Object> clips = new ArrayList<>();
         Object showing;
+        Double volume;
+        DoubleConsumer volumeListener;
         boolean visible;
         boolean closed;
 
@@ -72,8 +70,14 @@ public class MediaPlayersTest {
         }
 
         @Override
-        public void showClip(final Object clip) {
+        public void showClip(final Object clip, final Double clipVolume) {
             showing = clip;
+            volume = clipVolume;
+        }
+
+        @Override
+        public void setVolumeListener(final DoubleConsumer listener) {
+            volumeListener = listener;
         }
 
         @Override
@@ -91,11 +95,7 @@ public class MediaPlayersTest {
     public void setUp() throws Exception {
         folder = Files.createTempDirectory("study");
         dataStore = DataStoreFactory.newDataStore();
-        mixer = mock(MixerController.class);
-        tracks = mock(TracksEditorController.class);
-        when(mixer.getTracksEditorController()).thenReturn(tracks);
         videoController = mock(VideoController.class);
-        when(videoController.getMixerController()).thenReturn(mixer);
         opened = new ArrayList<>();
         failToOpen = false;
         doAnswer(call -> {
@@ -134,8 +134,6 @@ public class MediaPlayersTest {
             return null;
         }).when(player).setViewerVisible(any(Boolean.class));
         when(player.getOffset()).thenAnswer(call -> offset[0]);
-        TrackModel track = new TrackModel();
-        when(mixer.getTrackModel(id)).thenReturn(track);
         return player;
     }
 
@@ -212,28 +210,7 @@ public class MediaPlayersTest {
         clip.setOnset(-1_500);
 
         verify(player).setOffset(-1_500L);
-        verify(tracks).setTrackOffset(player.getIdentifier(), -1_500L);
-    }
-
-    @Test
-    public void draggingATrackMovesItsClip() throws Exception {
-        Cell clip = clip("media_1", 0, file("cam.mp4"));
-        players.openAll();
-
-        players.playerMoved(players.getPlayer(clip).getIdentifier(), 4_000);
-
-        assertEquals(clip.getOnset(), 4_000L);
-        assertEquals(clip.getOffset(), 14_000L);
-    }
-
-    @Test
-    public void removingATrackRemovesItsColumn() throws Exception {
-        Cell clip = clip("media_1", 0, file("cam.mp4"));
-        players.openAll();
-
-        players.playerRemoved(players.getPlayer(clip).getIdentifier());
-
-        assertEquals(dataStore.getAllVariables(), List.of());
+        verify(videoController, org.mockito.Mockito.atLeastOnce()).updateMaxViewerDuration();
     }
 
     /** Deleting a clip or its column in the spreadsheet closes its player; undo puts both back. */
@@ -264,29 +241,6 @@ public class MediaPlayersTest {
 
         dataStore.addVariable(column);
         assertSame(players.getPlayer(clip), opened.get(1));
-    }
-
-    @Test
-    public void aClipsVolumeAndLockComeFromItsPlayer() throws Exception {
-        Cell clip = clip("media_1", 0, file("cam.mp4"));
-        players.openAll();
-        StreamViewer player = players.getPlayer(clip);
-        when(player.getVolumeLevel()).thenReturn(0.7f);
-        mixer.getTrackModel(player.getIdentifier()).setLocked(true);
-
-        players.updateClips();
-
-        assertEquals(clip.getClip().volume(), 0.7);
-        assertTrue(clip.getVariable().isLocked());
-    }
-
-    @Test
-    public void aLockedColumnsTrackOpensLocked() throws Exception {
-        Variable media = dataStore.createMediaVariable("media_1");
-        media.setLocked(true);
-        Cell clip = media.createClip(0, MediaClip.of(file("cam.mp4")));
-
-        verify(mixer).setTrackLocked(players.getPlayer(clip).getIdentifier(), true);
     }
 
     @Test
@@ -478,5 +432,45 @@ public class MediaPlayersTest {
 
         assertEquals(media.getCells().get(0).getClip(),
             new MediaClip(folder.resolve("voice.m4a").toString(), 10_000, 0, 0, 0, MediaClip.DEFAULT_VOLUME));
+    }
+
+    /** Playback stops at the end of the last clip of known length, unless that is turned off. */
+    @Test
+    public void playbackStopsAtTheEndOfTheLastClip() throws Exception {
+        assertEquals(players.stopTime(true), -1L);
+
+        Variable room = dataStore.createMediaVariable("room");
+        addClip(room, 0, "a.mp4");
+        addClip(room, 20_000, "b.mp4");
+        Variable mic = dataStore.createMediaVariable("mic");
+        mic.createClip(40_000, MediaClip.of(folder.resolve("missing.mp4").toString()));
+        assertEquals(players.stopTime(true), 30_000L);
+
+        room.getCellsTemporally().get(1).setOnset(25_000);
+        assertEquals(players.stopTime(true), 35_000L);
+        assertEquals(players.stopTime(false), -1L);
+    }
+
+    /** The window shows the volume of the clip in play, and its volume control sets that clip's volume. */
+    @Test
+    public void theWindowsVolumeControlSetsTheVolumeOfTheClipInPlay() throws Exception {
+        Variable media = dataStore.createMediaVariable("media_1");
+        Cell first = addClip(media, 0, "a.mp4");
+        Cell second = addClip(media, 20_000, "b.mp4");
+        players.setVolume(second, 0.25);
+        FakeWindow window = windows.get(media);
+
+        players.clockForceSync(25_000);
+        assertEquals(window.volume, 0.25);
+
+        window.volumeListener.accept(0.6);
+        assertEquals(second.getClip().volume(), 0.6);
+        assertEquals(first.getClip().volume(), MediaClip.DEFAULT_VOLUME);
+        verify(players.getPlayer(second)).setVolumeLevel(0.6f);
+
+        players.clockForceSync(15_000);
+        assertNull(window.volume);
+        window.volumeListener.accept(0.1);
+        assertEquals(first.getClip().volume(), MediaClip.DEFAULT_VOLUME);
     }
 }

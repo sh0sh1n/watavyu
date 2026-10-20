@@ -437,7 +437,10 @@ public final class DatavyuView implements FileDropEventListener {
     }
 
     public void toggleHighlightAndFocusMode() {
-        Datavyu.getVideoController().getMixerController().enableHighlightAndFocusHandler(null);
+        Datavyu.getVideoController().toggleCellHighlightingAutoFocus();
+        if (Datavyu.getProjectController().getSpreadSheetPanel() != null) {
+            Datavyu.getProjectController().getSpreadSheetPanel().redrawCells();
+        }
         actions.get(HIGHLIGHT_AND_FOCUS).putValue(Action.NAME,
                 highlightAndFocusText(Datavyu.getVideoController().getCellHighlightAndFocus()));
     }

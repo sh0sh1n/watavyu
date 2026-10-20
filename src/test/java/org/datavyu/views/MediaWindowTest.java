@@ -43,20 +43,20 @@ public class MediaWindowTest {
                 window.addClip(b, second);
                 assertEquals(window.getTitle(), "media_1");
 
-                window.showClip(b);
+                window.showClip(b, 0.5);
                 assertTrue(shown(window) == second);
 
-                window.showClip(a);
+                window.showClip(a, 1.0);
                 assertTrue(shown(window) == first);
 
-                window.showClip(null);
+                window.showClip(null, null);
                 assertTrue(isGap(shown(window)));
 
                 // A clip whose file is missing has no video in the window.
-                window.showClip(new Object());
+                window.showClip(new Object(), 1.0);
                 assertTrue(isGap(shown(window)));
 
-                window.showClip(a);
+                window.showClip(a, 1.0);
                 window.removeClip(a);
                 assertTrue(isGap(shown(window)));
                 assertFalse(Arrays.asList(((Container) window.getContentPane().getComponent(0)).getComponents())
@@ -82,6 +82,32 @@ public class MediaWindowTest {
             } finally {
                 first.close();
                 second.close();
+            }
+        });
+    }
+
+    /** The volume control shows the clip in play's volume, reports what the user sets, and is off in a gap. */
+    @Test
+    public void theVolumeControlFollowsTheClipInPlay() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            MediaWindow window = new MediaWindow(null, "volume_1");
+            try {
+                double[] set = {-1};
+                window.setVolumeListener(level -> set[0] = level);
+                window.addClip("a", new JPanel());
+
+                window.showClip("a", 0.25);
+                assertEquals(window.volumeControl().getValue(), 25);
+                assertTrue(window.volumeControl().isEnabled());
+                assertEquals(set[0], -1.0, "showing a clip's volume is not a change");
+
+                window.volumeControl().setValue(60);
+                assertEquals(set[0], 0.6);
+
+                window.showClip(null, null);
+                assertFalse(window.volumeControl().isEnabled());
+            } finally {
+                window.close();
             }
         });
     }

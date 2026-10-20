@@ -30,6 +30,10 @@ public interface TimescaleConstants {
 
     static final Color MILLISECONDS_COLOR = Color.GRAY.darker();
 
-    static final int XPOS_ABS = TrackConstants.HEADER_WIDTH + 1;
+    /** Where the ruler starts, leaving room for half the needle's head at time zero. */
+    static final int XPOS_ABS = (int) Math.ceil(NeedleConstants.NEEDLE_HEAD_WIDTH) + 1;
+
+    /** Room after the end of the ruler. */
+    static final int END_PADDING = 10;
 
 }

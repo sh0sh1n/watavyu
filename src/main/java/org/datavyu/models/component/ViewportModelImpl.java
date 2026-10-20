@@ -124,27 +124,6 @@ public class ViewportModelImpl extends MixerComponentModelImpl implements Viewpo
      * {@inheritDoc}
      */
     @Override
-    public void setViewportZoom(final double zoomLevel, final long centerTime) {
-        final ViewportState oldViewport;
-        final ViewportState newViewport;
-
-        synchronized (this) {
-            if (viewport.getZoomLevel() == zoomLevel) {
-                return;
-            }
-
-            oldViewport = viewport;
-            viewport = viewport.zoomViewport(zoomLevel, centerTime);
-            newViewport = viewport;
-        }
-
-        firePropertyChange(ViewportState.NAME, oldViewport, newViewport);
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
     public void resetViewport() {
         final double newWidth;
         synchronized (this) {

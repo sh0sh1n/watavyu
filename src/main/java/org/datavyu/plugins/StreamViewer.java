@@ -25,11 +25,8 @@ package org.datavyu.plugins;
 import java.awt.Dimension;
 import java.io.File;
 
-import javax.swing.JDialog;
 
 import org.datavyu.models.Identifier;
-import org.datavyu.views.component.DefaultTrackPainter;
-import org.datavyu.views.component.TrackPainter;
 
 
 /**
@@ -62,13 +59,6 @@ public interface StreamViewer {
      * @param offset Offset in milliseconds.
      */
     void setOffset(final long offset);
-
-    /**
-     * Get the display window.
-     *
-     * @return A JDialog that will be displayed.
-     */
-    JDialog getParentJDialog();
 
     /**
      * Hides or shows the windows associated with this data viewer.
@@ -162,13 +152,6 @@ public interface StreamViewer {
      */
     void setCurrentTime(long time);
 
-    /**
-     * @return Custom track painter implementation. Must not return null.
-     * Plugins that do not have a custom track painter implementation should
-     * return {@link DefaultTrackPainter}.
-     */
-    TrackPainter getTrackPainter();
-
     /** @return the volume set for the video, from 0 to 1, including while it is muted by hiding the window */
     float getVolumeLevel();
 
@@ -180,27 +163,6 @@ public interface StreamViewer {
 
     /** @return the video's size in pixels */
     Dimension getVideoSize();
-
-    /**
-     * Adds the given ViewerStateListener to the collection of listeners who
-     * are interested in changes made to the project.
-     * @param vsl The ViewerStateListener to add.
-     */
-    void addViewerStateListener(ViewerStateListener vsl);
-
-    /**
-     * Removes the given ViewerStateListener from the collection of listeners.
-     * @param vsl The listener to remove.
-     */
-    void removeViewerStateListener(ViewerStateListener vsl);
-
-    /**
-     * Used to query the viewer for custom actions.
-     *
-     * @return custom actions.
-     * @see CustomActionsAdapter
-     */
-    CustomActions getCustomActions();
 
     /**
      * Unload all data, to prepare for being closed. Essentially the opposite

@@ -2,7 +2,6 @@ package org.datavyu.controllers.project;
 
 import org.datavyu.Datavyu;
 import org.datavyu.models.Identifier;
-import org.datavyu.models.component.TrackModel;
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.CellListener;
 import org.datavyu.models.db.CellValue;
@@ -31,6 +30,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
+import java.util.function.DoubleConsumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -58,8 +58,15 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
         /** Removes a clip's video. */
         void removeClip(Object clip);
 
-        /** Shows a clip's video, or black for null or a clip without video. */
-        void showClip(Object clip);
+        /**
+         * Shows a clip's video, or black for null or a clip without video, and the clip's volume.
+         *
+         * @param volume the clip's volume, from 0 to 1, or null when no clip is in play
+         */
+        void showClip(Object clip, Double volume);
+
+        /** Calls the listener with the volume the user sets for the clip in play. */
+        void setVolumeListener(DoubleConsumer listener);
 
         /** Shows or hides the window. */
         void setShowing(boolean showing);
@@ -228,54 +235,25 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
     }
 
     /**
-     * Copies what only the players know into their clips: their volume, and whether their tracks are locked.
+     * Where playback stops by itself: at the end of the last media clip of known length, unless that is turned off
+     * ({@link org.datavyu.util.Settings#isStopAtEndOfMedia}). Safe to call from the clock's threads.
+     *
+     * @param stopAtEndOfMedia whether playback stops at the end of the media
+     * @return the time to stop at, or -1 to play on
      */
-    public void updateClips() {
-        for (Map.Entry<Cell, StreamViewer> entry : players.entrySet()) {
-            Cell clip = entry.getKey();
-            clip.setClip(clip.getClip().withVolume(exact(entry.getValue().getVolumeLevel())));
+    public long stopTime(final boolean stopAtEndOfMedia) {
+        if (!stopAtEndOfMedia) {
+            return -1;
         }
-        syncLocks();
-    }
-
-    /** Locks each media column whose track is locked, and unlocks the rest. */
-    public void syncLocks() {
-        for (Map.Entry<Cell, StreamViewer> entry : players.entrySet()) {
-            TrackModel track = videoController.getMixerController().getTrackModel(entry.getValue().getIdentifier());
-            if (track != null) {
-                entry.getKey().getVariable().setLocked(track.isLocked());
+        long end = -1;
+        for (List<Span> clips : spans.values()) {
+            for (Span span : clips) {
+                if (span.end() > span.onset()) {
+                    end = Math.max(end, span.end());
+                }
             }
         }
-    }
-
-    /**
-     * A track was dragged in the video controller: its clip moves with it.
-     *
-     * @param player the track's player
-     * @param onset  where the track now starts
-     */
-    public void playerMoved(final Identifier player, final long onset) {
-        Cell clip = clipOf(player);
-        if (clip != null && clip.getOnset() != onset) {
-            clip.setOnset(onset);
-        }
-    }
-
-    /**
-     * A track was removed in the video controller: its clip goes, and its column with it once empty.
-     *
-     * @param player the track's player
-     */
-    public void playerRemoved(final Identifier player) {
-        Cell clip = clipOf(player);
-        if (clip == null) {
-            return;
-        }
-        Variable column = clip.getVariable();
-        column.removeCell(clip);
-        if (column.getCells().isEmpty()) {
-            dataStore.removeVariable(column);
-        }
+        return end;
     }
 
     /**
@@ -314,7 +292,7 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
                 onEdt.accept(() -> {
                     ColumnWindow window = windows.get(column);
                     if (window != null) {
-                        window.showClip(winner);
+                        window.showClip(winner, winner == null ? null : winner.getClip().volume());
                     }
                 });
             }
@@ -348,15 +326,6 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
         play(videoController.getCurrentTime());
     }
 
-    private Cell clipOf(final Identifier player) {
-        for (Map.Entry<Cell, StreamViewer> entry : players.entrySet()) {
-            if (entry.getValue().getIdentifier().equals(player)) {
-                return entry.getKey();
-            }
-        }
-        return null;
-    }
-
     /**
      * Opens a clip's player, unless it has one or is opening.
      *
@@ -385,8 +354,7 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
                 return;
             }
             players.put(clip, player);
-            videoController.getMixerController().setTrackLocked(player.getIdentifier(), column.isLocked());
-            windows.computeIfAbsent(column, windowFactory).addClip(clip, player.getVideoComponent());
+            windows.computeIfAbsent(column, this::newWindow).addClip(clip, player.getVideoComponent());
             // Media without video has no size or frame rate.
             Dimension size = player.getVideoSize();
             boolean video = size != null && size.width > 0 && size.height > 0;
@@ -420,6 +388,32 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
                 }
             }
             videoController.shutdown(player.getIdentifier(), false);
+        }
+    }
+
+    /** Makes a column's window, whose volume control sets the volume of the clip in play. */
+    private ColumnWindow newWindow(final Variable column) {
+        ColumnWindow window = windowFactory.apply(column);
+        window.setVolumeListener(volume -> {
+            Cell clip = shown.getOrDefault(column, Optional.empty()).orElse(null);
+            if (clip != null && column.contains(clip)) {
+                setVolume(clip, volume);
+            }
+        });
+        return window;
+    }
+
+    /**
+     * Sets a clip's volume, as its column's window does for the clip in play.
+     *
+     * @param clip   a media clip
+     * @param volume from 0 to 1
+     */
+    public void setVolume(final Cell clip, final double volume) {
+        clip.setClip(clip.getClip().withVolume(volume));
+        StreamViewer player = players.get(clip);
+        if (player != null) {
+            player.setVolumeLevel((float) volume);
         }
     }
 
@@ -493,8 +487,6 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
                 StreamViewer player = players.get(clip);
                 if (player != null && player.getOffset() != newOnset) {
                     player.setOffset(newOnset);
-                    videoController.getMixerController().getTracksEditorController()
-                        .setTrackOffset(player.getIdentifier(), newOnset);
                     videoController.updateMaxViewerDuration();
                 }
                 refresh(clip.getVariable());

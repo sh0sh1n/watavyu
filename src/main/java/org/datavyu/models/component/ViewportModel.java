@@ -59,13 +59,6 @@ public interface ViewportModel extends MixerComponentModel {
      */
     void setViewport(long start, long end, long maxEnd, double width);
 
-    /**
-     *
-     * @param zoomLevel Between 0 and 1.0 inclusive.
-     * @param centerTime Time to center around, or -1 if centering is not
-     * required.
-     */
-    void setViewportZoom(double zoomLevel, long centerTime);
     
     void resetViewport();
 }

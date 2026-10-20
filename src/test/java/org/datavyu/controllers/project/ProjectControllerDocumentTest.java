@@ -6,9 +6,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 
-import org.datavyu.controllers.component.MixerController;
 import org.datavyu.models.Identifier;
-import org.datavyu.models.component.TrackModel;
+import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.DataStoreFactory;
 import org.datavyu.models.db.MediaClip;
@@ -31,11 +30,11 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.function.Consumer;
 
-/** A project file holds every spreadsheet column in order, with what the open players know about their clips. */
+/** A project file holds every spreadsheet column in order, with what each clip's opened file says. */
 public class ProjectControllerDocumentTest {
 
     @Test
-    public void columnsAreSavedInSpreadsheetOrderWithThePlayersVolumeAndLock() throws Exception {
+    public void columnsAreSavedInSpreadsheetOrderWithWhatTheFileSays() throws Exception {
         Path folder = Files.createTempDirectory("study");
         File cam = Files.createFile(folder.resolve("cam.mp4")).toFile();
         DataStore dataStore = DataStoreFactory.newDataStore();
@@ -43,20 +42,16 @@ public class ProjectControllerDocumentTest {
         notes.setOrderIndex(0);
         Variable media = dataStore.createMediaVariable("media_1");
         media.setOrderIndex(1);
-        media.createClip(-2_500, MediaClip.of(cam.getAbsolutePath()));
+        Cell clip = media.createClip(-2_500, MediaClip.of(cam.getAbsolutePath()));
 
-        // The player opens at once and reports the file; its volume and its track's lock then change.
+        // The player opens at once and reports the file; the clip's volume and the column's lock then change.
         Identifier id = Identifier.generateIdentifier();
         StreamViewer player = mock(StreamViewer.class);
         when(player.getIdentifier()).thenReturn(id);
         when(player.getDuration()).thenReturn(60_000L);
         when(player.getFramesPerSecond()).thenReturn(29.97f);
         when(player.getVideoSize()).thenReturn(new Dimension(1920, 1080));
-        TrackModel track = new TrackModel();
-        MixerController mixer = mock(MixerController.class);
-        when(mixer.getTrackModel(id)).thenReturn(track);
         VideoController videoController = mock(VideoController.class);
-        when(videoController.getMixerController()).thenReturn(mixer);
         doAnswer(call -> {
             call.<Consumer<StreamViewer>>getArgument(2).accept(player);
             call.<Consumer<StreamViewer>>getArgument(3).accept(player);
@@ -66,8 +61,8 @@ public class ProjectControllerDocumentTest {
         MediaPlayers players = new MediaPlayers(dataStore, videoController,
             column -> mock(MediaPlayers.ColumnWindow.class), Runnable::run);
         players.openAll();
-        when(player.getVolumeLevel()).thenReturn(0.7f);
-        track.setLocked(true);
+        players.setVolume(clip, 0.7);
+        media.setLocked(true);
 
         SpreadSheetPanel panel = mock(SpreadSheetPanel.class);
         when(panel.getMediaPlayers()).thenReturn(players);

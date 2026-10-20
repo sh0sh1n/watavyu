@@ -148,12 +148,56 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
         setMaximumSize(this.getHeaderSize());
 
         setText(var.getName());
+        updateLockMark();
 
         datapanel = new ColumnDataPanel(this, width, var, cellSelL);
         this.setVisible(!var.isHidden());
         datapanel.setVisible(!var.isHidden());
 
         Datavyu.getVideoController().getClockTimer().registerListener(this);
+    }
+
+    /** The mark on a locked media column's header. */
+    private static final ImageIcon LOCK_MARK =
+            new ImageIcon(SpreadsheetColumn.class.getResource("/icons/track-lock.png"));
+
+    /** Shows the lock mark while a media column is locked. */
+    private void updateLockMark() {
+        setIcon(variable.isLocked() ? LOCK_MARK : null);
+        setToolTipText(variable.isLocked() ? "Locked: its clips do not move" : null);
+    }
+
+    /**
+     * Makes the Lock Clips menu item of a media column's header: it shows whether the column is locked and toggles
+     * it.
+     *
+     * @param column    a media column
+     * @param afterward runs after the lock changes
+     * @return the menu item
+     */
+    static JCheckBoxMenuItem lockItem(final Variable column, final Runnable afterward) {
+        JCheckBoxMenuItem item = new JCheckBoxMenuItem("Lock Clips", column.isLocked());
+        item.setName("lockClips");
+        item.addActionListener(e -> {
+            column.setLocked(item.isSelected());
+            afterward.run();
+        });
+        return item;
+    }
+
+    /** Shows a media column's header menu, if this event asks for one. */
+    private boolean showHeaderMenu(final MouseEvent me) {
+        if (!me.isPopupTrigger() || !variable.isMedia()) {
+            return false;
+        }
+        JPopupMenu menu = new JPopupMenu();
+        menu.add(lockItem(variable, () -> {
+            updateLockMark();
+            Datavyu.getProjectController().getSpreadSheetPanel().redrawCells();
+        }));
+        menu.show(this, me.getX(), me.getY());
+        me.consume();
+        return true;
     }
 
     /**
@@ -488,6 +532,9 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
 
     @Override
     public void mousePressed(final MouseEvent me) {
+        if (showHeaderMenu(me)) {
+            return;
+        }
         if(moveable && !draggable) {
             System.out.println("Pressed X: " + me.getX());
             setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
@@ -496,6 +543,9 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
 
     @Override
     public void mouseReleased(final MouseEvent me) {
+        if (showHeaderMenu(me)) {
+            return;
+        }
         // Fix dragging columns
         // Call column moving routine if user dragged mouse across columns.
 
@@ -548,6 +598,10 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
 
     @Override
     public void mouseClicked(final MouseEvent me) {
+        if (me.isPopupTrigger() || SwingUtilities.isRightMouseButton(me) || me.isControlDown()) {
+            me.consume();
+            return;
+        }
         if (me.getClickCount() == 2) {
             showChangeVarNameDialog();
         }
