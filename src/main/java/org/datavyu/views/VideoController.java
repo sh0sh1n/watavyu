@@ -294,7 +294,7 @@ public final class VideoController extends DatavyuDialog
             return;
         }
         try {
-            mediaPlayers.addMedia(videoFile);
+            mediaPlayers.addMediaFiles(java.util.List.of(videoFile), getCurrentTime());
         } catch (UserWarningException e) {
             logger.error("Unable to add " + videoFile, e);
             JOptionPane.showMessageDialog(Datavyu.getApplication().getMainFrame(), e.getMessage(),

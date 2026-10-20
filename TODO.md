@@ -15,12 +15,12 @@ Updated 2026-10-17. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
-| Java source (main) | 242 files, 42.5k lines | 185 files, 31.8k lines |
-| Tests / line coverage | 113 / 9.9% | 331 / 22.0%; still 0% in most views, the timeline and undo |
+| Java source (main) | 242 files, 42.5k lines | 186 files, 32.2k lines |
+| Tests / line coverage | 113 / 9.9% | 350 / 22.5%; still 0% in most views, the timeline and undo |
 | Runtime dependencies / with known vulnerabilities | 28 / 8 | 12 / 0 |
-| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 763 |
-| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 466 / 82; 17 (`MediaPlayers` and `DatavyuCell` joined) |
-| Never-invoked methods (`dead-code.py`) | 109+ | 6, all test-only accessors |
+| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 767 |
+| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 475 / 82; 17 (`MediaPlayers` and `DatavyuCell` joined) |
+| Never-invoked methods (`dead-code.py`) | 109+ | 7, all test-only accessors |
 | Static global access (`Datavyu.getView()` and friends) | about 330 call sites | 272 |
 
 ## Bugs
@@ -31,11 +31,10 @@ Updated 2026-10-17. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 ## Features
 
-**F4. Media columns.** ready. Done: media columns are spreadsheet columns whose cells are clips; a clip's onset is typed in its cell (unless the column is locked) or set by dragging its track, and its offset follows its length. Left:
-- Several clips in one media column, playing in one window: gaps are black, the later clip wins where clips overlap. Today each clip has its own player, window and track (`MediaPlayers`), and opening a project file with more than one clip in a media column is refused (`OpenController.openProjectFile`).
-- Adding media by dropping a file on the spreadsheet and by a menu command, both through `MediaPlayers.addMedia`; today only the video controller's Add Data button adds media.
-- Audio files, as clips like any other: video, audio, or both are one kind of clip, and audio alone shows a black window. The project file's rules require a clip's width, height and frame rate, so audio needs a format decision.
-- Saving while a clip's file is still opening is refused, as its length, size and frame rate are unknown (`SpreadsheetColumns.columns`); the format has no way to say "not yet known".
+**F4. Media columns.** ready. Done: media columns are spreadsheet columns whose clips play in one window per column; clips are added by menu, file drop or the video controller, and moved by typing their onset or dragging their track. Left:
+- Audio files, as clips like any other: video, audio, or both are one kind of clip, and audio alone shows a black window. The player opens only `.mp4` and `.m4v` today (`JavaFxVideoPlugin`); an audio-only file has no frame table or size.
+- Dragging clips in the spreadsheet (owner: later; today tracks are dragged in the video controller).
+- Adding media is not undoable, nor is removing a track in the video controller; deleting a clip or a media column in the spreadsheet is.
 
 **F6. Remove the video controller window.** ready. The next big UI change (AGENTS.md › North Star): media tracks move into the spreadsheet as media columns (F4), and the transport and timeline controls the window holds find a place in the main window or go. One idea (owner): a timeline with a draggable needle down the left edge of the spreadsheet. Media clips starting before time zero (a hack today) are discussed again here.
 
@@ -52,6 +51,8 @@ Updated 2026-10-17. Re-measure with the commands in [BUILDING.md › Analysis Re
 **U2. Project structure.** needs the owner. Spreadsheets are usually instances of a project template, and coding passes (columns and their codes) are reused across experiments. Datavyu handled this with Ruby scripts that created a spreadsheet, or migrated one when the template changed; that worked imperfectly and is not to be recreated. Explore how projects, templates, spreadsheets and portable coding passes relate, likely as a folder hierarchy, and where large videos live (often copied locally from a network share for speed). The project file holds everything until this is settled.
 
 **U3. Write-ahead log and event sourcing.** Consider recording every edit as an event in an append-only log beside the project file, for data integrity and disaster recovery. Volume is small (tens of thousands of events, perhaps millions). It would likely replace R9's autosave and could feed undo.
+
+**U4. Media identity and cached details.** Whether a clip's media is the file it was coded against, and what to trust when opening it goes wrong. Today a clip's cached details (length, size, frame rate) are replaced by whatever its file reports when it opens (`MediaPlayers.open`), so a file that opens but reports wrongly, or a different file at the same path, overwrites details that were right. Revisit with fingerprinting the media (owner: later), so a clip knows its file. A future idea (owner): filler cells with no media, as placeholders in a media column.
 
 ## Dependencies
 

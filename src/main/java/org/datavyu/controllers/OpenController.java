@@ -22,8 +22,6 @@ import org.datavyu.models.db.UserWarningException;
 import org.datavyu.models.project.Project;
 import org.datavyu.models.project.ViewerSetting;
 import org.datavyu.projectfile.ProjectDocument;
-import org.datavyu.projectfile.ProjectDocument.Column;
-import org.datavyu.projectfile.ProjectDocument.MediaColumn;
 import org.datavyu.projectfile.ProjectFileException;
 import org.datavyu.projectfile.ProjectJson;
 import org.datavyu.projectfile.SpreadsheetColumns;
@@ -135,12 +133,6 @@ public final class OpenController {
     public void openProjectFile(final File projectFile) {
         try {
             ProjectDocument document = ProjectJson.read(projectFile.toPath());
-            for (Column column : document.columns()) {
-                if (column instanceof MediaColumn media && media.clips().size() > 1) {
-                    throw new ProjectFileException("The media column \"" + media.name() + "\" has "
-                        + media.clips().size() + " clips. This version of Watavyu shows one clip per media column.");
-                }
-            }
             DataStore openedDataStore = DataStoreFactory.newDataStore();
             SpreadsheetColumns.addColumns(openedDataStore, document.columns(),
                 projectFile.getAbsoluteFile().getParentFile().toPath());

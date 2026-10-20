@@ -16,6 +16,12 @@ final class JsonFields {
 
     /** Requires an object with exactly these keys. */
     static void keys(final JsonNode node, final String at, final String... keys) throws ProjectFileException {
+        keys(node, at, Set.of(), keys);
+    }
+
+    /** Requires an object with these keys and no others, all of them present except the optional ones. */
+    static void keys(final JsonNode node, final String at, final Set<String> optional, final String... keys)
+            throws ProjectFileException {
         object(node, at);
         Set<String> expected = Set.of(keys);
         for (Iterator<String> names = node.fieldNames(); names.hasNext(); ) {
@@ -25,7 +31,7 @@ final class JsonFields {
             }
         }
         for (String key : keys) {
-            if (!node.has(key)) {
+            if (!node.has(key) && !optional.contains(key)) {
                 throw new ProjectFileException(at + ": \"" + key + "\" is missing");
             }
         }

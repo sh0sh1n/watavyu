@@ -75,6 +75,25 @@ public interface StreamViewer {
      */
     void setViewerVisible(boolean isVisible);
 
+    /** @return the component that shows the video, for showing it in a media column's window */
+    java.awt.Component getVideoComponent();
+
+    /**
+     * Shows the video in another window: from now on, showing or hiding this viewer shows or hides that window
+     * through the listener, and this viewer's own window stays hidden.
+     *
+     * @param showWindow called with whether the video's window should be showing
+     */
+    void setWindowListener(java.util.function.Consumer<Boolean> showWindow);
+
+    /**
+     * Marks whether this clip is the one its media column plays at the clock's time. A clip not in play is paused
+     * and silent. Safe to call from the clock's threads.
+     *
+     * @param inPlay whether the clip is in play
+     */
+    void setInPlay(boolean inPlay);
+
     /**
      * Return the file of the data.
      *

@@ -33,10 +33,8 @@ public final class SpreadsheetColumns {
      * @param dataStore     a spreadsheet
      * @param projectFolder the folder the project file is saved in
      * @return its columns in spreadsheet order, with their cells in time order
-     * @throws UserWarningException if a clip's file has not said how long it is, its size or its frame rate
      */
-    public static List<Column> columns(final DataStore dataStore, final Path projectFolder)
-            throws UserWarningException {
+    public static List<Column> columns(final DataStore dataStore, final Path projectFolder) {
         List<Column> columns = new ArrayList<>();
         for (Variable variable : dataStore.getAllVariables()) {
             columns.add(variable.isMedia() ? media(variable, projectFolder) : annotation(variable));
@@ -60,14 +58,11 @@ public final class SpreadsheetColumns {
         return columns;
     }
 
-    private static MediaColumn media(final Variable variable, final Path projectFolder) throws UserWarningException {
+    /** A media column, with what is known of each clip's file; a clip whose file never opened is saved all the same. */
+    private static MediaColumn media(final Variable variable, final Path projectFolder) {
         List<Clip> clips = new ArrayList<>();
         for (Cell cell : variable.getCellsTemporally()) {
             MediaClip clip = cell.getClip();
-            if (clip.duration() <= 0 || !(clip.frameRate() > 0) || clip.width() <= 0 || clip.height() <= 0) {
-                throw new UserWarningException("Unable to save: " + clip.fileName() + " in " + variable.getName()
-                    + " has not opened yet, so its length, size and frame rate are unknown.");
-            }
             clips.add(new Clip(cell.getOnset(), clip.volume(), new Source(
                 ProjectPaths.stored(projectFolder, Path.of(clip.file())), clip.duration(), clip.frameRate(),
                 clip.width(), clip.height())));

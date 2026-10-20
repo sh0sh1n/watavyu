@@ -2,7 +2,6 @@ package org.datavyu.projectfile;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNull;
-import static org.testng.Assert.expectThrows;
 import static org.testng.Assert.assertTrue;
 
 import org.datavyu.models.db.Cell;
@@ -10,7 +9,6 @@ import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.DataStoreFactory;
 import org.datavyu.models.db.Variable;
 import org.datavyu.models.db.MediaClip;
-import org.datavyu.models.db.UserWarningException;
 import org.datavyu.projectfile.ProjectDocument.AnnotationCell;
 import org.datavyu.projectfile.ProjectDocument.AnnotationColumn;
 import org.datavyu.projectfile.ProjectDocument.Clip;
@@ -144,15 +142,17 @@ public class SpreadsheetColumnsTest {
         assertEquals(saved.clips().get(0).source().file(), "/Users/someone/study/media/cam.mp4");
     }
 
+    /** Saving never waits for media: a clip whose file has not opened is saved with what is known of it. */
     @Test
-    public void aClipWhoseFileHasNotOpenedCannotBeSaved() throws Exception {
+    public void aClipWhoseFileHasNotOpenedIsSaved() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
-        dataStore.createMediaVariable("media_1").createClip(0, MediaClip.of("/Users/someone/study/cam.mp4"));
+        dataStore.createMediaVariable("media_1").createClip(1_000, MediaClip.of("/Users/someone/study/cam.mp4"));
 
-        UserWarningException e = expectThrows(UserWarningException.class,
-            () -> SpreadsheetColumns.columns(dataStore, FOLDER));
+        List<Column> columns = SpreadsheetColumns.columns(dataStore, FOLDER);
 
-        assertTrue(e.getMessage().contains("cam.mp4"), e.getMessage());
+        assertEquals(columns, List.of(new MediaColumn("media_1", false, false, List.of(
+            new Clip(1_000, 1, new Source("cam.mp4", 0, 0, 0, 0))))));
+        ProjectJson.toJson(new ProjectDocument(columns));
     }
 
     @Test

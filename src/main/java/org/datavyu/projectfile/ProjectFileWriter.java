@@ -90,15 +90,28 @@ final class ProjectFileWriter {
             Source source = clip.source();
             json.append(i == 0 ? "\n" : ",\n")
                 .append("        {\n")
-                .append("          \"onset\": \"").append(Timestamp.format(clip.onset())).append("\",\n")
-                .append("          \"offset\": \"").append(Timestamp.format(clip.offset())).append("\",\n")
-                .append("          \"settings\": { \"volume\": ").append(number(clip.volume())).append(" },\n")
-                .append("          \"source\": {\n")
-                .append("            \"file\": ").append(string(source.file())).append(",\n")
-                .append("            \"duration\": \"").append(Timestamp.format(source.duration())).append("\",\n")
-                .append("            \"frameRate\": ").append(number(source.frameRate())).append(",\n")
-                .append("            \"width\": ").append(source.width()).append(",\n")
-                .append("            \"height\": ").append(source.height()).append('\n')
+                .append("          \"onset\": \"").append(Timestamp.format(clip.onset())).append("\",\n");
+            if (source.duration() > 0) {
+                json.append("          \"offset\": \"").append(Timestamp.format(clip.offset())).append("\",\n");
+            }
+            json.append("          \"settings\": { \"volume\": ").append(number(clip.volume())).append(" },\n")
+                .append("          \"source\": {\n");
+            // What the media file said, when it has opened; a detail it never gave is left out.
+            List<String> fields = new ArrayList<>();
+            fields.add("\"file\": " + string(source.file()));
+            if (source.duration() > 0) {
+                fields.add("\"duration\": \"" + Timestamp.format(source.duration()) + "\"");
+            }
+            if (source.frameRate() > 0) {
+                fields.add("\"frameRate\": " + number(source.frameRate()));
+            }
+            if (source.width() > 0) {
+                fields.add("\"width\": " + source.width());
+            }
+            if (source.height() > 0) {
+                fields.add("\"height\": " + source.height());
+            }
+            json.append("            ").append(String.join(",\n            ", fields)).append('\n')
                 .append("          }\n")
                 .append("        }");
         }

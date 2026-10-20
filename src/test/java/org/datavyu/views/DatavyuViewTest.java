@@ -14,6 +14,15 @@ public class DatavyuViewTest {
         assertEquals(SheetLayoutFactory.DEFAULT_LAYOUT, SheetLayoutType.WeakTemporal);
     }
 
+    /** Dropped files the app plays join the project as media; other files open as projects. */
+    @Test
+    public void droppedMediaIsToldApartByItsName() {
+        assertEquals(DatavyuView.isMediaFile(new java.io.File("/study/cam.MP4")), true);
+        assertEquals(DatavyuView.isMediaFile(new java.io.File("/study/cam.m4v")), true);
+        assertEquals(DatavyuView.isMediaFile(new java.io.File("/study/study.watavyu.json")), false);
+        assertEquals(DatavyuView.isMediaFile(new java.io.File("/study/old.opf")), false);
+    }
+
     @Test
     public void theTitleNamesTheApplicationAndTheProject() {
         assertEquals(DatavyuView.windowTitle("Watavyu", "study.opf  *", false), "Watavyu - study.opf  *");

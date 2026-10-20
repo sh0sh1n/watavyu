@@ -26,12 +26,15 @@ import org.datavyu.views.VideoController;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.awt.Component;
 import java.awt.Dimension;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 /**
@@ -48,7 +51,41 @@ public class MediaPlayersTest {
     private TracksEditorController tracks;
     private List<StreamViewer> opened;
     private boolean failToOpen;
+    private Map<Variable, FakeWindow> windows;
     private MediaPlayers players;
+
+    /** A column's window, recording what it shows. */
+    private static final class FakeWindow implements MediaPlayers.ColumnWindow {
+        final List<Object> clips = new ArrayList<>();
+        Object showing;
+        boolean visible;
+        boolean closed;
+
+        @Override
+        public void addClip(final Object clip, final Component video) {
+            clips.add(clip);
+        }
+
+        @Override
+        public void removeClip(final Object clip) {
+            clips.remove(clip);
+        }
+
+        @Override
+        public void showClip(final Object clip) {
+            showing = clip;
+        }
+
+        @Override
+        public void setShowing(final boolean showing) {
+            visible = showing;
+        }
+
+        @Override
+        public void close() {
+            closed = true;
+        }
+    }
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -72,7 +109,12 @@ public class MediaPlayersTest {
             opened.add(player);
             return null;
         }).when(videoController).openStream(any(), any(), any(), any(), any());
-        players = new MediaPlayers(dataStore, videoController);
+        windows = new HashMap<>();
+        players = new MediaPlayers(dataStore, videoController, column -> {
+            FakeWindow window = new FakeWindow();
+            windows.put(column, window);
+            return window;
+        }, Runnable::run);
     }
 
     /** A player that reports a 10 s, 30 fps, 1280x720 file, and remembers the offset it is given. */
@@ -85,6 +127,12 @@ public class MediaPlayersTest {
         when(player.getFramesPerSecond()).thenReturn(30f);
         when(player.getVideoSize()).thenReturn(new Dimension(1280, 720));
         doAnswer(call -> offset[0] = call.<Long>getArgument(0)).when(player).setOffset(any(Long.class));
+        boolean[] visible = {true};
+        doAnswer(call -> {
+            visible[0] = call.<Boolean>getArgument(0);
+            // The player shows its column's window through the listener it was given.
+            return null;
+        }).when(player).setViewerVisible(any(Boolean.class));
         when(player.getOffset()).thenAnswer(call -> offset[0]);
         TrackModel track = new TrackModel();
         when(mixer.getTrackModel(id)).thenReturn(track);
@@ -262,5 +310,155 @@ public class MediaPlayersTest {
 
         verify(videoController, never()).openStream(any(), any(), any(), any(), any());
         verify(videoController, never()).openStream(any(), eq(null), any(), any());
+    }
+
+    private Cell addClip(final Variable column, final long onset, final String name) throws Exception {
+        return column.createClip(onset, MediaClip.of(file(name)));
+    }
+
+    /** All of a column's clips show in one window, which shows the clip in play and black in the gaps. */
+    @Test
+    public void aColumnsClipsShareOneWindowShowingTheClipInPlay() throws Exception {
+        Variable media = dataStore.createMediaVariable("media_1");
+        Cell first = addClip(media, 0, "a.mp4");
+        Cell second = addClip(media, 20_000, "b.mp4");
+        FakeWindow window = windows.get(media);
+
+        assertEquals(window.clips, List.of(first, second));
+        assertEquals(windows.size(), 1);
+
+        players.clockForceSync(5_000);
+        assertSame(window.showing, first);
+        verify(players.getPlayer(first), org.mockito.Mockito.atLeastOnce()).setInPlay(true);
+        verify(players.getPlayer(second), never()).setInPlay(true);
+
+        players.clockForceSync(15_000);
+        assertNull(window.showing);
+
+        players.clockForceSync(25_000);
+        assertSame(window.showing, second);
+    }
+
+    @Test
+    public void whereClipsOverlapTheLaterOneWins() throws Exception {
+        Variable media = dataStore.createMediaVariable("media_1");
+        Cell first = addClip(media, 0, "a.mp4");
+        Cell second = addClip(media, 5_000, "b.mp4");
+
+        players.clockPeriodicSync(7_000);
+
+        assertSame(windows.get(media).showing, second);
+        verify(players.getPlayer(first), org.mockito.Mockito.atLeastOnce()).setInPlay(false);
+    }
+
+    /** Moving a clip changes what plays at once, even while paused. */
+    @Test
+    public void movingAClipChangesWhatIsInPlay() throws Exception {
+        Variable media = dataStore.createMediaVariable("media_1");
+        Cell clip = addClip(media, 0, "a.mp4");
+        FakeWindow window = windows.get(media);
+        assertSame(window.showing, clip);
+
+        clip.setOnset(1_000);
+
+        assertNull(window.showing);
+    }
+
+    @Test
+    public void theWindowClosesWithItsLastClip() throws Exception {
+        Variable media = dataStore.createMediaVariable("media_1");
+        Cell first = addClip(media, 0, "a.mp4");
+        Cell second = addClip(media, 20_000, "b.mp4");
+        FakeWindow window = windows.get(media);
+
+        media.removeCell(first);
+        assertEquals(window.clips, List.of(second));
+        assertTrue(!window.closed);
+
+        media.removeCell(second);
+        assertTrue(window.closed);
+    }
+
+    /** A missing clip still plays where it is, as black: the later clip wins even when it cannot be shown. */
+    @Test
+    public void aMissingLaterClipShowsBlack() throws Exception {
+        Variable media = dataStore.createMediaVariable("media_1");
+        addClip(media, 0, "a.mp4");
+        Cell missing = media.createClip(5_000,
+            new MediaClip(folder.resolve("gone.mp4").toString(), 10_000, 30, 640, 480, 1));
+
+        players.clockForceSync(7_000);
+
+        // The window has no video for the missing clip, so it shows black.
+        assertSame(windows.get(media).showing, missing);
+        assertTrue(!windows.get(media).clips.contains(missing));
+    }
+
+    @Test
+    public void inPlayIsTheLatestStartingClipHoldingTheTime() throws Exception {
+        Variable media = dataStore.createMediaVariable("media_1");
+        Cell a = media.createClip(0, new MediaClip("/a.mp4", 10_000, 30, 640, 480, 1));
+        Cell b = media.createClip(5_000, new MediaClip("/b.mp4", 10_000, 30, 640, 480, 1));
+        Cell unknown = media.createClip(6_000, MediaClip.of("/c.mp4"));
+        List<MediaPlayers.Span> spans = List.of(
+            new MediaPlayers.Span(a, 0, 10_000, null),
+            new MediaPlayers.Span(b, 5_000, 15_000, null),
+            new MediaPlayers.Span(unknown, 6_000, 6_000, null));
+
+        assertSame(MediaPlayers.inPlay(spans, 0), a);
+        assertSame(MediaPlayers.inPlay(spans, 4_999), a);
+        assertSame(MediaPlayers.inPlay(spans, 5_000), b);
+        assertSame(MediaPlayers.inPlay(spans, 6_000), b);
+        assertSame(MediaPlayers.inPlay(spans, 14_999), b);
+        assertNull(MediaPlayers.inPlay(spans, 15_000));
+        assertNull(MediaPlayers.inPlay(spans, -1));
+    }
+
+    @Test
+    public void hidingAColumnHidesItsWindow() throws Exception {
+        Variable media = dataStore.createMediaVariable("media_1");
+        Cell clip = addClip(media, 0, "a.mp4");
+
+        media.setHidden(true);
+
+        verify(players.getPlayer(clip)).setViewerVisible(false);
+    }
+
+    /** Added media joins the one selected media column at the current time; otherwise each file gets a column. */
+    @Test
+    public void addedMediaJoinsTheSelectedMediaColumn() throws Exception {
+        Variable media = dataStore.createMediaVariable("media_1");
+        addClip(media, 0, "a.mp4");
+        dataStore.deselectAll();
+        media.setSelected(true);
+
+        players.addMediaFiles(List.of(new File(file("b.mp4"))), 12_000);
+
+        assertEquals(dataStore.getAllVariables(), List.of(media));
+        assertEquals(media.getCellsTemporally().get(1).getOnset(), 12_000L);
+        assertEquals(windows.get(media).clips.size(), 2);
+    }
+
+    @Test
+    public void addedMediaWithoutASelectedMediaColumnGetsNewColumns() throws Exception {
+        dataStore.createVariable("notes").setSelected(true);
+
+        players.addMediaFiles(List.of(new File(file("a.mp4")), new File(file("b.mp4"))), 12_000);
+
+        assertEquals(dataStore.getAllVariables().stream().map(Variable::getName).toList(),
+            List.of("notes", "media_1", "media_2"));
+        assertEquals(dataStore.getVariable("media_2").getCells().get(0).getOnset(), 0L);
+    }
+
+    @Test
+    public void aClipThatDoesNotOpenLeavesItsColumn() throws Exception {
+        Variable media = dataStore.createMediaVariable("media_1");
+        Cell kept = addClip(media, 0, "a.mp4");
+        failToOpen = true;
+
+        players.addClip(media, new File(file("broken.mp4")), 5_000);
+
+        assertEquals(media.getCells(), List.of(kept));
+        assertEquals(dataStore.getAllVariables(), List.of(media));
     }
 }

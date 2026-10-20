@@ -155,6 +155,36 @@ public class PlaybackIntegrationTest {
         }
     }
 
+    /** A clip that is not its media column's clip in play pauses, and does not start with the clock. */
+    @Test
+    public void aClipOutOfPlayPauses() throws Exception {
+        VideoController videoController = mock(VideoController.class);
+        when(videoController.getClockTimer()).thenReturn(mock(ClockTimer.class));
+        Datavyu.setVideoController(videoController);
+        StreamViewer viewer = JavaFxVideoPlugin.open(Identifier.generateIdentifier(), mp4, null, false);
+        try {
+            viewer.start();
+            long deadline = System.nanoTime() + 2_000_000_000L;
+            while (!viewer.isPlaying() && System.nanoTime() < deadline) {
+                Thread.sleep(10);
+            }
+            assertTrue(viewer.isPlaying(), "the clip starts");
+
+            viewer.setInPlay(false);
+            deadline = System.nanoTime() + 2_000_000_000L;
+            while (viewer.isPlaying() && System.nanoTime() < deadline) {
+                Thread.sleep(10);
+            }
+            assertFalse(viewer.isPlaying(), "a clip out of play pauses");
+        } finally {
+            JavaFxToolkit.onEdtAndWait(() -> {
+                viewer.close();
+                return null;
+            });
+            Datavyu.setVideoController(null);
+        }
+    }
+
     @Test
     public void reportsDurationAndFrameRate() {
         assertEquals(frames.frameCount(), FRAMES);

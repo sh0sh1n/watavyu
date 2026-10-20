@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Turns a project file's contents into a document, checking its keys and types. An unknown or missing key or a value
@@ -121,30 +122,52 @@ final class ProjectFileReader {
             JsonFields.texts(node.get("values"), at + ".values"));
     }
 
+    /**
+     * Reads a clip. What the source says about its media file is optional, as the file may never have opened; a clip
+     * has an offset exactly when its source has a duration.
+     */
     private static Clip clip(final JsonNode node, final String at) throws ProjectFileException {
-        JsonFields.keys(node, at, "onset", "offset", "settings", "source");
+        JsonFields.keys(node, at, Set.of("offset"), "onset", "offset", "settings", "source");
         JsonNode settings = node.get("settings");
         JsonFields.keys(settings, at + ".settings", "volume");
         JsonNode sourceNode = node.get("source");
-        JsonFields.keys(sourceNode, at + ".source", "file", "duration", "frameRate", "width", "height");
+        JsonFields.keys(sourceNode, at + ".source", Set.of("duration", "frameRate", "width", "height"),
+            "file", "duration", "frameRate", "width", "height");
         Source source = new Source(JsonFields.text(sourceNode.get("file"), at + ".source.file"),
-            JsonFields.time(sourceNode.get("duration"), at + ".source.duration"),
-            JsonFields.number(sourceNode.get("frameRate"), at + ".source.frameRate"),
-            JsonFields.integer(sourceNode.get("width"), at + ".source.width"),
-            JsonFields.integer(sourceNode.get("height"), at + ".source.height"));
+            sourceNode.has("duration") ? JsonFields.time(sourceNode.get("duration"), at + ".source.duration") : 0,
+            sourceNode.has("frameRate") ? positive(JsonFields.number(sourceNode.get("frameRate"),
+                at + ".source.frameRate"), at + ".source.frameRate") : 0,
+            sourceNode.has("width") ? (int) positive(JsonFields.integer(sourceNode.get("width"),
+                at + ".source.width"), at + ".source.width") : 0,
+            sourceNode.has("height") ? (int) positive(JsonFields.integer(sourceNode.get("height"),
+                at + ".source.height"), at + ".source.height") : 0);
         Clip clip = new Clip(JsonFields.time(node.get("onset"), at + ".onset"),
             JsonFields.number(settings.get("volume"), at + ".settings.volume"), source);
-        long offset = JsonFields.time(node.get("offset"), at + ".offset");
-        long expected;
-        try {
-            expected = Math.addExact(clip.onset(), source.duration());
-        } catch (ArithmeticException e) {
-            throw new ProjectFileException(at + ".offset: out of range", e);
+        if (sourceNode.has("duration") != node.has("offset")) {
+            throw new ProjectFileException(at + (node.has("offset")
+                ? ".offset: must be left out when the source's duration is unknown"
+                : ": \"offset\" is missing"));
         }
-        if (source.duration() >= 0 && offset != expected) {
-            throw new ProjectFileException(at + ".offset: must be the onset plus the source's duration ("
-                + Timestamp.format(clip.offset()) + ")");
+        if (node.has("offset")) {
+            long offset = JsonFields.time(node.get("offset"), at + ".offset");
+            long expected;
+            try {
+                expected = Math.addExact(clip.onset(), source.duration());
+            } catch (ArithmeticException e) {
+                throw new ProjectFileException(at + ".offset: out of range", e);
+            }
+            if (offset != expected) {
+                throw new ProjectFileException(at + ".offset: must be the onset plus the source's duration ("
+                    + Timestamp.format(expected) + ")");
+            }
         }
         return clip;
+    }
+
+    private static double positive(final double value, final String at) throws ProjectFileException {
+        if (!(value > 0)) {
+            throw new ProjectFileException(at + ": must be more than 0");
+        }
+        return value;
     }
 }

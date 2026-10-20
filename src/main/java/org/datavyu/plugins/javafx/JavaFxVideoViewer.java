@@ -28,10 +28,12 @@ import org.datavyu.plugins.StreamViewerDialog;
 
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Frame;
 import java.awt.GraphicsEnvironment;
 import java.awt.Rectangle;
+import java.awt.Window;
 import java.io.File;
 
 /**
@@ -106,7 +108,16 @@ public final class JavaFxVideoViewer extends StreamViewerDialog {
     @Override
     protected void setViewerSize(final int width, final int height) {
         panel.setPreferredSize(new Dimension(width, height));
-        pack();
+        // The video may be shown in its media column's window rather than this one.
+        Window window = SwingUtilities.getWindowAncestor(panel);
+        if (window != null) {
+            window.pack();
+        }
+    }
+
+    @Override
+    public Component getVideoComponent() {
+        return panel;
     }
 
     @Override

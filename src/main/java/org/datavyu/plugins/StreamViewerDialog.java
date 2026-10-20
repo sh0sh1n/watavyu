@@ -36,6 +36,7 @@ import java.awt.event.*;
 import java.io.File;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * This dialog supports basic viewing operations that all video viewers have in common. These are
@@ -72,6 +73,12 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
 
     /** Controls visibility */
     protected volatile boolean isVisible = true;
+
+    /** Whether this clip is the one its media column plays at the clock's time. */
+    private volatile boolean inPlay = true;
+
+    /** Shows or hides the window the video is shown in, when that is not this dialog. */
+    private volatile Consumer<Boolean> windowListener;
 
     /** Did we assume the frames per second? */
     protected boolean isAssumedFramesPerSecond = false;
@@ -207,7 +214,7 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
      * the volume).
      */
     protected void setVolume() {
-        setPlayerVolume(isVisible ? volume : 0F);
+        setPlayerVolume(isVisible && inPlay ? volume : 0F);
         volumeButton.setIcon(getVolumeButtonIcon());
     }
 
@@ -316,9 +323,10 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
         pack();
         invalidate();
 
-        // Each video's window comes back where the user last left a window showing a file of the same name.
+        // Each video's window comes back where the user last left a window showing a file of the same name. The
+        // window is shown by whoever shows the video: in the app, its media column's window shows it instead.
         WindowPlacement.restoreAndTrack(this, getName(), true);
-        setViewerVisible(true);
+        isVisible = true;
 
         if (framesPerSecond == -1) {
             framesPerSecond = getPlayerFramesPerSecond();
@@ -470,9 +478,31 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
 
     @Override
     public void setViewerVisible(final boolean isVisible) {
-        setVisible(isVisible);
+        Consumer<Boolean> listener = windowListener;
+        if (listener == null) {
+            setVisible(isVisible);
+        } else {
+            listener.accept(isVisible);
+        }
         this.isVisible = isVisible;
         setVolume();
+    }
+
+    @Override
+    public void setWindowListener(final Consumer<Boolean> showWindow) {
+        windowListener = showWindow;
+        setVisible(false);
+    }
+
+    @Override
+    public void setInPlay(final boolean newInPlay) {
+        if (newInPlay != inPlay) {
+            inPlay = newInPlay;
+            setPlayerVolume(isVisible && inPlay ? volume : 0F);
+            if (!inPlay && isPlaying()) {
+                pause();
+            }
+        }
     }
 
     @Override
@@ -536,7 +566,8 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
                 && !clockTimer.isPaused()
                 && getCurrentTime() != -1) {
                 // Only if in range and not already playing and not in seek playback
-                if (clockTime >= trackModel.getOffset()
+                if (inPlay
+                    && clockTime >= trackModel.getOffset()
                     && clockTime < trackModel.getDuration() + trackModel.getOffset()
                     && !isPlaying()
                     && !isSeekPlaybackEnabled()) {
@@ -545,7 +576,8 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
                         + " and Streamviewer clock at " + getCurrentTime());
                     start();
                 }
-                if ((clockTime < trackModel.getOffset()
+                if ((!inPlay
+                    || clockTime < trackModel.getOffset()
                     || clockTime >= trackModel.getDuration() + trackModel.getOffset())
                     && isPlaying()) {
                     logger.info("Stream Boundary Stopping track: " + getIdentifier()
@@ -603,6 +635,7 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
         TrackModel trackModel = tracksEditorController.getTrackModel(getIdentifier());
         // TODO: Ensure that there is a return valuey tying offset/duration directly to the object
         if (trackModel != null
+                && inPlay
                 && clockTime >= trackModel.getOffset()
                 && clockTime < mixerController.getMixerModel().getViewportModel().getViewport().getMaxEnd()) {
             logger.info("Clock Start Starts track: " + getIdentifier() + " at time: " + clockTime);

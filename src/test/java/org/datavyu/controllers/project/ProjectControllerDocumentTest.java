@@ -63,7 +63,8 @@ public class ProjectControllerDocumentTest {
             return null;
         }).when(videoController).openStream(any(), any(), any(), any(), any());
 
-        MediaPlayers players = new MediaPlayers(dataStore, videoController);
+        MediaPlayers players = new MediaPlayers(dataStore, videoController,
+            column -> mock(MediaPlayers.ColumnWindow.class), Runnable::run);
         players.openAll();
         when(player.getVolumeLevel()).thenReturn(0.7f);
         track.setLocked(true);
