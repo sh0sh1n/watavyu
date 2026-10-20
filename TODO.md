@@ -15,8 +15,8 @@ Updated 2026-10-17. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
-| Java source (main) | 242 files, 42.5k lines | 186 files, 32.2k lines |
-| Tests / line coverage | 113 / 9.9% | 350 / 22.5%; still 0% in most views, the timeline and undo |
+| Java source (main) | 242 files, 42.5k lines | 186 files, 32.3k lines |
+| Tests / line coverage | 113 / 9.9% | 353 / 23.0%; still 0% in most views, the timeline and undo |
 | Runtime dependencies / with known vulnerabilities | 28 / 8 | 12 / 0 |
 | Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 767 |
 | PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 475 / 82; 17 (`MediaPlayers` and `DatavyuCell` joined) |
@@ -31,8 +31,7 @@ Updated 2026-10-17. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 ## Features
 
-**F4. Media columns.** ready. Done: media columns are spreadsheet columns whose clips play in one window per column; clips are added by menu, file drop or the video controller, and moved by typing their onset or dragging their track. Left:
-- Audio files, as clips like any other: video, audio, or both are one kind of clip, and audio alone shows a black window. The player opens only `.mp4` and `.m4v` today (`JavaFxVideoPlugin`); an audio-only file has no frame table or size.
+**F4. Media columns.** ready. Done: media columns are spreadsheet columns whose clips, video or audio, play in one window per column; clips are added by menu, file drop or the video controller, and moved by typing their onset or dragging their track. Left, both deferred:
 - Dragging clips in the spreadsheet (owner: later; today tracks are dragged in the video controller).
 - Adding media is not undoable, nor is removing a track in the video controller; deleting a clip or a media column in the spreadsheet is.
 

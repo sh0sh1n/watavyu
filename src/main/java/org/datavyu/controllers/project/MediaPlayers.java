@@ -387,9 +387,11 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
             players.put(clip, player);
             videoController.getMixerController().setTrackLocked(player.getIdentifier(), column.isLocked());
             windows.computeIfAbsent(column, windowFactory).addClip(clip, player.getVideoComponent());
+            // Media without video has no size or frame rate.
             Dimension size = player.getVideoSize();
+            boolean video = size != null && size.width > 0 && size.height > 0;
             clip.setClip(clip.getClip().withDetails(Math.max(0, player.getDuration()),
-                exact(player.getFramesPerSecond()), size == null ? 0 : size.width, size == null ? 0 : size.height));
+                video ? exact(player.getFramesPerSecond()) : 0, video ? size.width : 0, video ? size.height : 0));
             refresh(column);
             player.setViewerVisible(!column.isHidden());
         }, () -> {

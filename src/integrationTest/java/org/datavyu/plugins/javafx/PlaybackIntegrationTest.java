@@ -46,6 +46,7 @@ public class PlaybackIntegrationTest {
 
     private File mp4;
     private File mov;
+    private File m4a;
     private FxPlaybackEngine engine;
     private JavaFxPlayback playback;
     private FrameProbe probe;
@@ -57,6 +58,12 @@ public class PlaybackIntegrationTest {
         File dir = new File(System.getProperty("fixtureDir", "build/playback-fixtures"));
         mp4 = new File(dir, "barcode-10s.mp4");
         mov = new File(dir, "barcode-10s.mov");
+        m4a = new File(dir, "tone-4s.m4a");
+        if (!m4a.isFile()) {
+            dir.mkdirs();
+            run(ffmpeg, "-v", "error", "-y", "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=48000:duration=4",
+                    "-c:a", "aac", "-b:a", "128k", m4a.getPath());
+        }
         if (!mp4.isFile() || !mov.isFile()) {
             dir.mkdirs();
             String barcode = "color=c=black:s=1024x64:r=" + FPS
@@ -146,6 +153,34 @@ public class PlaybackIntegrationTest {
             });
             assertEquals(viewer.getVolumeLevel(), 0.25f);
             assertFalse(viewer.isViewerVisible());
+        } finally {
+            JavaFxToolkit.onEdtAndWait(() -> {
+                viewer.close();
+                return null;
+            });
+            Datavyu.setVideoController(null);
+        }
+    }
+
+    /** Audio opens as media without a picture: it has a length, no size, no frame stepping, and it plays. */
+    @Test
+    public void audioOpensAsMediaWithoutAPicture() throws Exception {
+        VideoController videoController = mock(VideoController.class);
+        when(videoController.getClockTimer()).thenReturn(mock(ClockTimer.class));
+        Datavyu.setVideoController(videoController);
+        StreamViewer viewer = JavaFxVideoPlugin.open(Identifier.generateIdentifier(), m4a, null, false);
+        try {
+            assertEquals(viewer.getDuration(), 4_000L, 50L);
+            assertEquals(viewer.getVideoSize(), new Dimension(0, 0));
+            assertFalse(viewer.isStepEnabled());
+            assertTrue(viewer.getVideoComponent().getPreferredSize().width > 0, "the black picture has a size");
+
+            viewer.start();
+            long deadline = System.nanoTime() + 2_000_000_000L;
+            while (!viewer.isPlaying() && System.nanoTime() < deadline) {
+                Thread.sleep(10);
+            }
+            assertTrue(viewer.isPlaying(), "audio plays");
         } finally {
             JavaFxToolkit.onEdtAndWait(() -> {
                 viewer.close();

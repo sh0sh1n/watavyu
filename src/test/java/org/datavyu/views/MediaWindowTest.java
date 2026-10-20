@@ -69,4 +69,20 @@ public class MediaWindowTest {
             }
         });
     }
+
+    /** A media window with no remembered place opens below and to the right of those already open. */
+    @Test
+    public void newWindowsCascade() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            MediaWindow first = new MediaWindow(null, "cascade_1");
+            MediaWindow second = new MediaWindow(null, "cascade_2");
+            try {
+                assertEquals(second.getX() - first.getX(), MediaWindow.CASCADE_STEP);
+                assertEquals(second.getY() - first.getY(), MediaWindow.CASCADE_STEP);
+            } finally {
+                first.close();
+                second.close();
+            }
+        });
+    }
 }

@@ -8,6 +8,9 @@ import java.awt.CardLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Frame;
+import java.awt.Point;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -20,6 +23,12 @@ public final class MediaWindow extends JDialog implements MediaPlayers.ColumnWin
     private static final long serialVersionUID = 1L;
 
     private static final String GAP = "gap";
+
+    /** How far each new media window is set off from the one before. */
+    static final int CASCADE_STEP = 30;
+
+    /** The media windows not yet closed; Swing EDT only. */
+    private static final Set<MediaWindow> OPEN = new HashSet<>();
 
     private final CardLayout cards = new CardLayout();
     private final JPanel content = new JPanel(cards);
@@ -41,7 +50,13 @@ public final class MediaWindow extends JDialog implements MediaPlayers.ColumnWin
         content.add(gap, GAP);
         getContentPane().add(content);
         setDefaultCloseOperation(HIDE_ON_CLOSE);
-        WindowPlacement.restoreAndTrack(this, getName(), true);
+        if (!WindowPlacement.restoreAndTrack(this, getName(), true)) {
+            // Below and to the right of the media windows already open, so none hides another.
+            Point origin = owner == null ? new Point(0, 0) : owner.getLocation();
+            int step = CASCADE_STEP * (OPEN.size() + 1);
+            setLocation(origin.x + step, origin.y + step);
+        }
+        OPEN.add(this);
     }
 
     @Override
@@ -84,6 +99,7 @@ public final class MediaWindow extends JDialog implements MediaPlayers.ColumnWin
 
     @Override
     public void close() {
+        OPEN.remove(this);
         dispose();
     }
 }

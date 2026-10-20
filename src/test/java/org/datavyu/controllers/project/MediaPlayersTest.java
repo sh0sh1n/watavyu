@@ -461,4 +461,22 @@ public class MediaPlayersTest {
         assertEquals(media.getCells(), List.of(kept));
         assertEquals(dataStore.getAllVariables(), List.of(media));
     }
+
+    /** Audio is a clip like any other; it has no picture, so it records no size or frame rate. */
+    @Test
+    public void anAudioClipRecordsOnlyItsLength() throws Exception {
+        doAnswer(call -> {
+            StreamViewer player = player(call.getArgument(0), call.getArgument(1));
+            when(player.getVideoSize()).thenReturn(new Dimension(0, 0));
+            call.<Consumer<StreamViewer>>getArgument(2).accept(player);
+            call.<Consumer<StreamViewer>>getArgument(3).accept(player);
+            opened.add(player);
+            return null;
+        }).when(videoController).openStream(any(), any(), any(), any(), any());
+
+        Variable media = players.addMedia(new File(file("voice.m4a")));
+
+        assertEquals(media.getCells().get(0).getClip(),
+            new MediaClip(folder.resolve("voice.m4a").toString(), 10_000, 0, 0, 0, MediaClip.DEFAULT_VOLUME));
+    }
 }

@@ -814,7 +814,7 @@ public final class DatavyuView implements FileDropEventListener {
         List<File> media = new ArrayList<>();
         List<File> projects = new ArrayList<>();
         for (File file : evt.getFiles()) {
-            (isMediaFile(file) ? media : projects).add(file);
+            (JavaFxVideoPlugin.isMediaFile(file) ? media : projects).add(file);
         }
         addMediaFiles(media);
 
@@ -830,11 +830,6 @@ public final class DatavyuView implements FileDropEventListener {
         }
     }
 
-    /** @return whether a file is media the app plays, judged by its name */
-    static boolean isMediaFile(final File file) {
-        String name = file.getName().toLowerCase(Locale.ROOT);
-        return name.endsWith(".mp4") || name.endsWith(".m4v");
-    }
 
     /**
      * Action for adding media: chooses media files and adds them, as clips at the current time when one media column
