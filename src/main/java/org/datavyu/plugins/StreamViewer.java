@@ -24,13 +24,9 @@ package org.datavyu.plugins;
 
 import java.awt.Dimension;
 import java.io.File;
-import java.io.InputStream;
 
-import javax.swing.JDialog;
 
 import org.datavyu.models.Identifier;
-import org.datavyu.views.component.DefaultTrackPainter;
-import org.datavyu.views.component.TrackPainter;
 
 
 /**
@@ -65,16 +61,28 @@ public interface StreamViewer {
     void setOffset(final long offset);
 
     /**
-     * Get the display window.
-     *
-     * @return A JDialog that will be displayed.
-     */
-    JDialog getParentJDialog();
-
-    /**
      * Hides or shows the windows associated with this data viewer.
      */
     void setViewerVisible(boolean isVisible);
+
+    /** @return the component that shows the video, for showing it in a media column's window */
+    java.awt.Component getVideoComponent();
+
+    /**
+     * Shows the video in another window: from now on, showing or hiding this viewer shows or hides that window
+     * through the listener, and this viewer's own window stays hidden.
+     *
+     * @param showWindow called with whether the video's window should be showing
+     */
+    void setWindowListener(java.util.function.Consumer<Boolean> showWindow);
+
+    /**
+     * Marks whether this clip is the one its media column plays at the clock's time. A clip not in play is paused
+     * and silent. Safe to call from the clock's threads.
+     *
+     * @param inPlay whether the clip is in play
+     */
+    void setInPlay(boolean inPlay);
 
     /**
      * Return the file of the data.
@@ -144,20 +152,6 @@ public interface StreamViewer {
      */
     void setCurrentTime(long time);
 
-    /**
-     * @return Custom track painter implementation. Must not return null.
-     * Plugins that do not have a custom track painter implementation should
-     * return {@link DefaultTrackPainter}.
-     */
-    TrackPainter getTrackPainter();
-
-    /**
-     * Read settings from the given input stream, as older Datavyu project files stored them.
-     *
-     * @param is Input stream to load from.
-     */
-    void loadSettings(InputStream is);
-
     /** @return the volume set for the video, from 0 to 1, including while it is muted by hiding the window */
     float getVolumeLevel();
 
@@ -171,38 +165,10 @@ public interface StreamViewer {
     Dimension getVideoSize();
 
     /**
-     * Adds the given ViewerStateListener to the collection of listeners who
-     * are interested in changes made to the project.
-     * @param vsl The ViewerStateListener to add.
-     */
-    void addViewerStateListener(ViewerStateListener vsl);
-
-    /**
-     * Removes the given ViewerStateListener from the collection of listeners.
-     * @param vsl The listener to remove.
-     */
-    void removeViewerStateListener(ViewerStateListener vsl);
-
-    /**
-     * Used to query the viewer for custom actions.
-     *
-     * @return custom actions.
-     * @see CustomActionsAdapter
-     */
-    CustomActions getCustomActions();
-
-    /**
      * Unload all data, to prepare for being closed. Essentially the opposite
      * of setSourceFile. Call to reduce the data viewer to a low-resource state.
      */
     void close();
-
-    /**
-     * Did we assume the frames per second start back rate?
-     *
-     * @return True if we assumed the playback rate; otherwise false.
-     */
-    boolean isAssumedFramesPerSecond();
 
     boolean isStepEnabled();
 

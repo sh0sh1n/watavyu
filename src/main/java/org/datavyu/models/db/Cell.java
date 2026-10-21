@@ -192,4 +192,17 @@ public interface Cell {
      * @return
      */
     boolean isPastTimeWindow(long time);
+
+    /**
+     * @return what a media column's cell plays, or null for an annotation column's cell
+     */
+    MediaClip getClip();
+
+    /**
+     * Changes what a media column's cell plays, as when its file opens and says how long it is. The offset follows.
+     *
+     * @param clip what the cell plays
+     * @throws IllegalStateException if this is an annotation column's cell
+     */
+    void setClip(MediaClip clip);
 }

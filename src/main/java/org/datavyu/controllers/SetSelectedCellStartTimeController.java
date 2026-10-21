@@ -52,6 +52,10 @@ public class SetSelectedCellStartTimeController {
         }
 
         for (Cell cell : selectedCells) {
+            // A locked media column's clips do not move, so there is nothing to record.
+            if (cell.getClip() != null && cell.getVariable().isLocked()) {
+                continue;
+            }
             // record the effect
             UndoableEdit edit = new ChangeOnsetCellEdit(cell, cell.getOnset(), milliseconds, Granularity.FINEGRAINED);
             Datavyu.getView().getUndoSupport().postEdit(edit);

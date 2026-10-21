@@ -14,70 +14,42 @@
  */
 package org.datavyu.plugins;
 
-import net.miginfocom.swing.MigLayout;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.Datavyu;
-import org.datavyu.controllers.component.MixerController;
-import org.datavyu.controllers.component.TracksEditorController;
 import org.datavyu.models.Identifier;
-import org.datavyu.models.component.TrackModel;
 import org.datavyu.util.ClockTimer;
 import org.datavyu.util.ClockTimer.ClockListener;
 import org.datavyu.views.WindowPlacement;
 import org.datavyu.views.DatavyuDialog;
-import org.datavyu.views.component.DefaultTrackPainter;
-import org.datavyu.views.component.TrackPainter;
 
 import javax.swing.*;
-import javax.swing.event.ChangeEvent;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Properties;
+import java.util.function.Consumer;
 
 /**
- * This dialog supports basic viewing operations that all video viewers have in common. These are
- *   - controlling the volume,
- *   - resizing the display, and
- *   - controls the video stream.
+ * What all media players have in common: a clip's place on the timeline (its offset), its volume, and following the
+ * clock. A clip plays from its offset for its duration, and only while it is in play in its media column.
  */
 public abstract class StreamViewerDialog extends DatavyuDialog implements StreamViewer,
     ClockListener {
 
-    /** Text for volume icon */
-    private static final String VOLUME_TOOLTIP = "Change volume";
-
-    /** Text for resize icon */
-    private static final String RESIZE_TOOLTIP = "Resize video";
-
     /** Logger for this class */
     private static Logger logger = LogManager.getLogger(StreamViewerDialog.class);
 
-    /** Icon for volume slider */
-    private final ImageIcon volumeIcon = new ImageIcon(getClass().getResource("/icons/volume.png"));
-
-    /** Icon for when volume is muted */
-    private final ImageIcon mutedIcon = new ImageIcon(getClass().getResource("/icons/volume-muted.png"));
-
-    /** Icon for resizing the video */
-    private final ImageIcon resizeIcon = new ImageIcon(getClass().getResource("/icons/resize.png"));
-
-    /** List of listeners interested in changes made to the project */
-    private final List<ViewerStateListener> viewerListeners = new LinkedList<>();
-
-    /** Volume for start back in dB? */
+    /** The clip's volume, from 0 to 1 */
     protected volatile float volume = 1f;
 
     /** Controls visibility */
     protected volatile boolean isVisible = true;
 
-    /** Did we assume the frames per second? */
-    protected boolean isAssumedFramesPerSecond = false;
+    /** Whether this clip is the one its media column plays at the clock's time. */
+    private volatile boolean inPlay = true;
+
+    /** Shows or hides the window the video is shown in, when that is not this dialog. */
+    private volatile Consumer<Boolean> windowListener;
 
     /** The playback speed */
     protected volatile float playBackRate = 0;
@@ -88,141 +60,45 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     /** The current video file */
     protected File sourceFile;
 
-    /** Volume slider */
-    private JSlider volumeSlider;
-
-    /** Dialog containing volume slider */
-    private JDialog volumeDialog;
-
-    /** Volume button */
-    private JButton volumeButton;
-
-    /** Resize button */
-    private JButton resizeButton;
-
-    /** Custom actions handler */
-    private CustomActions actions = new CustomActionsAdapter() {
-        @Override
-        public AbstractButton getActionButton1() {
-            return volumeButton;
-        }
-
-        @Override
-        public AbstractButton getActionButton2() {
-            return resizeButton;
-        }
-
-        @Override
-        public AbstractButton getActionButton3() {
-            return null;
-        }
-    };
-
-    /** A context menu for resizing the video */
-    private JPopupMenu menuForResize = new JPopupMenu();
-
     /** Identifier of this data viewer */
     private Identifier identifier;
 
-    /** The offset of this stream viewer wrt to the others */
-    // Offset gets updated when the user pushes the bar through 'handleCarriageOffsetChangeEvent' in the VideoController
+    /** Where the clip starts on the timeline, in milliseconds. */
     private volatile long offset;
 
     /**
      * Constructs a base data video viewer.
      */
     public StreamViewerDialog(Identifier identifier, final Frame parent, final boolean modal) {
-
         super(parent, modal);
-
         this.identifier = identifier;
         offset = 0;
-
-        volumeButton = new JButton();
-        volumeButton.setIcon(getVolumeButtonIcon());
-        volumeButton.setBorderPainted(false);
-        volumeButton.setContentAreaFilled(false);
-        volumeButton.setToolTipText(VOLUME_TOOLTIP);
-        volumeButton.addActionListener(e -> handleActionButtonEvent1(e));
-        volumeSlider = new JSlider(JSlider.VERTICAL, 0, 100, 70);
-        volumeSlider.setMajorTickSpacing(10);
-        volumeSlider.setPaintTicks(true);
-        volumeSlider.setName("volumeSlider");
-        volumeSlider.addChangeListener(e -> handleVolumeSliderEvent(e));
-        volumeDialog = new JDialog(parent, false);
-        volumeDialog.setUndecorated(true);
-        volumeDialog.setVisible(false);
-        volumeDialog.setLayout(new MigLayout("", "[center]", ""));
-        volumeDialog.setSize(50, 125);
-        volumeDialog.setName("volumeDialog");
-        volumeDialog.getContentPane().add(volumeSlider, "pushx, pushy");
-        volumeDialog.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(final MouseEvent e) {
-                volumeDialog.setVisible(false);
-            }
-        });
-        volumeDialog.addWindowFocusListener(new WindowAdapter() {
-            @Override
-            public void windowLostFocus(final WindowEvent e) {
-                volumeDialog.setVisible(false);
-            }
-        });
-
-        resizeButton = new JButton();
-        resizeButton.setIcon(resizeIcon);
-        resizeButton.setBorderPainted(false);
-        resizeButton.setContentAreaFilled(false);
-        resizeButton.setToolTipText(RESIZE_TOOLTIP);
-        resizeButton.addActionListener(e -> handleActionButtonEvent2(e));
-        JMenuItem menuItemQuarter = new JMenuItem("25% size");
-        menuItemQuarter.addActionListener(e -> resizeVideo(0.25f));
-        JMenuItem menuItemHalf = new JMenuItem("50% size");
-        menuItemHalf.addActionListener(e -> resizeVideo(0.5f));
-        JMenuItem menuItemThreeQuarters = new JMenuItem("75% size");
-        menuItemThreeQuarters.addActionListener(e -> resizeVideo(0.75f));
-        JMenuItem menuItemFull = new JMenuItem("100% size");
-        menuItemFull.addActionListener(e -> resizeVideo(1.0f));
-        JMenuItem menuItemOneAndHalf = new JMenuItem("150% size");
-        menuItemOneAndHalf.addActionListener(e -> resizeVideo(1.5f));
-        JMenuItem menuItemDouble = new JMenuItem("200% size");
-        menuItemDouble.addActionListener(e -> resizeVideo(2.0f));
-        menuForResize.add(menuItemQuarter);
-        menuForResize.add(menuItemHalf);
-        menuForResize.add(menuItemThreeQuarters);
-        menuForResize.add(menuItemFull);
-        menuForResize.add(menuItemOneAndHalf);
-        menuForResize.add(menuItemDouble);
-        menuForResize.setName("menuForResize");
-
         initComponents();
     }
 
-    private void handleVolumeSliderEvent(final ChangeEvent e) {
-        volume = volumeSlider.getValue() / 100F;
-        setVolume();
-        notifyChange();
-    }
-
     /**
-     * Sets the volume of the movie to the level of the slider bar, or to 0
-     * if the track is hidden from view (this means hiding the track mutes
-     * the volume).
+     * Sets the player's volume to the clip's, or silences it while hidden or out of play.
      */
     protected void setVolume() {
-        setPlayerVolume(isVisible ? volume : 0F);
-        volumeButton.setIcon(getVolumeButtonIcon());
+        applyVolume();
     }
 
-    public void setVolume(float volume) {
-        setPlayerVolume(volume);
+    /** The volume last given to the player, to log changes. */
+    private volatile float appliedVolume = -1;
+
+    private void applyVolume() {
+        float effective = isVisible && inPlay ? volume : 0F;
+        if (effective != appliedVolume) {
+            appliedVolume = effective;
+            logger.info("Volume of " + identifier + " (" + (sourceFile == null ? "" : sourceFile.getName()) + ") is "
+                + effective + (isVisible ? "" : ", hidden") + (inPlay ? "" : ", out of play"));
+        }
+        setPlayerVolume(effective);
     }
 
     protected abstract void setPlayerVolume(float volume);
 
     protected abstract Dimension getOriginalVideoSize();
-
-    protected abstract void setViewerSize(int width, int height);
 
     /**
      * {@inheritDoc}
@@ -240,64 +116,6 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     public abstract long getDuration();
 
     /**
-     * Get the aspect ratio for the images.
-     *
-     * @return Aspect ratio as width/height.
-     */
-    private double getAspectRatio() {
-        return (getOriginalVideoSize() != null) ? (getOriginalVideoSize().getWidth() / getOriginalVideoSize().getHeight()) : 1;
-    }
-
-    @Override
-    public void validate() {
-        super.validate();
-    }
-
-    /**
-     * Resize the video to the desired scale.
-     *
-     * Note, this resize is ONLY used by the zoom functions in the dialog.
-     *
-     * The plugins are responsible for detecting any changes that happen on the window and adjusting their size
-     * accordingly. A resize is NOT handled through this method.
-     *
-     * @param scale The new ratio to scale to, where 1.0 = original size, 2.0 = 200% zoom, etc.
-     */
-    protected void resizeVideo(final float scale) {
-
-        // Resampling is assumed to be done in the plugin
-        int scaleHeight = (int) (getOriginalVideoSize().getHeight() * scale);
-
-        // lock the aspect ratio
-        if (getAspectRatio() > 0.0) {
-            int newWidth = (int) (scaleHeight * getAspectRatio());
-            int newHeight = scaleHeight;
-
-            setViewerSize(newWidth, newHeight);
-        }
-        notifyChange();
-    }
-
-    /**
-     * Set the height of the video.
-     *
-     * @param height
-     */
-    private void setVideoHeight(final int height) {
-
-        // TODO: How can that happen?
-        if (!(getAspectRatio() > 0)) {
-            return;
-        }
-
-        int newWidth = (int) (height * getAspectRatio()) + getInsets().left + getInsets().right;
-        int newHeight = height + getInsets().bottom + getInsets().top;
-
-        setSize(newWidth, newHeight);
-        validate();
-    }
-
-    /**
      * @return The playback startTime of the movie in milliseconds.
      */
     @Override
@@ -311,16 +129,7 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     @Override
     public void setOffset(final long newOffset) {
         logger.info("Set offset of stream viewer with " + identifier + " to " + newOffset);
-        // TODO: This set is communicated to the TrackController (if it does not come from there)
         offset = newOffset;
-    }
-
-    /**
-     * @return The parent JDialog that this data viewer resides within.
-     */
-    @Override
-    public JDialog getParentJDialog() {
-        return this;
     }
 
     /**
@@ -338,18 +147,16 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
         pack();
         invalidate();
 
-        // Each video's window comes back where the user last left a window showing a file of the same name.
+        // Each video's window comes back where the user last left a window showing a file of the same name. The
+        // window is shown by whoever shows the video: in the app, its media column's window shows it instead.
         WindowPlacement.restoreAndTrack(this, getName(), true);
-        setViewerVisible(true);
+        isVisible = true;
 
         if (framesPerSecond == -1) {
             framesPerSecond = getPlayerFramesPerSecond();
-        } // otherwise we loaded it from the settings
+        }
 
         logger.info("Frames per second: " + framesPerSecond);
-
-        // No need to seek to the first frame
-        // The plugins already display the first frame
     }
 
     /**
@@ -379,86 +186,6 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     @Override
     public abstract long getCurrentTime();
 
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public TrackPainter getTrackPainter() {
-        return new DefaultTrackPainter();
-    }
-
-    /**
-     * Shows an interface for toggling the playback volume.
-     *
-     * #handleActionButtonEvent1(java.awt.event.ActionEvent)
-     */
-    private void handleActionButtonEvent1(final ActionEvent event) {
-        // We don't allow volume changes while the track is hidden.
-        if (isVisible) {
-            volumeDialog.setLocation(volumeButton.getLocationOnScreen());
-            volumeDialog.setVisible(true);
-        }
-    }
-
-    private void handleActionButtonEvent2(final ActionEvent event) {
-        if (isVisible) {
-            menuForResize.show(resizeButton.getParent(), resizeButton.getX(), resizeButton.getY());
-        }
-    }
-
-    /**
-     * Notifies listeners about a change
-     */
-    protected void notifyChange() {
-        for (ViewerStateListener listener : viewerListeners) {
-            listener.notifyStateChanged(null, null);
-        }
-    }
-
-    @Override
-
-    public void loadSettings(final InputStream is) {
-        Properties settings = new Properties();
-        try {
-            settings.load(is);
-
-            // TODO: How does this offset get propagated to the TracksEditorController
-            String property = settings.getProperty("offset");
-            if ((property != null) && !property.equals("")) {
-                setOffset(Long.parseLong(property));
-            }
-
-            property = settings.getProperty("volume");
-            if ((property != null) && !property.equals("")) {
-                volumeSlider.setValue((int) (Float.parseFloat(property) * 100));
-            }
-
-            property = settings.getProperty("visible");
-            if ((property != null) && !property.equals("")) {
-                setViewerVisible(Boolean.parseBoolean(property));
-                setVolume();
-            }
-
-            property = settings.getProperty("height");
-            if ((property != null) && !property.equals("")) {
-                setVideoHeight(Integer.parseInt(property));
-            }
-
-            property = settings.getProperty("framesPerSecond");
-            if ((property != null) && !property.equals("")) {
-                framesPerSecond = Float.parseFloat(property);
-            }
-
-            // make Sure that we have a valid FPS
-            // Otherwise seek and jogging won't work
-            if (framesPerSecond <= 0) {
-                framesPerSecond = getPlayerFramesPerSecond();
-            }
-        } catch (IOException e) {
-            logger.error("Error loading settings", e);
-        }
-    }
-
     @Override
     public float getVolumeLevel() {
         return volume;
@@ -467,7 +194,6 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     @Override
     public void setVolumeLevel(final float level) {
         volume = level;
-        volumeSlider.setValue(Math.round(level * 100));
         setVolume();
     }
 
@@ -481,47 +207,20 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
         return getOriginalVideoSize();
     }
 
-    @Override
-    public void addViewerStateListener(final ViewerStateListener vsl) {
-        viewerListeners.add(vsl);
-    }
-
-    @Override
-    public void removeViewerStateListener(final ViewerStateListener vsl) {
-        viewerListeners.remove(vsl);
-    }
-
-    private ImageIcon getVolumeButtonIcon() {
-        return isVisible && (volume > 0) ? volumeIcon : mutedIcon;
-    }
-
     private void initComponents() {
         setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE);
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(final WindowEvent evt) {
-                formWindowClosing(evt);
+                stop();
+                isVisible = false;
+                setVolume();
             }
         });
         pack();
     }
 
-    /**
-     * Action to invoke when the window is hidden.
-     *
-     * @param evt The event that triggered this action.
-     */
-    private void formWindowClosing(final WindowEvent evt) {
-        stop();
-        volumeDialog.setVisible(false);
-        isVisible = false;
-        setVolume();
-    }
-
     protected abstract void cleanUp();
-
-    @Override
-    public CustomActions getCustomActions() { return actions; }
 
     @Override
     public Identifier getIdentifier() { return identifier; }
@@ -530,21 +229,36 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     public void close() {
         stop();
         cleanUp();
-        volumeDialog.dispose();
         dispose();
     }
 
     @Override
     public void setViewerVisible(final boolean isVisible) {
-        setVisible(isVisible);
+        Consumer<Boolean> listener = windowListener;
+        if (listener == null) {
+            setVisible(isVisible);
+        } else {
+            listener.accept(isVisible);
+        }
         this.isVisible = isVisible;
         setVolume();
     }
 
     @Override
+    public void setWindowListener(final Consumer<Boolean> showWindow) {
+        windowListener = showWindow;
+        setVisible(false);
+    }
 
-    public boolean isAssumedFramesPerSecond() {
-        return isAssumedFramesPerSecond;
+    @Override
+    public void setInPlay(final boolean newInPlay) {
+        if (newInPlay != inPlay) {
+            inPlay = newInPlay;
+            applyVolume();
+            if (!inPlay && isPlaying()) {
+                pause();
+            }
+        }
     }
 
     @Override
@@ -560,29 +274,24 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
         // Nothing to do here
     }
 
+    /** @return the clip's own time at a clock time, kept within the clip */
+    private long clipTime(final double clockTime) {
+        return (long) Math.min(Math.max(clockTime - offset, 0), getDuration());
+    }
+
+    /** @return whether a clock time falls within the clip */
+    private boolean holds(final double clockTime) {
+        return clockTime >= offset && clockTime < offset + getDuration();
+    }
+
     @Override
     public boolean isSeekPlaybackEnabled() { return false; }
 
     @Override
     public synchronized void clockSeekPlayback(final double clockTime) {
-        try {
-            MixerController mixerController = Datavyu.getVideoController().getMixerController();
-            TracksEditorController tracksEditorController = mixerController.getTracksEditorController();
-            TrackModel trackModel = tracksEditorController.getTrackModel(getIdentifier());
-            ClockTimer clockTimer = Datavyu.getVideoController().getClockTimer();
-            if (trackModel != null
-                && !clockTimer.isPaused()
-                && isSeekPlaybackEnabled()) {
-                double trackTime = Math.min(Math.max(clockTime - trackModel.getOffset(), 0), trackModel.getDuration());
-                logger.info("Clock Seek Playback is seeking stream "
-                            + getIdentifier()
-                            + " to time: "
-                            + trackTime);
-                setCurrentTime((long) trackTime);
-            }
-
-        } catch (Exception e) {
-            logger.error("Error during seek playback" + e.getMessage());
+        ClockTimer clockTimer = Datavyu.getVideoController().getClockTimer();
+        if (!clockTimer.isPaused() && isSeekPlaybackEnabled()) {
+            setCurrentTime(clipTime(clockTime));
         }
     }
 
@@ -594,29 +303,14 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     @Override
     public synchronized void streamsBoundaryCheck(final double clockTime) {
         try {
-            MixerController mixerController = Datavyu.getVideoController().getMixerController();
-            TracksEditorController tracksEditorController = mixerController.getTracksEditorController();
-            TrackModel trackModel = tracksEditorController.getTrackModel(getIdentifier());
             ClockTimer clockTimer = Datavyu.getVideoController().getClockTimer();
-            if (trackModel != null
-                && !clockTimer.isPaused()
-                && getCurrentTime() != -1) {
-                // Only if in range and not already playing and not in seek playback
-                if (clockTime >= trackModel.getOffset()
-                    && clockTime < trackModel.getDuration() + trackModel.getOffset()
-                    && !isPlaying()
-                    && !isSeekPlaybackEnabled()) {
-                    logger.info("Stream Boundary Starting track: " + getIdentifier()
-                        + " Master Clock at " + clockTime
-                        + " and Streamviewer clock at " + getCurrentTime());
+            if (!clockTimer.isPaused() && getCurrentTime() != -1) {
+                if (inPlay && holds(clockTime) && !isPlaying() && !isSeekPlaybackEnabled()) {
+                    logger.info("Stream Boundary Starting " + getIdentifier() + " at clock " + clockTime);
                     start();
                 }
-                if ((clockTime < trackModel.getOffset()
-                    || clockTime >= trackModel.getDuration() + trackModel.getOffset())
-                    && isPlaying()) {
-                    logger.info("Stream Boundary Stopping track: " + getIdentifier()
-                        + " Master Clock at " + clockTime
-                        + " and Streamviewer clock at " + getCurrentTime());
+                if ((!inPlay || !holds(clockTime)) && isPlaying()) {
+                    logger.info("Stream Boundary Stopping " + getIdentifier() + " at clock " + clockTime);
                     pause();
                 }
             }
@@ -627,51 +321,30 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
 
     @Override
     public synchronized void clockForceSync(double clockTime) {
-        MixerController mixerController = Datavyu.getVideoController().getMixerController();
-        TracksEditorController tracksEditorController = mixerController.getTracksEditorController();
-        TrackModel trackModel = tracksEditorController.getTrackModel(getIdentifier());
-        if (trackModel != null) {
-            double trackTime = Math.min(Math.max(clockTime - trackModel.getOffset(), 0), trackModel.getDuration());
-            // Force a sync only when the time is different
-            if (trackTime != getCurrentTime()) {
-                logger.info("Forced sync stream " + getIdentifier() + " track time: " + trackTime + " milliseconds");
-                setCurrentTime((long) trackTime);
-            }
+        long clipTime = clipTime(clockTime);
+        // Force a sync only when the time is different
+        if (clipTime != getCurrentTime()) {
+            logger.info("Forced sync stream " + getIdentifier() + " to " + clipTime + " milliseconds");
+            setCurrentTime(clipTime);
         }
     }
 
     @Override
     public synchronized void clockPeriodicSync(final double clockTime) {
-        try {
-            MixerController mixerController = Datavyu.getVideoController().getMixerController();
-            TracksEditorController tracksEditorController = mixerController.getTracksEditorController();
-            TrackModel trackModel = tracksEditorController.getTrackModel(getIdentifier());
-            if (trackModel != null
-                && !isSeekPlaybackEnabled()
-                && getCurrentTime() != -1) {
-                double trackTime = Math.min(Math.max(clockTime - trackModel.getOffset(), 0), trackModel.getDuration());
-                double difference = Math.abs(trackTime - getCurrentTime());
-                if (difference >= ClockTimer.SYNC_THRESHOLD) {
-                    logger.info("Sync stream " + getIdentifier() + " track time: " + trackTime + " milliseconds. stream time " + getCurrentTime() + " milliseconds");
-                    setCurrentTime((long) trackTime);
-                }
+        if (!isSeekPlaybackEnabled() && getCurrentTime() != -1) {
+            long clipTime = clipTime(clockTime);
+            if (Math.abs(clipTime - getCurrentTime()) >= ClockTimer.SYNC_THRESHOLD) {
+                logger.info("Sync stream " + getIdentifier() + " to " + clipTime + " milliseconds; it was at "
+                    + getCurrentTime());
+                setCurrentTime(clipTime);
             }
-        } catch (Exception e) {
-            logger.error("Error during periodic sync " + e.getMessage());
         }
     }
 
     @Override
     public synchronized void clockStart(final double clockTime) {
-        logger.info("Start");
-        MixerController mixerController = Datavyu.getVideoController().getMixerController();
-        TracksEditorController tracksEditorController = mixerController.getTracksEditorController();
-        TrackModel trackModel = tracksEditorController.getTrackModel(getIdentifier());
-        // TODO: Ensure that there is a return valuey tying offset/duration directly to the object
-        if (trackModel != null
-                && clockTime >= trackModel.getOffset()
-                && clockTime < mixerController.getMixerModel().getViewportModel().getViewport().getMaxEnd()) {
-            logger.info("Clock Start Starts track: " + getIdentifier() + " at time: " + clockTime);
+        if (inPlay && holds(clockTime)) {
+            logger.info("Clock Start Starts " + getIdentifier() + " at clock " + clockTime);
             start();
         }
     }

@@ -34,7 +34,4 @@ public class FrameRateController {
         return getHighestFrameRate();
     }
 
-    public synchronized boolean isZeroRate() {
-        return Math.abs(getFrameRate()) <= Math.ulp(1.0);
-    }
 }

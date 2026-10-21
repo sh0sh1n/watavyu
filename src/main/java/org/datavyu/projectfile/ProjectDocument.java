@@ -99,10 +99,10 @@ public record ProjectDocument(List<Column> columns) {
      * A media file and what Watavyu last read from it. The file wins when they disagree.
      *
      * @param file      the file's path: relative to the project file's folder, or absolute
-     * @param duration  its duration in milliseconds
-     * @param frameRate its nominal frame rate in frames per second
-     * @param width     its width in pixels
-     * @param height    its height in pixels
+     * @param duration  its duration in milliseconds; 0 if unknown
+     * @param frameRate its nominal frame rate in frames per second; 0 if unknown or it has no video
+     * @param width     its width in pixels; 0 if unknown or it has no video
+     * @param height    its height in pixels; 0 if unknown or it has no video
      */
     public record Source(String file, long duration, double frameRate, int width, int height) {
     }

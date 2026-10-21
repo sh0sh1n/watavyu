@@ -19,12 +19,13 @@ import org.apache.logging.log4j.Logger;
 import org.datavyu.models.Identifier;
 import org.datavyu.plugins.StreamViewer;
 
-import javax.swing.ImageIcon;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.Frame;
 import java.io.File;
 import java.io.IOException;
+import java.util.Locale;
+import java.util.List;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
@@ -48,8 +49,12 @@ public final class JavaFxVideoPlugin {
     /** Viewer class written to project files. */
     public static final String VIEWER_CLASS_NAME = JavaFxVideoViewer.class.getName();
 
+    /** The extensions of the media files the player opens: video in MP4, and audio that OpenJFX plays on macOS. */
+    public static final List<String> MEDIA_EXTENSIONS = List.of("mp4", "m4v", "m4a", "mp3", "wav", "aif", "aiff");
+
     /** The files the player opens, for file choosers. */
-    public static final FileFilter VIDEO_FILE_FILTER = new FileNameExtensionFilter("Video files", "mp4", "m4v");
+    public static final FileFilter VIDEO_FILE_FILTER =
+            new FileNameExtensionFilter("Media files", MEDIA_EXTENSIONS.toArray(new String[0]));
 
     /** Frame rate assumed when a file's frame times cannot be read. */
     private static final double FALLBACK_FRAMES_PER_SECOND = 30;
@@ -69,7 +74,10 @@ public final class JavaFxVideoPlugin {
                                     final boolean modal) {
         FxPlaybackEngine engine = FxPlaybackEngine.open(sourceFile, OPEN_TIMEOUT_SECONDS);
         try {
-            FrameIndex frames = readFrames(sourceFile, engine.durationMillis());
+            // Audio has no frames: positions keep to an assumed rate, and frame stepping is off.
+            FrameIndex frames = engine.width() > 0
+                    ? readFrames(sourceFile, engine.durationMillis())
+                    : FrameIndex.assumed(FALLBACK_FRAMES_PER_SECOND, engine.durationMillis());
             return JavaFxToolkit.onEdtAndWait(
                     () -> new JavaFxVideoViewer(identifier, sourceFile, parent, modal, engine, frames));
         } catch (Exception e) {
@@ -82,6 +90,16 @@ public final class JavaFxVideoPlugin {
         }
     }
 
+    /**
+     * @param file a file
+     * @return whether it is media the player opens, judged by its name in any letter case
+     */
+    public static boolean isMediaFile(final File file) {
+        String name = file.getName().toLowerCase(Locale.ROOT);
+        int dot = name.lastIndexOf('.');
+        return dot >= 0 && MEDIA_EXTENSIONS.contains(name.substring(dot + 1));
+    }
+
     static FrameIndex readFrames(final File file, final double durationMillis) {
         try {
             return Mp4FrameTable.read(file);
@@ -90,12 +108,5 @@ public final class JavaFxVideoPlugin {
                     + " fps and disabling frame stepping", e);
             return FrameIndex.assumed(FALLBACK_FRAMES_PER_SECOND, durationMillis);
         }
-    }
-
-    /**
-     * @return The icon shown in a video's track header.
-     */
-    public static ImageIcon trackIcon() {
-        return new ImageIcon(JavaFxVideoPlugin.class.getResource("/icons/video-track.png"));
     }
 }

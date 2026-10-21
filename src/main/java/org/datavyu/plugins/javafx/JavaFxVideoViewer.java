@@ -28,6 +28,7 @@ import org.datavyu.plugins.StreamViewerDialog;
 
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Frame;
 import java.awt.GraphicsEnvironment;
@@ -45,6 +46,10 @@ public final class JavaFxVideoViewer extends StreamViewerDialog {
     /** New windows take at most this fraction of the screen width. */
     private static final double INITIAL_MAX_SCREEN_FRACTION = 0.5;
 
+    /** The size of a new window for media without video. */
+    private static final int AUDIO_WIDTH = 480;
+    private static final int AUDIO_HEIGHT = 270;
+
     private final FxPlaybackEngine engine;
     private final JavaFxPlayback playback;
     private final JFXPanel panel = new JFXPanel();
@@ -54,7 +59,6 @@ public final class JavaFxVideoViewer extends StreamViewerDialog {
         super(identifier, parent, modal);
         this.engine = engine;
         this.playback = new JavaFxPlayback(engine, frames, Platform::runLater);
-        this.isAssumedFramesPerSecond = !frames.isMeasured();
         playback.setErrorHandler(error -> SwingUtilities.invokeLater(() -> showPlaybackError(error)));
 
         panel.setPreferredSize(initialSize());
@@ -82,6 +86,10 @@ public final class JavaFxVideoViewer extends StreamViewerDialog {
     }
 
     private Dimension initialSize() {
+        if (engine.width() <= 0 || engine.height() <= 0) {
+            // Audio has no picture: a black window of a usual size.
+            return new Dimension(AUDIO_WIDTH, AUDIO_HEIGHT);
+        }
         Rectangle screen = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds();
         double scale = Math.min(1.0, INITIAL_MAX_SCREEN_FRACTION * screen.width / engine.width());
         return new Dimension((int) (engine.width() * scale), (int) (engine.height() * scale));
@@ -103,10 +111,15 @@ public final class JavaFxVideoViewer extends StreamViewerDialog {
         return new Dimension(engine.width(), engine.height());
     }
 
+    /** @return the JavaFX player's own volume and status, as {@code "1.0 PLAYING"}, for tests */
+    String playerState() throws Exception {
+        return JavaFxToolkit.onFx(() -> engine.player().getVolume() + " " + engine.player().getStatus()
+                + (engine.player().isMute() ? " muted" : "")).get();
+    }
+
     @Override
-    protected void setViewerSize(final int width, final int height) {
-        panel.setPreferredSize(new Dimension(width, height));
-        pack();
+    public Component getVideoComponent() {
+        return panel;
     }
 
     @Override

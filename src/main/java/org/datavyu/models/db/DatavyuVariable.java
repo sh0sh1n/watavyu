@@ -46,6 +46,8 @@ public final class DatavyuVariable implements Variable {
     private String name;
     private int orderIndex = -1;
     private DatavyuDataStore owningDatastore;
+    private boolean media;
+    private boolean locked;
 
     /**
      * Default constructor.
@@ -54,26 +56,15 @@ public final class DatavyuVariable implements Variable {
 
     /**
      * Constructor.
-     *
-     * @param name The name to use for the variable being constructed.
-     * @param type The type to use for the variable being constructed.
-     */
-    public DatavyuVariable(String name, Argument type) throws UserWarningException {
-        this(name, type, false, null);
-    }
-
-    /**
-     * Constructor.
-     *
      * @param name          The name to use for the variable being constructed.
-     * @param type          The type to use for the variable being constructed.
+     * @param type          The codes of the variable; a media column has none.
      * @param grandfathered Flag to exempt variable from naming rules.
      * @param dds           The datastore to which this variable belongs
+     * @param media         Whether this is a media column
      */
-    public DatavyuVariable(String name,
-                           Argument type,
-                           boolean grandfathered,
-                           DatavyuDataStore dds) throws UserWarningException {
+    DatavyuVariable(String name, Argument type, boolean grandfathered, DatavyuDataStore dds, boolean media)
+            throws UserWarningException {
+        this.media = media;
         owningDatastore = dds;
         this.setName(name, grandfathered);
         this.setRootNode(type);
@@ -123,6 +114,9 @@ public final class DatavyuVariable implements Variable {
 
     @Override
     public Cell createCell() {
+        if (media) {
+            throw new IllegalStateException("The cells of media column " + name + " are clips");
+        }
         Cell c = new DatavyuCell(this, this.getRootNode());
 
         cells.add(c);
@@ -133,6 +127,38 @@ public final class DatavyuVariable implements Variable {
 
         owningDatastore.markAsChanged();
         return c;
+    }
+
+    @Override
+    public Cell createClip(final long onset, final MediaClip clip) {
+        if (!media) {
+            throw new IllegalStateException("Annotation column " + name + " has no clips");
+        }
+        Cell c = new DatavyuCell(this, this.getRootNode(), onset, clip);
+        cells.add(c);
+        for (VariableListener vl : getListeners(getID())) {
+            vl.cellInserted(c);
+        }
+        owningDatastore.markAsChanged();
+        return c;
+    }
+
+    @Override
+    public boolean isMedia() {
+        return media;
+    }
+
+    @Override
+    public boolean isLocked() {
+        return locked;
+    }
+
+    @Override
+    public void setLocked(final boolean newLocked) {
+        if (media && newLocked != locked) {
+            locked = newLocked;
+            owningDatastore.markAsChanged();
+        }
     }
 
     @Override

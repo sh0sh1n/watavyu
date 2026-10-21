@@ -64,10 +64,10 @@ final class ProjectRules {
             require(clip.volume() >= 0 && clip.volume() <= 1, clipAt + ".settings.volume", "must be from 0 to 1");
             require(source.file() != null && !source.file().isEmpty(), clipAt + ".source.file", "must not be empty");
             require(source.duration() >= 0, clipAt + ".source.duration", "must not be negative");
-            require(Double.isFinite(source.frameRate()) && source.frameRate() > 0, clipAt + ".source.frameRate",
-                "must be more than 0");
-            require(source.width() > 0, clipAt + ".source.width", "must be more than 0");
-            require(source.height() > 0, clipAt + ".source.height", "must be more than 0");
+            require(Double.isFinite(source.frameRate()) && source.frameRate() >= 0, clipAt + ".source.frameRate",
+                "must not be negative");
+            require(source.width() >= 0, clipAt + ".source.width", "must not be negative");
+            require(source.height() >= 0, clipAt + ".source.height", "must not be negative");
             try {
                 Math.addExact(clip.onset(), source.duration());
             } catch (ArithmeticException e) {

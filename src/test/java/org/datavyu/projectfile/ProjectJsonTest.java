@@ -188,6 +188,45 @@ public class ProjectJsonTest {
             List.of(-50L, 50L));
     }
 
+    /**
+     * What a clip's media file says is known only once it has opened, and an audio file has no size or frame rate:
+     * a detail never given is left out, and a clip without a known duration has no offset.
+     */
+    @Test
+    public void aClipsUnknownDetailsAreLeftOut() throws Exception {
+        ProjectDocument document = new ProjectDocument(List.of(new MediaColumn("V", false, false, List.of(
+            new Clip(2_000, 1, new Source("never-opened.mp4", 0, 0, 0, 0)),
+            new Clip(9_000, 1, new Source("voice.m4a", 5_000, 0, 0, 0))))));
+
+        String json = ProjectJson.toJson(document);
+
+        assertEquals(json.substring(json.indexOf("\"cells\"")), """
+            "cells": [
+                    {
+                      "onset": "00:00:02:000",
+                      "settings": { "volume": 1 },
+                      "source": {
+                        "file": "never-opened.mp4"
+                      }
+                    },
+                    {
+                      "onset": "00:00:09:000",
+                      "offset": "00:00:14:000",
+                      "settings": { "volume": 1 },
+                      "source": {
+                        "file": "voice.m4a",
+                        "duration": "00:00:05:000"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+            """);
+        assertEquals(read(json), document);
+        assertEquals(schemaErrors(json), List.of());
+    }
+
     @DataProvider
     public Object[][] invalidFiles() {
         // what is wrong, where the reader reports it, whether the schema also catches it, the file
@@ -234,6 +273,12 @@ public class ProjectJsonTest {
                 change("\"frameRate\": 30", "\"frameRate\": 0")},
             {"fractional width", "columns[1].cells[0].source.width", true,
                 change("\"width\": 640", "\"width\": 640.5")},
+            {"zero width", "columns[1].cells[0].source.width", true,
+                change("\"width\": 640", "\"width\": 0")},
+            {"offset without a duration", "columns[1].cells[0].offset", false,
+                change("\"duration\": \"00:00:10:000\", ", "")},
+            {"duration without an offset", "\"offset\" is missing", false,
+                change("\"offset\": \"00:00:10:000\",\n", "")},
             {"empty file", "columns[1].cells[0].source.file", true,
                 change("\"file\": \"a.mp4\"", "\"file\": \"\"")},
             {"missing file", "\"file\" is missing", true,

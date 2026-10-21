@@ -86,7 +86,8 @@ public final class MatrixRootView extends JTextArea implements FocusListener {
                    @Override
                    public void keyPressed(KeyEvent e) {
                        if ((Character.isLetter(e.getKeyChar()) || Character.isDigit(e.getKeyChar())
-                               || Character.isSpaceChar(e.getKeyChar())) && !e.isAltDown() && !e.isControlDown() && !e.isMetaDown()) {
+                               || Character.isSpaceChar(e.getKeyChar())) && !e.isAltDown() && !e.isControlDown() && !e.isMetaDown()
+                               && edTracker.getCurrentEditor().isEditable()) {
                            UndoableEdit edit = new ChangeValCellEdit(parentCell, oldValue, ChangeCellEdit.Granularity.FINEGRAINED);
                            Datavyu.getView().getUndoSupport().postEdit(edit);
                        }

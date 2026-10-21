@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Watavyu project",
-  "description": "A Watavyu project file (.watavyu.json): a spreadsheet of annotation columns and media columns. Rules this schema cannot express, which Watavyu also enforces: column names are unique; a coded cell has one value per code of its column; a video cell's offset is its onset plus its source's duration.",
+  "description": "A Watavyu project file (.watavyu.json): a spreadsheet of annotation columns and media columns. Rules this schema cannot express, which Watavyu also enforces: column names are unique; a coded cell has one value per code of its column; a clip has an offset exactly when its source has a duration, and the offset is the onset plus that duration.",
   "type": "object",
   "additionalProperties": false,
   "required": ["format", "version", "columns"],
@@ -105,11 +105,11 @@
       "description": "A media clip. It may start before time zero, when a recording began before the annotated session (a stopgap while the video controller window exists; see AGENTS.md).",
       "type": "object",
       "additionalProperties": false,
-      "required": ["onset", "offset", "settings", "source"],
+      "required": ["onset", "settings", "source"],
       "properties": {
         "onset": { "$ref": "#/$defs/signedTime" },
         "offset": {
-          "description": "The onset plus the source's duration. Written for readers; it cannot be set.",
+          "description": "The onset plus the source's duration, present exactly when the duration is. Written for readers; it cannot be set.",
           "$ref": "#/$defs/signedTime"
         },
         "settings": {
@@ -121,10 +121,10 @@
           }
         },
         "source": {
-          "description": "The media file and what Watavyu last read from it. The file wins when they disagree.",
+          "description": "The media file and what Watavyu last read from it. The file wins when they disagree. A detail the file has never given (it has not opened, or it has no video) is left out.",
           "type": "object",
           "additionalProperties": false,
-          "required": ["file", "duration", "frameRate", "width", "height"],
+          "required": ["file"],
           "properties": {
             "file": {
               "description": "The file's path: relative to the folder holding the project file, or absolute. Separators are /.",

@@ -306,6 +306,11 @@ public final class EditorTracker
 
     @Override
     public void keyTyped(KeyEvent e) {
+        // A cell with nothing to edit, such as a media clip or a column with no codes, refuses typing.
+        if (!currentEditor.isEditable()) {
+            e.consume();
+            return;
+        }
         // Key stroke is NOT delete or backspace - handle this within the crazy
         // editors - otherwise we assume this has been handled by keyPressed.
         if (!((e.getKeyChar() == '\u007F') || (e.getKeyChar() == '\u0008'))) {
@@ -326,6 +331,10 @@ public final class EditorTracker
                 break;
 
             case KeyEvent.VK_BACK_SPACE:
+                if (!currentEditor.isEditable()) {
+                    e.consume();
+                    break;
+                }
                 if (!gotKeyUp) {
                     resetEditorText();
                 }
@@ -335,6 +344,10 @@ public final class EditorTracker
                 break;
 
             case KeyEvent.VK_DELETE:
+                if (!currentEditor.isEditable()) {
+                    e.consume();
+                    break;
+                }
                 if (!gotKeyUp) {
                     resetEditorText();
                 }

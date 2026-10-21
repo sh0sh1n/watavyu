@@ -25,7 +25,6 @@ public class TracksControllerEvent extends EventObject {
     private static final long serialVersionUID = 6049024296868823563L;
 
     public enum EventType {
-        CARRIAGE_EVENT, /** @see CarriageEvent */
         TIMESCALE_EVENT, /** @see TimescaleEvent */
     }
 

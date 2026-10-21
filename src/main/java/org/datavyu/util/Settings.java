@@ -166,6 +166,17 @@ public final class Settings {
     }
 
     /**
+     * @return Whether playback stops at the end of the last media clip; true unless turned off.
+     */
+    public synchronized boolean isStopAtEndOfMedia() {
+        return data.stopAtEndOfMedia;
+    }
+
+    public synchronized void setStopAtEndOfMedia(final boolean stop) {
+        data.stopAtEndOfMedia = stop;
+    }
+
+    /**
      * @param window The window's key, see {@link org.datavyu.views.WindowPlacement}.
      * @return The window's bounds when it was last moved or resized.
      */
@@ -191,6 +202,7 @@ public final class Settings {
         String lastChosenDirectory;
         List<String> recentProjects = new ArrayList<>();
         Map<String, Bounds> windows = new LinkedHashMap<>();
+        boolean stopAtEndOfMedia = true;
 
         /** Replaces null collections from a hand-edited file, so callers never see null. */
         Data normalized() {

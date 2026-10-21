@@ -14,14 +14,9 @@
  */
 package org.datavyu.util;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.io.filefilter.FileFilterUtils;
-import org.apache.commons.io.filefilter.IOFileFilter;
-import org.apache.commons.io.filefilter.TrueFileFilter;
 
 import java.io.File;
-import java.util.Iterator;
 
 
 /**
@@ -169,41 +164,6 @@ public final class FileSystemUtils {
         }
         // 5. Combine the relative path with the current base dir and return that as the file to try.
         return new File(newBase, rel);
-    }
-
-    /**
-     * We search for a file first in the directory, second in all sub-directories, and third in all sub-directories
-     * of the parent directory.
-     *
-     * @param directory The directory to search in
-     * @param fileName The file name
-     *
-     * @return null if not found and otherwise the file with the directory path
-     */
-    public static File searchForFile(final File directory, final String fileName) {
-        // Solution 1: It is in the same directory as the project file.
-        File file = new File(directory, fileName);
-        if (file.exists()) {
-            return file;
-        }
-        // Solution 2: It is in a sub-directory of the project file.
-        IOFileFilter fileNameFilter = FileFilterUtils.nameFileFilter(fileName);
-        Iterator<File> subFiles = FileUtils.iterateFiles(directory, fileNameFilter, TrueFileFilter.TRUE);
-        if (subFiles.hasNext()) {
-            file = subFiles.next();
-        }
-        if (file.exists()) {
-            return file;
-        }
-        // Solution 3: It is in the parent of the current directory.
-        subFiles = FileUtils.iterateFiles(directory.getParentFile(), fileNameFilter,null);
-        if (subFiles.hasNext()) {
-            file = subFiles.next();
-        }
-        if (file.exists()) {
-            return file;
-        }
-        return null;
     }
 
     /**

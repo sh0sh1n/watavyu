@@ -2,9 +2,17 @@ package org.datavyu.views;
 
 import static org.testng.Assert.assertEquals;
 
+import org.datavyu.views.discrete.layouts.SheetLayoutFactory;
+import org.datavyu.views.discrete.layouts.SheetLayoutFactory.SheetLayoutType;
 import org.testng.annotations.Test;
 
 public class DatavyuViewTest {
+
+    /** F4: spreadsheets open in temporal layout, so media clips line up with the cells coded from them. */
+    @Test
+    public void spreadsheetsOpenInTemporalLayout() {
+        assertEquals(SheetLayoutFactory.DEFAULT_LAYOUT, SheetLayoutType.WeakTemporal);
+    }
 
     @Test
     public void theTitleNamesTheApplicationAndTheProject() {

@@ -27,6 +27,7 @@ import org.datavyu.event.component.FileDropEvent;
 import org.datavyu.event.component.FileDropEventListener;
 import org.datavyu.models.db.*;
 import org.datavyu.plugins.StreamViewer;
+import org.datavyu.plugins.javafx.JavaFxVideoPlugin;
 import org.datavyu.projectfile.ProjectDocument;
 import org.datavyu.projectfile.ProjectPaths;
 import org.datavyu.undoableedits.RemoveCellEdit;
@@ -38,6 +39,7 @@ import org.datavyu.util.FileFilters.*;
 import org.datavyu.views.discrete.SpreadSheetPanel;
 import org.datavyu.views.discrete.SpreadsheetTheme;
 import org.datavyu.views.discrete.SpreadsheetColumn;
+import org.datavyu.views.discrete.layouts.SheetLayoutFactory;
 import org.datavyu.views.discrete.layouts.SheetLayoutFactory.SheetLayoutType;
 
 import javax.swing.*;
@@ -53,6 +55,7 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -434,7 +437,10 @@ public final class DatavyuView implements FileDropEventListener {
     }
 
     public void toggleHighlightAndFocusMode() {
-        Datavyu.getVideoController().getMixerController().enableHighlightAndFocusHandler(null);
+        Datavyu.getVideoController().toggleCellHighlightingAutoFocus();
+        if (Datavyu.getProjectController().getSpreadSheetPanel() != null) {
+            Datavyu.getProjectController().getSpreadSheetPanel().redrawCells();
+        }
         actions.get(HIGHLIGHT_AND_FOCUS).putValue(Action.NAME,
                 highlightAndFocusText(Datavyu.getVideoController().getCellHighlightAndFocus()));
     }
@@ -807,16 +813,50 @@ public final class DatavyuView implements FileDropEventListener {
      */
     @Override
     public void filesDropped(final FileDropEvent evt) {
+        // Media dropped on the spreadsheet joins the project; anything else opens as a project.
+        List<File> media = new ArrayList<>();
+        List<File> projects = new ArrayList<>();
+        for (File file : evt.getFiles()) {
+            (JavaFxVideoPlugin.isMediaFile(file) ? media : projects).add(file);
+        }
+        addMediaFiles(media);
 
-        if (!Datavyu.getApplication().safeQuit()) {
+        if (projects.isEmpty() || !Datavyu.getApplication().safeQuit()) {
             return;
         }
 
         DatavyuFileChooser fileChooser = new DatavyuFileChooser();
         fileChooser.setVisible(false);
 
-        for (File file : evt.getFiles()) {
+        for (File file : projects) {
             open(file);
+        }
+    }
+
+
+    /**
+     * Action for adding media: chooses media files and adds them, as clips at the current time when one media column
+     * is selected, or each as a new media column.
+     */
+    public void addMedia() {
+        DatavyuFileChooser chooser = new DatavyuFileChooser();
+        chooser.setMultiSelectionEnabled(true);
+        chooser.addChoosableFileFilter(JavaFxVideoPlugin.VIDEO_FILE_FILTER);
+        chooser.setFileFilter(JavaFxVideoPlugin.VIDEO_FILE_FILTER);
+        if (chooser.showOpenDialog(getFrame()) == JFileChooser.APPROVE_OPTION) {
+            addMediaFiles(List.of(chooser.getSelectedFiles()));
+        }
+    }
+
+    private void addMediaFiles(final List<File> files) {
+        if (files.isEmpty() || panel.getMediaPlayers() == null) {
+            return;
+        }
+        try {
+            panel.getMediaPlayers().addMediaFiles(files, panel.getVideoController().getCurrentTime());
+        } catch (UserWarningException e) {
+            logger.error("Unable to add media", e);
+            Datavyu.getApplication().showWarningDialog(e.getMessage());
         }
     }
 
@@ -1225,6 +1265,7 @@ public final class DatavyuView implements FileDropEventListener {
         action(r.getString("exportByFrameMenuItem.text"), this::exportFileByFrame);
 
         action(r.getString("newColumnMenuItem.text"), this::showNewVariableForm);
+        action(r.getString("addMediaMenuItem.text"), this::addMedia);
         action(r.getString("columnListMenuItem.text"), this::showVariableList);
         action(r.getString("codeEditorMenuItem.text"), this::showVocabEditor);
         action(r.getString("newCellMenuItem.text"), this::newCell);
@@ -1426,6 +1467,7 @@ public final class DatavyuView implements FileDropEventListener {
             }
         });
         spreadsheetMenu.add(item("newColumnMenuItem.text"));
+        spreadsheetMenu.add(item("addMediaMenuItem.text"));
         spreadsheetMenu.add(item("columnListMenuItem.text"));
         spreadsheetMenu.add(item("codeEditorMenuItem.text"));
         spreadsheetMenu.addSeparator();
@@ -1449,6 +1491,7 @@ public final class DatavyuView implements FileDropEventListener {
         weakTemporalAlignmentMenuItem = withAccelerator(
                 new JCheckBoxMenuItem(command("weakTemporalAlignmentMenuItem.text")),
                 command("weakTemporalAlignmentMenuItem.text"));
+        weakTemporalAlignmentMenuItem.setSelected(SheetLayoutFactory.DEFAULT_LAYOUT == SheetLayoutType.WeakTemporal);
         spreadsheetMenu.add(weakTemporalAlignmentMenuItem);
         JMenu zoomMenu = new JMenu(resources.getString("zoomMenu.text"));
         zoomMenu.add(item("zoomInMenuItem.text"));

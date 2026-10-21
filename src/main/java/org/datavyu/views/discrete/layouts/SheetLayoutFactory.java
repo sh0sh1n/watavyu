@@ -35,6 +35,9 @@ public final class SheetLayoutFactory {
         WeakTemporal
     }
 
+    /** How a spreadsheet is laid out until the user changes it: in time, so clips line up with what they show. */
+    public static final SheetLayoutType DEFAULT_LAYOUT = SheetLayoutType.WeakTemporal;
+
     /**
      * Creates the SheetLayout requested by type.
      * @param type Type of layout to create.
