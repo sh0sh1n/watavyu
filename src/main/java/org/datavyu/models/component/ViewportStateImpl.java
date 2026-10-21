@@ -119,15 +119,6 @@ public final class ViewportStateImpl implements ViewportState {
         return getZoomSettingFor(getResolution());
     }
 
-    private double getMillisecondsPerPixelFor(final double zoomSettingValue) {
-        double value = (lowerMsPerPixel()
-                * Math.exp(
-                Math.log(upperMsPerPixel() / lowerMsPerPixel())
-                        * (1.0 - zoomSettingValue)));
-
-        return Math.min(Math.max(value, lowerMsPerPixel()), upperMsPerPixel());
-    }
-
     /**
      * @return Lower bound on the number of milliseconds per pixel.
      */

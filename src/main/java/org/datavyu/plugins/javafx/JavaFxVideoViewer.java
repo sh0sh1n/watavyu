@@ -59,7 +59,6 @@ public final class JavaFxVideoViewer extends StreamViewerDialog {
         super(identifier, parent, modal);
         this.engine = engine;
         this.playback = new JavaFxPlayback(engine, frames, Platform::runLater);
-        this.isAssumedFramesPerSecond = !frames.isMeasured();
         playback.setErrorHandler(error -> SwingUtilities.invokeLater(() -> showPlaybackError(error)));
 
         panel.setPreferredSize(initialSize());

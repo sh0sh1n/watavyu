@@ -170,13 +170,6 @@ public interface StreamViewer {
      */
     void close();
 
-    /**
-     * Did we assume the frames per second start back rate?
-     *
-     * @return True if we assumed the playback rate; otherwise false.
-     */
-    boolean isAssumedFramesPerSecond();
-
     boolean isStepEnabled();
 
     boolean isSeekPlaybackEnabled();

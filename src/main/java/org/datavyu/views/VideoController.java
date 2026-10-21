@@ -1240,7 +1240,8 @@ public final class VideoController extends DatavyuDialog
             Long steppedTime = null;
             for (StreamViewer streamViewer : streamViewers) {
                 if (streamViewer.isStepEnabled()
-                    && streamViewer.getFramesPerSecond() == frameRate) {
+                    && streamViewer.getFramesPerSecond() == frameRate
+                    && holds(streamViewer, clockTime)) {
                     streamViewer.stepBackward();
                     if (steppedTime == null) {
                         steppedTime = streamViewer.getCurrentTime() + streamViewer.getOffset();
@@ -1268,6 +1269,14 @@ public final class VideoController extends DatavyuDialog
 
             updateCurrentTimeLabelAndNeedle(newTime);
         }
+    }
+
+    /**
+     * @return whether a clip plays at a clock time; only such a clip steps by frame when jogging, so the clock follows
+     * the clip shown rather than another in the same column
+     */
+    static boolean holds(final StreamViewer clip, final long clockTime) {
+        return clockTime >= clip.getOffset() && clockTime < clip.getOffset() + clip.getDuration();
     }
 
     /** Frames per second jogging steps by when no media with video is open. */
@@ -1327,7 +1336,8 @@ public final class VideoController extends DatavyuDialog
             Long steppedTime = null;
             for (StreamViewer streamViewer : streamViewers) {
                 if (streamViewer.isStepEnabled()
-                        && streamViewer.getFramesPerSecond() == frameRate) {
+                        && streamViewer.getFramesPerSecond() == frameRate
+                        && holds(streamViewer, clockTime)) {
                     streamViewer.stepForward();
                     if (steppedTime == null) {
                         steppedTime = streamViewer.getCurrentTime() + streamViewer.getOffset();

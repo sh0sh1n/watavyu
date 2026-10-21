@@ -51,9 +51,6 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     /** Shows or hides the window the video is shown in, when that is not this dialog. */
     private volatile Consumer<Boolean> windowListener;
 
-    /** Did we assume the frames per second? */
-    protected boolean isAssumedFramesPerSecond = false;
-
     /** The playback speed */
     protected volatile float playBackRate = 0;
 
@@ -262,11 +259,6 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
                 pause();
             }
         }
-    }
-
-    @Override
-    public boolean isAssumedFramesPerSecond() {
-        return isAssumedFramesPerSecond;
     }
 
     @Override

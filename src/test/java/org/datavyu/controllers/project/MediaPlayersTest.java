@@ -56,6 +56,7 @@ public class MediaPlayersTest {
         Object showing;
         Double volume;
         DoubleConsumer volumeListener;
+        Runnable closeListener;
         boolean visible;
         boolean closed;
 
@@ -78,6 +79,11 @@ public class MediaPlayersTest {
         @Override
         public void setVolumeListener(final DoubleConsumer listener) {
             volumeListener = listener;
+        }
+
+        @Override
+        public void setCloseListener(final Runnable listener) {
+            closeListener = listener;
         }
 
         @Override
@@ -472,5 +478,59 @@ public class MediaPlayersTest {
         assertNull(window.volume);
         window.volumeListener.accept(0.1);
         assertEquals(first.getClip().volume(), MediaClip.DEFAULT_VOLUME);
+    }
+
+    /** A hidden column's clips are out of play, so they stay silent whatever else shows their players. */
+    @Test
+    public void aHiddenColumnsClipsAreOutOfPlay() throws Exception {
+        Variable media = dataStore.createMediaVariable("media_1");
+        Cell clip = addClip(media, 0, "a.mp4");
+        StreamViewer player = players.getPlayer(clip);
+
+        media.setHidden(true);
+        players.clockPeriodicSync(1_000);
+        verify(player, org.mockito.Mockito.atLeastOnce()).setInPlay(false);
+
+        media.setHidden(false);
+        org.mockito.Mockito.clearInvocations(player);
+        players.clockPeriodicSync(1_000);
+        verify(player).setInPlay(true);
+    }
+
+    @Test
+    public void closingAMediaWindowHidesItsColumn() throws Exception {
+        Variable media = dataStore.createMediaVariable("media_1");
+        addClip(media, 0, "a.mp4");
+
+        windows.get(media).closeListener.run();
+
+        assertTrue(media.isHidden());
+    }
+
+    /** A clip deleted and restored with undo while its player opens ends up with one player, the later one. */
+    @Test
+    public void aClipRestoredWhileOpeningGetsOnePlayer() throws Exception {
+        List<Runnable> pending = new ArrayList<>();
+        doAnswer(call -> {
+            StreamViewer player = player(call.getArgument(0), call.getArgument(1));
+            Consumer<StreamViewer> before = call.getArgument(2);
+            Consumer<StreamViewer> after = call.getArgument(3);
+            pending.add(() -> {
+                before.accept(player);
+                after.accept(player);
+                opened.add(player);
+            });
+            return null;
+        }).when(videoController).openStream(any(), any(), any(), any(), any());
+        Variable media = dataStore.createMediaVariable("media_1");
+        Cell clip = addClip(media, 0, "a.mp4");
+
+        media.removeCell(clip);
+        media.addCell(clip);
+        pending.forEach(Runnable::run);
+
+        assertEquals(opened.size(), 2);
+        verify(videoController).shutdown(opened.get(0).getIdentifier(), false);
+        assertSame(players.getPlayer(clip), opened.get(1));
     }
 }

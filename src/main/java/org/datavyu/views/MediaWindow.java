@@ -13,6 +13,8 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Frame;
 import java.awt.Point;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.DoubleConsumer;
@@ -50,6 +52,8 @@ public final class MediaWindow extends JDialog implements MediaPlayers.ColumnWin
 
     private DoubleConsumer volumeListener = level -> { };
 
+    private Runnable closeListener = () -> { };
+
     /**
      * @param owner  the main window
      * @param column the media column's name, which titles the window and keys where it is put back
@@ -76,6 +80,12 @@ public final class MediaWindow extends JDialog implements MediaPlayers.ColumnWin
         controls.add(volume, BorderLayout.CENTER);
         getContentPane().add(controls, BorderLayout.SOUTH);
         setDefaultCloseOperation(HIDE_ON_CLOSE);
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(final WindowEvent e) {
+                closeListener.run();
+            }
+        });
         if (!WindowPlacement.restoreAndTrack(this, getName(), true)) {
             // Below and to the right of the media windows already open, so none hides another.
             Point origin = owner == null ? new Point(0, 0) : owner.getLocation();
@@ -126,6 +136,11 @@ public final class MediaWindow extends JDialog implements MediaPlayers.ColumnWin
     @Override
     public void setVolumeListener(final DoubleConsumer listener) {
         volumeListener = listener;
+    }
+
+    @Override
+    public void setCloseListener(final Runnable listener) {
+        closeListener = listener;
     }
 
     /** @return the volume control, for tests */

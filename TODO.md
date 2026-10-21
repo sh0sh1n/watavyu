@@ -11,15 +11,15 @@ Items are in priority order within each section.
 
 ## Measures
 
-Updated 2026-10-20. Re-measure with the commands in [BUILDING.md › Analysis Reports](BUILDING.md#analysis-reports).
+Updated 2026-10-21. Re-measure with the commands in [BUILDING.md › Analysis Reports](BUILDING.md#analysis-reports).
 
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
 | Java source (main) | 242 files, 42.5k lines | 173 files, 29.2k lines |
-| Tests / line coverage | 113 / 9.9% | 355 / 25.5%; still 0% in most views, the timeline and undo |
+| Tests / line coverage | 113 / 9.9% | 362 / 25.9%; still 0% in most views, the timeline and undo |
 | Runtime dependencies / with known vulnerabilities | 28 / 8 | 12 / 0 |
-| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 691 |
-| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 446 / 71; 16 |
+| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 695 |
+| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 445 / 71; 16 |
 | Never-invoked methods (`dead-code.py`) | 109+ | 13: test-only accessors, and a Swing override the script cannot see |
 | Static global access (`Datavyu.getView()` and friends) | about 330 call sites | 272 |
 
@@ -29,15 +29,17 @@ Updated 2026-10-20. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 **B11. Recovering autosaves needs a dialog, and offers those of a Watavyu still running.** ready, *verified*. At launch, `DatavyuView.checkForAutosavedFile` asks about every `~*.watavyu.json` in the temporary folder: the dialog itself is a chore (owner), and it includes the autosave a running Watavyu is writing, which answering No deletes. Owner's direction: open unsaved autosaves without asking, and only those no running Watavyu owns (a lock file, or the owning process recorded in the autosave's name). With that, add a safeguard against saving over a newer file: if the project file changed on disk since it was opened or last saved (by another Watavyu, a recovered copy or another tool), say so before overwriting it. Settle with R9 and U3.
 
+**B12. Undoing an onset change does nothing once the column is locked.** ready, *from reading* (code review). A locked media column's clips do not move (`DatavyuCell.setOnset`), so undoing or redoing an onset change made before the lock leaves the clip where it is, while the undo history counts it as done. Either undo should be allowed to move a locked clip, or the history should skip such edits.
+
 **B7. Playback edges at time 0.** ready, *from reading*; not intended (owner). `ClockTimer` boundary checks pause playback at time 0, and shuttle does nothing at exactly 0 (`VideoController.shuttle` requires a time above 0). Both are bugs.
 
 ## Features
 
-**F4. Media columns.** ready. Done: media columns are spreadsheet columns whose clips, video or audio, play in one window per column; clips are added by menu, file drop or the video controller, and moved by typing their onset or dragging their track. Left, both deferred:
+**F4. Media columns.** ready. Done: media columns are spreadsheet columns whose clips, video or audio, play in one window per column; clips are added by menu, file drop or the video controller, and moved by typing their onset. Left, both deferred:
 - Dragging clips in the spreadsheet (owner: later; today tracks are dragged in the video controller).
 - Adding media is not undoable; deleting a clip or a media column in the spreadsheet is.
 
-**F6. Remove the video controller window.** ready. The next big UI change (AGENTS.md › North Star). Media tracks are already in the spreadsheet as media columns (F4), and the controller's tracks are gone; what is left is its transport buttons, time display, jump and frame-rate fields, and a ruler with a needle (`VideoController`, `MixerController`). They find a place in the main window or go. One idea (owner): a timeline with a draggable needle down the left edge of the spreadsheet. Media clips starting before time zero (a hack today) are discussed again here.
+**F6. Remove the video controller window.** ready. The next big UI change (AGENTS.md › North Star). Media tracks are already in the spreadsheet as media columns (F4), and the controller's tracks are gone; what is left is its transport buttons, time display, jump field, Add Data button, and a ruler with a needle (`VideoController`, `MixerController`). They find a place in the main window or go. One idea (owner): a timeline with a draggable needle down the left edge of the spreadsheet. Media clips starting before time zero (a hack today) are discussed again here.
 
 **F7. Configurable key mapping for playback.** ready. The numpad shortcuts (`Shortcuts`, the keypad section) are condensed into a smaller set of playback and coding keys that the user can map, so coding works on laptops without a numpad. Settings would hold the mapping.
 

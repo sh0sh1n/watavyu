@@ -37,9 +37,8 @@ import java.util.stream.Collectors;
 /**
  * Plays the spreadsheet's media columns. The spreadsheet holds each column and its clips; this opens a player for each
  * clip whose file exists, and keeps the players and the spreadsheet in step: a clip added, moved or removed in the
- * spreadsheet (by editing, undo or opening a project) opens, moves or closes its player, and a track dragged, locked or
- * removed in the video controller moves, locks or removes its clip. A clip whose file is missing keeps its place and
- * what is known about it, and has no player.
+ * spreadsheet (by editing, undo or opening a project) opens, moves or closes its player. A clip whose file is missing
+ * keeps its place and what is known about it, and has no player.
  *
  * <p>Each media column has one window. At any time it shows the clip in play: of the clips whose span holds the time,
  * the one that starts latest (the later clip wins). Where no clip is in play, or the clip in play has no player, the
@@ -68,6 +67,9 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
         /** Calls the listener with the volume the user sets for the clip in play. */
         void setVolumeListener(DoubleConsumer listener);
 
+        /** Calls the listener when the user closes the window. */
+        void setCloseListener(Runnable listener);
+
         /** Shows or hides the window. */
         void setShowing(boolean showing);
 
@@ -93,8 +95,8 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
     /** The player of each clip that has one. */
     private final Map<Cell, StreamViewer> players = new HashMap<>();
 
-    /** Clips whose players are opening. */
-    private final Set<Cell> opening = new HashSet<>();
+    /** Clips whose players are opening, each with a token for the opening; a player whose token is gone is stale. */
+    private final Map<Cell, Object> opening = new HashMap<>();
 
     /** Clips added in the app, which go if their file does not open. */
     private final Set<Cell> added = new HashSet<>();
@@ -283,7 +285,8 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
             Cell winner = inPlay(entry.getValue(), time);
             for (Span span : entry.getValue()) {
                 if (span.player() != null) {
-                    span.player().setInPlay(span.clip() == winner);
+                    // A hidden column's clips are out of play: paused and silent.
+                    span.player().setInPlay(span.clip() == winner && !entry.getKey().isHidden());
                 }
             }
             Variable column = entry.getKey();
@@ -336,15 +339,22 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
         if (!file.exists()) {
             return false;
         }
-        if (players.containsKey(clip) || !opening.add(clip)) {
+        if (players.containsKey(clip) || opening.containsKey(clip)) {
             return true;
         }
+        Object token = new Object();
+        opening.put(clip, token);
         Variable column = clip.getVariable();
         videoController.openStream(Identifier.generateIdentifier(), file, player -> {
             player.setWindowListener(showing -> setWindowShowing(column, showing));
             player.setOffset(clip.getOnset());
             player.setVolumeLevel((float) clip.getClip().volume());
         }, player -> {
+            if (opening.get(clip) != token) {
+                // The clip went, and perhaps came back with undo, while this player was opening.
+                videoController.shutdown(player.getIdentifier(), false);
+                return;
+            }
             opening.remove(clip);
             added.remove(clip);
             addedColumns.remove(column);
@@ -363,6 +373,9 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
             refresh(column);
             player.setViewerVisible(!column.isHidden());
         }, () -> {
+            if (opening.get(clip) != token) {
+                return;
+            }
             opening.remove(clip);
             if (added.remove(clip)) {
                 if (addedColumns.remove(column)) {
@@ -394,6 +407,8 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
     /** Makes a column's window, whose volume control sets the volume of the clip in play. */
     private ColumnWindow newWindow(final Variable column) {
         ColumnWindow window = windowFactory.apply(column);
+        // Closing a media window hides its column, which silences it; showing the column shows the window again.
+        window.setCloseListener(() -> column.setHidden(true));
         window.setVolumeListener(volume -> {
             Cell clip = shown.getOrDefault(column, Optional.empty()).orElse(null);
             if (clip != null && column.contains(clip)) {
@@ -441,6 +456,7 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
                         player.setViewerVisible(!isHidden);
                     }
                 }
+                refresh(column);
             }
 
             @Override

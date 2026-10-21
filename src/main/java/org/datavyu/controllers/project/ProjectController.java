@@ -42,6 +42,8 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -371,7 +373,8 @@ public final class ProjectController {
      * be found is reported and left out, as nothing is known about it to save.
      */
     private void addOlderVideos(final List<String> missingFilesList, final List<String> missingPluginList) {
-        List<Variable> added = new ArrayList<>();
+        // Each added column, by the file path the project file gave, which the oldest files' track locks name.
+        Map<String, Variable> added = new HashMap<>();
         for (ViewerSetting setting : project.getViewerSettings()) {
             File file = new File(setting.getFilePath());
 
@@ -415,7 +418,7 @@ public final class ProjectController {
                 if (setting.getTrackSettings() != null) {
                     column.setLocked(setting.getTrackSettings().isLocked());
                 }
-                added.add(column);
+                added.put(setting.getFilePath(), column);
             } catch (UserWarningException e) {
                 logger.error("Unable to add " + file, e);
             }
@@ -423,10 +426,9 @@ public final class ProjectController {
 
         // The oldest project files keep track locks apart, naming tracks by file.
         for (TrackSettings setting : project.getTrackSettings()) {
-            for (Variable column : added) {
-                if (column.getCells().get(0).getClip().file().equals(new File(setting.getFilePath()).getAbsolutePath())) {
-                    column.setLocked(setting.isLocked());
-                }
+            Variable column = added.get(setting.getFilePath());
+            if (column != null) {
+                column.setLocked(setting.isLocked());
             }
         }
     }
@@ -434,7 +436,7 @@ public final class ProjectController {
     /**
      * Where an older project file's video starts, how loud it is and whether it is hidden.
      */
-    private record OlderVideo(long onset, double volume, boolean hidden) {
+    record OlderVideo(long onset, double volume, boolean hidden) {
 
         static OlderVideo of(final ViewerSetting setting) {
             if (setting.getSettingsId() == null) {
@@ -446,14 +448,24 @@ public final class ProjectController {
             } catch (IOException | RuntimeException e) {
                 logger.error("Unable to read the settings of " + setting.getFilePath(), e);
             }
-            return new OlderVideo(Long.parseLong(property(settings, "offset", "0")),
-                Double.parseDouble(property(settings, "volume", "1")),
-                !Boolean.parseBoolean(property(settings, "visible", "true")));
+            long onset = 0;
+            double volume = MediaClip.DEFAULT_VOLUME;
+            try {
+                onset = Math.round(Double.parseDouble(property(settings, "offset", "0")));
+            } catch (NumberFormatException e) {
+                logger.error("Unreadable offset for " + setting.getFilePath() + "; using 0", e);
+            }
+            try {
+                volume = Math.min(1, Math.max(0, Double.parseDouble(property(settings, "volume", "1"))));
+            } catch (NumberFormatException e) {
+                logger.error("Unreadable volume for " + setting.getFilePath() + "; using 1", e);
+            }
+            return new OlderVideo(onset, volume, !Boolean.parseBoolean(property(settings, "visible", "true")));
         }
 
         private static String property(final Properties settings, final String key, final String otherwise) {
             String value = settings.getProperty(key);
-            return value == null || value.isEmpty() ? otherwise : value;
+            return value == null || value.isEmpty() ? otherwise : value.trim();
         }
     }
 
