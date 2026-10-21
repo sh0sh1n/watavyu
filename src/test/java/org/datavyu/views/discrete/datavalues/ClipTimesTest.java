@@ -63,12 +63,19 @@ public class ClipTimesTest {
         assertTrue(typingAllowed(cell, TimeStampSource.Offset));
     }
 
+    /** A clip cell names its file, its frame rate once known for video, and whether the file is missing. */
     @Test
-    public void aClipShowsItsFileAndWhetherItIsMissing() {
+    public void aClipShowsItsFileFrameRateAndWhetherItIsMissing() {
         String present = System.getProperty("java.home");
+        String name = Path.of(present).getFileName().toString();
 
-        assertEquals(DataValueEditorFactory.clipLabel(CAM), "cam.mp4 (missing)");
-        assertEquals(DataValueEditorFactory.clipLabel(MediaClip.of(present)),
-            Path.of(present).getFileName().toString());
+        assertEquals(DataValueEditorFactory.clipLabel(CAM), "cam.mp4 \u00b7 30 fps (missing)");
+        assertEquals(DataValueEditorFactory.clipLabel(MediaClip.of(present)), name);
+        assertEquals(DataValueEditorFactory.clipLabel(MediaClip.of(present).withDetails(60_000, 29.97, 1920, 1080)),
+            name + " \u00b7 29.97 fps");
+        assertEquals(DataValueEditorFactory.clipLabel(MediaClip.of(present).withDetails(60_000, 23.976023976, 1920,
+            1080)), name + " \u00b7 23.976 fps");
+        // Audio has no frame rate.
+        assertEquals(DataValueEditorFactory.clipLabel(MediaClip.of(present).withDetails(60_000, 0, 0, 0)), name);
     }
 }

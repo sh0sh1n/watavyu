@@ -190,6 +190,49 @@ public class PlaybackIntegrationTest {
         }
     }
 
+    /** Two clips in different media columns play together, each at its own volume. */
+    @Test
+    public void twoClipsPlayTogetherAtTheirOwnVolumes() throws Exception {
+        VideoController videoController = mock(VideoController.class);
+        when(videoController.getClockTimer()).thenReturn(mock(ClockTimer.class));
+        Datavyu.setVideoController(videoController);
+        JavaFxVideoViewer video = (JavaFxVideoViewer) JavaFxVideoPlugin.open(Identifier.generateIdentifier(), mp4,
+                null, false);
+        JavaFxVideoViewer audio = (JavaFxVideoViewer) JavaFxVideoPlugin.open(Identifier.generateIdentifier(), m4a,
+                null, false);
+        try {
+            // What MediaPlayers does as each opens, then as the clock starts.
+            JavaFxToolkit.onEdtAndWait(() -> {
+                for (JavaFxVideoViewer viewer : new JavaFxVideoViewer[]{video, audio}) {
+                    viewer.setWindowListener(showing -> { });
+                    viewer.setOffset(0);
+                    viewer.setVolumeLevel(1f);
+                    viewer.setViewerVisible(true);
+                    viewer.setInPlay(true);
+                }
+                return null;
+            });
+            video.start();
+            audio.start();
+            Thread.sleep(1_000);
+            JavaFxToolkit.onEdtAndWait(() -> {
+                audio.setVolumeLevel(0.09f);
+                return null;
+            });
+            Thread.sleep(300);
+
+            assertEquals(video.playerState(), "1.0 PLAYING");
+            assertEquals(audio.playerState(), (double) 0.09f + " PLAYING");
+        } finally {
+            JavaFxToolkit.onEdtAndWait(() -> {
+                video.close();
+                audio.close();
+                return null;
+            });
+            Datavyu.setVideoController(null);
+        }
+    }
+
     /** A clip that is not its media column's clip in play pauses, and does not start with the clock. */
     @Test
     public void aClipOutOfPlayPauses() throws Exception {

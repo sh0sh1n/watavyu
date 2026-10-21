@@ -16,4 +16,11 @@ public class VideoControllerTimeTest {
     public void currentTimeLabelDoesNotWrapAfterADay() {
         assertEquals(VideoController.formatTime(90_000_000L), "25:00:00:000");
     }
+
+    /** Jogging steps by the highest frame rate of the open video; with only audio open, by 30 frames a second. */
+    @Test
+    public void jogStepsByTheVideosFrameRateOrThirty() {
+        assertEquals(VideoController.jogFrameRate(29.97), 29.97);
+        assertEquals(VideoController.jogFrameRate(0), 30.0);
+    }
 }

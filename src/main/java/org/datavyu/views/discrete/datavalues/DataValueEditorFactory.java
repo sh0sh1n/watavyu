@@ -18,6 +18,8 @@ import org.datavyu.models.db.*;
 import org.datavyu.views.discrete.EditorComponent;
 
 import javax.swing.text.JTextComponent;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -73,13 +75,19 @@ public class DataValueEditorFactory {
     }
 
     /**
-     * Names what a media cell plays: its file's name, and whether the file is missing.
+     * Names what a media cell plays: its file's name, its frame rate when the file has video and has said it, and
+     * whether the file is missing, as {@code cam.mp4 · 29.97 fps (missing)}.
      *
      * @param clip a media cell's clip
      * @return the cell's text
      */
     public static String clipLabel(final MediaClip clip) {
-        return Files.exists(Path.of(clip.file())) ? clip.fileName() : clip.fileName() + " (missing)";
+        String label = clip.fileName();
+        if (clip.frameRate() > 0) {
+            label += " \u00b7 " + new BigDecimal(clip.frameRate()).setScale(3, RoundingMode.HALF_UP)
+                .stripTrailingZeros().toPlainString() + " fps";
+        }
+        return Files.exists(Path.of(clip.file())) ? label : label + " (missing)";
     }
 
     /**

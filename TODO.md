@@ -16,7 +16,7 @@ Updated 2026-10-20. Re-measure with the commands in [BUILDING.md › Analysis Re
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
 | Java source (main) | 242 files, 42.5k lines | 173 files, 29.2k lines |
-| Tests / line coverage | 113 / 9.9% | 354 / 25.5%; still 0% in most views, the timeline and undo |
+| Tests / line coverage | 113 / 9.9% | 355 / 25.5%; still 0% in most views, the timeline and undo |
 | Runtime dependencies / with known vulnerabilities | 28 / 8 | 12 / 0 |
 | Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 691 |
 | PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 446 / 71; 16 |
@@ -27,7 +27,7 @@ Updated 2026-10-20. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 **B2. The app changes a global macOS setting.** ready (owner: scope it to the app), *from reading*. At startup `Datavyu` runs `defaults write -g ApplePressAndHoldEnabled -bool false` for every application on the Mac, and restores it only on a clean shutdown; a crash or force-quit leaves it changed. (It used to run when the class loaded, so every test run turned the setting off and never restored it.) The intent is key repeat instead of the accent popup while holding keys. Scope it to the app: in-app key repeat, or a per-app defaults domain once there is an app bundle; then delete the global write.
 
-**B11. A second Watavyu offers to recover the autosave of one still running.** ready, *verified*. At launch, `DatavyuView.checkForAutosavedFile` offers every `~*.watavyu.json` in the temporary folder, including the one a running Watavyu is writing; answering No deletes it, so a crash of the first would then lose its work. Only offer autosaves no running Watavyu owns (a lock file, or the owning process recorded in the autosave's name). Settle with R9 and U3.
+**B11. Recovering autosaves needs a dialog, and offers those of a Watavyu still running.** ready, *verified*. At launch, `DatavyuView.checkForAutosavedFile` asks about every `~*.watavyu.json` in the temporary folder: the dialog itself is a chore (owner), and it includes the autosave a running Watavyu is writing, which answering No deletes. Owner's direction: open unsaved autosaves without asking, and only those no running Watavyu owns (a lock file, or the owning process recorded in the autosave's name). With that, add a safeguard against saving over a newer file: if the project file changed on disk since it was opened or last saved (by another Watavyu, a recovered copy or another tool), say so before overwriting it. Settle with R9 and U3.
 
 **B7. Playback edges at time 0.** ready, *from reading*; not intended (owner). `ClockTimer` boundary checks pause playback at time 0, and shuttle does nothing at exactly 0 (`VideoController.shuttle` requires a time above 0). Both are bugs.
 
@@ -42,6 +42,8 @@ Updated 2026-10-20. Re-measure with the commands in [BUILDING.md › Analysis Re
 **F7. Configurable key mapping for playback.** ready. The numpad shortcuts (`Shortcuts`, the keypad section) are condensed into a smaller set of playback and coding keys that the user can map, so coding works on laptops without a numpad. Settings would hold the mapping.
 
 **F8. Playback rates of 0.5 to 2×.** ready. Shuttle steps through powers of 2 from 1/32 to 32× (`RateController`); it should step through 0.5, 0.75, 1, 1.25, 1.5 and 2× (owner). `RateControllerTest` pins the current list.
+
+**F9. Add a clip to a media column.** ready. An explicit command to add a file to a media column as a clip at the current time, such as Add Clip… in the column header's right-click menu next to Lock Clips. Today this happens implicitly: with one media column selected, Spreadsheet > Add Media, a file drop or Add Data adds the file to that column (`MediaPlayers.addMediaFiles`), which is easy to miss. With F9 in place, Add Media should always make a new column, and the video controller's Add Data button, which duplicates Spreadsheet > Add Media, can go.
 
 **F2. Snapping when dragging a clip.** after dragging clips in the spreadsheet (F4). Wanted for easy alignment; removed with bookmarks and the region of interest. The old version (`TracksEditorController.snapOffset` on `main` before the cleanup) snapped a track's start, end and bookmarks to time zero, the needle, the region of interest and the other tracks' starts, ends and bookmarks, within 5 seconds. Rebuild it around media columns and their onsets; the controller's tracks are gone.
 

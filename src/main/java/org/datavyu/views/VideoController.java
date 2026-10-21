@@ -141,14 +141,8 @@ public final class VideoController extends DatavyuDialog
     /** */
     private JTextField jumpByTextField;
 
-    /** */
-    private JTextField stepSizeTextField;
 
-    /** */
-    private JLabel stepSizeLabel = new JLabel("Frame Rate");
 
-    /** */
-    private JPanel stepSizePanel;
 
     /** */
     private JPanel gridButtonPanel;
@@ -554,7 +548,6 @@ public final class VideoController extends DatavyuDialog
         // Recalculate the maximum playback duration
         updateMaxViewerDuration();
 
-        updateStepSizeTextField();
 
     }
 
@@ -626,7 +619,6 @@ public final class VideoController extends DatavyuDialog
     private void initComponents() {
         gridButtonPanel = new JPanel();
         jumpByTextField = new JTextField();
-        stepSizeTextField = new JTextField();
         onsetTextField = new JTextField();
         JButton addDataButton = new JButton();
         timeStampLabel = new JLabel();
@@ -774,7 +766,8 @@ public final class VideoController extends DatavyuDialog
         // Find button (small plus)
         findButton = buildButton("find", "osx", this::findAction);
         gridButtonPanel.add(findButton, NUM_PAD_KEY_SIZE);
-        addStepSizePanel();
+        // Where the frame rate was: the grid keeps its shape.
+        gridButtonPanel.add(new JLabel(), WIDE_TEXT_FIELD_SIZE);
 
         // Jog back button with 1
         JButton jogBackButton = buildButton("jogBack", null, this::jogBackAction);
@@ -840,40 +833,6 @@ public final class VideoController extends DatavyuDialog
         jumpByTextField.setName("jumpByTextField");
         gridButtonPanel.add(makeLabelAndTextFieldPanel(new JLabel("Jump by"), jumpByTextField),
                 WIDE_TEXT_FIELD_SIZE);
-    }
-
-    private void addStepSizePanel() {
-        // Go back text field
-        stepSizeTextField.setHorizontalAlignment(SwingConstants.CENTER);
-        stepSizeTextField.setName("stepSizeTextField");
-        stepSizeTextField.setToolTipText("Double click to change");
-        stepSizeTextField.setPreferredSize(new Dimension(WIDE_TEXT_FIELD_WIDTH - 10, 18));
-        stepSizeTextField.setEnabled(false);
-        stepSizePanel = makeLabelAndTextFieldPanel(stepSizeLabel, stepSizeTextField);
-        gridButtonPanel.add(stepSizePanel, WIDE_TEXT_FIELD_SIZE);
-        updateStepSizeTextField();
-    }
-
-    private void updateStepSizeTextField() {
-
-        // If we don't have any stream viewers, disable the label and remove the user-defined rate
-         if (frameRateController.isZeroRate()) {
-            stepSizeTextField.setText("");
-        } else {
-            stepSizeTextField.setText(Float.toString(frameRateController.getFrameRate()));
-        }
-    }
-
-    private void updateStepSizePanelColor() {
-        boolean assumedFps = false;
-        if (streamViewers != null) {
-            for (StreamViewer streamViewer : streamViewers) {
-                if (streamViewer.isAssumedFramesPerSecond()) {
-                    assumedFps = true;
-                }
-            }
-        }
-        stepSizePanel.setBackground(assumedFps ? Color.RED : Color.LIGHT_GRAY);
     }
 
     /**
@@ -952,11 +911,12 @@ public final class VideoController extends DatavyuDialog
         // Add the streamViewer
         streamViewers.add(streamViewer);
 
-        // Adjust the overall frame rate
-        frameRateController.addFrameRate(streamViewer.getIdentifier().asLong(), streamViewer.getFramesPerSecond());
-
-        updateStepSizeTextField();
-        updateStepSizePanelColor();
+        // Jogging steps by the highest frame rate of the media with video; audio has no frames.
+        Dimension size = streamViewer.getVideoSize();
+        if (size != null && size.width > 0 && size.height > 0) {
+            frameRateController.addFrameRate(streamViewer.getIdentifier().asLong(),
+                    streamViewer.getFramesPerSecond());
+        }
 
         updateMaxViewerDuration();
     }
@@ -1271,7 +1231,7 @@ public final class VideoController extends DatavyuDialog
             clockTimer.setRate(0f);
         } else {
             syncStreams();
-            double frameRate = frameRateController.getFrameRate();
+            double frameRate = jogFrameRate();
             long clockTime = (long) clockTimer.getClockTime();
             long stepSize = (long) Math.ceil(MILLI_IN_SEC / frameRate); // step size is in milliseconds
             // Update the clock timer with the new time
@@ -1310,6 +1270,21 @@ public final class VideoController extends DatavyuDialog
         }
     }
 
+    /** Frames per second jogging steps by when no media with video is open. */
+    static final double DEFAULT_JOG_FRAME_RATE = 30;
+
+    private double jogFrameRate() {
+        return jogFrameRate(frameRateController.getFrameRate());
+    }
+
+    /**
+     * @param highestVideoFrameRate the highest frame rate of the open media with video, 0 if none has video
+     * @return the frame rate jogging steps by
+     */
+    static double jogFrameRate(final double highestVideoFrameRate) {
+        return highestVideoFrameRate > 0 ? highestVideoFrameRate : DEFAULT_JOG_FRAME_RATE;
+    }
+
     /**
      * Get the frame rate controller for this video controller
      *
@@ -1342,7 +1317,7 @@ public final class VideoController extends DatavyuDialog
             clockTimer.setRate(0);
         } else {
             syncStreams();
-            double frameRate = frameRateController.getFrameRate();
+            double frameRate = jogFrameRate();
             long clockTime = (long) clockTimer.getClockTime();
             long stepSize = (long) Math.ceil(MILLI_IN_SEC / frameRate); // step size is in milliseconds
 

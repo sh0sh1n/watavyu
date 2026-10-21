@@ -112,6 +112,12 @@ public final class JavaFxVideoViewer extends StreamViewerDialog {
         return new Dimension(engine.width(), engine.height());
     }
 
+    /** @return the JavaFX player's own volume and status, as {@code "1.0 PLAYING"}, for tests */
+    String playerState() throws Exception {
+        return JavaFxToolkit.onFx(() -> engine.player().getVolume() + " " + engine.player().getStatus()
+                + (engine.player().isMute() ? " muted" : "")).get();
+    }
+
     @Override
     public Component getVideoComponent() {
         return panel;

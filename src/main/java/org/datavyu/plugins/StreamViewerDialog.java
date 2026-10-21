@@ -83,7 +83,20 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
      * Sets the player's volume to the clip's, or silences it while hidden or out of play.
      */
     protected void setVolume() {
-        setPlayerVolume(isVisible && inPlay ? volume : 0F);
+        applyVolume();
+    }
+
+    /** The volume last given to the player, to log changes. */
+    private volatile float appliedVolume = -1;
+
+    private void applyVolume() {
+        float effective = isVisible && inPlay ? volume : 0F;
+        if (effective != appliedVolume) {
+            appliedVolume = effective;
+            logger.info("Volume of " + identifier + " (" + (sourceFile == null ? "" : sourceFile.getName()) + ") is "
+                + effective + (isVisible ? "" : ", hidden") + (inPlay ? "" : ", out of play"));
+        }
+        setPlayerVolume(effective);
     }
 
     protected abstract void setPlayerVolume(float volume);
@@ -244,7 +257,7 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     public void setInPlay(final boolean newInPlay) {
         if (newInPlay != inPlay) {
             inPlay = newInPlay;
-            setVolume();
+            applyVolume();
             if (!inPlay && isPlaying()) {
                 pause();
             }

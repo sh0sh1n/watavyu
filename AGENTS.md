@@ -28,9 +28,9 @@ The aim is a smaller app whose every feature was chosen on purpose, with a moder
 
 Newest first. (owner) marks product decisions; the rest are engineering choices that can be revisited with reason.
 
-- **2026-10-20 (owner): the video controller has no tracks** (toward F6). A clip's volume is set in its media window, for the clip in play; a media column is locked from its header's right-click menu. The controller keeps a ruler and needle showing the whole timeline until F6; zoom, Lock all and the highlighting buttons are gone (Highlight and Focus stays in the menu; plain highlighting without focus went with its button). Playback stops at the end of the last media clip, a setting (`stopAtEndOfMedia`) that is on by default.
+- **2026-10-20 (owner): the video controller has no tracks** (toward F6). A clip's volume is set in its media window, for the clip in play; a media column is locked from its header's right-click menu. The controller keeps a ruler and needle showing the whole timeline until F6; zoom, Lock all, the highlighting buttons and the Frame Rate box are gone (Highlight and Focus stays in the menu; plain highlighting without focus went with its button). Playback stops at the end of the last media clip, a setting (`stopAtEndOfMedia`) that is on by default.
 - **2026-10-17 (owner): media columns in the spreadsheet** (F4). Rules for clips are under the JSON project format below.
-  - A media column's clips are cells laid out like annotation cells, showing the file's name and whether it is missing. The spreadsheet opens in temporal layout by default.
+  - A media column's clips are cells laid out like annotation cells, showing the file's name, its frame rate when it has video, and whether it is missing (owner). The spreadsheet opens in temporal layout by default.
   - The spreadsheet is a view on the media system. Adding a clip may later mean processing a large media file, so a clip cell shows missing or not-yet-available media gracefully.
   - Clips are added by dropping a file on the column and by a menu command: two entry points to one action, the simpler built first.
   - Clips move by editing their onset; dragging them in the spreadsheet comes later.
