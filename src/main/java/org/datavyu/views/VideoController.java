@@ -25,12 +25,7 @@ import org.datavyu.controllers.CreateNewCellController;
 import org.datavyu.controllers.SetNewCellStopTimeController;
 import org.datavyu.controllers.SetSelectedCellStartTimeController;
 import org.datavyu.controllers.SetSelectedCellStopTimeController;
-import org.datavyu.controllers.component.MixerController;
-import org.datavyu.event.component.TimescaleEvent;
-import org.datavyu.event.component.TracksControllerEvent;
-import org.datavyu.event.component.TracksControllerListener;
 import org.datavyu.models.Identifier;
-import org.datavyu.models.component.*;
 import org.datavyu.plugins.StreamViewer;
 import org.datavyu.plugins.javafx.JavaFxVideoPlugin;
 import org.datavyu.util.*;
@@ -40,18 +35,30 @@ import org.datavyu.util.Resources;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
-import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.util.*;
 import java.util.function.Consumer;
 
 
 /**
- * Video controller
+ * Plays a spreadsheet's media: its clock, its players and the playback and coding commands. Its buttons are the
+ * controls drawer beside the spreadsheet ({@link #getControls()}); the playhead shows the clock's time
+ * ({@link #setPlayhead(Playhead)}).
  */
-public final class VideoController extends DatavyuDialog
-        implements ClockListener, TracksControllerListener, PropertyChangeListener {
+public final class VideoController implements ClockListener {
+
+    /** Shows the clock's time and rate, from any thread. */
+    public interface Playhead {
+
+        /**
+         * @param time the clock's time, in milliseconds
+         * @param rate the clock's rate, as {@link #rateText(float, boolean)} gives it
+         */
+        void show(long time, String rate);
+    }
+
+    /** Where the timeline ends when no media runs longer: one minute. */
+    public static final long MINIMUM_TIMELINE_END = 60_000L;
 
     /** The logger for this class */
     private static Logger logger = LogManager.getLogger(VideoController.class);
@@ -84,26 +91,10 @@ public final class VideoController extends DatavyuDialog
 
     private static final Font TEXT_LABEL_FONT = new Font("Arial", Font.PLAIN, 10);
 
-    /** Format for time */
-    private static int timeStampFontSize = 15;
-
-    /** Colours of the hours, minutes, seconds and milliseconds in the current time label. */
-    private static final Color[] CLOCK_COLORS = {
-        TimescaleConstants.HOURS_COLOR, TimescaleConstants.MINUTES_COLOR,
-        TimescaleConstants.SECONDS_COLOR, TimescaleConstants.MILLISECONDS_COLOR
-    };
-
     private static RateController shuttleRates = new RateController();
 
-    /**
-     * // TODO: What is this doing here?
-     *
-     * Visible?
-     */
-    private boolean visible;
-
     /** Determines whether or not the 'shift' key is being held */
-    private boolean shiftMask = false;
+    private volatile boolean shiftMask = false;
 
     /** The set of streamViewers associated with this controller */
     private LinkedHashSet<StreamViewer> streamViewers = new LinkedHashSet<>();
@@ -111,13 +102,13 @@ public final class VideoController extends DatavyuDialog
     /** Clock timer */
     private final ClockTimer clockTimer = new ClockTimer();
 
-    /** Is the tracks panel currently shown */
-    private boolean tracksPanelVisible = true;
+    /** Where the timeline ends: the end of the media, or a minute if that is sooner. */
+    private volatile long timelineEnd = MINIMUM_TIMELINE_END;
 
-    /** The controller for manipulating tracks */
-    private MixerController mixerController = new MixerController();
+    /** Shows the clock's time; nothing until the spreadsheet sets one. */
+    private volatile Playhead playhead = (time, rate) -> { };
 
-    /** Keeps the tracks and the spreadsheet's media columns in step; null until a spreadsheet is set. */
+    /** Keeps the players and the spreadsheet's media columns in step; null until a spreadsheet is set. */
     private MediaPlayers mediaPlayers;
 
     /** Button to create a new cell */
@@ -148,9 +139,6 @@ public final class VideoController extends DatavyuDialog
     private JPanel gridButtonPanel;
 
     /** */
-    private JLabel labelSpeed;
-
-    /** */
     private JButton pauseButton;
 
     /** */
@@ -169,9 +157,6 @@ public final class VideoController extends DatavyuDialog
     private JButton pointCellButton;
 
     /** */
-    private JButton showTracksSmallButton;
-
-    /** */
     private JButton shuttleBackButton;
 
     /** */
@@ -179,12 +164,6 @@ public final class VideoController extends DatavyuDialog
 
     /** */
     private JButton stopButton;
-
-    /** */
-    private JLabel timeStampLabel;
-
-    /** */
-    private JPanel tracksPanel;
 
     private Resources resourceMap;
 
@@ -195,108 +174,44 @@ public final class VideoController extends DatavyuDialog
      */
     public static final boolean HIGHLIGHT_AND_FOCUS_BY_DEFAULT = true;
 
-    private boolean highlightCells = HIGHLIGHT_AND_FOCUS_BY_DEFAULT;
+    private volatile boolean highlightCells = HIGHLIGHT_AND_FOCUS_BY_DEFAULT;
 
-    private boolean highlightAndFocus = HIGHLIGHT_AND_FOCUS_BY_DEFAULT;
+    private volatile boolean highlightAndFocus = HIGHLIGHT_AND_FOCUS_BY_DEFAULT;
 
     private FrameRateController frameRateController = new FrameRateController();
 
-    private int jumpDirection = -1;
+    private volatile int jumpDirection = -1;
 
     /**
-     * Create a new VideoController.
-     *
-     * @param parent The parent of this form.
-     * @param modal  Should the dialog be modal or not?
+     * Makes a spreadsheet's player, stopped at time zero, with its controls.
      */
-    public VideoController(final Frame parent, final boolean modal) {
-        super(parent, modal);
-
+    public VideoController() {
         clockTimer.registerListener(this);
-
-        setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE);
-
         resourceMap = Resources.of(VideoController.class);
-
-
         initComponents();
-
-        setResizable(false);
-
-        final int defaultEndTime = (int) MixerController.DEFAULT_DURATION;
-
         clockTimer.setMinTime(0);
-        clockTimer.setMaxTime(defaultEndTime);
-
-        tracksPanel.add(mixerController.getTracksPanel(), "growx");
-        mixerController.addTracksControllerListener(this);
-        mixerController.getMixerModel().getViewportModel().addPropertyChangeListener(this);
-        mixerController.getMixerModel().getNeedleModel().addPropertyChangeListener(this);
-
-        showTracksPanel(tracksPanelVisible);
-
-        visible = true;
+        clockTimer.setMaxTime(MINIMUM_TIMELINE_END);
     }
 
     /**
-     * TODO: Put to some time utils?
+     * @return the controls drawer: the playback and coding buttons, laid out as a numeric keypad, and their fields
+     */
+    public JComponent getControls() {
+        return gridButtonPanel;
+    }
+
+    /**
+     * Sets what shows the clock's time, and shows it the time now.
      *
-     * @param time
-     * @return
+     * @param playhead shows the time; called from the clock's threads as well as the EDT
      */
-    public static String formatTime(final long time) {
-        return Timestamp.format(time);
+    public void setPlayhead(final Playhead playhead) {
+        this.playhead = playhead;
+        showPlayhead(getCurrentTime());
     }
 
     /**
-     * @param time a time in milliseconds
-     * @return the time as {@code HH:MM:SS:mmm} in HTML, each field in its timescale colour
-     */
-    static String formatTimeHtml(final long time) {
-        String[] fields = Timestamp.format(time).split(":");
-        StringBuilder html = new StringBuilder("<html>");
-        for (int i = 0; i < fields.length; i++) {
-            if (i > 0) {
-                html.append(':');
-            }
-            html.append("<font color=\"").append(toRGBString(CLOCK_COLORS[i])).append("\">")
-                .append(fields[i]).append("</font>");
-        }
-        return html.append("</html>").toString();
-    }
-
-    /**
-     * TODO: Put to some color utils?
-     *
-     * @param color
-     * @return
-     */
-    private static String toRGBString(final Color color) {
-        return String.format("#%02x%02x%02x", color.getRed(), color.getGreen(), color.getBlue());
-    }
-
-    /**
-     * Opens a video file as a new track.
-     *
-     * @param videoFile Video file.
-     * @return The identifier of the new track.
-     */
-    public void openVideo(final File videoFile) {
-        if (mediaPlayers == null) {
-            logger.error("No spreadsheet to add " + videoFile + " to");
-            return;
-        }
-        try {
-            mediaPlayers.addMediaFiles(java.util.List.of(videoFile), getCurrentTime());
-        } catch (UserWarningException e) {
-            logger.error("Unable to add " + videoFile, e);
-            JOptionPane.showMessageDialog(Datavyu.getApplication().getMainFrame(), e.getMessage(),
-                "Cannot Open Video", JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    /**
-     * Sets what keeps this controller's tracks and the spreadsheet's media columns in step.
+     * Sets what keeps the players and the spreadsheet's media columns in step.
      *
      * @param mediaPlayers the spreadsheet's media players
      */
@@ -366,21 +281,10 @@ public final class VideoController extends DatavyuDialog
     @Override
     public void clockStart(double clockTime) {
         logger.info("Start");
-    }
-
-    /**
-     * Keep track of whether this should be visible or not
-     */
-    public boolean shouldBeVisible() {
-        return visible;
-    }
-
-    public void setShouldBeVisible(boolean v) {
-        visible = v;
+        updateCurrentTimeLabelAndNeedle((long) clockTime);
     }
 
     @Override
-
     public void clockForceSync(double clockTime) {
         logger.debug("Forced sync to " + clockTime + " milliseconds.");
         // Updates the position of the needle and label
@@ -396,19 +300,12 @@ public final class VideoController extends DatavyuDialog
                 logger.info("Pausing at the end of the media, " + stop);
                 clockTimer.pause();
                 clockTimer.setForceTime(stop);
-                labelSpeed.setText("[" + FloatingPointUtils.doubleToFractionStr(clockTimer.getRate()) + "]");
             } else if (atTimelineEdge(clockTime, rate, getTimelineEnd())) {
                 logger.info("Clock Boundary Pausing Master Clock at " + clockTime);
                 clockTimer.pause();
-                labelSpeed.setText("[" + FloatingPointUtils.doubleToFractionStr(clockTimer.getRate()) + "]");
             }
         }
-
-        // Updates the position of the needle and label
-        // Check for visible to remove Java Null pointer exception for non-initialised Needle Model
-        if (visible) {
-            updateCurrentTimeLabelAndNeedle((long) clockTime);
-        }
+        updateCurrentTimeLabelAndNeedle((long) clockTime);
     }
 
     /**
@@ -468,21 +365,36 @@ public final class VideoController extends DatavyuDialog
     @Override
     public void clockRate(float rate) {
         logger.debug("Update rate speed to " + rate);
-        labelSpeed.setText(FloatingPointUtils.doubleToFractionStr(rate));
+        updateCurrentTimeLabelAndNeedle(getCurrentTime());
     }
 
     /**
      * @return The end of the timeline, the latest end of any track, in milliseconds.
      */
     private long getTimelineEnd() {
-        return mixerController.getMixerModel().getViewportModel().getViewport().getMaxEnd();
+        return timelineEnd;
     }
 
     private void updateCurrentTimeLabelAndNeedle(long currentTime) {
-        long currentTimeInRange = clockTimer.toRange(currentTime);
+        showPlayhead(clockTimer.toRange(currentTime));
+    }
 
-        timeStampLabel.setText(formatTimeHtml(currentTimeInRange));
-        mixerController.getMixerModel().getNeedleModel().setCurrentTime(currentTimeInRange);
+    private void showPlayhead(final long time) {
+        playhead.show(time, rateText(clockTimer.getRate(), clockTimer.isPaused()));
+    }
+
+    /**
+     * @param rate   the clock's rate
+     * @param paused whether the clock is paused
+     * @return the rate as the playhead shows it: {@code 1.25×} while playing, {@code paused 1.25×} while paused at a
+     * rate, and {@code stopped} at rate zero
+     */
+    static String rateText(final float rate, final boolean paused) {
+        if (rate == 0F) {
+            return "stopped";
+        }
+        String text = new java.math.BigDecimal(Float.toString(rate)).stripTrailingZeros().toPlainString() + "×";
+        return paused ? "paused " + text : text;
     }
 
     /**
@@ -507,7 +419,7 @@ public final class VideoController extends DatavyuDialog
      * Fits the timeline to the media: it ends where the last clip ends.
      */
     public void updateMaxViewerDuration() {
-        long maxDuration = ViewportStateImpl.MINIMUM_MAX_END;
+        long maxDuration = MINIMUM_TIMELINE_END;
 
         for (StreamViewer streamViewer : streamViewers) {
             if ((streamViewer.getDuration() + streamViewer.getOffset()) > maxDuration) {
@@ -515,11 +427,9 @@ public final class VideoController extends DatavyuDialog
             }
         }
 
-        mixerController.setTimelineEnd(maxDuration);
-
-        if (streamViewers.isEmpty()) {
-            mixerController.getNeedleController().resetNeedlePosition();
-        }
+        timelineEnd = maxDuration;
+        clockTimer.setMaxTime(maxDuration);
+        updateCurrentTimeLabelAndNeedle(getCurrentTime());
     }
 
     /**
@@ -574,7 +484,7 @@ public final class VideoController extends DatavyuDialog
      */
     private boolean shouldRemove() {
         Resources rMap = Resources.of(Datavyu.class);
-        return Dialogs.confirm(this, rMap.getString("ClosePluginDialog.message"),
+        return Dialogs.confirm(Datavyu.getApplication().getMainFrame(), rMap.getString("ClosePluginDialog.message"),
                 rMap.getString("ClosePluginDialog.title"), "OK");
     }
 
@@ -600,6 +510,7 @@ public final class VideoController extends DatavyuDialog
 
     private JPanel makeLabelAndTextFieldPanel(JLabel label, JTextField textField) {
         JPanel jPanel = new JPanel();
+        jPanel.setOpaque(false);
         label.setFont(TEXT_LABEL_FONT);
         textField.setFont(TEXT_FIELD_FONT);
         jPanel.add(label);
@@ -626,98 +537,18 @@ public final class VideoController extends DatavyuDialog
     }
 
     /**
-     * Initialize the view for OS other than Macs.
+     * Lays out the controls as a numeric keypad, with the fields beside it.
      */
     private void initComponents() {
         gridButtonPanel = new JPanel();
         jumpByTextField = new JTextField();
         onsetTextField = new JTextField();
-        JButton addDataButton = new JButton();
-        timeStampLabel = new JLabel();
-        labelSpeed = new JLabel();
         createNewCell = new JButton();
-        JLabel atLabel = new JLabel();
-        JLabel xLabel = new JLabel();
         offsetTextField = new JTextField();
-        tracksPanel = new JPanel(new MigLayout("fill"));
 
-        final int fontSize = 11;
-
-        setTitle(resourceMap.getString("title"));
-        addWindowListener(new java.awt.event.WindowAdapter() {
-            @Override
-            public void windowClosing(
-                    final java.awt.event.WindowEvent evt) {
-                formWindowClosing(evt);
-            }
-        });
-
+        gridButtonPanel.setName("controls");
         gridButtonPanel.setBackground(Color.WHITE);
         gridButtonPanel.setLayout(new MigLayout("wrap 5"));
-
-        // Add data button
-        addDataButton.setText(resourceMap.getString("addDataButton.text"));
-        addDataButton.setFont(new Font("Tahoma", Font.PLAIN, fontSize));
-        addDataButton.setFocusPainted(false);
-        addDataButton.setName("addDataButton");
-        addDataButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(final ActionEvent evt) {
-                openVideoButtonActionPerformed(evt);
-            }
-        });
-        gridButtonPanel.add(addDataButton, "span 2, w 90!, h 25!, wrap");
-
-        // Timestamp panel
-        JPanel timestampPanel = new JPanel(new MigLayout("","push[][][]0![]push"));
-        timestampPanel.setOpaque(false);
-
-        // Timestamp label
-        timeStampLabel.setFont(new Font("Tahoma", Font.BOLD, timeStampFontSize));
-        timeStampLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        timeStampLabel.setText("00:00:00:000");
-        timeStampLabel.setHorizontalTextPosition(SwingConstants.CENTER);
-        timeStampLabel.setName("timeStampLabel");
-        timeStampLabel.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                // Open a new frame here as i have assumed you have declared "frame" as instance variable
-                if (e.getClickCount() >= 3) {
-                    int newTime = Integer.parseInt(JOptionPane.showInputDialog(null,
-                            "Enter new time in ms", getCurrentTime()));
-                    setCurrentTime(newTime);
-                }
-            }
-        });
-        timeStampLabel.addMouseWheelListener(new MouseWheelListener() {
-            @Override
-            public void mouseWheelMoved(MouseWheelEvent e) {
-                int count = e.getWheelRotation();
-                timeStampFontSize = Math.min(72, Math.max(10, timeStampFontSize + count));
-                timeStampLabel.setFont(new Font("Tahoma", Font.BOLD, timeStampFontSize));
-                gridButtonPanel.setMinimumSize(timestampPanel.getMinimumSize());
-                timeStampLabel.repaint();
-                pack();
-                validate();
-            }
-        });
-        timestampPanel.add(timeStampLabel);
-
-        atLabel.setText("@");
-        timestampPanel.add(atLabel);
-
-        labelSpeed.setFont(new Font("Tahoma", Font.BOLD, timeStampFontSize));
-        labelSpeed.setBorder(javax.swing.BorderFactory.createEmptyBorder(1, 1, 1,
-                2));
-        labelSpeed.setName("labelSpeed");
-        labelSpeed.setText("0");
-        timestampPanel.add(labelSpeed);
-
-        xLabel.setFont(new Font("Tahoma", Font.BOLD, fontSize));
-        xLabel.setText("x");
-        timestampPanel.add(xLabel);
-
-        gridButtonPanel.add(timestampPanel, "north");
 
         // Placeholder at top, left: 'clear' or 'numlock' position
         gridButtonPanel.add(makePlaceholderButton(), NUM_PAD_KEY_SIZE);
@@ -726,21 +557,8 @@ public final class VideoController extends DatavyuDialog
         pointCellButton = buildButton("pointCell", null, this::pointCellAction);
         gridButtonPanel.add(pointCellButton, NUM_PAD_KEY_SIZE);
 
-        // Show/hide: forward slash on the Mac keypad
-        showTracksSmallButton = new JButton();
-        showTracksSmallButton.setIcon(resourceMap.getIcon(
-                "showTracksSmallButton.hide.icon"));
-        showTracksSmallButton.setName("showTracksSmallButton");
-        showTracksSmallButton.getAccessibleContext().setAccessibleName(
-                "Show Tracks");
-        showTracksSmallButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(final ActionEvent evt) {
-                showTracksButtonActionPerformed(evt);
-            }
-        });
-        showTracksSmallButton.setFocusPainted(false);
-        gridButtonPanel.add(showTracksSmallButton, NUM_PAD_KEY_SIZE);
+        // Placeholder at forward slash on the Mac keypad, whose key shows or hides these controls
+        gridButtonPanel.add(makePlaceholderButton(), NUM_PAD_KEY_SIZE);
 
         // Placeholder at asterisk location
         gridButtonPanel.add(makePlaceholderButton(), NUM_PAD_KEY_SIZE);
@@ -824,15 +642,6 @@ public final class VideoController extends DatavyuDialog
         gridButtonPanel.add(makeLabelAndTextFieldPanel(new JLabel("Offset"), offsetTextField),
                 WIDE_TEXT_FIELD_SIZE);
 
-        getContentPane().setLayout(new MigLayout("ins 0, hidemode 3, fillx", "[growprio 0]0[]", ""));
-        getContentPane().add(gridButtonPanel, "");
-        getContentPane().setBackground(Color.WHITE);
-
-        tracksPanel.setBackground(Color.WHITE);
-        tracksPanel.setVisible(false);
-        getContentPane().add(tracksPanel, "growx");
-
-        pack();
     }
 
     private void addJumpByPair() {
@@ -845,71 +654,6 @@ public final class VideoController extends DatavyuDialog
         jumpByTextField.setName("jumpByTextField");
         gridButtonPanel.add(makeLabelAndTextFieldPanel(new JLabel("Jump by"), jumpByTextField),
                 WIDE_TEXT_FIELD_SIZE);
-    }
-
-    /**
-     * Action to invoke when the user closes the data controller.
-     *
-     * @param evt The event that triggered this action.
-     */
-    private void formWindowClosing(final WindowEvent evt) {
-        setVisible(false);
-        visible = false;
-    }
-
-    /**
-     * Action to invoke when the user clicks on the open button.
-     *
-     * @param evt The event that triggered this action.
-     */
-    private void openVideoButtonActionPerformed(final ActionEvent evt) {
-        logger.info("Add data");
-
-        DatavyuFileChooser chooser = new DatavyuFileChooser();
-        chooser.addChoosableFileFilter(JavaFxVideoPlugin.VIDEO_FILE_FILTER);
-        chooser.setFileFilter(JavaFxVideoPlugin.VIDEO_FILE_FILTER);
-
-        if (JFileChooser.APPROVE_OPTION == chooser.showOpenDialog(this)) {
-            openVideo(chooser.getSelectedFile());
-        }
-    }
-
-    /**
-     * Action to invoke when the user clicks the show tracks button.
-     *
-     * @param evt The event that triggered this action.
-     */
-    private void showTracksButtonActionPerformed(ActionEvent evt) {
-
-        // TODO: Fix this assert through proper error handling
-        assert (evt.getSource() instanceof JButton);
-
-        JButton button = (JButton) evt.getSource();
-        Resources resourceMap = Resources.of(VideoController.class);
-
-        if (tracksPanelVisible) {
-            logger.info("Show tracks (" + button.getName() + ")");
-            // Panel is being displayed, hide it
-            button.setIcon(resourceMap.getIcon(button.getName() + ".show.icon"));
-            button.setPressedIcon(resourceMap.getIcon(button.getName() + "Selected.show.icon"));
-        } else {
-            logger.info("Hide tracks (" + button.getName() + ")");
-            // Panel is hidden, show it
-            button.setIcon(resourceMap.getIcon(button.getName() + ".hide.icon"));
-            button.setPressedIcon(resourceMap.getIcon(button.getName() + "Selected.hide.icon"));
-        }
-
-        tracksPanelVisible = !tracksPanelVisible;
-        showTracksPanel(tracksPanelVisible);
-    }
-
-    /**
-     * Returns set of StreamViewers.
-     *
-     * @return a set of StreamViewers.
-     */
-    public LinkedHashSet<StreamViewer> getStreamViewers() {
-        return streamViewers;
     }
 
     /**
@@ -952,67 +696,10 @@ public final class VideoController extends DatavyuDialog
     }
 
     /**
-     * @param show true to show the tracks layout, false otherwise
-     */
-    private void showTracksPanel(final boolean show) {
-        updateCurrentTimeLabelAndNeedle(getCurrentTime());
-        tracksPanel.setVisible(show);
-        tracksPanel.repaint();
-        pack();
-        validate();
-    }
-
-    /**
-     * Handler for a TracksControllerEvent.
-     *
-     * @param e event
-     */
-    @Override
-    public void tracksControllerChanged(final TracksControllerEvent e) {
-        switch (e.getEventType()) {
-            case TIMESCALE_EVENT:
-                handleTimescaleEvent((TimescaleEvent) e.getEventObject());
-                break;
-            default:
-                break;
-        }
-    }
-
-    /**
-     * Handles a TimescaleEvent that is created when pulling on the needle with the mouse
-     *
-     * @param e The timescale event that triggered this action
-     */
-    private void handleTimescaleEvent(final TimescaleEvent e) {
-        logger.info("Change time to " + e.getTime() + " milliseconds and toggle: " + e.getToggleStartStop());
-
-        // Set the time
-        clockTimer.setForceTime(e.getTime());
-
-        // Toggle
-        if (e.getToggleStartStop()) {
-            clockTimer.toggle();
-        }
-    }
-
-    private void handleNeedleChange(final NeedleState needle) {
-        // Nothing to do here, since we update the needle based on the clock timer and not vice versa
-        // Notice, that dragging on the needle is handled through "handleTimescaleEvent"
-    }
-
-    private void handleViewportChange(final ViewportState viewport) {
-        clockTimer.setMaxTime(viewport.getMaxEnd());
-    }
-
-    /**
      * Simulates start button clicked.
      */
     public void pressPlay() {
         playButton.doClick();
-    }
-
-    public void pressShowTracksSmall() {
-        showTracksSmallButton.doClick();
     }
 
     /**
@@ -1124,12 +811,10 @@ public final class VideoController extends DatavyuDialog
         if (clockTimer.isPaused() && !clockTimer.isStopped()) {
             logger.info("Resume playback at rate: " + clockTimer.getRate());
             clockTimer.start();
-            labelSpeed.setText(FloatingPointUtils.doubleToFractionStr(clockTimer.getRate()));
         } else {
             logger.info("Pause playback at rate: " + clockTimer.getRate());
             clockTimer.pause();
             clockTimer.setForceTime((long) clockTimer.getStreamTime());
-            labelSpeed.setText("[" + FloatingPointUtils.doubleToFractionStr(clockTimer.getRate())  + "]");
         }
     }
 
@@ -1435,16 +1120,6 @@ public final class VideoController extends DatavyuDialog
         new CreateNewCellController(time, false);
         new SetNewCellStopTimeController(time);
         setOffsetField(time);
-    }
-
-    @Override
-    public void propertyChange(final PropertyChangeEvent e) {
-        Object source = e.getSource();
-        if (source instanceof NeedleModel) {
-            handleNeedleChange(((NeedleModel) source).getNeedle());
-        } else if (source instanceof ViewportModel) {
-            handleViewportChange(((ViewportModel) source).getViewport());
-        }
     }
 
     public ClockTimer getClockTimer() {

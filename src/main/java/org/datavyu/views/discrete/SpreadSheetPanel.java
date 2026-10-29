@@ -33,6 +33,8 @@ import org.datavyu.views.VideoController;
 import org.datavyu.views.discrete.layouts.SheetLayout;
 import org.datavyu.views.discrete.layouts.SheetLayoutFactory;
 import org.datavyu.views.discrete.layouts.SheetLayoutFactory.SheetLayoutType;
+import org.datavyu.views.discrete.layouts.TimeAxis;
+import org.datavyu.util.Settings;
 
 import javax.swing.*;
 import javax.swing.Box.Filler;
@@ -50,6 +52,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import javax.swing.undo.UndoableEdit;
 
@@ -70,10 +73,16 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
     private ProjectController projectController;
 
     /** Video controller */
-    private VideoController videoController;
+    private transient VideoController videoController;
 
     /** Plays this spreadsheet's media columns; set with the video controller. */
     private MediaPlayers mediaPlayers;
+
+    /** The video controller's buttons, in a drawer at the left; set with the video controller. */
+    private JPanel controlsDrawer;
+
+    /** The playhead beside the columns; set with the video controller. */
+    private PlayheadCarriage playhead;
 
     /** Scrollable view inserted into the JScrollPane */
     private SpreadsheetView mainView;
@@ -273,6 +282,73 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
         this.videoController = videoController;
         mediaPlayers = new MediaPlayers(projectController.getDataStore(), videoController);
         videoController.setMediaPlayers(mediaPlayers);
+
+        playhead = new PlayheadCarriage(scrollPane.getViewport(), this::timeAxis, videoController::setCurrentTime,
+                mainView::setPlayheadY, () -> Settings.get().isPlayheadAcrossColumns());
+        layoutFollowedByPlayhead();
+        videoController.setPlayhead(playhead);
+
+        // Above the playhead, a blank the height of the column headers, so the strip starts level with the cells.
+        JComponent headerBlank = new JComponent() {
+            @Override
+            public Dimension getPreferredSize() {
+                JViewport columnHeader = scrollPane.getColumnHeader();
+                return new Dimension(PlayheadCarriage.WIDTH, scrollPane.getInsets().top
+                        + (columnHeader == null ? 0 : columnHeader.getPreferredSize().height));
+            }
+        };
+        headerView.addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(final ComponentEvent e) {
+                headerBlank.revalidate();
+            }
+        });
+        JPanel playheadColumn = new JPanel(new BorderLayout());
+        playheadColumn.add(headerBlank, BorderLayout.NORTH);
+        playheadColumn.add(playhead, BorderLayout.CENTER);
+
+        controlsDrawer = new JPanel(new BorderLayout());
+        controlsDrawer.setName("controlsDrawer");
+        controlsDrawer.setBackground(Color.WHITE);
+        controlsDrawer.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, Color.LIGHT_GRAY));
+        controlsDrawer.add(videoController.getControls(), BorderLayout.NORTH);
+        controlsDrawer.setVisible(Settings.get().isShowControls());
+
+        JPanel west = new JPanel(new BorderLayout());
+        west.add(controlsDrawer, BorderLayout.WEST);
+        west.add(playheadColumn, BorderLayout.EAST);
+        add(west, BorderLayout.WEST);
+        revalidate();
+    }
+
+    /** @return where times fall down the sheet, or empty when it is laid out by order */
+    private Optional<TimeAxis> timeAxis() {
+        return ((SheetLayout) scrollPane.getLayout()).timeAxis();
+    }
+
+    /** Has the playhead follow the cells each time the sheet is laid out. */
+    private void layoutFollowedByPlayhead() {
+        if (playhead != null) {
+            ((SheetLayout) scrollPane.getLayout()).setAfterLayout(playhead::refresh);
+            playhead.refresh();
+        }
+    }
+
+    /** @return the playhead beside the columns, or null before the video controller is set */
+    public PlayheadCarriage getPlayhead() {
+        return playhead;
+    }
+
+    /**
+     * Shows or hides the controls drawer.
+     *
+     * @param show whether it shows
+     */
+    public void setControlsShown(final boolean show) {
+        if (controlsDrawer != null) {
+            controlsDrawer.setVisible(show);
+            revalidate();
+        }
     }
 
     /**
@@ -595,6 +671,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
     public void setLayoutType(final SheetLayoutType type) {
         this.currentLayoutType = type;
         this.scrollPane.setLayout(SheetLayoutFactory.createLayout(type));
+        layoutFollowedByPlayhead();
 
         revalidate();
     }

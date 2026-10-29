@@ -219,6 +219,24 @@ public class MediaPlayersTest {
         verify(videoController, org.mockito.Mockito.atLeastOnce()).updateMaxViewerDuration();
     }
 
+    /** Leaving a spreadsheet's tab hides its media; coming back shows it again, except a hidden column's. */
+    @Test
+    public void mediaShowsWithItsSpreadsheetUnlessItsColumnIsHidden() throws Exception {
+        Cell shown = clip("media_1", 0, file("cam.mp4"));
+        Cell hidden = clip("media_2", 0, file("room.mp4"));
+        players.openAll();
+        hidden.getVariable().setHidden(true);
+        org.mockito.Mockito.clearInvocations(players.getPlayer(shown), players.getPlayer(hidden));
+
+        players.setShowing(false);
+        verify(players.getPlayer(shown)).setViewerVisible(false);
+        verify(players.getPlayer(hidden)).setViewerVisible(false);
+
+        players.setShowing(true);
+        verify(players.getPlayer(shown)).setViewerVisible(true);
+        verify(players.getPlayer(hidden), org.mockito.Mockito.times(2)).setViewerVisible(false);
+    }
+
     /** Deleting a clip or its column in the spreadsheet closes its player; undo puts both back. */
     @Test
     public void deletingAClipClosesItsPlayerAndUndoReopensIt() throws Exception {

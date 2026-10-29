@@ -4,17 +4,44 @@ import static org.testng.Assert.assertEquals;
 
 import org.testng.annotations.Test;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class VideoControllerTimeTest {
 
+    /** The playhead shows the rate as a decimal while playing, and says when playback is paused or stopped. */
     @Test
-    public void currentTimeLabelColoursEachField() {
-        assertEquals(VideoController.formatTimeHtml(3_723_004L).replaceAll("<font color=\"#[0-9a-f]{6}\">", "<f>"),
-            "<html><f>01</font>:<f>02</font>:<f>03</font>:<f>004</font></html>");
+    public void thePlayheadShowsTheRate() {
+        assertEquals(VideoController.rateText(1F, false), "1×");
+        assertEquals(VideoController.rateText(1.25F, false), "1.25×");
+        assertEquals(VideoController.rateText(0.75F, true), "paused 0.75×");
+        assertEquals(VideoController.rateText(0F, true), "stopped");
     }
 
+    /** Moving the clock moves the playhead. */
     @Test
-    public void currentTimeLabelDoesNotWrapAfterADay() {
-        assertEquals(VideoController.formatTime(90_000_000L), "25:00:00:000");
+    public void movingTheClockMovesThePlayhead() {
+        VideoController controller = new VideoController();
+        List<String> shown = new ArrayList<>();
+        controller.setPlayhead((time, rate) -> shown.add(time + " " + rate));
+        assertEquals(shown, List.of("0 paused 1×"), "a new clock is paused at the normal rate");
+
+        controller.setCurrentTime(5_000);
+
+        assertEquals(shown.get(shown.size() - 1), "5000 paused 1×");
+    }
+
+    /** Shuttling forward at time zero plays faster, as it does anywhere else (B7). */
+    @Test
+    public void shuttlingAtTimeZeroPlays() {
+        VideoController controller = new VideoController();
+        try {
+            controller.shuttleForwardAction();
+            assertEquals(controller.getClockTimer().getRate(), 1.25F);
+            assertEquals(controller.getClockTimer().isPaused(), false);
+        } finally {
+            controller.stopAction();
+        }
     }
 
     /** Jogging steps by the highest frame rate of the open video; with only audio open, by 30 frames a second. */
@@ -35,20 +62,6 @@ public class VideoControllerTimeTest {
         assertEquals(VideoController.holds(clip, 60_000), true);
         assertEquals(VideoController.holds(clip, 59_999), false);
         assertEquals(VideoController.holds(clip, 120_000), false);
-    }
-
-    /** Shuttling forward at time zero plays faster, as it does anywhere else (B7). */
-    @Test
-    public void shuttlingAtTimeZeroPlays() {
-        VideoController controller = new VideoController(null, false);
-        try {
-            controller.shuttleForwardAction();
-            assertEquals(controller.getClockTimer().getRate(), 1.25F);
-            assertEquals(controller.getClockTimer().isPaused(), false);
-        } finally {
-            controller.stopAction();
-            controller.dispose();
-        }
     }
 
     /** Playback starting at time zero or at the end runs on when it heads away from that edge (B7). */

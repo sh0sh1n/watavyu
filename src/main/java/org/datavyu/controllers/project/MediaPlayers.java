@@ -227,6 +227,16 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
         return column;
     }
 
+    /**
+     * Shows or hides the media windows, as this spreadsheet's tab is chosen or left, or the main window is minimised
+     * and restored. Shown again, the window of a hidden column stays hidden.
+     *
+     * @param showing whether the windows show
+     */
+    public void setShowing(final boolean showing) {
+        players.forEach((clip, player) -> player.setViewerVisible(showing && !clip.getVariable().isHidden()));
+    }
+
     /** @return the player of a clip, or null if it has none */
     public StreamViewer getPlayer(final Cell clip) {
         return players.get(clip);

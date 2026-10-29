@@ -54,7 +54,6 @@ public final class Datavyu implements TitleNotifier {
     private static final String MAIN_WINDOW = "main";
 
     /** Settings key of the video controller's location */
-    private static final String VIDEO_CONTROLLER_WINDOW = "videoController";
 
     private static final Datavyu application = new Datavyu();
 
@@ -160,14 +159,6 @@ public final class Datavyu implements TitleNotifier {
      */
     public void show(final Window window) {
         WindowPlacement.show(window);
-    }
-
-    /**
-     * Action for showing the video controller.
-     */
-    public void showVideoController() {
-        show(videoController);
-        videoController.setShouldBeVisible(true);
     }
 
     /**
@@ -280,7 +271,7 @@ public final class Datavyu implements TitleNotifier {
     }
 
     /**
-     * Creates and shows the main window and the video controller, then opens the file given on the command line.
+     * Creates and shows the main window, then opens the file given on the command line.
      */
     private void start(final String[] args) {
         // Key repeat instead of the accent popup while holding keys (B2: this changes the setting for every app).
@@ -306,19 +297,8 @@ public final class Datavyu implements TitleNotifier {
         }
         mainFrame.setVisible(true);
 
-        // Create video controller.
         projectController = new ProjectController();
         videoController = datavyuView.getSpreadsheetPanel().getVideoController();
-
-        if (!WindowPlacement.restoreAndTrack(videoController, VIDEO_CONTROLLER_WINDOW, false)) {
-            // Below the main window, but neither below the bottom of the primary screen nor above its top.
-            final Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-            int x = mainFrame.getX();
-            int y = mainFrame.getY() + mainFrame.getHeight();
-            y = (int) Math.max(Math.min(y, screenSize.getHeight() - videoController.getHeight()), 0);
-            videoController.setLocation(x, y);
-        }
-        videoController.setVisible(true);
         datavyuView.startFirstSpreadsheet();
         datavyuView.checkForAutosavedFile();
 

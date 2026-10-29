@@ -18,11 +18,15 @@ import org.datavyu.views.discrete.SpreadsheetCell;
 import org.datavyu.views.discrete.SpreadsheetColumn;
 
 import javax.swing.*;
+import java.util.Optional;
 
 /**
  * SheetLayout - abstract class for spreadsheet layouts.
  */
 public abstract class SheetLayout extends ScrollPaneLayout {
+
+    /** Runs after each layout of the sheet. */
+    private Runnable afterLayout = () -> { };
 
     /**
      * SheetLayout constructor.
@@ -33,4 +37,23 @@ public abstract class SheetLayout extends ScrollPaneLayout {
     public abstract void reorientView(SpreadsheetCell cell);
 
     public abstract void reorientView(SpreadsheetColumn column);
+
+    /**
+     * @param afterLayout runs after each layout of the sheet, to follow where its cells now are
+     */
+    public void setAfterLayout(final Runnable afterLayout) {
+        this.afterLayout = afterLayout;
+    }
+
+    /** Called by a layout once it has placed the sheet's cells. */
+    protected final void laidOut() {
+        afterLayout.run();
+    }
+
+    /**
+     * @return where times fall down the sheet as last laid out, or empty if this layout does not place cells in time
+     */
+    public Optional<TimeAxis> timeAxis() {
+        return Optional.empty();
+    }
 }
