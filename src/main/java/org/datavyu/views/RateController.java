@@ -23,12 +23,12 @@ final class RateController {
     }
 
     /**
-     * Default rate controller with rates:
-     * -32, -16, -8, -4, -2, -1, -1/2, -1/4, -1/8, -1/16, -1/32, 0, 1/32, 1/16, 1/8, 1/4, 1/2, 1, 2, 4, 8, 16, 32
+     * The shuttle's rates: 0, then 0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 3 and 4 in each direction. Beyond 4x, people
+     * jump or scrub instead.
      */
     RateController() {
-        this(new float[]{-32F, -16F, -8F, -4F, -2F, -1F, -1/2F, -1/4F, -1/8F, -1/16F, -1/32F,
-                           0F, 1/32F, 1/16F, 1/8F, 1/4F, 1/2F, 1F, 2F, 4F, 8F, 16F, 32F});
+        this(new float[]{-4F, -3F, -2F, -1.5F, -1.25F, -1F, -0.75F, -0.5F, -0.25F,
+                           0F, 0.25F, 0.5F, 0.75F, 1F, 1.25F, 1.5F, 2F, 3F, 4F});
     }
 
     /**

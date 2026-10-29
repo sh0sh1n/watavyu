@@ -10,18 +10,28 @@ public class RateControllerTest {
 
     @Test
     public void shuttlesThroughTheRateLadder() {
-        assertEquals(rates.nextRate(1F, 1), 2F);
-        assertEquals(rates.nextRate(1F, -1), 0.5F);
-        assertEquals(rates.nextRate(0F, -1), -1 / 32F);
-        assertEquals(rates.nextRate(32F, 1), 32F, "the fastest rate is the limit");
+        float[] ladder = {0F, 0.25F, 0.5F, 0.75F, 1F, 1.25F, 1.5F, 2F, 3F, 4F};
+        for (int i = 1; i < ladder.length; i++) {
+            assertEquals(rates.nextRate(ladder[i - 1], 1), ladder[i]);
+            assertEquals(rates.nextRate(ladder[i], -1), ladder[i - 1]);
+        }
+        assertEquals(rates.nextRate(4F, 1), 4F, "the fastest rate is the limit");
+        assertEquals(rates.nextRate(0F, -1), -0.25F);
+        assertEquals(rates.nextRate(-4F, -1), -4F, "the fastest reverse rate is the limit");
+    }
+
+    @Test
+    public void jumpsSeveralRatesAtOnce() {
+        assertEquals(rates.nextRate(0F, 4), 1F);
+        assertEquals(rates.nextRate(1F, -20), -4F);
     }
 
     @Test
     public void stopsAtZeroWhenReverseIsNotAllowed() {
-        assertEquals(rates.nextRate(1 / 32F, -1, false), 0F);
+        assertEquals(rates.nextRate(0.25F, -1, false), 0F);
         assertEquals(rates.nextRate(0F, -1, false), 0F);
         assertEquals(rates.nextRate(0F, -3, false), 0F);
-        assertEquals(rates.nextRate(1F, -1, false), 0.5F, "forward rates are unaffected");
-        assertEquals(rates.nextRate(0F, 1, false), 1 / 32F);
+        assertEquals(rates.nextRate(1F, -1, false), 0.75F, "forward rates are unaffected");
+        assertEquals(rates.nextRate(0F, 1, false), 0.25F);
     }
 }
