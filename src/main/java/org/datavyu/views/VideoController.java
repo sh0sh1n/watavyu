@@ -389,18 +389,19 @@ public final class VideoController extends DatavyuDialog
 
     @Override
     public void clockBoundaryCheck(double clockTime) {
-        long stop = mediaPlayers == null ? -1 : mediaPlayers.stopTime(Settings.get().isStopAtEndOfMedia());
-        if (stop >= 0 && clockTime >= stop && !clockTimer.isPaused()) {
-            logger.info("Pausing at the end of the media, " + stop);
-            clockTimer.pause();
-            clockTimer.setForceTime(stop);
-            labelSpeed.setText("[" + FloatingPointUtils.doubleToFractionStr(clockTimer.getRate()) + "]");
-        }
-        if((clockTime >= getTimelineEnd() || clockTime <= 0)
-                && !clockTimer.isPaused()){
-            logger.info("Clock Boundary Pausing Master Clock at " + clockTime );
-            clockTimer.pause();
-            labelSpeed.setText("[" + FloatingPointUtils.doubleToFractionStr(clockTimer.getRate())  + "]");
+        if (!clockTimer.isPaused()) {
+            long stop = mediaPlayers == null ? -1 : mediaPlayers.stopTime(Settings.get().isStopAtEndOfMedia());
+            float rate = clockTimer.getRate();
+            if (stop >= 0 && rate > 0 && clockTime >= stop) {
+                logger.info("Pausing at the end of the media, " + stop);
+                clockTimer.pause();
+                clockTimer.setForceTime(stop);
+                labelSpeed.setText("[" + FloatingPointUtils.doubleToFractionStr(clockTimer.getRate()) + "]");
+            } else if (atTimelineEdge(clockTime, rate, getTimelineEnd())) {
+                logger.info("Clock Boundary Pausing Master Clock at " + clockTime);
+                clockTimer.pause();
+                labelSpeed.setText("[" + FloatingPointUtils.doubleToFractionStr(clockTimer.getRate()) + "]");
+            }
         }
 
         // Updates the position of the needle and label
@@ -408,6 +409,17 @@ public final class VideoController extends DatavyuDialog
         if (visible) {
             updateCurrentTimeLabelAndNeedle((long) clockTime);
         }
+    }
+
+    /**
+     * @param clockTime   the clock's time
+     * @param rate        the clock's rate
+     * @param timelineEnd the end of the timeline
+     * @return whether playback has run into the end it is heading for: the timeline's end going forward, or time
+     * zero going backward. Playback starting at either edge and heading away from it carries on.
+     */
+    static boolean atTimelineEdge(final double clockTime, final float rate, final long timelineEnd) {
+        return rate > 0 ? clockTime >= timelineEnd : rate < 0 && clockTime <= 0;
     }
 
     @Override
@@ -1370,13 +1382,11 @@ public final class VideoController extends DatavyuDialog
      * @param shuttleJump The required rate and direction of the shuttle.
      */
     private void shuttle(int shuttleJump) {
-        if (clockTimer.getClockTime() > 0 && clockTimer.getClockTime() < getTimelineEnd()) {
-            float currentRate = clockTimer.getRate();
-            boolean reverseAllowed = streamViewers.stream().allMatch(StreamViewer::isReversePlaybackSupported);
-            float nextRate = shuttleRates.nextRate(currentRate, shuttleJump, reverseAllowed);
-            clockTimer.setRate(nextRate);
-            logger.info("Changed rate from " + currentRate + " to " + nextRate + " for " + shuttleJump + " jumps.");
-        }
+        float currentRate = clockTimer.getRate();
+        boolean reverseAllowed = streamViewers.stream().allMatch(StreamViewer::isReversePlaybackSupported);
+        float nextRate = shuttleRates.nextRate(currentRate, shuttleJump, reverseAllowed);
+        clockTimer.setRate(nextRate);
+        logger.info("Changed rate from " + currentRate + " to " + nextRate + " for " + shuttleJump + " jumps.");
     }
 
     /**
