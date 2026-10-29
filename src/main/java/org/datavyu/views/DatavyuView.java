@@ -22,6 +22,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.Datavyu;
 import org.datavyu.controllers.*;
+import org.datavyu.controllers.project.MediaColumns;
 import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.event.component.FileDropEvent;
 import org.datavyu.event.component.FileDropEventListener;
@@ -30,6 +31,7 @@ import org.datavyu.plugins.StreamViewer;
 import org.datavyu.plugins.javafx.JavaFxVideoPlugin;
 import org.datavyu.projectfile.ProjectDocument;
 import org.datavyu.projectfile.ProjectPaths;
+import org.datavyu.undoableedits.AddMediaColumnEdit;
 import org.datavyu.undoableedits.RemoveCellEdit;
 import org.datavyu.undoableedits.RemoveVariableEdit;
 import org.datavyu.undoableedits.SpreadsheetUndoManager;
@@ -885,6 +887,41 @@ public final class DatavyuView implements FileDropEventListener {
     }
 
     /**
+     * Gives the spreadsheet open at launch the empty media columns a new spreadsheet starts with. Its columns can be
+     * made only once the application has its view and video controller, after this view is made.
+     */
+    public void startFirstSpreadsheet() {
+        startNewSpreadsheet(panel.getProjectController().getDataStore());
+    }
+
+    /**
+     * Gives a new spreadsheet the empty media columns it starts with, as set in the settings.
+     *
+     * @param dataStore the new spreadsheet
+     */
+    private static void startNewSpreadsheet(final DataStore dataStore) {
+        try {
+            MediaColumns.startNewSpreadsheet(dataStore, Settings.get().getNewSpreadsheetMediaColumns());
+        } catch (UserWarningException e) {
+            logger.error("Unable to add the new spreadsheet's media columns", e);
+        }
+    }
+
+    /**
+     * Action for adding an empty media column, for media added later.
+     */
+    public void newMediaColumn() {
+        DataStore dataStore = Datavyu.getProjectController().getDataStore();
+        try {
+            Variable column = MediaColumns.addSelected(dataStore);
+            undoSupport.postEdit(new AddMediaColumnEdit(dataStore, column.getName()));
+        } catch (UserWarningException e) {
+            logger.error("Unable to add a media column", e);
+            Datavyu.getApplication().showWarningDialog(e.getMessage());
+        }
+    }
+
+    /**
      * Action for showing the about window.
      */
     public void showAboutWindow() {
@@ -932,7 +969,9 @@ public final class DatavyuView implements FileDropEventListener {
 
     public ProjectController createNewSpreadsheet(String name) {
         ProjectController pc = new ProjectController();
-        pc.setDataStore(DataStoreFactory.newDataStore());
+        DataStore dataStore = DataStoreFactory.newDataStore();
+        startNewSpreadsheet(dataStore);
+        pc.setDataStore(dataStore);
         pc.setProjectName(name);
         pc = createNewSpreadsheet(pc);
 
@@ -1265,6 +1304,7 @@ public final class DatavyuView implements FileDropEventListener {
         action(r.getString("exportByFrameMenuItem.text"), this::exportFileByFrame);
 
         action(r.getString("newColumnMenuItem.text"), this::showNewVariableForm);
+        action(r.getString("newMediaColumnMenuItem.text"), this::newMediaColumn);
         action(r.getString("addMediaMenuItem.text"), this::addMedia);
         action(r.getString("columnListMenuItem.text"), this::showVariableList);
         action(r.getString("codeEditorMenuItem.text"), this::showVocabEditor);
@@ -1467,6 +1507,7 @@ public final class DatavyuView implements FileDropEventListener {
             }
         });
         spreadsheetMenu.add(item("newColumnMenuItem.text"));
+        spreadsheetMenu.add(item("newMediaColumnMenuItem.text"));
         spreadsheetMenu.add(item("addMediaMenuItem.text"));
         spreadsheetMenu.add(item("columnListMenuItem.text"));
         spreadsheetMenu.add(item("codeEditorMenuItem.text"));
