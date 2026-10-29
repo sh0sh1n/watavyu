@@ -28,6 +28,7 @@ import org.datavyu.views.VariableListV;
 import org.datavyu.views.VideoController;
 import org.datavyu.views.WindowPlacement;
 import org.datavyu.views.discrete.SpreadSheetPanel;
+import org.datavyu.views.discrete.SpreadsheetTheme;
 import org.datavyu.util.Dialogs;
 
 import javax.swing.*;
@@ -120,6 +121,8 @@ public final class Datavyu implements TitleNotifier {
      * @param args The command line arguments passed to Datavyu. The first, if any, is a file to open.
      */
     public static void main(final String[] args) {
+        // Window title bars follow the Mac's appearance, as the palette does.
+        System.setProperty("apple.awt.application.appearance", "system");
         SwingUtilities.invokeLater(() -> application.start(args));
     }
 
@@ -279,11 +282,11 @@ public final class Datavyu implements TitleNotifier {
             osxPressAndHoldEnabled = true;
             MacOS.setOSXPressAndHoldValue(false);
         }
-        try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (ReflectiveOperationException | UnsupportedLookAndFeelException e) {
-            logger.error("Cannot use the system look and feel", e);
-        }
+        SpreadsheetTheme.installLookAndFeel();
+        // The main frame is made when this class loads, before the look and feel; give it the new one.
+        SwingUtilities.updateComponentTreeUI(mainFrame);
+        SpreadsheetTheme.setMonospacedValues(Settings.get().isMonospacedValues());
+        logger.info("Palette: " + SpreadsheetTheme.PALETTE.name());
         MacOS.loadCompileHandler();
         if (args.length > 0) {
             commandLineFile = args[0];

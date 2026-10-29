@@ -49,7 +49,7 @@ public class SpreadsheetEmptyCell extends JPanel implements MouseListener {
     /**
      * Border to use for normal cell. No extra information to show.
      */
-    private static final Border NORMAL_BORDER = new MatteBorder(0, 0, 1, 1, SpreadsheetTheme.BORDER_COLOR);
+    private static final Border NORMAL_BORDER = new MatteBorder(0, 0, 1, 1, SpreadsheetTheme.PALETTE.rule());
 
     /**
      * The panel that displays the cell.
@@ -125,35 +125,35 @@ public class SpreadsheetEmptyCell extends JPanel implements MouseListener {
         topPanel.addMouseListener(this);
         ord = new JLabel("+");
         ord.setFont(SpreadsheetTheme.labelFont());
-        ord.setForeground(addAlpha(SpreadsheetTheme.ORDINAL_FOREGROUND_COLOR, ALPHA));
+        ord.setForeground(addAlpha(SpreadsheetTheme.PALETTE.ordinal(), ALPHA));
         ord.setToolTipText(rMap.getString("ord.tooltip"));
         ord.addMouseListener(this);
         ord.setFocusable(true);
 
         onset = new JLabel("--:--:--:---");
         onset.setFont(SpreadsheetTheme.labelFont());
-        onset.setForeground(addAlpha(SpreadsheetTheme.TIMESTAMP_FOREGROUND_COLOR, ALPHA));
+        onset.setForeground(addAlpha(SpreadsheetTheme.PALETTE.time(), ALPHA));
         onset.setToolTipText(rMap.getString("onset.tooltip"));
         onset.addMouseListener(this);
         onset.setName("onsetTextField");
 
         offset = new JLabel("--:--:--:---");
         offset.setFont(SpreadsheetTheme.labelFont());
-        offset.setForeground(addAlpha(SpreadsheetTheme.TIMESTAMP_FOREGROUND_COLOR, ALPHA));
+        offset.setForeground(addAlpha(SpreadsheetTheme.PALETTE.time(), ALPHA));
         offset.setToolTipText(rMap.getString("offset.tooltip"));
         offset.addMouseListener(this);
         offset.setName("offsetTextField");
 
         dataPanel = new JLabel(rMap.getString("empty.text"));
         dataPanel.setFont(SpreadsheetTheme.labelFont());
-        dataPanel.setForeground(addAlpha(SpreadsheetTheme.FOREGROUND_COLOR, ALPHA));
+        dataPanel.setForeground(addAlpha(SpreadsheetTheme.PALETTE.text(), ALPHA));
 
         dataPanel.setOpaque(false);
         dataPanel.addMouseListener(this);
         dataPanel.setName("cellValue");
 
         // Set the appearance of the spreadsheet cell.
-        cellPanel.setBackground(addAlpha(SpreadsheetTheme.BACKGROUND_COLOR, ALPHA));
+        cellPanel.setBackground(addAlpha(SpreadsheetTheme.PALETTE.cell(), ALPHA));
         cellPanel.setBorder(NORMAL_BORDER);
         cellPanel.setLayout(new BorderLayout());
 

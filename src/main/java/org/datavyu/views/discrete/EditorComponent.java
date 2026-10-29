@@ -87,7 +87,7 @@ public abstract class EditorComponent implements ClipboardOwner {
     public EditorComponent(final JTextComponent tc) {
         this();
         parentComp = tc;
-        parentComp.setBackground(SpreadsheetTheme.BACKGROUND_COLOR);
+        parentComp.setBackground(SpreadsheetTheme.PALETTE.cell());
     }
 
     /**

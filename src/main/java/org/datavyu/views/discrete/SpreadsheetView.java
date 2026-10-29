@@ -36,7 +36,8 @@ public class SpreadsheetView extends JPanel implements Scrollable {
     private List<SpreadsheetColumn> columns;
 
     /** The playhead's line across the columns: its needle's colour, faint enough to read the cells through. */
-    static final Color PLAYHEAD_LINE = new Color(204, 34, 34, 110);
+    static final Color PLAYHEAD_LINE = new Color(SpreadsheetTheme.PALETTE.accent().getRed(),
+            SpreadsheetTheme.PALETTE.accent().getGreen(), SpreadsheetTheme.PALETTE.accent().getBlue(), 90);
 
     /** Where the playhead's line crosses the columns, or -1 for no line. */
     private int playheadY = -1;

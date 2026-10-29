@@ -87,15 +87,15 @@ public final class ColumnDataPanel extends JPanel implements KeyEventDispatcher 
 
         setLayout(null);
         setBorder(BorderFactory.createMatteBorder(0, 0, 0, Constants.BORDER_SIZE,
-                new Color(175, 175, 175)));
+                SpreadsheetTheme.PALETTE.rule()));
 
         newCellButton = new SpreadsheetEmptyCell(variable);
         this.add(newCellButton);
 
         padding = new JPanel();
-        padding.setBackground(new Color(237, 237, 237));
+        padding.setBackground(SpreadsheetTheme.PALETTE.ground());
         padding.setBorder(BorderFactory.createMatteBorder(0, 0, 0, Constants.BORDER_SIZE,
-                new Color(175, 175, 175)));
+                SpreadsheetTheme.PALETTE.rule()));
         this.add(padding);
 
         // Populate the data column with spreadsheet cells.

@@ -63,6 +63,7 @@ dependencies {
     implementation(libs.snakeyaml)
     implementation(variantOf(libs.miglayout) { classifier("swing") })
     implementation(libs.commons.io)
+    implementation(libs.flatlaf)
     implementation(libs.log4j.api)
     implementation(libs.log4j.core)
     implementation(libs.jackson.databind)

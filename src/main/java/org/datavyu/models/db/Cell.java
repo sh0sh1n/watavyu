@@ -187,13 +187,6 @@ public interface Cell {
     boolean isInTimeWindow(long time);
 
     /**
-     *
-     * @param time
-     * @return
-     */
-    boolean isPastTimeWindow(long time);
-
-    /**
      * @return what a media column's cell plays, or null for an annotation column's cell
      */
     MediaClip getClip();

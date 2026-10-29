@@ -8,7 +8,6 @@ import javax.swing.JComponent;
 import javax.swing.JViewport;
 import javax.swing.SwingUtilities;
 import java.awt.BasicStroke;
-import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.FontMetrics;
@@ -37,13 +36,14 @@ public final class PlayheadCarriage extends JComponent implements VideoControlle
     /** The strip's width. */
     static final int WIDTH = 100;
 
-    /** The needle's colour. */
-    static final Color NEEDLE = new Color(204, 34, 34);
+    /** Where the needle stays, as a share of the sheet's visible height from its top, while the sheet follows it. */
+    static final double FOLLOW_AT = 1.0 / 3;
 
-    private static final Color STRIP = new Color(244, 244, 244);
-    private static final Color EDGE = new Color(190, 190, 190);
-    private static final Font TIME_FONT = new Font(Font.SANS_SERIF, Font.BOLD, 11);
-    private static final Font RATE_FONT = new Font(Font.SANS_SERIF, Font.PLAIN, 10);
+    /** Width and height of the triangle that points to a needle out of view. */
+    private static final int MARKER = 6;
+
+    private static final Font TIME_FONT = SpreadsheetTheme.labelFont().deriveFont(11.5F);
+    private static final Font RATE_FONT = SpreadsheetTheme.labelFont().deriveFont(10.5F);
     private static final int BADGE_HEIGHT = 30;
     private static final int BADGE_MARGIN = 3;
 
@@ -53,12 +53,12 @@ public final class PlayheadCarriage extends JComponent implements VideoControlle
     private final IntConsumer lineAt;
     private final BooleanSupplier lineAcross;
 
-    /** A time and the rate at it, shown together. */
-    private record Reading(long time, String rate) {
+    /** A time and the rate at it, shown together, and whether playback is running. */
+    private record Reading(long time, String rate, boolean playing) {
     }
 
     /** What the playhead shows, set by the clock's threads as one, so a time never shows with another tick's rate. */
-    private volatile Reading reading = new Reading(0, "stopped");
+    private volatile Reading reading = new Reading(0, "stopped", false);
 
     /** Whether a move of the needle is waiting for the EDT, so the clock's ticks do not pile up there. */
     private final AtomicBoolean moving = new AtomicBoolean();
@@ -111,8 +111,8 @@ public final class PlayheadCarriage extends JComponent implements VideoControlle
 
     /** Shows the clock's time and rate; called from any thread. */
     @Override
-    public void show(final long time, final String rate) {
-        this.reading = new Reading(time, rate);
+    public void show(final long time, final String rate, final boolean playing) {
+        this.reading = new Reading(time, rate, playing);
         if (moving.compareAndSet(false, true)) {
             SwingUtilities.invokeLater(() -> {
                 moving.set(false);
@@ -131,11 +131,29 @@ public final class PlayheadCarriage extends JComponent implements VideoControlle
         return reading.rate();
     }
 
-    /** Puts the needle and its line where the time falls now, after the time, the cells or the layout change. */
+    /**
+     * Puts the needle and its line where the time falls now, after the time, the cells or the layout change. While
+     * playback runs, the sheet scrolls to keep the needle {@link #FOLLOW_AT} of the way down.
+     */
     public void refresh() {
-        long time = reading.time();
-        lineAt.accept(lineAcross.getAsBoolean() ? axis.get().map(a -> a.y(time)).orElse(-1) : -1);
+        Reading shown = reading;
+        Optional<Integer> sheetY = axis.get().map(a -> a.y(shown.time()));
+        if (shown.playing()) {
+            sheetY.ifPresent(this::follow);
+        }
+        lineAt.accept(lineAcross.getAsBoolean() ? sheetY.orElse(-1) : -1);
         repaint();
+    }
+
+    private void follow(final int sheetY) {
+        Dimension extent = viewport.getExtentSize();
+        Dimension view = viewport.getViewSize();
+        int top = (int) Math.round(sheetY - extent.height * FOLLOW_AT);
+        top = Math.max(0, Math.min(top, view.height - extent.height));
+        Point position = viewport.getViewPosition();
+        if (top != position.y) {
+            viewport.setViewPosition(new Point(position.x, top));
+        }
     }
 
     /**
@@ -164,52 +182,66 @@ public final class PlayheadCarriage extends JComponent implements VideoControlle
         try {
             g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-            g.setColor(STRIP);
+            g.setColor(SpreadsheetTheme.PALETTE.chrome());
             g.fillRect(0, 0, getWidth(), getHeight());
-            g.setColor(EDGE);
+            g.setColor(SpreadsheetTheme.PALETTE.rule());
             g.drawLine(getWidth() - 1, 0, getWidth() - 1, getHeight());
 
             int top = SwingUtilities.convertPoint(viewport, 0, 0, this).y;
             int bottom = top + viewport.getExtentSize().height;
             Reading shown = reading;
             Optional<Integer> needle = axis.get().map(a -> toStrip(a.y(shown.time())));
-            String marker = "";
+            // Which way the needle lies when out of view: -1 above, 1 below, 0 in view or absent.
+            int pointing = 0;
             int badgeCentre;
             if (needle.isEmpty()) {
                 badgeCentre = top + BADGE_MARGIN + BADGE_HEIGHT / 2;
             } else if (needle.get() < top) {
-                marker = "▲ ";
+                pointing = -1;
                 badgeCentre = top + BADGE_MARGIN + BADGE_HEIGHT / 2;
             } else if (needle.get() >= bottom) {
-                marker = "▼ ";
+                pointing = 1;
                 badgeCentre = bottom - BADGE_MARGIN - BADGE_HEIGHT / 2;
             } else {
-                g.setColor(NEEDLE);
+                g.setColor(SpreadsheetTheme.PALETTE.accent());
                 g.setStroke(new BasicStroke(2));
                 g.drawLine(0, needle.get(), getWidth(), needle.get());
                 badgeCentre = Math.max(top + BADGE_HEIGHT / 2,
                         Math.min(needle.get(), bottom - BADGE_HEIGHT / 2));
             }
-            paintBadge(g, badgeCentre, shown.time(), marker + shown.rate());
+            paintBadge(g, badgeCentre, shown.time(), shown.rate(), pointing);
         } finally {
             g.dispose();
         }
     }
 
-    private void paintBadge(final Graphics2D g, final int centre, final long time, final String rateText) {
+    private void paintBadge(final Graphics2D g, final int centre, final long time, final String rateText,
+                            final int pointing) {
         int x = BADGE_MARGIN;
         int y = centre - BADGE_HEIGHT / 2;
         int width = getWidth() - 2 * BADGE_MARGIN - 1;
-        g.setColor(NEEDLE);
-        g.fillRoundRect(x, y, width, BADGE_HEIGHT, 8, 8);
-        g.setColor(Color.WHITE);
+        // Plain text on the strip, not a coloured badge: the needle is the only mark in the accent.
+        g.setColor(SpreadsheetTheme.PALETTE.chrome());
+        g.fillRect(x, y, width, BADGE_HEIGHT);
+        g.setColor(SpreadsheetTheme.PALETTE.text());
         g.setFont(TIME_FONT);
         FontMetrics timeMetrics = g.getFontMetrics();
         String timeText = Timestamp.format(time);
         g.drawString(timeText, x + (width - timeMetrics.stringWidth(timeText)) / 2, y + 2 + timeMetrics.getAscent());
+        g.setColor(SpreadsheetTheme.PALETTE.time());
         g.setFont(RATE_FONT);
         FontMetrics rateMetrics = g.getFontMetrics();
-        g.drawString(rateText, x + (width - rateMetrics.stringWidth(rateText)) / 2,
-                y + BADGE_HEIGHT - 3 - rateMetrics.getDescent());
+        int markerWidth = pointing == 0 ? 0 : MARKER + MARKER / 2;
+        int rateX = x + (width - rateMetrics.stringWidth(rateText) + markerWidth) / 2;
+        int baseline = y + BADGE_HEIGHT - 3 - rateMetrics.getDescent();
+        g.drawString(rateText, rateX, baseline);
+        if (pointing != 0) {
+            // Drawn, not typed: Plex Mono has no arrows.
+            int left = rateX - markerWidth;
+            int middle = baseline - rateMetrics.getAscent() / 2 + 1;
+            int tip = middle + pointing * MARKER / 2;
+            int base = middle - pointing * MARKER / 2;
+            g.fillPolygon(new int[]{left, left + MARKER, left + MARKER / 2}, new int[]{base, base, tip}, 3);
+        }
     }
 }

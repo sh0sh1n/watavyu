@@ -131,7 +131,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
 
         headerView = new JPanel();
         headerView.setLayout(new BoxLayout(headerView, BoxLayout.X_AXIS));
-        headerView.setBorder(BorderFactory.createMatteBorder(1, 0, 1, 0, Color.BLACK));
+        headerView.setBorder(BorderFactory.createMatteBorder(1, 0, 1, 0, SpreadsheetTheme.PALETTE.rule()));
         headerView.setName("headerView");
 
         columns = new ArrayList<>();
@@ -154,14 +154,14 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
 
         // Set a border for the top right corner
         JPanel rightCorner = new JPanel();
-        rightCorner.setBorder(BorderFactory.createMatteBorder(1, 1, 1, 0, Color.BLACK));
+        rightCorner.setBorder(BorderFactory.createMatteBorder(1, 1, 1, 0, SpreadsheetTheme.PALETTE.rule()));
         scrollPane.setCorner(ScrollPaneConstants.UPPER_RIGHT_CORNER, rightCorner);
 
         Resources rMap = Resources.of(SpreadSheetPanel.class);
 
         
         // Set up the add new variable button
-        newVariableButton.setBorder(BorderFactory.createMatteBorder(0, 0, 0, Constants.BORDER_SIZE, Color.black));
+        newVariableButton.setBorder(BorderFactory.createMatteBorder(0, 0, 0, Constants.BORDER_SIZE, SpreadsheetTheme.PALETTE.rule()));
         newVariableButton.setName("newVarPlusButton");
         newVariableButton.setToolTipText(rMap.getString("add.tooltip"));
         
@@ -214,7 +214,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
     private JButton makeHiddenVarsButton()
     {
         JButton res = new JButton();
-        res.setBorder(BorderFactory.createMatteBorder(0, 0, 0, Constants.BORDER_SIZE, Color.black));
+        res.setBorder(BorderFactory.createMatteBorder(0, 0, 0, Constants.BORDER_SIZE, SpreadsheetTheme.PALETTE.rule()));
         res.setName("hiddenVarsButton");       
         return res;
     }
@@ -247,6 +247,15 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
         hiddenVariablesButton.setEnabled(hiddensOnly.size() != 0);
 
         hiddenVariablesSpacerLabel.setText(hiddenVariablesButton.getText());
+    }
+
+    /** Shows every cell's colours again, after the past-cell dimming changes. */
+    public void refreshCellColours() {
+        for (SpreadsheetColumn col : getColumns()) {
+            for (SpreadsheetCell cell : col.getCells()) {
+                cell.refreshColours();
+            }
+        }
     }
 
     public void redrawCells() {
@@ -309,8 +318,8 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
 
         controlsDrawer = new JPanel(new BorderLayout());
         controlsDrawer.setName("controlsDrawer");
-        controlsDrawer.setBackground(Color.WHITE);
-        controlsDrawer.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, Color.LIGHT_GRAY));
+        controlsDrawer.setBackground(SpreadsheetTheme.PALETTE.chrome());
+        controlsDrawer.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, SpreadsheetTheme.PALETTE.rule()));
         controlsDrawer.add(videoController.getControls(), BorderLayout.NORTH);
         controlsDrawer.setVisible(Settings.get().isShowControls());
 
