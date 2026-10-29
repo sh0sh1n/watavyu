@@ -4,7 +4,7 @@ Known bugs and planned work, in place of GitHub issues. Finished items are delet
 
 Each item says what blocks it and how it is known:
 
-- **ready**: can be done now. **after-ui**: waits for the UI direction (U1). **after-F4**: waits for media columns.
+- **ready**: can be done now. **after-ui**: waits for the UI direction (U1). **future**: kept for later consideration, not planned.
 - *verified*: reproduced or measured. *from reading*: seen in the code, not exercised in the running app.
 
 Items are in priority order within each section.
@@ -33,11 +33,9 @@ Updated 2026-10-21. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 **B7. Playback edges at time 0.** ready, *from reading*; not intended (owner). `ClockTimer` boundary checks pause playback at time 0, and shuttle does nothing at exactly 0 (`VideoController.shuttle` requires a time above 0). Both are bugs.
 
-## Features
+**B14. Adding media cannot be undone.** ready, *from reading*. Spreadsheet > Add Media and dropping files post no undoable edit (`MediaPlayers.addMediaFiles`), while deleting the clip or column afterwards can be undone. Undo should take an added clip or column out again, closing its player.
 
-**F4. Media columns.** ready. Done: media columns are spreadsheet columns whose clips, video or audio, play in one window per column; clips are added by menu, file drop or the video controller, and moved by typing their onset. Left, both deferred:
-- Dragging clips in the spreadsheet (owner: later; today tracks are dragged in the video controller).
-- Adding media is not undoable; deleting a clip or a media column in the spreadsheet is.
+## Features
 
 **F6. Remove the video controller window.** ready. The next big UI change (AGENTS.md › North Star). Media tracks are already in the spreadsheet as media columns (F4), and the controller's tracks are gone; what is left is its transport buttons, time display, jump field, Add Data button, and a ruler with a needle (`VideoController`, `MixerController`). They find a place in the main window or go. One idea (owner): a timeline with a draggable needle down the left edge of the spreadsheet. Media clips starting before time zero (a hack today) are discussed again here.
 
@@ -47,9 +45,17 @@ Updated 2026-10-21. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 **F9. Add a clip to a media column.** ready. An explicit command to add a file to a media column as a clip at the current time, such as Add Clip… in the column header's right-click menu next to Lock Clips. Today this happens implicitly: with one media column selected, Spreadsheet > Add Media, a file drop or Add Data adds the file to that column (`MediaPlayers.addMediaFiles`), which is easy to miss. With F9 in place, Add Media should always make a new column, and the video controller's Add Data button, which duplicates Spreadsheet > Add Media, can go.
 
-**F2. Snapping when dragging a clip.** after dragging clips in the spreadsheet (F4). Wanted for easy alignment; removed with bookmarks and the region of interest. The old version (`TracksEditorController.snapOffset` on `main` before the cleanup) snapped a track's start, end and bookmarks to time zero, the needle, the region of interest and the other tracks' starts, ends and bookmarks, within 5 seconds. Rebuild it around media columns and their onsets; the controller's tracks are gone.
+**F12. Edit history in the controls drawer.** ready, medium priority (owner). Below the controls, a list of the edits that can be undone and redone, newest first, from the spreadsheet's undo history (`SpreadsheetUndoManager`; each edit has a presentation name, and `SpreadSheetEdit.toString` already formats one with its time). Hiding the drawer hides both, so the space can be reclaimed with one toggle. Datavyu's separate Undo History window was removed in the cleanup; this replaces it. B14 (adding media is not undoable) shows up here.
+
+**F10. Offsets below onsets, and point cells without offsets.** ready, medium to low priority (owner). A cell shows its onset and offset side by side, which sets a column's minimum width. Put the offset at the bottom of the cell, so columns can shrink thinner, and add a setting to leave the offset out entirely for point cells (offset = onset), which new cells are by default (`SpreadsheetCell`, `TimeStampDataValueEditor`, the column width limits in `SpreadsheetColumn`).
+
+**F11. Shorter cell times.** ready, low priority (owner). Where a cell's onset and offset both start with zero fields, leave those fields out of both: `00:00:04:028` and `00:08:04:028` show as `00:04:028` and `08:04:028`. The playhead keeps every field. Editing a shortened time needs a rule for what is typed.
+
+**F2. Dragging clips in the spreadsheet, with snapping.** future (owner: low priority; may be dropped). Clips move only by typing their onset. Dragging a clip cell would move it, snapping for easy alignment as Datavyu's track dragging did: `TracksEditorController.snapOffset` on `main` before the cleanup snapped a track's start, end and bookmarks to time zero, the needle, the region of interest and the other tracks' starts, ends and bookmarks, within 5 seconds. A locked column's clips stay put.
 
 ## Research
+
+**U5. A UI for long sessions.** needs the owner; next after the open PRs. Researchers code for hours, so the first aim is little eye strain, then performance (AGENTS.md › North Star). Research what reduces strain over long sessions (contrast, colour temperature, dark and light themes, font and size, motion such as the moving playhead) and propose a design. Owner's taste: minimalist, like a black and green terminal, with simple lines and shapes instead of icons. That would empty `src/main/resources/icons`: the keypad buttons (`DataController/eng`, where `back*.png` is already unused), the column lock and volume marks, the Code Editor's arrows and change mark, and the About splash; the app icon `datavyu.icns` is a separate question. Colours and fonts are constants in `SpreadsheetTheme`; the rest of the UI uses the system look and feel.
 
 **U1. UI direction.** needs the owner. Decided so far: remove the video controller window (F6) and replace the numpad shortcuts with a configurable key mapping (F7). The rest of the UI, and what it means for MigLayout (D1), is open.
 
