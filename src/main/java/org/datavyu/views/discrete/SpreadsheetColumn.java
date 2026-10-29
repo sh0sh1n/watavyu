@@ -19,6 +19,7 @@ import org.apache.logging.log4j.Logger;
 import org.datavyu.Datavyu;
 import org.datavyu.models.db.*;
 import org.datavyu.undoableedits.ChangeNameVariableEdit;
+import org.datavyu.undoableedits.LockColumnEdit;
 import org.datavyu.util.ClockTimer;
 import org.datavyu.util.Constants;
 import org.datavyu.util.DragAndDrop.TransparentPanel;
@@ -30,6 +31,7 @@ import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.function.Consumer;
 
 /**
  * This class maintains the visual representation of the column in the
@@ -169,18 +171,20 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
 
     /**
      * Makes the Lock Clips menu item of a media column's header: it shows whether the column is locked and toggles
-     * it.
+     * it, as an undoable edit.
      *
+     * @param dataStore the spreadsheet holding the column
      * @param column    a media column
-     * @param afterward runs after the lock changes
+     * @param post      takes the edit for the undo history
      * @return the menu item
      */
-    static JCheckBoxMenuItem lockItem(final Variable column, final Runnable afterward) {
+    static JCheckBoxMenuItem lockItem(final DataStore dataStore, final Variable column,
+                                      final Consumer<UndoableEdit> post) {
         JCheckBoxMenuItem item = new JCheckBoxMenuItem("Lock Clips", column.isLocked());
         item.setName("lockClips");
         item.addActionListener(e -> {
             column.setLocked(item.isSelected());
-            afterward.run();
+            post.accept(new LockColumnEdit(dataStore, column.getName(), item.isSelected()));
         });
         return item;
     }
@@ -191,10 +195,7 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
             return false;
         }
         JPopupMenu menu = new JPopupMenu();
-        menu.add(lockItem(variable, () -> {
-            updateLockMark();
-            Datavyu.getProjectController().getSpreadSheetPanel().redrawCells();
-        }));
+        menu.add(lockItem(dataStore, variable, Datavyu.getView().getUndoSupport()::postEdit));
         menu.show(this, me.getX(), me.getY());
         me.consume();
         return true;
@@ -502,6 +503,16 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
         this.datapanel.setVisible(!isHidden);
         this.setSelected(false);
         columnVisList.columnVisibilityChanged();
+    }
+
+    @Override
+    public void lockChanged(final boolean locked) {
+        updateLockMark();
+        // Its clips' onsets show whether they can be edited.
+        for (SpreadsheetCell cell : getCells()) {
+            cell.valueChange(cell.getCell().getCellValue());
+            cell.updateSelectionDisplay();
+        }
     }
 
     @Override
