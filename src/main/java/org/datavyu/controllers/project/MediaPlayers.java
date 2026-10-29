@@ -12,7 +12,6 @@ import org.datavyu.models.db.UserWarningException;
 import org.datavyu.models.db.Variable;
 import org.datavyu.models.db.VariableListener;
 import org.datavyu.plugins.StreamViewer;
-import org.datavyu.projectfile.MediaColumnNames;
 import org.datavyu.util.ClockTimer;
 import org.datavyu.views.MediaWindow;
 import org.datavyu.views.VideoController;
@@ -32,7 +31,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.DoubleConsumer;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 /**
  * Plays the spreadsheet's media columns. The spreadsheet holds each column and its clips; this opens a player for each
@@ -215,9 +213,7 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
      * @throws UserWarningException if the column cannot be added
      */
     public Variable addMedia(final File file) throws UserWarningException {
-        Set<String> names = dataStore.getAllVariables().stream().map(Variable::getName).collect(Collectors.toSet());
-        Variable column = dataStore.createMediaVariable(MediaColumnNames.next(names));
-        column.setOrderIndex(dataStore.getAllVariables().size() - 1);
+        Variable column = MediaColumns.add(dataStore);
         // Not selected, so that media added next gets its own column unless the user picks this one.
         column.setSelected(false);
         addedColumns.add(column);

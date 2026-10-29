@@ -319,6 +319,7 @@ public final class Datavyu implements TitleNotifier {
             videoController.setLocation(x, y);
         }
         videoController.setVisible(true);
+        datavyuView.startFirstSpreadsheet();
         datavyuView.checkForAutosavedFile();
 
         // The DB we create by default doesn't really have any unsaved changes.

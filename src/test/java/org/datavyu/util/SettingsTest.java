@@ -125,4 +125,18 @@ public class SettingsTest {
         Files.write(file, "{ \"recentProjects\": [] }".getBytes(StandardCharsets.UTF_8));
         assertTrue(Settings.load(file).isStopAtEndOfMedia());
     }
+
+    /** A new spreadsheet starts with one empty media column unless the setting says otherwise. */
+    @Test
+    public void aNewSpreadsheetStartsWithOneMediaColumnByDefault() throws IOException {
+        Settings settings = Settings.load(file);
+        assertEquals(settings.getNewSpreadsheetMediaColumns(), 1);
+
+        settings.setNewSpreadsheetMediaColumns(0);
+        settings.save();
+        assertEquals(Settings.load(file).getNewSpreadsheetMediaColumns(), 0);
+
+        Files.write(file, "{ \"newSpreadsheetMediaColumns\": -2 }".getBytes(StandardCharsets.UTF_8));
+        assertEquals(Settings.load(file).getNewSpreadsheetMediaColumns(), 0);
+    }
 }

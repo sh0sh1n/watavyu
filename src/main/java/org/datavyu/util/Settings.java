@@ -177,6 +177,17 @@ public final class Settings {
     }
 
     /**
+     * @return How many empty media columns a new spreadsheet starts with: 1 unless set otherwise, never below 0.
+     */
+    public synchronized int getNewSpreadsheetMediaColumns() {
+        return Math.max(data.newSpreadsheetMediaColumns, 0);
+    }
+
+    public synchronized void setNewSpreadsheetMediaColumns(final int columns) {
+        data.newSpreadsheetMediaColumns = columns;
+    }
+
+    /**
      * @param window The window's key, see {@link org.datavyu.views.WindowPlacement}.
      * @return The window's bounds when it was last moved or resized.
      */
@@ -203,6 +214,7 @@ public final class Settings {
         List<String> recentProjects = new ArrayList<>();
         Map<String, Bounds> windows = new LinkedHashMap<>();
         boolean stopAtEndOfMedia = true;
+        int newSpreadsheetMediaColumns = 1;
 
         /** Replaces null collections from a hand-edited file, so callers never see null. */
         Data normalized() {

@@ -30,7 +30,6 @@ import org.datavyu.models.project.TrackSettings;
 import org.datavyu.models.project.ViewerSetting;
 import org.datavyu.projectfile.ProjectDocument;
 import org.datavyu.projectfile.SpreadsheetColumns;
-import org.datavyu.projectfile.MediaColumnNames;
 import org.datavyu.util.FileSystemUtils;
 import org.datavyu.views.discrete.SpreadSheetPanel;
 
@@ -40,13 +39,11 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
 import java.util.Properties;
-import java.util.Set;
 
 
 /**
@@ -409,10 +406,7 @@ public final class ProjectController {
 
             try {
                 OlderVideo video = OlderVideo.of(setting);
-                Set<String> names = new HashSet<>();
-                dataStore.getAllVariables().forEach(variable -> names.add(variable.getName()));
-                Variable column = dataStore.createMediaVariable(MediaColumnNames.next(names));
-                column.setOrderIndex(dataStore.getAllVariables().size() - 1);
+                Variable column = MediaColumns.add(dataStore);
                 column.setHidden(video.hidden());
                 column.createClip(video.onset(), MediaClip.of(file.getAbsolutePath()).withVolume(video.volume()));
                 if (setting.getTrackSettings() != null) {
