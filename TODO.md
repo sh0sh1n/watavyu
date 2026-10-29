@@ -37,8 +37,6 @@ Updated 2026-10-21. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 **F7. Configurable key mapping for playback.** ready. The numpad shortcuts (`Shortcuts`, the keypad section) are condensed into a smaller set of playback and coding keys that the user can map, so coding works on laptops without a numpad. Settings would hold the mapping.
 
-**F8. Playback rates of 0.5 to 2×.** ready. Shuttle steps through powers of 2 from 1/32 to 32× (`RateController`); it should step through 0.5, 0.75, 1, 1.25, 1.5 and 2× (owner). `RateControllerTest` pins the current list.
-
 **F9. Add a clip to a media column.** ready. An explicit command to add a file to a media column as a clip at the current time, such as Add Clip… in the column header's right-click menu next to Lock Clips. Today this happens implicitly: with one media column selected, Spreadsheet > Add Media, a file drop or Add Data adds the file to that column (`MediaPlayers.addMediaFiles`), which is easy to miss. With F9 in place, Add Media should always make a new column, and the video controller's Add Data button, which duplicates Spreadsheet > Add Media, can go.
 
 **F12. Edit history in the controls drawer.** ready, medium priority (owner). Below the controls, a list of the edits that can be undone and redone, newest first, from the spreadsheet's undo history (`SpreadsheetUndoManager`; each edit has a presentation name, and `SpreadSheetEdit.toString` already formats one with its time). Hiding the drawer hides both, so the space can be reclaimed with one toggle. Datavyu's separate Undo History window was removed in the cleanup; this replaces it. B14 (adding media is not undoable) shows up here.

@@ -43,7 +43,7 @@ public class VideoControllerTimeTest {
         VideoController controller = new VideoController(null, false);
         try {
             controller.shuttleForwardAction();
-            assertEquals(controller.getClockTimer().getRate(), 2F);
+            assertEquals(controller.getClockTimer().getRate(), 1.25F);
             assertEquals(controller.getClockTimer().isPaused(), false);
         } finally {
             controller.stopAction();
