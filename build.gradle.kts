@@ -193,6 +193,29 @@ tasks.withType<com.github.spotbugs.snom.SpotBugsTask>().configureEach {
     reports.create("xml") { required.set(true) }
 }
 
+// SpotBugs reports are not gates, except for categories that have reached zero findings: those fail the build, so
+// they stay at zero (AGENTS.md: checks only ratchet up).
+val spotbugsGatedCategories = setOf("MT_CORRECTNESS")
+val spotbugsGate = tasks.register("spotbugsGate") {
+    description = "Fails if SpotBugs finds anything in a category that has reached zero findings."
+    group = "verification"
+    val report = layout.buildDirectory.file("reports/spotbugs/main.xml")
+    dependsOn(tasks.named("spotbugsMain"))
+    inputs.file(report)
+    doLast {
+        val xml = report.get().asFile.readText()
+        val categories = Regex("<BugPattern [^>]*type=\"([^\"]+)\"[^>]*category=\"([^\"]+)\"")
+            .findAll(xml).associate { it.groupValues[1] to it.groupValues[2] }
+        val found = Regex("<BugInstance [^>]*type=\"([^\"]+)\"").findAll(xml).map { it.groupValues[1] }
+            .filter { categories[it] in spotbugsGatedCategories }.toList()
+        if (found.isNotEmpty()) {
+            throw GradleException("SpotBugs found ${found.size} issue(s) in gated categories " +
+                "$spotbugsGatedCategories: ${found.distinct()}; see build/reports/spotbugs/main.html")
+        }
+    }
+}
+tasks.check { dependsOn(spotbugsGate) }
+
 tasks.jacocoTestReport {
     dependsOn(tasks.test)
     reports {

@@ -177,6 +177,29 @@ public final class Settings {
     }
 
     /**
+     * @return Whether the playback controls show beside the spreadsheet; true unless hidden.
+     */
+    public synchronized boolean isShowControls() {
+        return data.showControls;
+    }
+
+    public synchronized void setShowControls(final boolean show) {
+        data.showControls = show;
+    }
+
+    /**
+     * @return Whether the playhead's line runs across the spreadsheet's columns as well as its own strip; true unless
+     * turned off.
+     */
+    public synchronized boolean isPlayheadAcrossColumns() {
+        return data.playheadAcrossColumns;
+    }
+
+    public synchronized void setPlayheadAcrossColumns(final boolean across) {
+        data.playheadAcrossColumns = across;
+    }
+
+    /**
      * @return How many empty media columns a new spreadsheet starts with: 1 unless set otherwise, never below 0.
      */
     public synchronized int getNewSpreadsheetMediaColumns() {
@@ -214,6 +237,8 @@ public final class Settings {
         List<String> recentProjects = new ArrayList<>();
         Map<String, Bounds> windows = new LinkedHashMap<>();
         boolean stopAtEndOfMedia = true;
+        boolean showControls = true;
+        boolean playheadAcrossColumns = true;
         int newSpreadsheetMediaColumns = 1;
 
         /** Replaces null collections from a hand-edited file, so callers never see null. */

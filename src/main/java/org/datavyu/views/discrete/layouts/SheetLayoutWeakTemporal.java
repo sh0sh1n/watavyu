@@ -34,6 +34,9 @@ public class SheetLayoutWeakTemporal extends SheetLayout {
     int maxHeight;
     private JScrollPane pane;
 
+    /** Where times fell down the sheet in the last layout. */
+    private TimeAxis timeAxis = TimeAxis.NONE;
+
     /**
      * SheetLayoutOrdinal constructor.
      *
@@ -100,6 +103,7 @@ public class SheetLayoutWeakTemporal extends SheetLayout {
             pos += heightMap.getOrDefault(time, 0);
             pos += gapSize;
         }
+        timeAxis = new TimeAxis(onsetMap);
 
         /* Iterate over all spreadsheet cells and set boundaries using onset and offset maps.
            Keep a local copy of the position maps.  Since each time value gets a range of positions
@@ -184,11 +188,15 @@ public class SheetLayoutWeakTemporal extends SheetLayout {
         }
 
         padColumns(mainView, parent);
-//        System.err.println(String.format("Aligned.  Time: %d.", System.currentTimeMillis() - startTime));
+        laidOut();
     }
 
     @Override
+    public Optional<TimeAxis> timeAxis() {
+        return Optional.of(timeAxis);
+    }
 
+    @Override
     public void reorientView(SpreadsheetCell cell) {
         double viewMax = pane.getViewport().getViewRect().getY() + pane.getViewport().getViewRect().getHeight();
         double viewMin = pane.getViewport().getViewRect().getY();

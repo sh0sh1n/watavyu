@@ -321,7 +321,6 @@ public final class ProjectController {
         addOlderVideos(missingFilesList, missingPluginList);
         missingFilesList.addAll(spreadSheetPanel.getMediaPlayers().openAll());
 
-        boolean showController = dataStore.getAllVariables().stream().anyMatch(Variable::isMedia);
 
         if (!missingFilesList.isEmpty() || !missingPluginList.isEmpty()) {
             JFrame mainFrame = Datavyu.getApplication().getMainFrame();
@@ -355,13 +354,6 @@ public final class ProjectController {
             JOptionPane.showMessageDialog(mainFrame, sb.toString(),
                     rMap.getString("ProjectLoadError.title"),
                     JOptionPane.WARNING_MESSAGE);
-
-            showController = true;
-        }
-
-        // Show the data controller
-        if (showController) {
-            Datavyu.getApplication().showVideoController();
         }
     }
 

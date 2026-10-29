@@ -12,7 +12,8 @@ public class ResourcesTest {
 
     @Test
     public void readsTheClassResourceFile() {
-        assertEquals(Resources.of(VideoController.class).getString("title"), "Data Viewer Controller");
+        assertEquals(Resources.of(VideoController.class).getString("onsetTextField.toolTipText"),
+            "Use \"+\" to find this cellValue");
     }
 
     @Test

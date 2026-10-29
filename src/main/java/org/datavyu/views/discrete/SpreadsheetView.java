@@ -35,6 +35,12 @@ public class SpreadsheetView extends JPanel implements Scrollable {
      */
     private List<SpreadsheetColumn> columns;
 
+    /** The playhead's line across the columns: its needle's colour, faint enough to read the cells through. */
+    static final Color PLAYHEAD_LINE = new Color(204, 34, 34, 110);
+
+    /** Where the playhead's line crosses the columns, or -1 for no line. */
+    private int playheadY = -1;
+
     /**
      * Creates new form SpreadsheetView.
      */
@@ -62,6 +68,50 @@ public class SpreadsheetView extends JPanel implements Scrollable {
     public void removeColumn(final SpreadsheetColumn delColumn) {
         this.remove(delColumn.getDataPanel());
         columns.remove(delColumn);
+    }
+
+    /**
+     * Moves the playhead's line across the columns.
+     *
+     * @param y the line's height in the sheet, or -1 for no line
+     */
+    public void setPlayheadY(final int y) {
+        if (y != playheadY) {
+            repaintLine(playheadY);
+            playheadY = y;
+            repaintLine(y);
+        }
+    }
+
+    /** @return the playhead's line's height in the sheet, or -1 if there is none */
+    int getPlayheadY() {
+        return playheadY;
+    }
+
+    private void repaintLine(final int y) {
+        if (y >= 0) {
+            repaint(0, y - 2, getWidth(), 4);
+        }
+    }
+
+    /** With a line over the cells, a cell repaints through this view, so that the line is drawn over it again. */
+    @Override
+    public boolean isOptimizedDrawingEnabled() {
+        return playheadY < 0;
+    }
+
+    @Override
+    protected boolean isPaintingOrigin() {
+        return playheadY >= 0;
+    }
+
+    @Override
+    public void paint(final Graphics g) {
+        super.paint(g);
+        if (playheadY >= 0) {
+            g.setColor(PLAYHEAD_LINE);
+            g.fillRect(0, playheadY - 1, getWidth(), 2);
+        }
     }
 
     /**

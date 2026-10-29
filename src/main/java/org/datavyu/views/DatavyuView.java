@@ -150,13 +150,11 @@ public final class DatavyuView implements FileDropEventListener {
 
                 for (Component tab : tabbedPane.getComponents()) {
                     if (tab instanceof SpreadSheetPanel) {
-                        VideoController videoController = ((SpreadSheetPanel) tab).getVideoController();
-
-                        videoController.stopAction();
-                        for (StreamViewer streamViewer : videoController.getStreamViewers()) {
-                            streamViewer.setViewerVisible(false);
+                        SpreadSheetPanel sheet = (SpreadSheetPanel) tab;
+                        sheet.getVideoController().stopAction();
+                        if (sheet.getMediaPlayers() != null) {
+                            sheet.getMediaPlayers().setShowing(false);
                         }
-                        videoController.setVisible(false);
                     }
                 }
 
@@ -165,19 +163,12 @@ public final class DatavyuView implements FileDropEventListener {
                     SpreadSheetPanel spreadSheetPanel = (SpreadSheetPanel) tabbedPane.getSelectedComponent();
                     if (Datavyu.getView() != null) {
                         Datavyu.setProjectController(spreadSheetPanel.getProjectController());
-
-                        Datavyu.getVideoController().setVisible(false);
                         Datavyu.setVideoController(spreadSheetPanel.getVideoController());
                         Datavyu.getView().panel = spreadSheetPanel;
                         spreadSheetPanel.revalidate();
                         Datavyu.getView().tabbedPane.revalidate();
-
-                        if (spreadSheetPanel.getVideoController().shouldBeVisible()) {
-                            spreadSheetPanel.getVideoController().setVisible(true);
-
-                            for (StreamViewer d : spreadSheetPanel.getVideoController().getStreamViewers()) {
-                                d.setViewerVisible(true);
-                            }
+                        if (spreadSheetPanel.getMediaPlayers() != null) {
+                            spreadSheetPanel.getMediaPlayers().setShowing(true);
                         }
                     }
 
@@ -191,7 +182,7 @@ public final class DatavyuView implements FileDropEventListener {
 
         panel = new SpreadSheetPanel(new ProjectController(), null);
         panel.getProjectController().setSpreadSheetPanel(panel);
-        panel.setVideoController(new VideoController(frame, false));
+        panel.setVideoController(new VideoController());
 
         Datavyu.setProjectController(panel.getProjectController());
         panel.registerListeners();
@@ -211,18 +202,16 @@ public final class DatavyuView implements FileDropEventListener {
             @Override
             public void windowIconified(WindowEvent e) {
                 frame.setState(WindowEvent.WINDOW_ICONIFIED);
-                Datavyu.getVideoController().setVisible(false);
-                for (StreamViewer dv : Datavyu.getVideoController().getStreamViewers()) {
-                    dv.setViewerVisible(false);
+                if (panel.getMediaPlayers() != null) {
+                    panel.getMediaPlayers().setShowing(false);
                 }
             }
 
             @Override
             public void windowDeiconified(WindowEvent e) {
                 frame.setState(WindowEvent.WINDOW_DEICONIFIED);
-                Datavyu.getVideoController().setVisible(true);
-                for (StreamViewer dv : Datavyu.getVideoController().getStreamViewers()) {
-                    dv.setViewerVisible(true);
+                if (panel.getMediaPlayers() != null) {
+                    panel.getMediaPlayers().setShowing(true);
                 }
             }
 
@@ -882,8 +871,28 @@ public final class DatavyuView implements FileDropEventListener {
     /**
      * Action for showing the quicktime video controller.
      */
-    public void showVideoController() {
-        Datavyu.getApplication().showVideoController();
+    public void toggleControls() {
+        boolean show = !Settings.get().isShowControls();
+        Settings.get().setShowControls(show);
+        for (Component tab : tabbedPane.getComponents()) {
+            if (tab instanceof SpreadSheetPanel) {
+                ((SpreadSheetPanel) tab).setControlsShown(show);
+            }
+        }
+        actions.get(resources.getString("showControlsMenuItem.text")).putValue(Action.SELECTED_KEY, show);
+    }
+
+    /**
+     * Action for running the playhead's line across the spreadsheet's columns, or only down its own strip.
+     */
+    public void togglePlayheadAcrossColumns() {
+        boolean across = !Settings.get().isPlayheadAcrossColumns();
+        Settings.get().setPlayheadAcrossColumns(across);
+        for (Component tab : tabbedPane.getComponents()) {
+            if (tab instanceof SpreadSheetPanel && ((SpreadSheetPanel) tab).getPlayhead() != null) {
+                ((SpreadSheetPanel) tab).getPlayhead().refresh();
+            }
+        }
     }
 
     /**
@@ -939,7 +948,7 @@ public final class DatavyuView implements FileDropEventListener {
         Datavyu.setProjectController(pc);
 
         // Data controller needs to be registered before load for the cell positioning highlighting
-        VideoController dcv = new VideoController(frame, false);
+        VideoController dcv = new VideoController();
         Datavyu.setVideoController(dcv);
 
 
@@ -1337,7 +1346,10 @@ public final class DatavyuView implements FileDropEventListener {
         action(HIGHLIGHT_AND_FOCUS, this::toggleHighlightAndFocusMode)
                 .putValue(Action.NAME, highlightAndFocusText(VideoController.HIGHLIGHT_AND_FOCUS_BY_DEFAULT));
 
-        action(r.getString("videoControllerMenuItem.text"), this::showVideoController);
+        action(r.getString("showControlsMenuItem.text"), this::toggleControls)
+                .putValue(Action.SELECTED_KEY, Settings.get().isShowControls());
+        action(r.getString("playheadAcrossColumnsMenuItem.text"), this::togglePlayheadAcrossColumns)
+                .putValue(Action.SELECTED_KEY, Settings.get().isPlayheadAcrossColumns());
 
         action(r.getString("hotkeysMenuItem.text"), this::showHotkeysDialog);
         action(r.getString("citationMenuItem.text"), this::showCitationDialog);
@@ -1405,7 +1417,7 @@ public final class DatavyuView implements FileDropEventListener {
                 .reference("Spreadsheet", "Select column to right", "⌘→")
                 .keypad("Point cell: new cell with onset and offset at the current time", KeyEvent.VK_DIVIDE, 0,
                         run(() -> controller().pressPointCell()))
-                .keypad("Show or hide tracks", KeyEvent.VK_MULTIPLY, 0, run(() -> controller().pressShowTracksSmall()))
+                .keypad("Show or hide the controls", KeyEvent.VK_MULTIPLY, 0, command("showControlsMenuItem.text"))
                 .keypad("Set cell onset", KeyEvent.VK_NUMPAD7, 0, run(() -> controller().pressSetCellOnset()))
                 .keypad("Play", KeyEvent.VK_NUMPAD8, 0, run(() -> controller().pressPlay()))
                 .keypad("Set cell offset", KeyEvent.VK_NUMPAD9, 0, run(() -> controller().pressSetCellOffsetNine()))
@@ -1546,9 +1558,11 @@ public final class DatavyuView implements FileDropEventListener {
         highlightAndFocusItem.setToolTipText(resources.getString("highlightAndFocusMenuItem.toolTipText"));
         menuBar.add(spreadsheetMenu);
 
-        JMenu controllerMenu = new JMenu(resources.getString("controllerMenu.text"));
-        controllerMenu.add(item("videoControllerMenuItem.text"));
-        menuBar.add(controllerMenu);
+        JMenu playbackMenu = new JMenu(resources.getString("playbackMenu.text"));
+        playbackMenu.add(withAccelerator(new JCheckBoxMenuItem(command("showControlsMenuItem.text")),
+                command("showControlsMenuItem.text")));
+        playbackMenu.add(new JCheckBoxMenuItem(command("playheadAcrossColumnsMenuItem.text")));
+        menuBar.add(playbackMenu);
 
         JMenu helpMenu = new JMenu(resources.getString("helpMenu.text"));
         helpMenu.add(item("hotkeysMenuItem.text"));

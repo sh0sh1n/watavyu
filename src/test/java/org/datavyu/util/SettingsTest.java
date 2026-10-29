@@ -126,6 +126,20 @@ public class SettingsTest {
         assertTrue(Settings.load(file).isStopAtEndOfMedia());
     }
 
+    /** The controls drawer and the playhead's line across the columns show until turned off. */
+    @Test
+    public void theControlsAndThePlayheadLineShowByDefault() throws IOException {
+        Settings settings = Settings.load(file);
+        assertTrue(settings.isShowControls());
+        assertTrue(settings.isPlayheadAcrossColumns());
+
+        settings.setShowControls(false);
+        settings.setPlayheadAcrossColumns(false);
+        settings.save();
+        assertFalse(Settings.load(file).isShowControls());
+        assertFalse(Settings.load(file).isPlayheadAcrossColumns());
+    }
+
     /** A new spreadsheet starts with one empty media column unless the setting says otherwise. */
     @Test
     public void aNewSpreadsheetStartsWithOneMediaColumnByDefault() throws IOException {

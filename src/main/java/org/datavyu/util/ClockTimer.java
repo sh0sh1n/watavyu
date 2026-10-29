@@ -184,17 +184,6 @@ public final class ClockTimer {
         }
     }
 
-    /**
-     * Toggles between start/stop
-     */
-    public synchronized void toggle() {
-        if (isStopped) {
-            start();
-        } else {
-            stop();
-        }
-    }
-
   /**
    * Sets the update rate for the clock.
    *
