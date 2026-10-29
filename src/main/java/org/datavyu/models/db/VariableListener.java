@@ -55,4 +55,12 @@ public interface VariableListener {
      * @param deletedCell The cell that has been removed from the variable.
      */
     void cellRemoved(final Cell deletedCell);
+
+    /**
+     * A media column has been locked or unlocked.
+     *
+     * @param locked whether the column's clips are now locked
+     */
+    default void lockChanged(final boolean locked) {
+    }
 }

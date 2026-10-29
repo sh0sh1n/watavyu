@@ -158,6 +158,9 @@ public final class DatavyuVariable implements Variable {
         if (media && newLocked != locked) {
             locked = newLocked;
             owningDatastore.markAsChanged();
+            for (VariableListener vl : getListeners(getID())) {
+                vl.lockChanged(newLocked);
+            }
         }
     }
 
