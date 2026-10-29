@@ -12,6 +12,7 @@ The aim is a smaller app whose every feature was chosen on purpose, with a moder
 - **Cut, then keep on purpose.** Unused features go. What stays is kept deliberately and pinned by tests, because each kept behaviour is something the app is then committed to.
 - **Transparent data.** A project is one readable JSON file holding the spreadsheet and the project. Videos are data columns like any other, with explicit onsets (F1).
 - **Fewer windows.** The main window, video controller and video windows are hard to manage. The next big UI change removes the video controller window: media tracks move into the spreadsheet (F4, F6), and the numpad shortcuts become a smaller, configurable key mapping, so coding works on laptops without a numpad (F7).
+- **Comfortable for hours, then fast.** Researchers code for hours at a stretch, so the UI's first priority is little eye strain; performance comes second (U5).
 - **One platform.** macOS on Apple Silicon, Java 25, Swing with OpenJFX video through a patched media library. The app makes no network connections of its own; the rule keeps traffic off the public internet, and project and video files on mounted or local-network volumes are fine.
 
 ## How to Work Here
@@ -29,12 +30,13 @@ The aim is a smaller app whose every feature was chosen on purpose, with a moder
 Newest first. (owner) marks product decisions; the rest are engineering choices that can be revisited with reason.
 
 - **2026-10-20 (owner): the video controller has no tracks** (toward F6). A clip's volume is set in its media window, for the clip in play; a media column is locked from its header's right-click menu. The controller keeps a ruler and needle showing the whole timeline until F6; zoom, Lock all, the highlighting buttons and the Frame Rate box are gone (Highlight and Focus stays in the menu; plain highlighting without focus went with its button). Playback stops at the end of the last media clip, a setting (`stopAtEndOfMedia`) that is on by default; off, it runs on to the end of the timeline, which is at least a minute, as in Datavyu. Closing a media window hides its column, which silences it.
-- **2026-10-17 (owner): media columns in the spreadsheet** (F4). Rules for clips are under the JSON project format below.
+- **2026-10-17 (owner): media columns in the spreadsheet** (F4). Rules for clips are under the JSON project format below. Done to unblock other work, and expected to be refined: do not build in assumptions that would make the details below hard to change.
   - A media column's clips are cells laid out like annotation cells, showing the file's name, its frame rate when it has video, and whether it is missing (owner). The spreadsheet opens in temporal layout by default.
   - The spreadsheet is a view on the media system. Adding a clip may later mean processing a large media file, so a clip cell shows missing or not-yet-available media gracefully.
   - Clips are added by dropping a file on the column and by a menu command: two entry points to one action, the simpler built first.
-  - Clips move by editing their onset; dragging them in the spreadsheet comes later.
+  - Clips move by editing their onset. Dragging them in the spreadsheet is low priority, a possibility for later (F2).
   - One floating media window per media column, for now. Adding media (Spreadsheet > Add Media, dropping files on the spreadsheet, or the video controller's Add Data) puts each file in the one selected media column as a clip at the current time, or otherwise in a new media column at time zero.
+  - Column names `media_1`, `media_2`, … are provisional (2026-10-29). Alternatives to explore: a prefix such as `_media_1`, or namespaces such as `media::1` and `annotation::bookmarks`.
   - A clip is one media container: video without audio and audio without video are the same to a media column. Audio alone shows a black window; splitting audio and video playback is a later discussion. Gaps between clips are black.
   - Idea for F6: a timeline with a draggable needle down the left edge of the spreadsheet, like the controller's timeline.
 - **2026-10-14 (owner): playback rates.** Shuttle steps through 0.5, 0.75, 1, 1.25, 1.5 and 2× instead of powers of 2; beyond 2×, people jump or scrub instead (F8).
@@ -48,7 +50,7 @@ Newest first. (owner) marks product decisions; the rest are engineering choices 
   - **Hack:** a clip may start before time zero, because dragging a track in the video controller allowed it before the tracks went (for a recording that began before the annotated session). The video controller window is to be removed (F6); discuss negative times again then.
   - Every offset is a real time: new cells are point cells (offset = onset), with no "unset" offset. An offset before its onset is allowed, saved as it is, and flagged in the spreadsheet with a red border as in Datavyu (which exempts an offset of `00:00:00:000`, Datavyu's "unset").
   - Not carried over: the project name, original folder and database file name, plugin UUID, namespace and class, per-object version numbers, and the frame-rate override. Video window size and position wait for U1.
-- **2026-10-14 (owner): removed features**: Ruby and R scripting and the script console; the file and favorites drawers; the `.shapa` and `.odb` formats; the Undo History window; the playback region of interest; track bookmarks; snapping while dragging a track. Old `.opf` files with bookmarks still open; the bookmarks are dropped.
+- **2026-10-14 (owner): removed features**: Ruby and R scripting and the script console; the file and favorites drawers; the `.shapa` and `.odb` formats; the Undo History window (an edit list in the controls drawer is planned instead, F12); the playback region of interest; track bookmarks; snapping while dragging a track. Old `.opf` files with bookmarks still open; the bookmarks are dropped.
 - **2026-10-14 (owner): kept features**: JSON import/export; highlight-and-focus mode, on by default and not announced in the window title; quick-key mode, for now.
 - **2026-10-14 (owner): snapping comes back** after F1 (F2).
 - **2026-10-14 (owner): no characterization tests.** Tests are written for behaviour that is deliberately kept or rebuilt.
@@ -65,7 +67,7 @@ Ask the owner before acting on these.
 
 - Project structure beyond one file: folders, templates, and coding passes reused across experiments (U2).
 - Migration from Datavyu: whether `.opf` files keep opening, or a one-off converter replaces that. Dropping it would also drop SnakeYAML (D1).
-- The rest of the UI direction (U1) beyond removing the video controller window.
+- The rest of the UI direction (U1) beyond removing the video controller window, and the visual design for long sessions (U5).
 - Whether quick-key mode stays.
 - Whether a scripting shell returns, and in what form. It would start from a clean slate.
 
