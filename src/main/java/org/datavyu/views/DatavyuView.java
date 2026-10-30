@@ -526,86 +526,6 @@ public final class DatavyuView implements FileDropEventListener {
 
 
 
-    /**
-     * Action for exporting the current project as a particular file.
-     */
-    public void exportFile() {
-        DatavyuFileChooser fileChooser = new DatavyuFileChooser();
-
-        fileChooser.addChoosableFileFilter(CellCsvFilter.INSTANCE);
-        fileChooser.setFileFilter(CellCsvFilter.INSTANCE);
-
-        int result = fileChooser.showSaveDialog(getComponent());
-
-        if (result == JFileChooser.APPROVE_OPTION) {
-            exportToCSV(fileChooser);
-        }
-    }
-
-    private void exportToCSV(final DatavyuFileChooser fc) {
-        ProjectController projectController = Datavyu.getProjectController();
-
-        try {
-            ExportDatabaseFileController exportC = new ExportDatabaseFileController();
-
-            String dbFileName = fc.getSelectedFile().getPath();
-            if (!dbFileName.endsWith(".csv")) {
-                dbFileName = dbFileName.concat(".csv");
-            }
-
-            // Only save if the project file does not exists or if the user
-            // confirms a file overwrite in the case that the file exists.
-            if (!canSave(fc.getSelectedFile().getParent(), dbFileName)) {
-                return;
-            }
-            File f = new File(fc.getSelectedFile().getParent(), dbFileName);
-
-            exportC.exportAsCells(dbFileName, projectController.getDataStore());
-        } catch (Exception e) {
-            logger.error("Failed export to CSV. Error: ", e);
-        }
-    }
-
-    /**
-     * Action for exporting the current project as a particular file.
-     */
-    public void exportFileByFrame() {
-        DatavyuFileChooser fileChooser = new DatavyuFileChooser();
-
-        fileChooser.addChoosableFileFilter(FrameCsvFilter.INSTANCE);
-        fileChooser.setFileFilter(FrameCsvFilter.INSTANCE);
-
-        int result = fileChooser.showSaveDialog(getComponent());
-
-        if (result == JFileChooser.APPROVE_OPTION) {
-            exportToCSVByFrame(fileChooser);
-        }
-    }
-
-    private void exportToCSVByFrame(final DatavyuFileChooser fc) {
-        ProjectController projController = Datavyu.getProjectController();
-
-        try {
-            ExportDatabaseFileController exportC = new ExportDatabaseFileController();
-
-            String dbFileName = fc.getSelectedFile().getPath();
-            if (!dbFileName.endsWith(".csv")) {
-                dbFileName = dbFileName.concat(".csv");
-            }
-
-            // Only save if the project file does not exists or if the user
-            // confirms a file overwrite in the case that the file exists.
-            if (!canSave(fc.getSelectedFile().getParent(), dbFileName)) {
-                return;
-            }
-
-            exportC.exportByFrame(dbFileName, projController.getDataStore());
-
-        } catch (Exception e) {
-            logger.error("Export to CSV by frame failed. Error: ", e);
-        }
-    }
-
     private boolean canSave(final String directory, final String file) {
         File newFile = new File(directory, file);
         return (newFile.exists() && Datavyu.getApplication().overwriteExisting()) || !newFile.exists();
@@ -1335,8 +1255,6 @@ public final class DatavyuView implements FileDropEventListener {
         action(r.getString("closeTabMenuItem.text"), this::closeTab);
         action(r.getString("saveMenuItem.text"), this::save);
         action(r.getString("saveAsMenuItem.text"), this::saveAs);
-        action(r.getString("exportMenuItem.text"), this::exportFile);
-        action(r.getString("exportByFrameMenuItem.text"), this::exportFileByFrame);
 
         action(r.getString("newColumnMenuItem.text"), this::showNewVariableForm);
         action(r.getString("newMediaColumnMenuItem.text"), this::newMediaColumn);
@@ -1527,8 +1445,6 @@ public final class DatavyuView implements FileDropEventListener {
         fileMenu.addSeparator();
         fileMenu.add(item("saveMenuItem.text"));
         fileMenu.add(item("saveAsMenuItem.text"));
-        fileMenu.add(item("exportMenuItem.text"));
-        fileMenu.add(item("exportByFrameMenuItem.text"));
         menuBar.add(fileMenu);
 
         JMenu spreadsheetMenu = new JMenu(resources.getString("spreadsheetMenu.text"));
