@@ -36,10 +36,22 @@ public class MediaColumnTest {
     public void movingAClipMovesItsOffset() throws Exception {
         Cell clip = DataStoreFactory.newDataStore().createMediaVariable("media_1").createClip(2_000, CAM);
 
-        clip.setOnset(-500);
+        clip.setOnset(500);
 
-        assertEquals(clip.getOnset(), -500L);
-        assertEquals(clip.getOffset(), 9_500L);
+        assertEquals(clip.getOnset(), 500L);
+        assertEquals(clip.getOffset(), 10_500L);
+    }
+
+    /** B13: no time is negative, so no clip starts before time zero. */
+    @Test
+    public void aClipCannotStartBeforeTimeZero() throws Exception {
+        Variable media = DataStoreFactory.newDataStore().createMediaVariable("media_1");
+        Cell clip = media.createClip(2_000, CAM);
+
+        assertThrows(IllegalArgumentException.class, () -> clip.setOnset(-500));
+        assertEquals(clip.getOnset(), 2_000L);
+        assertThrows(IllegalArgumentException.class, () -> media.createClip(-1, CAM));
+        assertEquals(media.getCells(), List.of(clip));
     }
 
     @Test

@@ -111,7 +111,7 @@ public class SpreadsheetColumnsTest {
         List<Column> columns = List.of(
             new AnnotationColumn("notes", List.of("code01"), false, List.of()),
             new MediaColumn("media_2", true, true, List.of(
-                new Clip(-2_500, 0.7, new Source("media/cam 1.mp4", 60_000, 29.97, 1920, 1080)))),
+                new Clip(2_500, 0.7, new Source("media/cam 1.mp4", 60_000, 29.97, 1920, 1080)))),
             new MediaColumn("media_1", false, false, List.of(
                 new Clip(1_000, 1, new Source("/Volumes/Share/room.mp4", 5_000, 25, 640, 480)))));
         DataStore dataStore = DataStoreFactory.newDataStore();
@@ -125,7 +125,7 @@ public class SpreadsheetColumnsTest {
         Cell clip = media.getCells().get(0);
         assertEquals(clip.getClip(),
             new MediaClip("/Users/someone/study/media/cam 1.mp4", 60_000, 29.97, 1920, 1080, 0.7));
-        assertEquals(clip.getOffset(), 57_500L);
+        assertEquals(clip.getOffset(), 62_500L);
         assertEquals(SpreadsheetColumns.columns(dataStore, FOLDER), columns);
         assertEquals(SpreadsheetColumns.of(dataStore), List.of(columns.get(0)));
     }

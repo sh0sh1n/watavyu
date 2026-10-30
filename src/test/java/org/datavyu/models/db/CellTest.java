@@ -24,6 +24,7 @@ import org.datavyu.models.project.Project;
 import static org.mockito.Mockito.*;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertThrows;
 import static org.testng.Assert.assertTrue;
 
 /**
@@ -69,6 +70,20 @@ public class CellTest {
         model = null;
         var = null;
         ds = null;
+    }
+
+    /** B13: no time is negative; a negative onset or offset is refused and leaves the cell as it was. */
+    @Test
+    public void negativeTimesAreRefused() {
+        model.setOnset(1_000);
+        model.setOffset(2_000);
+
+        assertThrows(IllegalArgumentException.class, () -> model.setOnset(-1));
+        assertThrows(IllegalArgumentException.class, () -> model.setOffset(-1));
+        assertThrows(IllegalArgumentException.class, () -> model.setOnset("-00:00:01:000"));
+
+        assertEquals(model.getOnset(), 1_000L);
+        assertEquals(model.getOffset(), 2_000L);
     }
 
     @Test

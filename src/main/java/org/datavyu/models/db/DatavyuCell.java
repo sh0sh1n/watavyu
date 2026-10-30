@@ -53,7 +53,7 @@ public class DatavyuCell implements Cell {
     DatavyuCell(Variable parent, Argument type, long onset, MediaClip clip) {
         this(parent, type);
         this.clip = clip;
-        this.onset = onset;
+        this.onset = Timestamp.requireNotNegative(onset);
         this.offset = onset + clip.duration();
     }
 
@@ -94,6 +94,7 @@ public class DatavyuCell implements Cell {
         if (clip != null) {
             return;
         }
+        Timestamp.requireNotNegative(newOffset);
         if (newOffset != offset) parent.getOwningDatastore().markAsChanged();
         offset = newOffset;
         for (CellListener cl : getListeners(getID())) {
@@ -127,6 +128,7 @@ public class DatavyuCell implements Cell {
         if (clip != null && parent.isLocked()) {
             return;
         }
+        Timestamp.requireNotNegative(newOnset);
         if (newOnset != onset) parent.getOwningDatastore().markAsChanged();
         onset = newOnset;
         for (CellListener cl : getListeners(getID())) {

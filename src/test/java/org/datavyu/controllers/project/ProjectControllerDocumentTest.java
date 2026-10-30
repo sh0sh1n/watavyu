@@ -42,7 +42,7 @@ public class ProjectControllerDocumentTest {
         notes.setOrderIndex(0);
         Variable media = dataStore.createMediaVariable("media_1");
         media.setOrderIndex(1);
-        Cell clip = media.createClip(-2_500, MediaClip.of(cam.getAbsolutePath()));
+        Cell clip = media.createClip(2_500, MediaClip.of(cam.getAbsolutePath()));
 
         // The player opens at once and reports the file; the clip's volume and the column's lock then change.
         Identifier id = Identifier.generateIdentifier();
@@ -74,6 +74,6 @@ public class ProjectControllerDocumentTest {
         assertEquals(document.columns(), List.of(
             new AnnotationColumn("notes", List.of("code01"), false, List.of()),
             new MediaColumn("media_1", false, true, List.of(
-                new Clip(-2_500, 0.7, new Source("cam.mp4", 60_000, 29.97, 1920, 1080))))));
+                new Clip(2_500, 0.7, new Source("cam.mp4", 60_000, 29.97, 1920, 1080))))));
     }
 }
