@@ -69,30 +69,10 @@ public class OpenControllerTest {
     }
 
     @Test
-    public void testLoadOPF() {
-        File demoFile = new File(TEST_FOLDER, "IO/simple2.opf");
+    public void testLoadCSV2() {
+        File demoFile = new File(TEST_FOLDER, "IO/simple3.csv");
         OpenController openc = new OpenController();
-        openc.openProject(demoFile);
-
-        DataStore ds = openc.getDataStore();
-        List<Variable> vars = ds.getAllVariables();
-        assertEquals(vars.size(), 1);
-        assertEquals(vars.get(0).getName(), "TestColumn");
-        assertEquals(codes(vars.get(0)), List.of("var"));
-        assertEquals(vars.get(0).isHidden(), false);
-
-        List<Cell> cells = vars.get(0).getCells();
-        assertEquals(cells.size(), 1);
-        assertEquals(cells.get(0).getOnsetString(), "00:01:00:000");
-        assertEquals(cells.get(0).getOffsetString(), "00:02:00:000");
-        assertEquals(cells.get(0).getValueAsString(), "(This is a test cell.)");
-    }
-
-    @Test
-    public void testLoadOPF2() {
-        File demoFile = new File(TEST_FOLDER, "IO/simple3.opf");
-        OpenController openc = new OpenController();
-        openc.openProject(demoFile);
+        openc.openDataStore(demoFile);
 
         DataStore ds = openc.getDataStore();
         List<Variable> vars = ds.getAllVariables();
@@ -141,10 +121,10 @@ public class OpenControllerTest {
     }
 
     @Test
-    public void testLoadOPF3() {
-        File demoFile = new File(TEST_FOLDER, "IO/simple4.opf");
+    public void testLoadCSV3() {
+        File demoFile = new File(TEST_FOLDER, "IO/simple4.csv");
         OpenController openc = new OpenController();
-        openc.openProject(demoFile);
+        openc.openDataStore(demoFile);
 
         DataStore ds = openc.getDataStore();
         List<Variable> vars = ds.getAllVariables();

@@ -18,16 +18,11 @@ import org.apache.commons.io.FilenameUtils;
 import org.datavyu.projectfile.ProjectPaths;
 
 import java.nio.file.Paths;
-import java.util.LinkedList;
-import java.util.List;
 
 
 /**
  * This class represents a project in Datavyu. A project manages the different
  * files used by Datavyu, such as database files and media files.
- *
- * <p>A project file's media columns are spreadsheet columns; an older {@code .opf} file's videos come as viewer
- * settings, which become media columns when the project loads.
  */
 public final class Project {
 
@@ -45,26 +40,6 @@ public final class Project {
      * The directory that the project file resides in.
      */
     private String projectDirectory;
-
-    /**
-     * The directory that the project file was saved to. Could be the same as
-     * the project directory, and could importantly be blank in the case of
-     * loading older project files.
-     */
-    private String originalProjectDirectory;
-
-    private List<ViewerSetting> viewerSettings;
-
-    @Deprecated
-    private List<TrackSettings> interfaceSettings;
-
-    /**
-     * Constructor.
-     */
-    public Project() {
-        viewerSettings = new LinkedList<ViewerSetting>();
-        interfaceSettings = new LinkedList<TrackSettings>();
-    }
 
     /**
      * @return The database file name. Does not include directory.
@@ -110,44 +85,6 @@ public final class Project {
         projectName = name;
     }
 
-    public void setViewerSettings(
-            final Iterable<ViewerSetting> viewerSettings) {
-
-        if (viewerSettings != null) {
-            this.viewerSettings = new LinkedList<ViewerSetting>();
-
-            for (ViewerSetting viewerSetting : viewerSettings) {
-                this.viewerSettings.add(viewerSetting);
-            }
-        }
-    }
-
-    @Deprecated
-    public void setTrackSettings(
-            final Iterable<TrackSettings> interfaceSettings) {
-
-        if (interfaceSettings != null) {
-            this.interfaceSettings = new LinkedList<TrackSettings>();
-
-            for (TrackSettings interfaceSetting : interfaceSettings) {
-                this.interfaceSettings.add(interfaceSetting);
-            }
-        }
-    }
-
-    /**
-     * @return Viewer settings used for each media file being managed by
-     * Datavyu.
-     */
-    public Iterable<ViewerSetting> getViewerSettings() {
-        return viewerSettings;
-    }
-
-    @Deprecated
-    public Iterable<TrackSettings> getTrackSettings() {
-        return interfaceSettings;
-    }
-
     /**
      * @return the projectDirectory
      */
@@ -160,21 +97,5 @@ public final class Project {
      */
     public void setProjectDirectory(final String projectDirectory) {
         this.projectDirectory = projectDirectory;
-    }
-
-    /**
-     * @return the directory the project file was saved to.
-     */
-    public String getOriginalProjectDirectory() {
-        return originalProjectDirectory;
-    }
-
-    /**
-     * @param originalProjectDirectory sets the directory the project file was
-     *                                 saved to.
-     */
-    public void setOriginalProjectDirectory(
-            final String originalProjectDirectory) {
-        this.originalProjectDirectory = originalProjectDirectory;
     }
 }

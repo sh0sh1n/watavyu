@@ -48,14 +48,14 @@ public class SettingsTest {
     public void savedSettingsReadBackTheSame() {
         Settings settings = Settings.load(file);
         settings.setLastChosenDirectory("/Users/someone/Movies");
-        settings.rememberProject(new File("/a.opf"));
-        settings.rememberProject(new File("/b.opf"));
+        settings.rememberProject(new File("/a.watavyu.json"));
+        settings.rememberProject(new File("/b.watavyu.json"));
         settings.setWindowBounds("main", new Rectangle(10, 20, 800, 600));
         settings.save();
 
         Settings loaded = Settings.load(file);
         assertEquals(loaded.getLastChosenDirectory(), "/Users/someone/Movies");
-        assertEquals(loaded.getRecentProjects(), Arrays.asList(new File("/b.opf"), new File("/a.opf")));
+        assertEquals(loaded.getRecentProjects(), Arrays.asList(new File("/b.watavyu.json"), new File("/a.watavyu.json")));
         assertEquals(loaded.getWindowBounds("main"), Optional.of(new Rectangle(10, 20, 800, 600)));
     }
 
@@ -71,20 +71,20 @@ public class SettingsTest {
     @Test
     public void reopeningAProjectMovesItToTheFront() {
         Settings settings = Settings.load(file);
-        settings.rememberProject(new File("/a.opf"));
-        settings.rememberProject(new File("/b.opf"));
-        settings.rememberProject(new File("/a.opf"));
-        assertEquals(settings.getRecentProjects(), Arrays.asList(new File("/a.opf"), new File("/b.opf")));
+        settings.rememberProject(new File("/a.watavyu.json"));
+        settings.rememberProject(new File("/b.watavyu.json"));
+        settings.rememberProject(new File("/a.watavyu.json"));
+        assertEquals(settings.getRecentProjects(), Arrays.asList(new File("/a.watavyu.json"), new File("/b.watavyu.json")));
     }
 
     @Test
     public void onlyTheFiveMostRecentProjectsAreKept() {
         Settings settings = Settings.load(file);
         for (int i = 1; i <= 7; i++) {
-            settings.rememberProject(new File("/" + i + ".opf"));
+            settings.rememberProject(new File("/" + i + ".watavyu.json"));
         }
-        assertEquals(settings.getRecentProjects(), Arrays.asList(new File("/7.opf"), new File("/6.opf"),
-            new File("/5.opf"), new File("/4.opf"), new File("/3.opf")));
+        assertEquals(settings.getRecentProjects(), Arrays.asList(new File("/7.watavyu.json"), new File("/6.watavyu.json"),
+            new File("/5.watavyu.json"), new File("/4.watavyu.json"), new File("/3.watavyu.json")));
     }
 
     @Test

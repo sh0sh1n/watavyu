@@ -20,15 +20,12 @@ import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.DataStoreFactory;
 import org.datavyu.models.db.UserWarningException;
 import org.datavyu.models.project.Project;
-import org.datavyu.models.project.ViewerSetting;
 import org.datavyu.projectfile.ProjectDocument;
 import org.datavyu.projectfile.ProjectFileException;
 import org.datavyu.projectfile.ProjectJson;
 import org.datavyu.projectfile.SpreadsheetColumns;
 
 import java.io.File;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
 
 
 /**
@@ -59,71 +56,6 @@ public final class OpenController {
         dataStore = odc.open(dataStoreFile);
         dataStore.deselectAll();
     }
-
-    /**
-     * Opens a file as a Datavyu project.
-     *
-     * @param projectFile The file to use when opening a file as a project.
-     */
-    public void openProject(final File projectFile) {
-        openProjectArchive(projectFile);
-
-        dataStore.setName(projectFile.getName());
-
-        dataStore.deselectAll();
-
-        // Mark as unchanged after loading spreadsheet
-        dataStore.markAsUnchanged();
-    }
-
-    /**
-     * Opens a file as a Datavyu archive.
-     *
-     * @param archiveFile The archive to open as a project.
-     */
-    private void openProjectArchive(final File archiveFile) {
-
-        try {
-            ZipFile zipFile = new ZipFile(archiveFile);
-
-            String arch = archiveFile.getName().substring(0, archiveFile.getName().lastIndexOf('.'));
-            ZipEntry zippedProjectFile = zipFile.getEntry("project");
-
-            // Older project files are nested within a directory.
-            // Try in the nested location if unable to find a project.
-            if (zippedProjectFile == null) {
-                zippedProjectFile = zipFile.getEntry(arch + File.separator + "project");
-            }
-
-            OpenProjectFileController opc = new OpenProjectFileController();
-            project = opc.open(zipFile.getInputStream(zippedProjectFile));
-
-            ZipEntry zippedDataStore = zipFile.getEntry("db");
-
-            // Older dataStore files are nested within a directory
-            // Try in the nested location if unable to find a project.
-            if (zippedDataStore == null) {
-                zippedDataStore = zipFile.getEntry(arch + File.separator + "db");
-            }
-
-            OpenDataStoreFileController odc = new OpenDataStoreFileController();
-            dataStore = odc.openAsCsv(zipFile.getInputStream(zippedDataStore));
-
-            for (ViewerSetting vs : project.getViewerSettings()) {
-                if (vs.getSettingsId() != null) {
-                    ZipEntry entry = zipFile.getEntry(vs.getSettingsId());
-                    vs.copySettings(zipFile.getInputStream(entry));
-                }
-            }
-
-            zipFile.close();
-        } catch (Exception e) {
-            logger.error("Unable to open project archive", e);
-        }
-
-        dataStore.deselectAll();
-    }
-
 
     /**
      * Opens a project file. On failure the data store and project stay null and {@link #getError()} says why.

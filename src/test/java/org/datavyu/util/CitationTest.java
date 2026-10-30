@@ -2,15 +2,12 @@ package org.datavyu.util;
 
 import static org.testng.Assert.assertEquals;
 
-import java.util.Map;
-
 import org.testng.annotations.Test;
-import org.yaml.snakeyaml.Yaml;
 
 public class CitationTest {
 
     private static Citation parse(String cff) {
-        return Citation.fromCff((Map<?, ?>) new Yaml().load(cff));
+        return Citation.fromCff(cff);
     }
 
     private static final String BASE = "message: \"Cite me.\"\n"
@@ -69,5 +66,17 @@ public class CitationTest {
         assertEquals(citation.bibtex("1.0.0"),
             "@software{watavyu,\n  author = {Lovelace, Ada Maria and Turing, Alan},\n  title = {Watavyu},\n"
                 + "  version = {1.0.0},\n  url = {https://github.com/sh0sh1n/watavyu}\n}");
+    }
+
+    /** Only the citation's keys are read: comments, other keys and other lists are skipped, and quotes are undone. */
+    @Test
+    public void readsOnlyWhatACitationNeeds() {
+        Citation citation = parse("# A comment\ncff-version: 1.2.0\nmessage: 'It''s \"cited\".'\n"
+            + "title: \"Say \\\"Watavyu\\\"\"\nkeywords:\n  - video\n  - coding\n"
+            + "repository-code: https://example.org\n"
+            + "authors:\n  # people\n  - family-names: Lovelace\n    given-names: Ada\nlicense: GPL-3.0-or-later\n");
+        assertEquals(citation.getMessage(), "It's \"cited\".");
+        assertEquals(citation.apa("1.0.0"),
+            "Lovelace, A. (n.d.). Say \"Watavyu\" (Version 1.0.0) [Computer software]. https://example.org");
     }
 }

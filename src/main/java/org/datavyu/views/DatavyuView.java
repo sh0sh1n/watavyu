@@ -255,7 +255,6 @@ public final class DatavyuView implements FileDropEventListener {
                     // the last time datavyu crashed
                     if ((f.isFile()) &&
                             ((FilenameUtils.wildcardMatchOnSystem(f.getName(), "~*" + ProjectDocument.EXTENSION)) ||
-                                    (FilenameUtils.wildcardMatchOnSystem(f.getName(), "~*.opf")) ||
                                     (FilenameUtils.wildcardMatchOnSystem(f.getName(), "~*.csv")))) {
 
                         // The autosave is deleted once it has opened, or if the user does not want it.
@@ -297,8 +296,6 @@ public final class DatavyuView implements FileDropEventListener {
             extension = ProjectDocument.EXTENSION;
         } else if (lastSaveOption instanceof CsvFilter) {
             extension = ".csv";
-        } else if (lastSaveOption instanceof OpfFilter) {
-            extension = ".opf";
         }
 
         String projectName = projectController.getProjectName();
@@ -622,7 +619,7 @@ public final class DatavyuView implements FileDropEventListener {
         DatavyuFileChooser fileChooser = new DatavyuFileChooser();
 
         fileChooser.addChoosableFileFilter(ProjectFileFilter.INSTANCE);
-        fileChooser.addChoosableFileFilter(OpfFilter.INSTANCE);
+        fileChooser.addChoosableFileFilter(CsvFilter.INSTANCE);
 
         fileChooser.setFileFilter(ProjectFileFilter.INSTANCE);
         int result = fileChooser.showOpenDialog(getComponent());
@@ -666,8 +663,6 @@ public final class DatavyuView implements FileDropEventListener {
         String name = file.getName().toLowerCase(Locale.ROOT);
         if (name.endsWith(ProjectDocument.EXTENSION)) {
             return ProjectFileFilter.INSTANCE;
-        } else if (name.endsWith(".opf")) {
-            return OpfFilter.INSTANCE;
         } else if (name.endsWith(".csv")) {
             return CsvFilter.INSTANCE;
         }
@@ -783,17 +778,6 @@ public final class DatavyuView implements FileDropEventListener {
         OpenController openController = new OpenController();
         openController.openProjectFile(projectFile);
         return openController;
-    }
-
-    private OpenController openProject(final File projectFile) {
-        OpenController openController = new OpenController();
-        openController.openProject(projectFile);
-
-        // Check to make sure that this project file isn't already open
-        if ((openController.getProject() != null) && (openController.getDataStore() != null)) {
-            return openController;
-        }
-        return null;
     }
 
     /**
@@ -1699,9 +1683,6 @@ public final class DatavyuView implements FileDropEventListener {
 
             if (filter == ProjectFileFilter.INSTANCE) {
                 openController = openProjectFile(fileChooser.getSelectedFile());
-            } else if (filter == OpfFilter.INSTANCE) {
-                // Opening an older Datavyu project file
-                openController = openProject(fileChooser.getSelectedFile());
             } else {
                 // Opening a database file
                 openController = openDatabase(fileChooser.getSelectedFile());

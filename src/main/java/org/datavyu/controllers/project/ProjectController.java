@@ -22,15 +22,11 @@ import org.datavyu.controllers.VocabEditorController;
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.DataStoreFactory;
-import org.datavyu.models.db.MediaClip;
 import org.datavyu.models.db.UserWarningException;
 import org.datavyu.models.db.Variable;
 import org.datavyu.models.project.Project;
-import org.datavyu.models.project.TrackSettings;
-import org.datavyu.models.project.ViewerSetting;
 import org.datavyu.projectfile.ProjectDocument;
 import org.datavyu.projectfile.SpreadsheetColumns;
-import org.datavyu.util.FileSystemUtils;
 import org.datavyu.views.discrete.SpreadSheetPanel;
 
 import javax.swing.*;
@@ -39,11 +35,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.List;
-import java.util.Properties;
 
 
 /**
@@ -302,156 +294,24 @@ public final class ProjectController {
     }
 
     /**
-     * Set the original project directory.
-     *
-     * @param directory the original directory.
-     */
-    public void setOriginalProjectDirectory(final String directory) {
-        project.setOriginalProjectDirectory(directory);
-    }
-
-    /**
-     * Opens the project's media: the players of its media columns, after turning an older project file's videos into
-     * media columns. Reports media that is missing.
+     * Opens the players of the project's media columns. Reports media that is missing.
      */
     public void loadProject() {
-        List<String> missingFilesList = new LinkedList<>();
-        List<String> missingPluginList = new LinkedList<>();
+        List<String> missingFilesList = spreadSheetPanel.getMediaPlayers().openAll();
 
-        addOlderVideos(missingFilesList, missingPluginList);
-        missingFilesList.addAll(spreadSheetPanel.getMediaPlayers().openAll());
-
-
-        if (!missingFilesList.isEmpty() || !missingPluginList.isEmpty()) {
+        if (!missingFilesList.isEmpty()) {
             JFrame mainFrame = Datavyu.getApplication().getMainFrame();
             Resources rMap = Resources.of(Datavyu.class);
 
-            StringBuilder sb = new StringBuilder();
-
-            if (!missingFilesList.isEmpty()) {
-                sb.append("The following files are missing:\n\n");
-
-                for (String filePath : missingFilesList) {
-                    sb.append(filePath);
-                    sb.append('\n');
-                }
-            }
-
-            if (!missingPluginList.isEmpty()) {
-
-                if (sb.length() != 0) {
-                    sb.append('\n');
-                }
-
-                sb.append("The following plugins are missing:\n\n");
-
-                for (String pluginName : missingPluginList) {
-                    sb.append(pluginName);
-                    sb.append('\n');
-                }
+            StringBuilder sb = new StringBuilder("The following files are missing:\n\n");
+            for (String filePath : missingFilesList) {
+                sb.append(filePath);
+                sb.append('\n');
             }
 
             JOptionPane.showMessageDialog(mainFrame, sb.toString(),
                     rMap.getString("ProjectLoadError.title"),
                     JOptionPane.WARNING_MESSAGE);
-        }
-    }
-
-    /**
-     * Turns the videos of an older Datavyu project file into media columns, one clip each. A video whose file cannot
-     * be found is reported and left out, as nothing is known about it to save.
-     */
-    private void addOlderVideos(final List<String> missingFilesList, final List<String> missingPluginList) {
-        // Each added column, by the file path the project file gave, which the oldest files' track locks name.
-        Map<String, Variable> added = new HashMap<>();
-        for (ViewerSetting setting : project.getViewerSettings()) {
-            File file = new File(setting.getFilePath());
-
-            if (!file.exists()) {
-                // Look for a file by generating OS-independent paths.
-                File searchedFile = FileSystemUtils.generateRelative(
-                        project.getOriginalProjectDirectory(),
-                        setting.getFilePath(), project.getProjectDirectory());
-
-                if (searchedFile != null) {
-                    file = searchedFile;
-                }
-            }
-
-            // The file is actually missing.
-            if (!file.exists()) {
-                missingFilesList.add(setting.getFilePath());
-                continue;
-            }
-
-            ViewerSetting.PlayerMatch match = setting.playerMatch();
-            if (match == ViewerSetting.PlayerMatch.NONE) {
-                missingPluginList.add(setting.getPluginName());
-                continue;
-            }
-            if (match == ViewerSetting.PlayerMatch.OTHER_VIDEO_PLAYER) {
-                JOptionPane.showMessageDialog(Datavyu.getView().getComponent(),
-                    "This project uses the video plugin " + setting.getPluginName()
-                        + ", which is no longer available.\nThe video will be opened with the default plugin.",
-                    "Plugin Not Available", JOptionPane.INFORMATION_MESSAGE);
-            }
-
-            try {
-                OlderVideo video = OlderVideo.of(setting);
-                Variable column = MediaColumns.add(dataStore);
-                column.setHidden(video.hidden());
-                column.createClip(video.onset(), MediaClip.of(file.getAbsolutePath()).withVolume(video.volume()));
-                if (setting.getTrackSettings() != null) {
-                    column.setLocked(setting.getTrackSettings().isLocked());
-                }
-                added.put(setting.getFilePath(), column);
-            } catch (UserWarningException e) {
-                logger.error("Unable to add " + file, e);
-            }
-        }
-
-        // The oldest project files keep track locks apart, naming tracks by file.
-        for (TrackSettings setting : project.getTrackSettings()) {
-            Variable column = added.get(setting.getFilePath());
-            if (column != null) {
-                column.setLocked(setting.isLocked());
-            }
-        }
-    }
-
-    /**
-     * Where an older project file's video starts, how loud it is and whether it is hidden.
-     */
-    record OlderVideo(long onset, double volume, boolean hidden) {
-
-        static OlderVideo of(final ViewerSetting setting) {
-            if (setting.getSettingsId() == null) {
-                return new OlderVideo(setting.getOffset(), MediaClip.DEFAULT_VOLUME, false);
-            }
-            Properties settings = new Properties();
-            try {
-                settings.load(setting.getSettingsInputStream());
-            } catch (IOException | RuntimeException e) {
-                logger.error("Unable to read the settings of " + setting.getFilePath(), e);
-            }
-            long onset = 0;
-            double volume = MediaClip.DEFAULT_VOLUME;
-            try {
-                onset = Math.round(Double.parseDouble(property(settings, "offset", "0")));
-            } catch (NumberFormatException e) {
-                logger.error("Unreadable offset for " + setting.getFilePath() + "; using 0", e);
-            }
-            try {
-                volume = Math.min(1, Math.max(0, Double.parseDouble(property(settings, "volume", "1"))));
-            } catch (NumberFormatException e) {
-                logger.error("Unreadable volume for " + setting.getFilePath() + "; using 1", e);
-            }
-            return new OlderVideo(onset, volume, !Boolean.parseBoolean(property(settings, "visible", "true")));
-        }
-
-        private static String property(final Properties settings, final String key, final String otherwise) {
-            String value = settings.getProperty(key);
-            return value == null || value.isEmpty() ? otherwise : value.trim();
         }
     }
 

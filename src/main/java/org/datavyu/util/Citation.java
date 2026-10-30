@@ -1,19 +1,19 @@
 package org.datavyu.util;
 
-import org.yaml.snakeyaml.Yaml;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
-import java.time.ZoneOffset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
 /**
- * How to cite Watavyu, read from the CITATION.cff file at the repository root (bundled as a resource).
+ * How to cite Watavyu, read from the CITATION.cff file at the repository root (bundled as a resource). The file is
+ * YAML; this reads the part of it a citation needs, as the file writes it: top-level {@code key: value} lines, and the
+ * {@code authors} list of {@code - key: value} entries. Other keys and nested blocks are skipped.
  *
  * The running application's version is cited rather than any version in the file, so a citation always names the
  * build that produced the results.
@@ -25,11 +25,11 @@ public final class Citation {
     private final String message;
     private final String title;
     /** Each author as read from the file: an entity has "name", a person has "given-names" and "family-names". */
-    private final List<Map<?, ?>> authors;
+    private final List<Map<String, String>> authors;
     private final String url;
     private final String year;
 
-    private Citation(String message, String title, List<Map<?, ?>> authors, String url, String year) {
+    private Citation(String message, String title, List<Map<String, String>> authors, String url, String year) {
         this.message = message;
         this.title = title;
         this.authors = authors;
@@ -47,37 +47,66 @@ public final class Citation {
             if (in == null) {
                 throw new IllegalStateException("Missing resource " + RESOURCE);
             }
-            return fromCff((Map<?, ?>) new Yaml().load(in));
+            return fromCff(new String(in.readAllBytes(), StandardCharsets.UTF_8));
         } catch (IOException e) {
             throw new UncheckedIOException("Cannot read " + RESOURCE, e);
         }
     }
 
     /**
-     * Builds a citation from parsed CITATION.cff contents.
+     * Builds a citation from the text of a CITATION.cff file.
      *
-     * @param cff The YAML document as a map.
+     * @param cff The file's text.
      *
      * @return The citation.
      */
-    static Citation fromCff(Map<?, ?> cff) {
-        List<Map<?, ?>> authors = new ArrayList<>();
-        for (Object author : (List<?>) cff.get("authors")) {
-            authors.add((Map<?, ?>) author);
+    static Citation fromCff(String cff) {
+        Map<String, String> fields = new LinkedHashMap<>();
+        List<Map<String, String>> authors = new ArrayList<>();
+        String block = null;
+        for (String line : cff.lines().toList()) {
+            if (line.isBlank() || line.stripLeading().startsWith("#")) {
+                continue;
+            }
+            if (!Character.isWhitespace(line.charAt(0))) {
+                String[] field = field(line);
+                block = field[1].isEmpty() ? field[0] : null;
+                fields.put(field[0], field[1]);
+            } else if ("authors".equals(block)) {
+                String entry = line.strip();
+                if (entry.startsWith("-")) {
+                    authors.add(new LinkedHashMap<>());
+                    entry = entry.substring(1).strip();
+                }
+                if (!entry.isEmpty() && !authors.isEmpty()) {
+                    String[] field = field(entry);
+                    authors.get(authors.size() - 1).put(field[0], field[1]);
+                }
+            }
         }
-        return new Citation((String) cff.get("message"), (String) cff.get("title"), authors,
-            (String) cff.get("repository-code"), year(cff.get("date-released")));
+        String released = fields.get("date-released");
+        return new Citation(fields.get("message"), fields.get("title"), authors, fields.get("repository-code"),
+            released == null || released.length() < 4 ? null : released.substring(0, 4));
     }
 
-    /** SnakeYAML reads an unquoted date as a Date at midnight UTC and a quoted one as a String. */
-    private static String year(Object dateReleased) {
-        if (dateReleased == null) {
-            return null;
+    /** Splits {@code key: value} into the key and the value, unquoted; a key alone has an empty value. */
+    private static String[] field(String line) {
+        int colon = line.indexOf(':');
+        if (colon < 0) {
+            throw new IllegalArgumentException("Not a key and value in CITATION.cff: " + line);
         }
-        if (dateReleased instanceof Date) {
-            return String.valueOf(((Date) dateReleased).toInstant().atZone(ZoneOffset.UTC).getYear());
+        return new String[] {line.substring(0, colon).strip(), unquote(line.substring(colon + 1).strip())};
+    }
+
+    /** A double-quoted value with its backslash escapes, a single-quoted one with doubled quotes, or a plain one. */
+    private static String unquote(String value) {
+        if (value.length() >= 2 && value.startsWith("\"") && value.endsWith("\"")) {
+            return value.substring(1, value.length() - 1).replaceAll("\\\\(.)", "$1");
         }
-        return dateReleased.toString().substring(0, 4);
+        if (value.length() >= 2 && value.startsWith("'") && value.endsWith("'")) {
+            return value.substring(1, value.length() - 1).replace("''", "'");
+        }
+        return value;
     }
 
     /**
@@ -98,12 +127,12 @@ public final class Citation {
      */
     public String apa(String version) {
         List<String> names = new ArrayList<>();
-        for (Map<?, ?> author : authors) {
+        for (Map<String, String> author : authors) {
             if (author.containsKey("name")) {
-                names.add((String) author.get("name"));
+                names.add(author.get("name"));
             } else {
                 StringBuilder initials = new StringBuilder();
-                for (String given : ((String) author.get("given-names")).split(" ")) {
+                for (String given : author.get("given-names").split(" ")) {
                     initials.append(initials.length() == 0 ? "" : " ").append(given.charAt(0)).append('.');
                 }
                 names.add(author.get("family-names") + ", " + initials);
@@ -125,9 +154,9 @@ public final class Citation {
      */
     public String bibtex(String version) {
         List<String> names = new ArrayList<>();
-        for (Map<?, ?> author : authors) {
+        for (Map<String, String> author : authors) {
             names.add(author.containsKey("name")
-                ? "{" + escape((String) author.get("name")) + "}"
+                ? "{" + escape(author.get("name")) + "}"
                 : escape(author.get("family-names") + ", " + author.get("given-names")));
         }
         StringBuilder entry = new StringBuilder("@software{").append(key()).append(",\n");
