@@ -78,9 +78,9 @@ public class GlyphTest {
     }
 
     @Test
-    public void onlyThePointCellAndWarningHaveDots() {
+    public void onlyTheWarningHasADot() {
         for (Glyph.Shape shape : Glyph.Shape.values()) {
-            boolean dotted = shape == Glyph.Shape.POINT_CELL || shape == Glyph.Shape.WARNING;
+            boolean dotted = shape == Glyph.Shape.WARNING;
             assertEquals(!Glyph.dots(shape).isEmpty(), dotted, shape.toString());
         }
         assertFalse(Glyph.lines(Glyph.Shape.WARNING).isEmpty());

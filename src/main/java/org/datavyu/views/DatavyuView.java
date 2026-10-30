@@ -1361,8 +1361,6 @@ public final class DatavyuView implements FileDropEventListener {
                         actions.get(HIGHLIGHT_AND_FOCUS))
                 .reference("Spreadsheet", "Select column to left", "⌘←")
                 .reference("Spreadsheet", "Select column to right", "⌘→")
-                .keypad("Point cell: new cell with onset and offset at the current time", KeyEvent.VK_DIVIDE, 0,
-                        run(() -> controller().pressPointCell()))
                 .keypad("Show or hide the controls", KeyEvent.VK_MULTIPLY, 0, command("showControlsMenuItem.text"))
                 .keypad("Set cell onset", KeyEvent.VK_NUMPAD7, 0, run(() -> controller().pressSetCellOnset()))
                 .keypad("Play", KeyEvent.VK_NUMPAD8, 0, run(() -> controller().pressPlay()))
