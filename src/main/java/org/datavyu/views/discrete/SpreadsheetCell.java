@@ -22,15 +22,13 @@ import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.CellListener;
 import org.datavyu.models.db.CellValue;
 import org.datavyu.util.ClockTimer;
+import org.datavyu.util.Settings;
 import org.datavyu.views.discrete.datavalues.MatrixRootView;
 import org.datavyu.views.discrete.datavalues.TimeStampDataValueEditor.TimeStampSource;
 import org.datavyu.views.discrete.datavalues.TimeStampTextField;
 
 import javax.swing.*;
 import javax.swing.Box.Filler;
-import javax.swing.border.Border;
-import javax.swing.border.CompoundBorder;
-import javax.swing.border.MatteBorder;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.ArrayList;
@@ -44,56 +42,9 @@ public class SpreadsheetCell extends JPanel
         implements MouseListener, FocusListener, CellListener, ClockTimer.ClockListener {
 
     /**
-     * Border to use if cell overlaps with another.
-     */
-    public static final Border OVERLAP_BORDER = new CompoundBorder(
-            new CompoundBorder(
-                    new MatteBorder(0, 0, 1, 0, SpreadsheetTheme.BORDER_COLOR),
-                    new MatteBorder(0, 0, 3, 0, SpreadsheetTheme.OVERLAP_COLOR)),
-            new MatteBorder(3,
-                            3, 0, 3, SpreadsheetTheme.BACKGROUND_COLOR));
-
-    /**
      * Width of spacer between onset and offset timestamps.
      */
     private static final int TIME_SPACER = 5;
-    /**
-     * Border to use when a cell is highlighted.
-     */
-    private static final Border HIGHLIGHT_BORDER = new CompoundBorder(
-            new MatteBorder(0, 0, 1, 0, SpreadsheetTheme.BORDER_COLOR),
-            new MatteBorder(3, 3, 3, 3, SpreadsheetTheme.SELECTED_COLOR));
-    /**
-     * Border to use when a cell is highlighted and overlapping cell.
-     */
-    private static final Border HIGHLIGHT_OVERLAP_BORDER = new CompoundBorder(
-            new CompoundBorder(
-                    new MatteBorder(0, 0, 1, 0, SpreadsheetTheme.BORDER_COLOR),
-                    new MatteBorder(0, 0, 3, 0, SpreadsheetTheme.OVERLAP_COLOR)),
-            new MatteBorder(3,
-                            3, 0, 3, SpreadsheetTheme.SELECTED_COLOR));
-    /**
-     * Border to use when a cell is selected.
-     */
-    private static final Border FILL_OVERLAP_BORDER = HIGHLIGHT_OVERLAP_BORDER;
-    /**
-     * Border to use when a cell is selected.
-     */
-    private static final Border FILL_BORDER = new CompoundBorder(
-            new CompoundBorder(
-                    new MatteBorder(0, 0, 1, 0, SpreadsheetTheme.BORDER_COLOR),
-                    new MatteBorder(0, 0, 3, 0, SpreadsheetTheme.SELECTED_COLOR)),
-            new MatteBorder(3,
-                            3, 0, 3, SpreadsheetTheme.SELECTED_COLOR));
-    /**
-     * Border to use for normal cell. No extra information to show.
-     */
-    private static final Border NORMAL_BORDER = new CompoundBorder(
-            new CompoundBorder(
-                    new MatteBorder(1, 0, 1, 0, SpreadsheetTheme.BORDER_COLOR),
-                    new MatteBorder(0, 0, 3, 0, SpreadsheetTheme.BACKGROUND_COLOR)),
-            new MatteBorder(3, 3, 0, 3,
-                            SpreadsheetTheme.BACKGROUND_COLOR));
     /**
      * The logger for this class.
      */
@@ -116,8 +67,8 @@ public class SpreadsheetCell extends JPanel
      * The Ordinal display component.
      */
     private JLabel ord;
-    private Color timeHighlightColor = new Color(116, 242, 190);
-    private Color pastTimeHighlightColor = new Color(247, 153, 153);
+    /** Where this cell stood against the needle when it was last drawn, so a clock tick changes it only on a move. */
+    private CellLook.Time shownTime;
     /**
      * The Onset display component.
      */
@@ -179,14 +130,14 @@ public class SpreadsheetCell extends JPanel
         topPanel.addMouseListener(this);
         ord = new JLabel();
         ord.setFont(SpreadsheetTheme.labelFont());
-        ord.setForeground(SpreadsheetTheme.ORDINAL_FOREGROUND_COLOR);
+        ord.setForeground(SpreadsheetTheme.PALETTE.ordinal());
         ord.setToolTipText(rMap.getString("ord.tooltip"));
         ord.addMouseListener(this);
         ord.setFocusable(true);
 
         onset = new TimeStampTextField(model, TimeStampSource.Onset);
         onset.setFont(SpreadsheetTheme.labelFont());
-        onset.setForeground(SpreadsheetTheme.TIMESTAMP_FOREGROUND_COLOR);
+        onset.setForeground(SpreadsheetTheme.PALETTE.time());
         onset.setToolTipText(rMap.getString("onset.tooltip"));
         onset.addFocusListener(this);
         onset.addMouseListener(this);
@@ -194,7 +145,7 @@ public class SpreadsheetCell extends JPanel
 
         offset = new TimeStampTextField(model, TimeStampSource.Offset);
         offset.setFont(SpreadsheetTheme.labelFont());
-        offset.setForeground(SpreadsheetTheme.TIMESTAMP_FOREGROUND_COLOR);
+        offset.setForeground(SpreadsheetTheme.PALETTE.time());
         offset.setToolTipText(rMap.getString("offset.tooltip"));
         offset.addFocusListener(this);
         offset.addMouseListener(this);
@@ -202,7 +153,7 @@ public class SpreadsheetCell extends JPanel
 
         dataPanel = new MatrixRootView(model, cell.getCellValue());
         dataPanel.setFont(SpreadsheetTheme.dataFont());
-        dataPanel.setForeground(SpreadsheetTheme.FOREGROUND_COLOR);
+        dataPanel.setForeground(SpreadsheetTheme.PALETTE.text());
 
         dataPanel.setOpaque(false);
         dataPanel.addFocusListener(this);
@@ -210,9 +161,8 @@ public class SpreadsheetCell extends JPanel
         dataPanel.setName("cellValue");
 
         // Set the appearance of the spreadsheet cell.
-        cellPanel.setBackground(SpreadsheetTheme.BACKGROUND_COLOR);
-        // Cell is highlighted by default.
-        cellPanel.setBorder(NORMAL_BORDER);
+        cellPanel.setBackground(SpreadsheetTheme.PALETTE.cell());
+        cellPanel.setBorder(CellLook.border(SpreadsheetTheme.PALETTE, CellLook.Selection.NONE, false, false));
         cellPanel.setLayout(new BorderLayout());
 
         // Set the apperance of the top panel and add child elements (ord, onset
@@ -329,21 +279,7 @@ public class SpreadsheetCell extends JPanel
      */
     public void setOverlapBorder(final boolean overlap) {
         cellOverlap = overlap;
-
-        if (cellOverlap) {
-
-            if (model.isHighlighted()) {
-                cellPanel.setBorder(HIGHLIGHT_OVERLAP_BORDER);
-            } else {
-                cellPanel.setBorder(OVERLAP_BORDER);
-            }
-        } else {
-            if (model.isHighlighted()) {
-                cellPanel.setBorder(HIGHLIGHT_BORDER);
-            } else {
-                cellPanel.setBorder(NORMAL_BORDER);
-            }
-        }
+        updateSelectionDisplay();
     }
 
     /**
@@ -360,46 +296,43 @@ public class SpreadsheetCell extends JPanel
         return dataPanel;
     }
 
+    /**
+     * Shows how the cell is selected, whether it overlaps the next cell, and where it stands against the needle
+     * ({@link CellLook}). Where it stands shows only while cells are highlighted by time.
+     */
     public void updateSelectionDisplay() {
-        if (model.isHighlighted() && !Datavyu.getVideoController().getCellHighlightAndFocus()) {
-            if (cellOverlap) {
-                cellPanel.setBorder(HIGHLIGHT_OVERLAP_BORDER);
-            } else {
-                cellPanel.setBorder(HIGHLIGHT_BORDER);
-            }
+        boolean highlightAndFocus = Datavyu.getVideoController().getCellHighlightAndFocus();
+        CellLook.Selection selection;
+        if (model.isHighlighted() && !highlightAndFocus) {
+            selection = CellLook.Selection.HIGHLIGHTED;
         } else if (model.isSelected()) {
-            if (cellOverlap) {
-                cellPanel.setBorder(FILL_OVERLAP_BORDER);
-            } else {
-                cellPanel.setBorder(FILL_BORDER);
-            }
+            selection = CellLook.Selection.SELECTED;
         } else {
-            if (cellOverlap) {
-                cellPanel.setBorder(OVERLAP_BORDER);
-            } else {
-                cellPanel.setBorder(NORMAL_BORDER);
-            }
+            selection = CellLook.Selection.NONE;
         }
+        CellLook.Time time = highlightAndFocus || Datavyu.getVideoController().getCellHighlighting()
+                ? CellLook.timeOf(model.getOnset(), model.getOffset(), Datavyu.getVideoController().getCurrentTime())
+                : CellLook.Time.AHEAD;
+        cellPanel.setBorder(CellLook.border(SpreadsheetTheme.PALETTE, selection, cellOverlap,
+                time == CellLook.Time.IN_PLAY));
+        if (time != shownTime) {
+            shownTime = time;
+            showColours(CellLook.colours(SpreadsheetTheme.PALETTE, time, Settings.get().getPastCellDim()));
+        }
+    }
 
-        if (Datavyu.getVideoController().getCellHighlightAndFocus()) {
-            if (model.isPastTimeWindow(Datavyu.getVideoController().getCurrentTime())) {
-                cellPanel.setBackground(pastTimeHighlightColor);
-            }  else if(model.isInTimeWindow(Datavyu.getVideoController().getCurrentTime())) {
-                cellPanel.setBackground(timeHighlightColor);
-            } else {
-                cellPanel.setBackground(SpreadsheetTheme.BACKGROUND_COLOR);
-            }
-        } else if (Datavyu.getVideoController().getCellHighlighting()) {
-            if(model.isPastTimeWindow(Datavyu.getVideoController().getCurrentTime())) {
-                cellPanel.setBackground(pastTimeHighlightColor);
-            } else if(model.isInTimeWindow(Datavyu.getVideoController().getCurrentTime())) {
-                cellPanel.setBackground(timeHighlightColor);
-            } else {
-                cellPanel.setBackground(SpreadsheetTheme.BACKGROUND_COLOR);
-            }
-        } else {
-            cellPanel.setBackground(SpreadsheetTheme.BACKGROUND_COLOR);
-        }
+    /** Shows colours again after the past-cell dimming changes. */
+    public void refreshColours() {
+        shownTime = null;
+        updateSelectionDisplay();
+    }
+
+    private void showColours(final CellLook.Colours colours) {
+        cellPanel.setBackground(colours.background());
+        dataPanel.setForeground(colours.text());
+        onset.setForeground(colours.time());
+        offset.setForeground(colours.time());
+        ord.setForeground(colours.ordinal());
     }
 
     // *************************************************************************
@@ -408,6 +341,8 @@ public class SpreadsheetCell extends JPanel
     @Override
     public void offsetChanged(final long newOffset) {
         offset.setValue();
+        // The time field is its own validate root; the sheet places its cells by time, so it lays them out again.
+        revalidate();
         if (model.isSelected()) {
             // Update the find windows to the newly selected cell's values
             Datavyu.getVideoController().setOnsetField(model.getOnset());
@@ -418,6 +353,8 @@ public class SpreadsheetCell extends JPanel
     @Override
     public void onsetChanged(final long newOnset) {
         onset.setValue();
+        // The time field is its own validate root; the sheet places its cells by time, so it lays them out again.
+        revalidate();
         if (model.isSelected()) {
             Datavyu.getVideoController().setOnsetField(model.getOnset());
             Datavyu.getVideoController().setOffsetField(model.getOffset());

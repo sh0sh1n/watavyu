@@ -2,7 +2,6 @@ package org.datavyu.views;
 
 import org.datavyu.controllers.project.MediaPlayers;
 
-import javax.swing.ImageIcon;
 import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -68,7 +67,7 @@ public final class MediaWindow extends JDialog implements MediaPlayers.ColumnWin
         content.add(gap, GAP);
         getContentPane().add(content, BorderLayout.CENTER);
         JPanel controls = new JPanel(new BorderLayout(4, 0));
-        controls.add(new JLabel(new ImageIcon(MediaWindow.class.getResource("/icons/volume.png"))), BorderLayout.WEST);
+        controls.add(new JLabel(Glyph.of(Glyph.Shape.VOLUME, 16)), BorderLayout.WEST);
         volume.setName("volume");
         volume.setToolTipText("Volume of the clip in play");
         volume.setEnabled(false);

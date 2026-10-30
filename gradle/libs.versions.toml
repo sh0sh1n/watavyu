@@ -9,6 +9,7 @@ pmd = "7.17.0"
 [libraries]
 commons-io = "commons-io:commons-io:2.22.0"
 errorprone-core = "com.google.errorprone:error_prone_core:2.50.0"
+flatlaf = "com.formdev:flatlaf:3.7.2"
 jackson-databind = "com.fasterxml.jackson.core:jackson-databind:2.22.3"
 json-schema-validator = "com.networknt:json-schema-validator:3.0.7"
 log4j-api = { module = "org.apache.logging.log4j:log4j-api", version.ref = "log4j" }

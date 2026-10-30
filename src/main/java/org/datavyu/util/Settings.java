@@ -21,10 +21,10 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * The user's settings: the last folder chosen in a file dialog, recently opened projects and window positions. They
- * are stored as JSON in {@code settings.json} under {@code ~/Library/Application Support/Watavyu}, or under the
- * directory named by the {@value #DIRECTORY_PROPERTY} system property, which the tests set so they never touch the
- * user's settings.
+ * The user's settings: the last folder chosen in a file dialog, recently opened projects, window positions, and how
+ * playback and the spreadsheet look. They are stored as JSON in {@code settings.json} under
+ * {@code ~/Library/Application Support/Watavyu}, or under the directory named by the {@value #DIRECTORY_PROPERTY}
+ * system property, which the tests set so they never touch the user's settings.
  *
  * <p>A missing or unreadable file gives the defaults. Changes stay in memory until {@link #save()}.
  */
@@ -37,6 +37,13 @@ public final class Settings {
     public static final int RECENT_PROJECT_LIMIT = 5;
 
     private static final String FILE_NAME = "settings.json";
+
+    /** How far past cells fade unless set otherwise, a trial value until the owner picks one (U5). */
+    public static final int DEFAULT_PAST_CELL_DIM = 40;
+
+    private static final String SANS = "sans";
+
+    private static final String MONO = "mono";
 
     private static final Logger logger = LogManager.getLogger(Settings.class);
 
@@ -211,6 +218,30 @@ public final class Settings {
     }
 
     /**
+     * @return Whether cell values are set in a monospaced font: true when {@code spreadsheetFont} is {@code mono},
+     * false for {@code sans} or anything else.
+     */
+    public synchronized boolean isMonospacedValues() {
+        return MONO.equals(data.spreadsheetFont);
+    }
+
+    public synchronized void setMonospacedValues(final boolean monospaced) {
+        data.spreadsheetFont = monospaced ? MONO : SANS;
+    }
+
+    /**
+     * @return How far the times and values of cells the needle has passed fade toward the cell colour, from 0
+     * (unchanged) to 100 (hidden): {@value #DEFAULT_PAST_CELL_DIM} unless set otherwise, clamped to that range.
+     */
+    public synchronized int getPastCellDim() {
+        return Math.max(0, Math.min(100, data.pastCellDim));
+    }
+
+    public synchronized void setPastCellDim(final int percent) {
+        data.pastCellDim = Math.max(0, Math.min(100, percent));
+    }
+
+    /**
      * @param window The window's key, see {@link org.datavyu.views.WindowPlacement}.
      * @return The window's bounds when it was last moved or resized.
      */
@@ -240,6 +271,8 @@ public final class Settings {
         boolean showControls = true;
         boolean playheadAcrossColumns = true;
         int newSpreadsheetMediaColumns = 1;
+        String spreadsheetFont = SANS;
+        int pastCellDim = DEFAULT_PAST_CELL_DIM;
 
         /** Replaces null collections from a hand-edited file, so callers never see null. */
         Data normalized() {

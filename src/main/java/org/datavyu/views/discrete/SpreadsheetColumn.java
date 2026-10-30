@@ -23,8 +23,10 @@ import org.datavyu.undoableedits.LockColumnEdit;
 import org.datavyu.util.ClockTimer;
 import org.datavyu.util.Constants;
 import org.datavyu.util.DragAndDrop.TransparentPanel;
+import org.datavyu.views.Glyph;
 
 import javax.swing.*;
+import javax.swing.border.Border;
 import javax.swing.undo.UndoableEdit;
 import java.awt.*;
 import java.awt.event.*;
@@ -84,11 +86,6 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
     private boolean selected = false;
 
     /**
-     * Background color of the header when unselected.
-     */
-    private Color backColor;
-
-    /**
      * Can the column be dragged?
      */
     private boolean draggable;
@@ -143,8 +140,10 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
 
         setOpaque(true);
         setHorizontalAlignment(JLabel.CENTER);
-        setBorder(BorderFactory.createMatteBorder(0, 0, 0, Constants.BORDER_SIZE, Color.black));
-        backColor = getBackground();
+        setFont(SpreadsheetTheme.headerFont());
+        setBackground(SpreadsheetTheme.PALETTE.chrome());
+        setForeground(SpreadsheetTheme.PALETTE.text());
+        setBorder(headerBorder(false));
         setMinimumSize(this.getHeaderSize());
         setPreferredSize(this.getHeaderSize());
         setMaximumSize(this.getHeaderSize());
@@ -159,9 +158,25 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
         Datavyu.getVideoController().getClockTimer().registerListener(this);
     }
 
+    /** Height of the bar under a selected column's header. */
+    private static final int SELECTION_BAR = 3;
+
+    /**
+     * @param selected whether the column is selected
+     * @return the header's border: a rule on its right, and a bar in the selection colour along its bottom when
+     * selected, so the name stays on the chrome and keeps its contrast
+     */
+    private static Border headerBorder(final boolean selected) {
+        Border rule = BorderFactory.createMatteBorder(0, 0, 0, Constants.BORDER_SIZE,
+                SpreadsheetTheme.PALETTE.rule());
+        Border bar = selected
+                ? BorderFactory.createMatteBorder(0, 0, SELECTION_BAR, 0, SpreadsheetTheme.PALETTE.selection())
+                : BorderFactory.createEmptyBorder(0, 0, SELECTION_BAR, 0);
+        return BorderFactory.createCompoundBorder(rule, bar);
+    }
+
     /** The mark on a locked media column's header. */
-    private static final ImageIcon LOCK_MARK =
-            new ImageIcon(SpreadsheetColumn.class.getResource("/icons/track-lock.png"));
+    private static final Icon LOCK_MARK = Glyph.of(Glyph.Shape.LOCK, 14);
 
     /** Shows the lock mark while a media column is locked. */
     private void updateLockMark() {
@@ -346,11 +361,7 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
         variable.setSelected(isSelected);
         this.selected = isSelected;
 
-        if (selected) {
-            setBackground(SpreadsheetTheme.SELECTED_COLOR);
-        } else {
-            setBackground(backColor);
-        }
+        setBorder(headerBorder(selected));
         repaint();
     }
 

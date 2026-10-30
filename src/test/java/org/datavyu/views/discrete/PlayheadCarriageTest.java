@@ -69,13 +69,20 @@ public class PlayheadCarriageTest {
     }
 
     private void show(final long time) throws Exception {
-        playhead.show(time, "1×");
+        show(time, false);
+    }
+
+    private void show(final long time, final boolean playing) throws Exception {
+        playhead.show(time, playing ? "1×" : "paused 1×", playing);
         SwingUtilities.invokeAndWait(() -> { });
     }
 
     private void press(final int y) {
-        playhead.dispatchEvent(new MouseEvent(playhead, MouseEvent.MOUSE_PRESSED, 0, 0, 10, y, 1, false,
-                MouseEvent.BUTTON1));
+        mouse(MouseEvent.MOUSE_PRESSED, y);
+    }
+
+    private void mouse(final int id, final int y) {
+        playhead.dispatchEvent(new MouseEvent(playhead, id, 0, 0, 10, y, 1, false, MouseEvent.BUTTON1));
     }
 
     @Test
@@ -85,7 +92,64 @@ public class PlayheadCarriageTest {
         assertEquals(playhead.needleY(), Optional.of(250));
         assertEquals(lines.get(lines.size() - 1), Integer.valueOf(250), "the line across the columns");
         assertEquals(playhead.getTime(), 2_500L);
-        assertEquals(playhead.getRate(), "1×");
+        assertEquals(playhead.getRate(), "paused 1×");
+    }
+
+    /** While playback runs, the sheet scrolls to keep the needle a third of the way down its visible height. */
+    @Test
+    public void duringPlaybackTheSheetFollowsTheNeedle() throws Exception {
+        int visible = scrollPane.getViewport().getExtentSize().height;
+
+        show(5_000, true);
+
+        assertEquals(scrollPane.getViewport().getViewPosition().y, 500 - Math.round(visible / 3.0F));
+        assertEquals(playhead.needleY(), Optional.of(Math.round(visible / 3.0F)));
+    }
+
+    /** The sheet never scrolls past its ends to follow the needle. */
+    @Test
+    public void followingStopsAtTheEndsOfTheSheet() throws Exception {
+        show(500, true);
+        assertEquals(scrollPane.getViewport().getViewPosition().y, 0);
+
+        // A sheet ending just below the last cell, so the needle there would scroll it past its end.
+        scrollPane.getViewport().getView().setPreferredSize(new Dimension(300, 1_100));
+        scrollPane.getViewport().getView().setSize(300, 1_100);
+        show(10_000, true);
+        int bottom = 1_100 - scrollPane.getViewport().getExtentSize().height;
+        assertEquals(scrollPane.getViewport().getViewPosition().y, bottom);
+    }
+
+    /**
+     * While the user holds the needle during playback, the sheet stays put: the time under the pointer depends on where
+     * the sheet is scrolled, so following would run the time away under a drag. Let go, it follows again.
+     */
+    @Test
+    public void theSheetDoesNotFollowANeedleTheUserHolds() throws Exception {
+        scrollPane.getViewport().setViewPosition(new Point(0, 400));
+        press(100);
+
+        show(9_000, true);
+        mouse(MouseEvent.MOUSE_DRAGGED, 120);
+        show(9_100, true);
+
+        assertEquals(scrollPane.getViewport().getViewPosition().y, 400);
+        assertEquals(seeks, List.of(5_000L, 5_200L), "each drag gives the time under the pointer");
+
+        mouse(MouseEvent.MOUSE_RELEASED, 120);
+        show(9_200, true);
+        assertEquals(scrollPane.getViewport().getViewPosition().y,
+                920 - Math.round(scrollPane.getViewport().getExtentSize().height / 3.0F));
+    }
+
+    /** Paused, the sheet stays where the user left it, so the needle may be out of view. */
+    @Test
+    public void pausedTheSheetStaysWhereItIs() throws Exception {
+        scrollPane.getViewport().setViewPosition(new Point(0, 1_200));
+
+        show(2_500);
+
+        assertEquals(scrollPane.getViewport().getViewPosition().y, 1_200);
     }
 
     @Test
@@ -149,7 +213,9 @@ public class PlayheadCarriageTest {
         Color onLine = new Color(image.getRGB(25, 20));
         Color offLine = new Color(image.getRGB(25, 30));
         assertEquals(offLine, Color.WHITE);
-        assertTrue(onLine.getRed() > onLine.getGreen() + 60, "reddish: " + onLine);
-        assertTrue(onLine.getGreen() > 100, "the cell shows through: " + onLine);
+        Color accent = SpreadsheetTheme.PALETTE.accent();
+        assertFalse(onLine.equals(Color.WHITE), "the line shows");
+        assertTrue(onLine.getRed() > accent.getRed() && onLine.getGreen() > accent.getGreen()
+                && onLine.getBlue() > accent.getBlue(), "the cell shows through, between it and the accent: " + onLine);
     }
 }

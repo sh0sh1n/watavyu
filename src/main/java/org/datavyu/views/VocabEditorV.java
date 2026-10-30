@@ -14,6 +14,7 @@
  */
 package org.datavyu.views;
 
+import org.datavyu.views.discrete.SpreadsheetTheme;
 import org.datavyu.util.Resources;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -47,6 +48,9 @@ public final class VocabEditorV extends DatavyuDialog {
 
     /** The logger for this class */
     private static Logger LOGGER = LogManager.getLogger(VocabEditorV.class);
+
+    /** Width and height of the arrows on the move buttons, in pixels. */
+    private static final int ARROW_SIZE = 14;
 
     /** Data store for the annotations of streams */
     private DataStore dataStore;
@@ -189,7 +193,7 @@ public final class VocabEditorV extends DatavyuDialog {
 
         // Add a pad cell to fill out the bottom of the vertical frame.
         JPanel holdPanel = new JPanel();
-        holdPanel.setBackground(Color.white);
+        holdPanel.setBackground(SpreadsheetTheme.PALETTE.cell());
         holdPanel.setLayout(new BorderLayout());
         holdPanel.add(verticalFrame, BorderLayout.NORTH);
         currentVocabList.setViewportView(holdPanel);
@@ -585,7 +589,7 @@ public final class VocabEditorV extends DatavyuDialog {
 
         moveCodeLeftButton.addActionListener(e -> moveArgumentLeft());
         Resources resourceMap = Resources.of(VocabEditorV.class);
-        moveCodeLeftButton.setIcon(resourceMap.getIcon("moveCodeLeftButton.icon"));
+        moveCodeLeftButton.setIcon(Glyph.of(Glyph.Shape.LEFT, ARROW_SIZE));
         moveCodeLeftButton.setText(bundle.getString("moveCodeLeftButton.text"));
         moveCodeLeftButton.setToolTipText(bundle.getString("moveCodeLeftButton.tip"));
         moveCodeLeftButton.setName("moveCodeLeftButton");
@@ -598,7 +602,7 @@ public final class VocabEditorV extends DatavyuDialog {
         getContentPane().add(moveCodeLeftButton, gridBagConstraints);
 
         moveCodeRightButton.addActionListener(e -> moveArgumentRight());
-        moveCodeRightButton.setIcon(resourceMap.getIcon("moveCodeRightButton.icon"));
+        moveCodeRightButton.setIcon(Glyph.of(Glyph.Shape.RIGHT, ARROW_SIZE));
         moveCodeRightButton.setText(bundle.getString("moveCodeRightButton.text"));
         moveCodeRightButton.setToolTipText(bundle.getString("moveCodeRightButton.tip"));
         moveCodeRightButton.setHorizontalTextPosition(javax.swing.SwingConstants.LEFT);
@@ -612,7 +616,7 @@ public final class VocabEditorV extends DatavyuDialog {
         getContentPane().add(moveCodeRightButton, gridBagConstraints);
 
         moveVariableUpButton.addActionListener(e -> moveVariableUp());
-        moveVariableUpButton.setIcon(resourceMap.getIcon("moveVariableUpButton.icon"));
+        moveVariableUpButton.setIcon(Glyph.of(Glyph.Shape.UP, ARROW_SIZE));
         moveVariableUpButton.setText(bundle.getString("moveVariableUpButton.text"));
         moveVariableUpButton.setToolTipText(bundle.getString("moveVariableUpButton.tip"));
         moveVariableUpButton.setHorizontalTextPosition(javax.swing.SwingConstants.LEFT);
@@ -626,7 +630,7 @@ public final class VocabEditorV extends DatavyuDialog {
         getContentPane().add(moveVariableUpButton, gridBagConstraints);
 
         moveVariableDownButton.addActionListener(e -> moveVariableDown());
-        moveVariableDownButton.setIcon(resourceMap.getIcon("moveVariableDownButton.icon"));
+        moveVariableDownButton.setIcon(Glyph.of(Glyph.Shape.DOWN, ARROW_SIZE));
         moveVariableDownButton.setText(bundle.getString("moveVariableDownButton.text"));
         moveVariableDownButton.setToolTipText(bundle.getString("moveVariableDownButton.tip"));
         moveVariableDownButton.setHorizontalTextPosition(javax.swing.SwingConstants.LEFT);
@@ -670,7 +674,7 @@ public final class VocabEditorV extends DatavyuDialog {
 
         nameWarningsLabel.setText("");
         nameWarningsLabel.setName("nameWarningLabel");
-        nameWarningsLabel.setForeground(Color.RED);
+        nameWarningsLabel.setForeground(SpreadsheetTheme.PALETTE.warning());
         nameWarningsLabel.setHorizontalAlignment(SwingConstants.LEFT);
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 0;
@@ -808,13 +812,13 @@ public final class VocabEditorV extends DatavyuDialog {
 
         if (s.isEmpty() && first != true) {
             nameWarningsLabel.setText("All changes applied.");
-            nameWarningsLabel.setForeground(Color.BLACK);
+            nameWarningsLabel.setForeground(SpreadsheetTheme.PALETTE.text());
         } else if (s.isEmpty() && first == true) {
             nameWarningsLabel.setText("");
-            nameWarningsLabel.setForeground(Color.BLACK);
+            nameWarningsLabel.setForeground(SpreadsheetTheme.PALETTE.text());
         } else {
             nameWarningsLabel.setText("<html><b><u>Invalid names:</u></b> " + s + "<br />Names must begin with a letter, be non-empty, and underscore is the ONLY permitted special character. Repeated names are not allowed.</html>");
-            nameWarningsLabel.setForeground(Color.RED);
+            nameWarningsLabel.setForeground(SpreadsheetTheme.PALETTE.warning());
         }
     }
 }

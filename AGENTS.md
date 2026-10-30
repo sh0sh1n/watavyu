@@ -8,7 +8,7 @@ Watavyu is a personal macOS fork of Datavyu, a tool for coding behaviour in vide
 
 The aim is a smaller app whose every feature was chosen on purpose, with a modern UI and project files a person can read:
 
-- **A C++ rewrite follows.** The app will be rewritten in C++ for interoperability with computer vision and ML/AI libraries. Until then, effort goes into cutting features and fleshing out the behaviour of what stays, pinned by tests that become the rewrite's specification, not into refactoring code that will be replaced. Refactor only where a cut or a behaviour change needs it.
+- **A C++ rewrite follows.** The app will be rewritten in C++ for interoperability with computer vision and ML/AI libraries, with Qt as the expected UI framework (owner, 2026-10-29): Swing's component per cell limits how large a sheet stays smooth. Until then, effort goes into cutting features and fleshing out the behaviour of what stays, pinned by tests that become the rewrite's specification, not into refactoring code that will be replaced. Refactor only where a cut or a behaviour change needs it.
 - **Cut, then keep on purpose.** Unused features go. What stays is kept deliberately and pinned by tests, because each kept behaviour is something the app is then committed to.
 - **Transparent data.** A project is one readable JSON file holding the spreadsheet and the project. Videos are data columns like any other, with explicit onsets (F1).
 - **Fewer windows.** The main window, video controller and video windows were hard to manage. The video controller window is gone: media tracks are media columns in the spreadsheet, and its buttons and playhead sit beside the columns (F4, F6). Next, the numpad shortcuts become a smaller, configurable key mapping, so coding works on laptops without a numpad (F7).
@@ -33,6 +33,10 @@ The aim is a smaller app whose every feature was chosen on purpose, with a moder
 
 Newest first. (owner) marks product decisions; the rest are engineering choices that can be revisited with reason.
 
+- **2026-10-29 (owner): the long-session look** (U5). Research and a live prototype: https://claude.ai/artifact/Ampc7PFCaewSmy6Eb3hA2L (private to the owner).
+  - Two palettes that follow macOS appearance: Paper, a light grey well below screen white, for lit offices, where most coding happens; Graphite, its dark twin, for dim rooms. Neutral greys; green only for the needle, the cell in play and selection; an offset before its onset keeps a red border. No pure black or white backgrounds; data text at 10–12.5:1 contrast, times near 6:1. The video is the brightest thing on screen.
+  - Keys and marks are line glyphs drawn in code (a triangle for play, brackets for onset and offset), not image files. Times are IBM Plex Mono; values are IBM Plex Sans or Mono, a setting with its default undecided. Both are bundled.
+  - No coloured fills for time: the cell in play gets an edge mark and a slight lift, and past cells fade toward the cell colour by a setting from 0 (unchanged) to 100 (hidden), its default undecided. During playback the sheet follows the needle.
 - **2026-10-29 (owner): no video controller window** (F6). Its window became two parts of each spreadsheet tab, left of the columns:
   - A controls drawer holding its buttons and fields as they were, shown or hidden from the Playback menu or the keypad's `*` (a setting, on by default). Which buttons stay is to be found by trial and error.
   - A playhead: a vertical strip with a needle and the current time and rate, and no ruler or scale. The needle follows the spreadsheet's rows: it sits where its time falls among the cells in temporal layout, scrolls with them, and is dragged to scrub. A visible media column spans its media, so with one the strip covers the whole recording; with all media columns hidden it follows the annotations. Its line can run across the columns, faint enough to read cells through (a setting, on by default).
@@ -61,10 +65,11 @@ Newest first. (owner) marks product decisions; the rest are engineering choices 
 - **2026-10-14 (owner): kept features**: JSON import/export; highlight-and-focus mode, on by default and not announced in the window title; quick-key mode, for now.
 - **2026-10-14 (owner): snapping comes back** after F1 (F2).
 - **2026-10-14 (owner): no characterization tests.** Tests are written for behaviour that is deliberately kept or rebuilt.
+- **2026-10-29: the look lives in a palette, FlatLaf and Plex** (U5; BUILDING.md › Application Structure). Colours are named tokens in `Palette`, one palette per appearance, and views take them from `SpreadsheetTheme.PALETTE`, never from literals. FlatLaf 3.7.2 (pure Java, no network) themes the system parts from the same tokens, since a probe showed constants alone leave menus, tabs, fields and scroll bars in the system look. IBM Plex Sans and Mono are bundled under the SIL Open Font License. Glyphs are drawn in code (`Glyph`); the only image left is the app icon.
 - **2026-10-29: the playhead reads the layout** (BUILDING.md › Application Structure). The temporal layout publishes where times fall down the sheet (`TimeAxis`) after each pass, and the playhead strip sits beside the scroll pane, following its scrolling, rather than inside it as a row header whose height would have to track the sheet's. Each tab keeps its own `VideoController`, now a plain object rather than a window.
 - **2026-10-17: media columns are spreadsheet columns** (BUILDING.md › Application Structure). The data model holds the clip rules; `MediaPlayers` keeps the players in step with the spreadsheet, so undo, opening a project and the video controller all go through one path.
 - **2026-10-14: project files are read strictly and written in a fixed layout** (`org.datavyu.projectfile`, BUILDING.md › Project Files). The reader refuses unknown keys and names the place of any error; the writer checks the same rules first. The published JSON Schema is tested to agree with the reader. Times are `long` milliseconds in code, formatted and parsed only by `Timestamp`.
-- **2026-10-14: no Swing Application Framework.** A plain `main`, Swing `Action`s, `Resources` over `ResourceBundle`, and `WindowPlacement` replaced it. Settings are JSON (`Settings`, see BUILDING.md › Settings); spreadsheet colours and fonts are constants in `SpreadsheetTheme`, not settings.
+- **2026-10-14: no Swing Application Framework.** A plain `main`, Swing `Action`s, `Resources` over `ResourceBundle`, and `WindowPlacement` replaced it. Settings are JSON (`Settings`, see BUILDING.md › Settings); colours follow the Mac's appearance rather than a setting.
 - **2026-10-14: one shortcut table.** `Shortcuts` drives menu accelerators, the keypad and the Keyboard Shortcuts dialog; new shortcuts go there.
 - **2026-10-14: OpenJFX is the only video player.** The plugin system is gone. Project files do not name a player; in older `.opf` files, a track recorded with another Datavyu video player opens with OpenJFX after a notice.
 - **Error Prone is the linter; analysis reports are not gates** (BUILDING.md › Lint). PMD, SpotBugs, JaCoCo and the scripts in `tools/analysis` measure TODO.md. A SpotBugs category at zero joins `spotbugsGate` and fails the build; thread safety is the first.
@@ -75,7 +80,8 @@ Ask the owner before acting on these.
 
 - Project structure beyond one file: folders, templates, and coding passes reused across experiments (U2).
 - Migration from Datavyu: whether `.opf` files keep opening, or a one-off converter replaces that. Dropping it would also drop SnakeYAML (D1).
-- The rest of the UI direction (U1) beyond the controls drawer and playhead (F6), including which controls stay, and the visual design for long sessions (U5).
+- The rest of the UI direction (U1) beyond the controls drawer and playhead (F6) and the long-session look (U5), including which controls stay.
+- The defaults for the values font (sans or mono) and for dimming past cells, once both have been tried (U5).
 - Whether quick-key mode stays.
 - Whether a scripting shell returns, and in what form. It would start from a clean slate.
 

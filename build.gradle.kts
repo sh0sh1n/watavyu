@@ -63,6 +63,7 @@ dependencies {
     implementation(libs.snakeyaml)
     implementation(variantOf(libs.miglayout) { classifier("swing") })
     implementation(libs.commons.io)
+    implementation(libs.flatlaf)
     implementation(libs.log4j.api)
     implementation(libs.log4j.core)
     implementation(libs.jackson.databind)
@@ -131,6 +132,8 @@ tasks.withType<Test>().configureEach {
     systemProperty("watavyu.settingsDir", layout.buildDirectory.dir("test-settings/$name").get().asFile.absolutePath)
     // and log here, never in the user's ~/Library/Logs/Watavyu.
     systemProperty("watavyu.logDir", layout.buildDirectory.dir("test-logs/$name").get().asFile.absolutePath)
+    // Tests see the light palette whatever the Mac's appearance, and never ask macOS for it.
+    systemProperty("watavyu.appearance", "light")
 }
 
 tasks.test {

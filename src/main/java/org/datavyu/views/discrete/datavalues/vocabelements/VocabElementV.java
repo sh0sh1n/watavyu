@@ -14,6 +14,8 @@
  */
 package org.datavyu.views.discrete.datavalues.vocabelements;
 
+import org.datavyu.views.Glyph;
+import org.datavyu.views.discrete.SpreadsheetTheme;
 import org.datavyu.util.Resources;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -27,7 +29,6 @@ import javax.swing.border.Border;
 import java.awt.*;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
-import java.net.URL;
 
 /**
  * A view for a vocab element.
@@ -54,16 +55,16 @@ public class VocabElementV extends JPanel {
      */
     private static Border LINE_BORDER =
             BorderFactory.createCompoundBorder(
-                    BorderFactory.createMatteBorder(0, 0, 1, 0, Color.GRAY),
+                    BorderFactory.createMatteBorder(0, 0, 1, 0, SpreadsheetTheme.PALETTE.rule()),
                     BorderFactory.createEmptyBorder(3, 0, 3, 0));
     /**
      * The logger for this class.
      */
     private static Logger LOGGER = LogManager.getLogger(VocabElementV.class);
     /**
-     * the light blue colour used for backgrounds
+     * The background of the code being edited.
      */
-    private static Color lightBlue = new Color(224, 248, 255, 255);
+    private static final Color FOCUSED = SpreadsheetTheme.PALETTE.inPlay();
     /**
      * The label to use for if this vocab element has changed.
      */
@@ -73,9 +74,9 @@ public class VocabElementV extends JPanel {
      */
     private VocabElementRootView veRootView;
     /**
-     * The icon to use for if this vocab element has changed or not.
+     * The mark beside a name that cannot be applied.
      */
-    private ImageIcon bangIcon;
+    private static final Icon WARNING_MARK = new Glyph(Glyph.Shape.WARNING, 14, SpreadsheetTheme.PALETTE.warning());
     private String bangIconText;
     /**
      * Is the name currently displayed for this column invalid
@@ -98,10 +99,8 @@ public class VocabElementV extends JPanel {
 
         Resources rMap = Resources.of(VocabElementV.class);
 
-        URL iconURL = getClass().getResource(rMap.getString("delta.icon"));
         bangIconText = rMap.getString("delta.tooltip");
 
-        bangIcon = new ImageIcon(iconURL);
         deleteVE = false;
         parentEditor = vev;
         varModel = var;
@@ -118,21 +117,21 @@ public class VocabElementV extends JPanel {
         leftPanel.setLayout(flayout);
         leftPanel.add(invalidBangIcon);
         veRootView.setOpaque(false);
-        veRootView.setBackground(Color.WHITE);
+        veRootView.setBackground(SpreadsheetTheme.PALETTE.cell());
         leftPanel.setOpaque(false);
 
         veRootView.addFocusListener(new FocusAdapter() {
             @Override
             public void focusGained(FocusEvent fe) {
                 if (!deleteVE) {
-                    setBG(lightBlue);
+                    setBG(FOCUSED);
                 }
             }
 
             @Override
             public void focusLost(FocusEvent fe) {
                 if (!deleteVE) {
-                    setBG(Color.WHITE);
+                    setBG(SpreadsheetTheme.PALETTE.cell());
                 }
             }
         });
@@ -141,7 +140,7 @@ public class VocabElementV extends JPanel {
         this.setLayout(layout);
         this.add(leftPanel, BorderLayout.WEST);
         this.add(veRootView, BorderLayout.CENTER);
-        this.setBackground(Color.WHITE);
+        this.setBackground(SpreadsheetTheme.PALETTE.cell());
         this.setBorder(LINE_BORDER);
 
         this.rebuildContents();
@@ -165,7 +164,7 @@ public class VocabElementV extends JPanel {
         invalidState = invalid;
 
         if (invalid) {
-            invalidBangIcon.setIcon(bangIcon);
+            invalidBangIcon.setIcon(WARNING_MARK);
             invalidBangIcon.setToolTipText(bangIconText);
         } else {
             invalidBangIcon.setIcon(null);

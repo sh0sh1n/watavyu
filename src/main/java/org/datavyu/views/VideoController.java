@@ -14,6 +14,7 @@
  */
 package org.datavyu.views;
 
+import org.datavyu.views.discrete.SpreadsheetTheme;
 import org.datavyu.controllers.project.MediaPlayers;
 import org.datavyu.util.Settings;
 import org.datavyu.models.db.UserWarningException;
@@ -53,8 +54,9 @@ public final class VideoController implements ClockListener {
         /**
          * @param time the clock's time, in milliseconds
          * @param rate the clock's rate, as {@link #rateText(float, boolean)} gives it
+         * @param playing whether playback is running, so the sheet follows the needle
          */
-        void show(long time, String rate);
+        void show(long time, String rate, boolean playing);
     }
 
     /** Where the timeline ends when no media runs longer: one minute. */
@@ -87,9 +89,9 @@ public final class VideoController implements ClockListener {
     private static final String WIDE_TEXT_FIELD_SIZE = "w " + WIDE_TEXT_FIELD_WIDTH + "!, h "
             + WIDE_TEXT_FIELD_HEIGHT + "!";
 
-    private static final Font TEXT_FIELD_FONT = new Font("Arial", Font.PLAIN, 10);
+    private static final Font TEXT_FIELD_FONT = SpreadsheetTheme.timeFont(10.5F);
 
-    private static final Font TEXT_LABEL_FONT = new Font("Arial", Font.PLAIN, 10);
+    private static final Font TEXT_LABEL_FONT = SpreadsheetTheme.uiFont(10.5F);
 
     private static RateController shuttleRates = new RateController();
 
@@ -106,7 +108,7 @@ public final class VideoController implements ClockListener {
     private volatile long timelineEnd = MINIMUM_TIMELINE_END;
 
     /** Shows the clock's time; nothing until the spreadsheet sets one. */
-    private volatile Playhead playhead = (time, rate) -> { };
+    private volatile Playhead playhead = (time, rate, playing) -> { };
 
     /** Keeps the players and the spreadsheet's media columns in step; null until a spreadsheet is set. */
     private MediaPlayers mediaPlayers;
@@ -380,7 +382,8 @@ public final class VideoController implements ClockListener {
     }
 
     private void showPlayhead(final long time) {
-        playhead.show(time, rateText(clockTimer.getRate(), clockTimer.isPaused()));
+        playhead.show(time, rateText(clockTimer.getRate(), clockTimer.isPaused()),
+                !clockTimer.isPaused() && clockTimer.getRate() != 0F);
     }
 
     /**
@@ -489,20 +492,19 @@ public final class VideoController implements ClockListener {
     }
 
     /**
-     * Helper method for Building a button for the data controller - sets the icon, selected icon, action map, and name.
+     * Makes a key of the keypad.
      *
-     * @param name Prefix when looking for actions and buttons.
-     * @param modifier Modifier (if any) to apply to the prefix. Maybe null.
-     * @param action What the button does.
-     * @return A configured button.
+     * @param name   prefix of the button's name, which tests find it by
+     * @param glyph  what the key shows
+     * @param label  what it does, in a word or two
+     * @param key    the keypad key that does the same
+     * @param action what the key does
+     * @return the key
      */
-    private JButton buildButton(final String name, final String modifier, final Runnable action) {
-        String dotModifier = (modifier == null) || modifier.isEmpty() ? "" : "." + modifier;
-        JButton jButton = new JButton();
+    private JButton buildButton(final String name, final Glyph.Shape glyph, final String label, final String key,
+                                final Runnable action) {
+        JButton jButton = new KeypadKey(glyph, label, key);
         jButton.addActionListener(e -> action.run());
-        jButton.setIcon(resourceMap.getIcon(name + "Button.icon" + dotModifier));
-        jButton.setPressedIcon(resourceMap.getIcon(name + "SelectedButton.icon" + dotModifier));
-        jButton.setFocusPainted(false);
         jButton.setName(name + "Button");
         return jButton;
     }
@@ -547,14 +549,14 @@ public final class VideoController implements ClockListener {
         offsetTextField = new JTextField();
 
         gridButtonPanel.setName("controls");
-        gridButtonPanel.setBackground(Color.WHITE);
+        gridButtonPanel.setBackground(SpreadsheetTheme.PALETTE.chrome());
         gridButtonPanel.setLayout(new MigLayout("wrap 5"));
 
         // Placeholder at top, left: 'clear' or 'numlock' position
         gridButtonPanel.add(makePlaceholderButton(), NUM_PAD_KEY_SIZE);
 
         // Point cell: equals sign on the Mac keypad
-        pointCellButton = buildButton("pointCell", null, this::pointCellAction);
+        pointCellButton = buildButton("pointCell", Glyph.Shape.POINT_CELL, "point", "=", this::pointCellAction);
         gridButtonPanel.add(pointCellButton, NUM_PAD_KEY_SIZE);
 
         // Placeholder at forward slash on the Mac keypad, whose key shows or hides these controls
@@ -566,53 +568,53 @@ public final class VideoController implements ClockListener {
         gridButtonPanel.add(makePlaceholderButton(false), WIDE_TEXT_FIELD_SIZE);
 
         // Set cell onset button with 7
-        setCellOnsetButton = buildButton("setCellOnset", null, this::setCellOnsetAction);
+        setCellOnsetButton = buildButton("setCellOnset", Glyph.Shape.SET_ONSET, "onset", "7", this::setCellOnsetAction);
         gridButtonPanel.add(setCellOnsetButton, NUM_PAD_KEY_SIZE);
 
         // Play video button with 8
-        playButton = buildButton("start", null, this::startAction);
+        playButton = buildButton("start", Glyph.Shape.PLAY, "play", "8", this::startAction);
         playButton.setRequestFocusEnabled(false);
         gridButtonPanel.add(playButton, NUM_PAD_KEY_SIZE);
 
         // Set cell offset button with 9
-        nineSetCellOffsetButton = buildButton("setCellOffset", "nine", this::setCellOffsetAction);
+        nineSetCellOffsetButton = buildButton("setCellOffset", Glyph.Shape.SET_OFFSET, "offset", "9", this::setCellOffsetAction);
         gridButtonPanel.add(nineSetCellOffsetButton, NUM_PAD_KEY_SIZE);
 
         addJumpByPair();
 
         // Shuttle back button with 4
-        shuttleBackButton = buildButton("shuttleBack", null, this::shuttleBackAction);
+        shuttleBackButton = buildButton("shuttleBack", Glyph.Shape.SHUTTLE_BACK, "shuttle", "4", this::shuttleBackAction);
         gridButtonPanel.add(shuttleBackButton, NUM_PAD_KEY_SIZE);
 
         // Stop button with 5
-        stopButton = buildButton("stop", null, this::stopAction);
+        stopButton = buildButton("stop", Glyph.Shape.STOP, "stop", "5", this::stopAction);
         gridButtonPanel.add(stopButton, NUM_PAD_KEY_SIZE);
 
         // Shuttle forward button with 6
-        shuttleForwardButton = buildButton("shuttleForward", null, this::shuttleForwardAction);
+        shuttleForwardButton = buildButton("shuttleForward", Glyph.Shape.SHUTTLE_FORWARD, "shuttle", "6", this::shuttleForwardAction);
         gridButtonPanel.add(shuttleForwardButton, NUM_PAD_KEY_SIZE);
 
 
         // Find button (small plus)
-        findButton = buildButton("find", "osx", this::findAction);
+        findButton = buildButton("find", Glyph.Shape.FIND, "find", "+", this::findAction);
         gridButtonPanel.add(findButton, NUM_PAD_KEY_SIZE);
         // Where the frame rate was: the grid keeps its shape.
         gridButtonPanel.add(new JLabel(), WIDE_TEXT_FIELD_SIZE);
 
         // Jog back button with 1
-        JButton jogBackButton = buildButton("jogBack", null, this::jogBackAction);
+        JButton jogBackButton = buildButton("jogBack", Glyph.Shape.JOG_BACK, "jog", "1", this::jogBackAction);
         gridButtonPanel.add(jogBackButton, NUM_PAD_KEY_SIZE);
 
         // Pause button with 2
-        pauseButton = buildButton("pause", null, this::pauseAction);
+        pauseButton = buildButton("pause", Glyph.Shape.PAUSE, "pause", "2", this::pauseAction);
         gridButtonPanel.add(pauseButton, NUM_PAD_KEY_SIZE);
 
         // Jog forward button with 3
-        JButton jogForwardButton = buildButton("jogForward", null, this::jogForwardAction);
+        JButton jogForwardButton = buildButton("jogForward", Glyph.Shape.JOG_FORWARD, "jog", "3", this::jogForwardAction);
         gridButtonPanel.add(jogForwardButton, NUM_PAD_KEY_SIZE);
 
         // Create new cell button with enter
-        createNewCell = buildButton("createNewCell", null, this::createNewCellAction);
+        createNewCell = buildButton("createNewCell", Glyph.Shape.NEW_CELL, "new cell", "enter", this::createNewCellAction);
         createNewCell.setAlignmentY(0.0F);
         createNewCell.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
         gridButtonPanel.add(createNewCell, TALL_NUM_PAD_KEY_SIZE);
@@ -626,11 +628,12 @@ public final class VideoController implements ClockListener {
         gridButtonPanel.add(makeLabelAndTextFieldPanel(new JLabel("Onset"), onsetTextField), WIDE_TEXT_FIELD_SIZE);
 
         // Create new cell setting offset button with zero
-        createNewCellSettingOffset = buildButton("createNewCellAndSetOffset", null, this::createNewCellAndSetOffsetAction);
+        createNewCellSettingOffset = buildButton("createNewCellAndSetOffset", Glyph.Shape.NEW_CELL_PREVIOUS_OFFSET,
+                "new + prev offset", "0", this::createNewCellAndSetOffsetAction);
         gridButtonPanel.add(createNewCellSettingOffset, "span 2, w 95!, h 45!");
 
         // Set cell offset button
-        setCellOffsetButton = buildButton("setCellOffset", "period", this::setCellOffsetAction);
+        setCellOffsetButton = buildButton("setCellOffset", Glyph.Shape.SET_OFFSET, "offset", ".", this::setCellOffsetAction);
         gridButtonPanel.add(setCellOffsetButton, NUM_PAD_KEY_SIZE);
 
         // Offset text field
@@ -646,7 +649,7 @@ public final class VideoController implements ClockListener {
 
     private void addJumpByPair() {
         //Go back button - minus key
-        jumpByButton = buildButton("jumpBy", null, this::jumpByAction);
+        jumpByButton = buildButton("jumpBy", Glyph.Shape.JUMP_BACK, "jump", "−", this::jumpByAction);
         gridButtonPanel.add(jumpByButton, NUM_PAD_KEY_SIZE);
         //Go back text field
         jumpByTextField.setHorizontalAlignment(SwingConstants.CENTER);

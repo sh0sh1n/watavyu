@@ -153,4 +153,39 @@ public class SettingsTest {
         Files.write(file, "{ \"newSpreadsheetMediaColumns\": -2 }".getBytes(StandardCharsets.UTF_8));
         assertEquals(Settings.load(file).getNewSpreadsheetMediaColumns(), 0);
     }
+
+    /** Cell values are in sans until the values font is set to mono, which is saved as the word "mono". */
+    @Test
+    public void valuesAreSansUntilSetToMono() throws IOException {
+        Settings settings = Settings.load(file);
+        assertFalse(settings.isMonospacedValues());
+
+        settings.setMonospacedValues(true);
+        settings.save();
+        assertTrue(Settings.load(file).isMonospacedValues());
+        String json = new String(Files.readAllBytes(file), StandardCharsets.UTF_8);
+        assertTrue(json.contains("\"spreadsheetFont\" : \"mono\""), json);
+
+        Files.write(file, "{ \"spreadsheetFont\": \"serif\" }".getBytes(StandardCharsets.UTF_8));
+        assertFalse(Settings.load(file).isMonospacedValues());
+    }
+
+    /** Past cells dim by a trial default until the owner picks one, and the setting stays between 0 and 100. */
+    @Test
+    public void pastCellDimIsAPercentage() throws IOException {
+        Settings settings = Settings.load(file);
+        assertEquals(settings.getPastCellDim(), Settings.DEFAULT_PAST_CELL_DIM);
+
+        settings.setPastCellDim(80);
+        settings.save();
+        assertEquals(Settings.load(file).getPastCellDim(), 80);
+
+        settings.setPastCellDim(140);
+        assertEquals(settings.getPastCellDim(), 100);
+        settings.setPastCellDim(-5);
+        assertEquals(settings.getPastCellDim(), 0);
+
+        Files.write(file, "{ \"pastCellDim\": 250 }".getBytes(StandardCharsets.UTF_8));
+        assertEquals(Settings.load(file).getPastCellDim(), 100);
+    }
 }

@@ -18,6 +18,9 @@ import org.datavyu.views.discrete.SpreadsheetCell;
 import org.datavyu.views.discrete.SpreadsheetColumn;
 
 import javax.swing.*;
+import java.awt.Component;
+import java.awt.Container;
+import java.awt.Dimension;
 import java.util.Optional;
 
 /**
@@ -28,11 +31,40 @@ public abstract class SheetLayout extends ScrollPaneLayout {
     /** Runs after each layout of the sheet. */
     private Runnable afterLayout = () -> { };
 
+    /** The scroll pane's size when the cells were last placed, or null before they first are. */
+    private Dimension placedFor;
+
     /**
      * SheetLayout constructor.
      */
     protected SheetLayout() {
     }
+
+    /**
+     * Lays out the scroll pane, and places the cells again if something in the sheet changed or the pane changed size.
+     * Scrolling revalidates the viewport, and with it this scroll pane, but moves no cell; placing every cell on each
+     * scroll step stalled scrolling and following the needle on a large sheet (B15). A change in the sheet invalidates
+     * its view on the way up to the scroll pane, so a valid view means its cells are where they were.
+     *
+     * @param parent the spreadsheet's scroll pane
+     */
+    @Override
+    public final void layoutContainer(final Container parent) {
+        super.layoutContainer(parent);
+        Component view = ((JScrollPane) parent).getViewport().getView();
+        if (view != null && view.isValid() && parent.getSize().equals(placedFor)) {
+            return;
+        }
+        placedFor = parent.getSize();
+        layoutCells(parent);
+    }
+
+    /**
+     * Places the sheet's cells.
+     *
+     * @param parent the spreadsheet's scroll pane, already laid out
+     */
+    protected abstract void layoutCells(Container parent);
 
     public abstract void reorientView(SpreadsheetCell cell);
 

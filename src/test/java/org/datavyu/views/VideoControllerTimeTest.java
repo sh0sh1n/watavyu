@@ -23,7 +23,7 @@ public class VideoControllerTimeTest {
     public void movingTheClockMovesThePlayhead() {
         VideoController controller = new VideoController();
         List<String> shown = new ArrayList<>();
-        controller.setPlayhead((time, rate) -> shown.add(time + " " + rate));
+        controller.setPlayhead((time, rate, playing) -> shown.add(time + " " + rate + (playing ? " playing" : "")));
         assertEquals(shown, List.of("0 paused 1×"), "a new clock is paused at the normal rate");
 
         controller.setCurrentTime(5_000);

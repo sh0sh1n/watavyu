@@ -15,13 +15,13 @@ Updated 2026-10-29. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
-| Java source (main) | 242 files, 42.5k lines | 152 files, 26.8k lines |
-| Tests / line coverage | 113 / 9.9% | 388 / 31.8%; still 0% in most views and undo |
-| Runtime dependencies / with known vulnerabilities | 28 / 8 | 12 / 0 |
-| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 614 |
-| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 424 / 71 (none on thread safety, now gated); 16 |
-| Never-invoked methods (`dead-code.py`) | 109+ | 17: test-only accessors, and Swing overrides the script cannot see |
-| Static global access (`grep -rohP 'Datavyu\.(get\|set)\w*\(' src/main/java \| wc -l`) | about 330 call sites | 255 (259 before F6; earlier figures counted differently) |
+| Java source (main) | 242 files, 42.5k lines | 157 files, 27.5k lines |
+| Tests / line coverage | 113 / 9.9% | 457 / 35.8%; still 0% in most views and undo |
+| Runtime dependencies / with known vulnerabilities | 28 / 8 | 13 / 0 at the last check; FlatLaf, added for U5, not yet checked |
+| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 608 |
+| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 426 / 74 (none on thread safety, now gated); 16 |
+| Never-invoked methods (`dead-code.py`) | 109+ | 20: test-only accessors, and Swing overrides the script cannot see |
+| Static global access (`grep -rohP 'Datavyu\.(get\|set)\w*\(' src/main/java \| wc -l`) | about 330 call sites | 250 (259 before F6; earlier figures counted differently) |
 
 ## Bugs
 
@@ -45,9 +45,11 @@ Updated 2026-10-29. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 **F2. Dragging clips in the spreadsheet, with snapping.** future (owner: low priority; may be dropped). Clips move only by typing their onset. Dragging a clip cell would move it, snapping for easy alignment as Datavyu's track dragging did: `TracksEditorController.snapOffset` on `main` before the cleanup snapped a track's start, end and bookmarks to time zero, the needle, the region of interest and the other tracks' starts, ends and bookmarks, within 5 seconds. A locked column's clips stay put.
 
-## Research
+**F13. Follow the Mac's appearance while running.** ready, low priority, *from reading*. The palette is read once at startup (`SpreadsheetTheme.PALETTE`, `Appearance`), so switching macOS between light and dark leaves Watavyu in the old palette until it restarts. Following it live means listening for the change, swapping the palette and FlatLaf's look and feel, and refreshing every cell, header and window.
 
-**U5. A UI for long sessions.** needs the owner; next after the open PRs. Researchers code for hours, so the first aim is little eye strain, then performance (AGENTS.md › North Star). Research what reduces strain over long sessions (contrast, colour temperature, dark and light themes, font and size, motion such as the moving playhead) and propose a design. Owner's taste: minimalist, like a black and green terminal, with simple lines and shapes instead of icons. That would empty `src/main/resources/icons`: the keypad buttons (`DataController/eng`, where `back*.png` is already unused), the column lock and volume marks, the Code Editor's arrows and change mark, and the About splash; the app icon `datavyu.icns` is a separate question. Colours and fonts are constants in `SpreadsheetTheme`; the rest of the UI uses the system look and feel.
+**F14. A clearer selected column header in Paper.** ready, low priority, *verified* (contrast measured). A selected column's header has a bar in the selection colour along its bottom (`SpreadsheetColumn.headerBorder`), at 2.7:1 against Paper's chrome, under the 3:1 the other marks keep (`PaletteTest`). Use the accent, a thicker bar, or a selection colour tuned for chrome.
+
+## Research
 
 **U1. UI direction.** needs the owner. Decided so far: the video controller window became a controls drawer and a playhead beside the spreadsheet (AGENTS.md › Decisions), and the numpad shortcuts become a configurable key mapping (F7). Which controls the drawer keeps is to be found by trial and error. The rest of the UI, and what it means for MigLayout (D1), is open.
 
@@ -74,6 +76,6 @@ The app is to be rewritten in C++ (AGENTS.md › North Star), so refactor only w
 
 **R4. Per-editor key handling.** `EditorTracker` and the value editors handle keys per editor, with 21 uses of the deprecated modifier API (`getModifiers`, `*_MASK`, `getMenuShortcutKeyMask`). Move what can go into `Shortcuts`; do with F7.
 
-**R7. Threading.** Make the boundary between the clock thread, the JavaFX thread and the EDT explicit, as `JavaFxPlayback` already does for the player. `ClockTimer` notifies its listeners on its own pool threads, most of them while holding its lock, so a listener that waits on another thread can deadlock it; the playhead (`PlayheadCarriage.show`) and `MediaPlayers` hand their work to the EDT. SpotBugs's thread-safety findings are at zero and gated.
+**R7. Threading.** Make the boundary between the clock thread, the JavaFX thread and the EDT explicit, as `JavaFxPlayback` already does for the player. `ClockTimer` notifies its listeners on its own pool threads, most of them while holding its lock, so a listener that waits on another thread can deadlock it; the playhead (`PlayheadCarriage.show`) and `MediaPlayers` hand their work to the EDT. Cells still restyle for the needle on the clock thread (`SpreadsheetCell`'s clock listener, through `CellLook`), as they did before U5. SpotBugs's thread-safety findings are at zero and gated.
 
 **R9. Autosave and crash recovery.** ready. `AutoSaveController` saves a `~<name>_*.watavyu.json` project file to the temporary folder every minute; at launch, `DatavyuView.checkForAutosavedFile` offers to recover any left in the temporary folder (Datavyu's `~*.opf`/`~*.csv` too) and opens one as an unsaved project; that flow is checked only by reading, as its dialogs need clicks. The temporary folder is shared with other apps and cleared by macOS. Settle this together with U3.

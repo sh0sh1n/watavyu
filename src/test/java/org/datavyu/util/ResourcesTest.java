@@ -1,7 +1,6 @@
 package org.datavyu.util;
 
 import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 
 import org.datavyu.Datavyu;
@@ -36,11 +35,5 @@ public class ResourcesTest {
     @Test
     public void missingKeysGiveNull() {
         assertNull(Resources.of(VideoController.class).getString("no.such.key"));
-        assertNull(Resources.of(VideoController.class).getIcon("no.such.key"));
-    }
-
-    @Test
-    public void loadsIconsFromTheClassPath() {
-        assertNotNull(Resources.of(VideoController.class).getIcon("startButton.icon"));
     }
 }

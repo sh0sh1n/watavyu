@@ -1147,6 +1147,48 @@ public final class DatavyuView implements FileDropEventListener {
     }
 
     /**
+     * Action for setting cell values in Plex Mono or Plex Sans. Cells read their font each time they paint, as zoom
+     * relies on, so the sheet only needs laying out again.
+     */
+    public void toggleMonospacedValues() {
+        boolean monospaced = !Settings.get().isMonospacedValues();
+        Settings.get().setMonospacedValues(monospaced);
+        SpreadsheetTheme.setMonospacedValues(monospaced);
+        panel.revalidate();
+        panel.repaint();
+    }
+
+    /**
+     * Sets how far the times and values of cells the needle has passed fade, and shows every cell again.
+     *
+     * @param percent from 0 (unchanged) to 100 (hidden)
+     */
+    public void setPastCellDim(final int percent) {
+        Settings.get().setPastCellDim(percent);
+        for (Component tab : tabbedPane.getComponents()) {
+            if (tab instanceof SpreadSheetPanel) {
+                ((SpreadSheetPanel) tab).refreshCellColours();
+            }
+        }
+    }
+
+    /** Steps offered in the Dim Past Cells menu; the settings file takes any whole number from 0 to 100. */
+    private static final int[] PAST_CELL_DIM_STEPS = {0, 20, 40, 60, 80, 100};
+
+    private JMenu pastCellDimMenu() {
+        JMenu menu = new JMenu(resources.getString("pastCellDimMenu.text"));
+        ButtonGroup group = new ButtonGroup();
+        int current = Settings.get().getPastCellDim();
+        for (int step : PAST_CELL_DIM_STEPS) {
+            JRadioButtonMenuItem item = new JRadioButtonMenuItem(step + "%", step == current);
+            item.addActionListener(e -> setPastCellDim(step));
+            group.add(item);
+            menu.add(item);
+        }
+        return menu;
+    }
+
+    /**
      * The method to invoke when the use selects the spreadsheet menu item.
      *
      * @param evt The event that triggered this action.
@@ -1342,6 +1384,8 @@ public final class DatavyuView implements FileDropEventListener {
         action(r.getString("zoomInMenuItem.text"), this::zoomIn);
         action(r.getString("zoomOutMenuItem.text"), this::zoomOut);
         action(r.getString("resetZoomMenuItem.text"), this::resetZoom);
+        action(r.getString("monospacedValuesMenuItem.text"), this::toggleMonospacedValues)
+                .putValue(Action.SELECTED_KEY, Settings.get().isMonospacedValues());
         action(QUICK_KEYS, this::toggleQuickKeys).putValue(Action.NAME, quickKeyModeText());
         action(HIGHLIGHT_AND_FOCUS, this::toggleHighlightAndFocusMode)
                 .putValue(Action.NAME, highlightAndFocusText(VideoController.HIGHLIGHT_AND_FOCUS_BY_DEFAULT));
@@ -1552,6 +1596,8 @@ public final class DatavyuView implements FileDropEventListener {
         zoomMenu.addSeparator();
         zoomMenu.add(item("resetZoomMenuItem.text"));
         spreadsheetMenu.add(zoomMenu);
+        spreadsheetMenu.add(new JCheckBoxMenuItem(command("monospacedValuesMenuItem.text")));
+        spreadsheetMenu.add(pastCellDimMenu());
         JMenuItem quickKeysItem = spreadsheetMenu.add(item(actions.get(QUICK_KEYS)));
         quickKeysItem.setToolTipText(resources.getString("quickKeysMenuItem.toolTipText"));
         JMenuItem highlightAndFocusItem = spreadsheetMenu.add(item(actions.get(HIGHLIGHT_AND_FOCUS)));

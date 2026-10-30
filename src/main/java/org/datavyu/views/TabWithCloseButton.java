@@ -31,6 +31,7 @@ package org.datavyu.views;
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+import org.datavyu.views.discrete.SpreadsheetTheme;
 import org.datavyu.Datavyu;
 
 import javax.swing.*;
@@ -128,9 +129,9 @@ public class TabWithCloseButton extends JPanel {
                 g2.translate(1, 1);
             }
             g2.setStroke(new BasicStroke(2));
-            g2.setColor(Color.BLACK);
+            g2.setColor(SpreadsheetTheme.PALETTE.time());
             if (getModel().isRollover()) {
-                g2.setColor(Color.MAGENTA);
+                g2.setColor(SpreadsheetTheme.PALETTE.text());
             }
             int delta = 6;
             g2.drawLine(delta, delta, getWidth() - delta - 1, getHeight() - delta - 1);
