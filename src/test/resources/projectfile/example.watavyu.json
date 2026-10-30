@@ -8,8 +8,8 @@
       "settings": { "hidden": false, "locked": true },
       "cells": [
         {
-          "onset": "-00:00:02:500",
-          "offset": "00:14:26:120",
+          "onset": "00:00:02:500",
+          "offset": "00:14:31:120",
           "settings": { "volume": 0.8 },
           "source": {
             "file": "media/session-04-cam1.mp4",

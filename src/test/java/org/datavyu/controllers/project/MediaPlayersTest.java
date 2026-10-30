@@ -213,9 +213,9 @@ public class MediaPlayersTest {
         players.openAll();
         StreamViewer player = players.getPlayer(clip);
 
-        clip.setOnset(-1_500);
+        clip.setOnset(1_500);
 
-        verify(player).setOffset(-1_500L);
+        verify(player).setOffset(1_500L);
         verify(videoController, org.mockito.Mockito.atLeastOnce()).updateMaxViewerDuration();
     }
 

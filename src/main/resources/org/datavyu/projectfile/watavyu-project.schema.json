@@ -21,14 +21,9 @@
   },
   "$defs": {
     "time": {
-      "description": "A time in HH:MM:SS:mmm. Hours have at least two digits and do not wrap at 24.",
+      "description": "A time in HH:MM:SS:mmm. Hours have at least two digits and do not wrap at 24. No time is negative.",
       "type": "string",
       "pattern": "^[0-9]{2,}:[0-5][0-9]:[0-5][0-9]:[0-9]{3}$"
-    },
-    "signedTime": {
-      "description": "A time in HH:MM:SS:mmm that may be negative, with a leading minus sign. There is no negative zero.",
-      "type": "string",
-      "pattern": "^(-(?!0+:00:00:000$))?[0-9]{2,}:[0-5][0-9]:[0-5][0-9]:[0-9]{3}$"
     },
     "name": {
       "type": "string",
@@ -102,15 +97,15 @@
       }
     },
     "clip": {
-      "description": "A media clip. It may start before time zero, when a recording began before the annotated session (a stopgap while the video controller window exists; see AGENTS.md).",
+      "description": "A media clip.",
       "type": "object",
       "additionalProperties": false,
       "required": ["onset", "settings", "source"],
       "properties": {
-        "onset": { "$ref": "#/$defs/signedTime" },
+        "onset": { "$ref": "#/$defs/time" },
         "offset": {
           "description": "The onset plus the source's duration, present exactly when the duration is. Written for readers; it cannot be set.",
-          "$ref": "#/$defs/signedTime"
+          "$ref": "#/$defs/time"
         },
         "settings": {
           "type": "object",

@@ -88,8 +88,12 @@ final class JsonFields {
     }
 
     static long time(final JsonNode node, final String at) throws ProjectFileException {
+        String text = text(node, at);
+        if (text.startsWith("-")) {
+            throw new ProjectFileException(at + ": \"" + text + "\" must not be negative");
+        }
         try {
-            return Timestamp.parseCanonical(text(node, at));
+            return Timestamp.parseCanonical(text);
         } catch (IllegalArgumentException e) {
             throw new ProjectFileException(at + ": \"" + node.textValue() + "\" is not a time (HH:MM:SS:mmm)", e);
         }

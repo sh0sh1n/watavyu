@@ -42,6 +42,7 @@ public interface Cell {
      * Sets the offset for this cell.
      *
      * @param newOffset The new offset timestamp in milliseconds to use for this cell.
+     * @throws IllegalArgumentException if the offset is negative, as no time is
      */
     void setOffset(final long newOffset);
 
@@ -79,6 +80,7 @@ public interface Cell {
      *
      * @param newOnset The new onset timestamp in milliseconds to use for this
      *                 cell.
+     * @throws IllegalArgumentException if the onset is negative, as no time is
      */
     void setOnset(final long newOnset);
 

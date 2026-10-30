@@ -48,6 +48,7 @@ final class ProjectRules {
             AnnotationCell cell = column.cells().get(i);
             String cellAt = at + ".cells[" + i + "]";
             require(cell.onset() >= 0, cellAt + ".onset", "must not be negative");
+            require(cell.offset() >= 0, cellAt + ".offset", "must not be negative");
             require(cell.values().size() == column.codes().size(), cellAt + ".values",
                 "must hold one value per code (" + column.codes().size() + ")");
             for (int v = 0; v < cell.values().size(); v++) {
@@ -61,6 +62,7 @@ final class ProjectRules {
             Clip clip = column.clips().get(i);
             Source source = clip.source();
             String clipAt = at + ".cells[" + i + "]";
+            require(clip.onset() >= 0, clipAt + ".onset", "must not be negative");
             require(clip.volume() >= 0 && clip.volume() <= 1, clipAt + ".settings.volume", "must be from 0 to 1");
             require(source.file() != null && !source.file().isEmpty(), clipAt + ".source.file", "must not be empty");
             require(source.duration() >= 0, clipAt + ".source.duration", "must not be negative");

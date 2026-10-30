@@ -113,8 +113,8 @@ public class ProjectJsonTest {
         assertEquals(camera.name(), "Camera_1");
         assertTrue(camera.locked());
         Clip clip = camera.clips().get(0);
-        assertEquals(clip.onset(), -2_500L);
-        assertEquals(clip.offset(), 866_120L);
+        assertEquals(clip.onset(), 2_500L);
+        assertEquals(clip.offset(), 871_120L);
         assertEquals(clip.volume(), 0.8);
         assertEquals(clip.source(), new Source("media/session-04-cam1.mp4", 868_620L, 29.97, 1920, 1080));
 
@@ -134,7 +134,7 @@ public class ProjectJsonTest {
                 new AnnotationCell(0, 5, List.of("tab\there", "\u0001control")),
                 new AnnotationCell(360_000_000L, 360_000_001L, List.of("", "")))),
             new MediaColumn("Two clips", true, false, List.of(
-                new Clip(-1, 0.333333, new Source("/Volumes/Share/a b.mp4", 1, 23.976, 1, 1)),
+                new Clip(1, 0.333333, new Source("/Volumes/Share/a b.mp4", 1, 23.976, 1, 1)),
                 new Clip(10, 0, new Source("x.mp4", 0, 0.5, 7680, 4320)))),
             new MediaColumn("No clips", false, false, List.of())));
         String json = ProjectJson.toJson(document);
@@ -180,12 +180,12 @@ public class ProjectJsonTest {
                 new AnnotationCell(5, 9, List.of("third")),
                 new AnnotationCell(5, 6, List.of("second")),
                 new AnnotationCell(1, 1, List.of("first")))),
-            new MediaColumn("V", false, false, List.of(new Clip(50, 1, source), new Clip(-50, 1, source)))));
+            new MediaColumn("V", false, false, List.of(new Clip(50, 1, source), new Clip(5, 1, source)))));
         ProjectDocument reread = read(ProjectJson.toJson(document));
         assertEquals(((AnnotationColumn) reread.columns().get(0)).cells().stream()
             .map(cell -> cell.values().get(0)).toList(), List.of("first", "second", "third"));
         assertEquals(((MediaColumn) reread.columns().get(1)).clips().stream().map(Clip::onset).toList(),
-            List.of(-50L, 50L));
+            List.of(5L, 50L));
     }
 
     /**
@@ -261,8 +261,12 @@ public class ProjectJsonTest {
                 change("\"values\": [\"v\"]", "\"values\": [1]")},
             {"short hours", "columns[0].cells[0].onset", true,
                 change("\"onset\": \"00:00:01:000\"", "\"onset\": \"0:00:01:000\"")},
-            {"negative annotation onset", "columns[0].cells[0].onset", true,
+            {"negative annotation onset", "columns[0].cells[0].onset: \"-00:00:01:000\" must not be negative", true,
                 change("\"onset\": \"00:00:01:000\"", "\"onset\": \"-00:00:01:000\"")},
+            {"negative annotation offset", "columns[0].cells[0].offset: \"-00:00:02:000\" must not be negative", true,
+                change("\"offset\": \"00:00:02:000\"", "\"offset\": \"-00:00:02:000\"")},
+            {"negative clip onset", "columns[1].cells[0].onset: \"-00:00:02:000\" must not be negative", true,
+                change("\"onset\": \"00:00:00:000\"", "\"onset\": \"-00:00:02:000\"")},
             {"clip offset not onset plus duration", "columns[1].cells[0].offset", false,
                 change("\"offset\": \"00:00:10:000\"", "\"offset\": \"00:00:09:000\"")},
             {"negative zero", "columns[1].cells[0].onset", true,
@@ -334,6 +338,16 @@ public class ProjectJsonTest {
             new AnnotationColumn("A", List.of("x"), false, List.of()), new MediaColumn("A", false, false, List.of())));
         assertTrue(expectThrows(ProjectFileException.class, () -> ProjectJson.toJson(sameName))
             .getMessage().contains("columns[1].name"));
+
+        ProjectDocument negativeOffset = new ProjectDocument(List.of(
+            new AnnotationColumn("A", List.of("x"), false, List.of(new AnnotationCell(10, -1, List.of("a"))))));
+        assertTrue(expectThrows(ProjectFileException.class, () -> ProjectJson.toJson(negativeOffset))
+            .getMessage().contains("columns[0].cells[0].offset: must not be negative"));
+
+        ProjectDocument clipBeforeZero = new ProjectDocument(List.of(new MediaColumn("V", false, false,
+            List.of(new Clip(-1, 1, new Source("a.mp4", 10, 30, 640, 480))))));
+        assertTrue(expectThrows(ProjectFileException.class, () -> ProjectJson.toJson(clipBeforeZero))
+            .getMessage().contains("columns[0].cells[0].onset: must not be negative"));
     }
 
     @Test
