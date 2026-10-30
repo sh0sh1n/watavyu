@@ -6,15 +6,18 @@ import static org.testng.Assert.assertTrue;
 
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.DataStoreFactory;
+import org.datavyu.models.db.Variable;
 import org.testng.annotations.Test;
 
+import javax.swing.JButton;
 import javax.swing.JTable;
 import javax.swing.SwingUtilities;
 import java.awt.Component;
 import java.awt.Container;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-/** The Column List shows and hides columns; columns are renamed only in the Code Editor. */
+/** The Column List shows and hides columns, and shows them all; columns are renamed only in the Code Editor. */
 public class VariableListVTest {
 
     static <T extends Component> T find(final Container in, final Class<T> type, final String name) {
@@ -49,6 +52,32 @@ public class VariableListVTest {
             assertFalse(rows.getModel().isCellEditable(0, 2), "name");
             assertFalse(rows.getModel().isCellEditable(0, 0), "order");
             assertTrue(rows.getModel().isCellEditable(0, 1), "visible");
+        } finally {
+            SwingUtilities.invokeAndWait(() -> list.get().dispose());
+        }
+    }
+
+    @Test
+    public void showAllColumnsShowsEveryHiddenColumn() throws Exception {
+        DataStore dataStore = DataStoreFactory.newDataStore();
+        Variable notes = dataStore.createVariable("notes");
+        Variable media = dataStore.createMediaVariable("media_1");
+        Variable shown = dataStore.createVariable("shown");
+        notes.setHidden(true);
+        media.setHidden(true);
+        AtomicInteger refreshed = new AtomicInteger();
+        AtomicReference<VariableListV> list = new AtomicReference<>();
+        SwingUtilities.invokeAndWait(() -> {
+            list.set(new VariableListV(null, false, dataStore, refreshed::incrementAndGet));
+            JButton showAll = find(list.get().getContentPane(), JButton.class, "showAllColumns");
+            assertEquals(showAll.getText(), "Show All Columns");
+            showAll.doClick();
+        });
+        try {
+            assertFalse(notes.isHidden());
+            assertFalse(media.isHidden());
+            assertFalse(shown.isHidden());
+            assertEquals(refreshed.get(), 1);
         } finally {
             SwingUtilities.invokeAndWait(() -> list.get().dispose());
         }

@@ -11,17 +11,17 @@ Items are in priority order within each section.
 
 ## Measures
 
-Updated 2026-10-29. Re-measure with the commands in [BUILDING.md › Analysis Reports](BUILDING.md#analysis-reports).
+Updated 2026-10-30. Re-measure with the commands in [BUILDING.md › Analysis Reports](BUILDING.md#analysis-reports).
 
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
-| Java source (main) | 242 files, 42.5k lines | 157 files, 27.5k lines |
-| Tests / line coverage | 113 / 9.9% | 457 / 35.8%; still 0% in most views and undo |
+| Java source (main) | 242 files, 42.5k lines | 148 files, 25.9k lines |
+| Tests / line coverage | 113 / 9.9% | 442 / 38.9%; still 0% in most views and undo |
 | Runtime dependencies / with known vulnerabilities | 28 / 8 | 12 / 0 at the last check; FlatLaf, added for U5, not yet checked |
-| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 608 |
-| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 426 / 74 (none on thread safety, now gated); 16 |
-| Never-invoked methods (`dead-code.py`) | 109+ | 20: test-only accessors, and Swing overrides the script cannot see |
-| Static global access (`grep -rohP 'Datavyu\.(get\|set)\w*\(' src/main/java \| wc -l`) | about 330 call sites | 250 (259 before F6; earlier figures counted differently) |
+| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 535 |
+| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 390 / 71 (none on thread safety, now gated); 15 |
+| Never-invoked methods (`dead-code.py`) | 109+ | 21: test-only accessors, unused settings setters, and Swing overrides the script cannot see |
+| Static global access (`grep -rohP 'Datavyu\.(get\|set)\w*\(' src/main/java \| wc -l`) | about 330 call sites | 236 (259 before F6; earlier figures counted differently) |
 
 ## Bugs
 
