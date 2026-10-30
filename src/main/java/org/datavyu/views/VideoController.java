@@ -146,9 +146,6 @@ public final class VideoController implements ClockListener {
     private JButton playButton;
 
     /** */
-    private JButton nineSetCellOffsetButton;
-
-    /** */
     private JButton setCellOffsetButton;
 
     /** */
@@ -567,8 +564,8 @@ public final class VideoController implements ClockListener {
         gridButtonPanel.add(playButton, NUM_PAD_KEY_SIZE);
 
         // Set cell offset button with 9
-        nineSetCellOffsetButton = buildButton("setCellOffset", Glyph.Shape.SET_OFFSET, "offset", "9", this::setCellOffsetAction);
-        gridButtonPanel.add(nineSetCellOffsetButton, NUM_PAD_KEY_SIZE);
+        setCellOffsetButton = buildButton("setCellOffset", Glyph.Shape.SET_OFFSET, "offset", "9", this::setCellOffsetAction);
+        gridButtonPanel.add(setCellOffsetButton, NUM_PAD_KEY_SIZE);
 
         addJumpByPair();
 
@@ -622,9 +619,8 @@ public final class VideoController implements ClockListener {
                 "new + prev offset", "0", this::createNewCellAndSetOffsetAction);
         gridButtonPanel.add(createNewCellSettingOffset, "span 2, w 95!, h 45!");
 
-        // Set cell offset button
-        setCellOffsetButton = buildButton("setCellOffset", Glyph.Shape.SET_OFFSET, "offset", ".", this::setCellOffsetAction);
-        gridButtonPanel.add(setCellOffsetButton, NUM_PAD_KEY_SIZE);
+        // Placeholder at the decimal point, which set the offset as 9 does
+        gridButtonPanel.add(makePlaceholderButton(), NUM_PAD_KEY_SIZE);
 
         // Offset text field
         offsetTextField.setHorizontalAlignment(SwingConstants.CENTER);
@@ -740,15 +736,8 @@ public final class VideoController implements ClockListener {
     /**
      * Simulates set cell offset button clicked.
      */
-    public void pressSetCellOffsetPeriod() {
+    public void pressSetCellOffset() {
         setCellOffsetButton.doClick();
-    }
-
-    /**
-     * Simulates set cell offset button clicked.
-     */
-    public void pressSetCellOffsetNine() {
-        nineSetCellOffsetButton.doClick();
     }
 
     /**

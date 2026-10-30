@@ -1364,7 +1364,7 @@ public final class DatavyuView implements FileDropEventListener {
                 .keypad("Show or hide the controls", KeyEvent.VK_MULTIPLY, 0, command("showControlsMenuItem.text"))
                 .keypad("Set cell onset", KeyEvent.VK_NUMPAD7, 0, run(() -> controller().pressSetCellOnset()))
                 .keypad("Play", KeyEvent.VK_NUMPAD8, 0, run(() -> controller().pressPlay()))
-                .keypad("Set cell offset", KeyEvent.VK_NUMPAD9, 0, run(() -> controller().pressSetCellOffsetNine()))
+                .keypad("Set cell offset", KeyEvent.VK_NUMPAD9, 0, run(() -> controller().pressSetCellOffset()))
                 .keypad("Shuttle back", KeyEvent.VK_NUMPAD4, 0, run(() -> controller().pressShuttleBack()))
                 .keypad("Stop", KeyEvent.VK_NUMPAD5, 0, run(() -> controller().pressStop()))
                 .keypad("Shuttle forward", KeyEvent.VK_NUMPAD6, 0, run(() -> controller().pressShuttleForward()))
@@ -1373,7 +1373,6 @@ public final class DatavyuView implements FileDropEventListener {
                 .keypad("Jog forward one frame", KeyEvent.VK_NUMPAD3, 0, run(() -> controller().jogForwardAction()))
                 .keypad("New cell, setting the previous cell's offset", KeyEvent.VK_NUMPAD0, 0,
                         run(() -> controller().pressCreateNewCellSettingOffset()))
-                .keypad("Set cell offset", KeyEvent.VK_DECIMAL, 0, run(() -> controller().pressSetCellOffsetPeriod()))
                 .keypad("Jump back by the jump time", KeyEvent.VK_SUBTRACT, 0, run(() -> controller().pressJumpBack()))
                 .keypad("Jump forward by the jump time", KeyEvent.VK_SUBTRACT, shift,
                         run(() -> controller().pressJumpForward()))
