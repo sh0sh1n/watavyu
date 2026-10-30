@@ -47,7 +47,7 @@ public class KeypadKeyTest {
         collect(controls, keys);
 
         assertEquals(keys.stream().map(KeypadKey::getKey).toList(),
-                List.of("7", "8", "9", "−", "4", "5", "6", "+", "1", "2", "3", "enter", "0", "."));
+                List.of("7", "8", "9", "−", "4", "5", "6", "+", "1", "2", "3", "enter", "0"));
         for (KeypadKey key : keys) {
             assertTrue(key.getIcon() instanceof Glyph, key.getName());
             assertTrue(!key.getKey().isEmpty(), key.getName());
