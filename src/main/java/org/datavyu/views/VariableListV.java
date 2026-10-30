@@ -21,7 +21,6 @@ import org.apache.logging.log4j.Logger;
 import org.datavyu.Datavyu;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.DataStoreListener;
-import org.datavyu.models.db.UserWarningException;
 import org.datavyu.models.db.Variable;
 
 import javax.swing.*;
@@ -73,7 +72,6 @@ public final class VariableListV extends DatavyuDialog
      */
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JTable variableList;
-    private javax.swing.JLabel changeInstructions;
 
     /**
      * Mapping between database column identifier - to the table model.
@@ -113,32 +111,19 @@ public final class VariableListV extends DatavyuDialog
         variableList.getColumnModel().getColumn(OCOLUMN).setMinWidth(40);
         variableList.getColumnModel().getColumn(OCOLUMN).setMaxWidth(40);
         variableList.setAutoResizeMode(JTable.AUTO_RESIZE_LAST_COLUMN);
-        
-        //Use JTextfield to edit variable name cells
-        variableList.getColumnModel().getColumn(NCOLUMN)
-                .setCellEditor(new DefaultCellEditor(makeTextFieldWithHoverMessage()));
-        
+
+
         populateTable();
     }
     
-    private JTextField makeTextFieldWithHoverMessage()
-    {
-        JTextField ans = new JTextField();
-        ans.setToolTipText("Click to edit");
-        return ans;
-    }
-
     @SuppressWarnings("unchecked")
     private void initComponents() {
         jScrollPane1 = new javax.swing.JScrollPane();
         variableList = new javax.swing.JTable();
-        changeInstructions = new JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
         setTitle(rMap.getString("variableListDialog.title"));
         setName("variableListDialog"); 
-        
-        changeInstructions.setText(rMap.getString("changeInstructions.text"));
 
         jScrollPane1.setName("jScrollPane1"); 
 
@@ -154,7 +139,6 @@ public final class VariableListV extends DatavyuDialog
         MigLayout layout = new MigLayout("wrap");
         getContentPane().setLayout(layout);
         getContentPane().add(jScrollPane1);
-        getContentPane().add(changeInstructions);
 
         pack();
     }
@@ -211,19 +195,6 @@ public final class VariableListV extends DatavyuDialog
                     var.setSelected(false);
                 }
 
-            } else if (columnName.equals(rMap.getString("Table.nameColumn"))) {
-                LOGGER.info("Editied Variable Name from VariableList");
-
-                if (!var.getName().equals(data)) {
-                    try {
-                        if ((!var.getName().equals((String) data))) {
-                            var.setName((String) data);
-                        }
-                    } catch (UserWarningException uwe) {
-                        Datavyu.getApplication().showWarningDialog(uwe);
-                        tableModel.setValueAt(var.getName(), row, column);
-                    }
-                }
             }
 
             Datavyu.getProjectController().getDataStore().markAsChanged();
@@ -319,7 +290,8 @@ public final class VariableListV extends DatavyuDialog
 
         @Override
         public boolean isCellEditable(int row, int column) {
-            if (column == VCOLUMN || column == NCOLUMN) {
+            // Columns are renamed in the Code Editor, not here.
+            if (column == VCOLUMN) {
                 return true;
             }
             return false;

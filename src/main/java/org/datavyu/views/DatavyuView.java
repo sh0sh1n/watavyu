@@ -110,7 +110,6 @@ public final class DatavyuView implements FileDropEventListener {
     private JMenuItem newCellMenuItem;
     private JMenuItem newCellLeftMenuItem;
     private JMenuItem newCellRightMenuItem;
-    private JMenuItem changeVarNameMenuItem;
     private JMenuItem hideSelectedColumnsMenuItem;
     private JMenuItem deleteColumnMenuItem;
     private JMenuItem deleteCellMenuItem;
@@ -942,25 +941,6 @@ public final class DatavyuView implements FileDropEventListener {
     }
 
     /**
-     * Action for changing variable name.
-     */
-    public void changeColumnName() {
-        // Only one column should be selected, but just in case, we'll only
-        // change the first column
-//        Variable var = Datavyu.getProjectController().getDataStore().getSelectedVariables().get(0);
-        Variable var = null;
-        var = Datavyu.getProjectController().getDataStore().getSelectedVariables().get(0);
-
-        for (SpreadsheetColumn sCol : panel.getColumns()) {
-            if (sCol.getVariable().equals(var)) {
-                sCol.showChangeVarNameDialog();
-
-                break;
-            }
-        }
-    }
-
-    /**
      * Action for removing cells from the database.
      */
     public void deleteCells() {
@@ -1117,19 +1097,16 @@ public final class DatavyuView implements FileDropEventListener {
         if (selectedCols.isEmpty()) {
             deleteColumnMenuItem.setEnabled(false);
             hideSelectedColumnsMenuItem.setEnabled(false);
-            changeVarNameMenuItem.setEnabled(false);
         } else if (selectedCols.size() == 1) {
             deleteColumnMenuItem.setText(rMap.getString("deleteColumnMenuItemSingle.text"));
             deleteColumnMenuItem.setEnabled(true);
             hideSelectedColumnsMenuItem.setText(rMap.getString("hideSelectedColumnsMenuItemSingle.text"));
             hideSelectedColumnsMenuItem.setEnabled(true);
-            changeVarNameMenuItem.setEnabled(true);
         } else {
             deleteColumnMenuItem.setText(rMap.getString("deleteColumnMenuItemPlural.text"));
             deleteColumnMenuItem.setEnabled(true);
             hideSelectedColumnsMenuItem.setText(rMap.getString("hideSelectedColumnsMenuItemPlural.text"));
             hideSelectedColumnsMenuItem.setEnabled(true);
-            changeVarNameMenuItem.setEnabled(false);
         }
 
         List<Cell> selectedCells = Datavyu.getProjectController().getDataStore().getSelectedCells();
@@ -1264,7 +1241,6 @@ public final class DatavyuView implements FileDropEventListener {
         action(r.getString("newCellMenuItem.text"), this::newCell);
         action(r.getString("newCellLeftMenuItem.text"), this::newCellLeft);
         action(r.getString("newCellRightMenuItem.text"), this::newCellRight);
-        action(r.getString("changeVarNameMenuItem.text"), this::changeColumnName);
         action(r.getString("hideSelectedColumnsMenuItem.text"), () -> {
             hideColumn();
             getSpreadsheetPanel().deselectAll();
@@ -1469,7 +1445,6 @@ public final class DatavyuView implements FileDropEventListener {
         newCellLeftMenuItem = spreadsheetMenu.add(item("newCellLeftMenuItem.text"));
         newCellRightMenuItem = spreadsheetMenu.add(item("newCellRightMenuItem.text"));
         spreadsheetMenu.addSeparator();
-        changeVarNameMenuItem = spreadsheetMenu.add(item("changeVarNameMenuItem.text"));
         hideSelectedColumnsMenuItem = spreadsheetMenu.add(item("hideSelectedColumnsMenuItem.text"));
         spreadsheetMenu.add(item("showAllColumnsMenuItem.text"));
         spreadsheetMenu.addSeparator();
