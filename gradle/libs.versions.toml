@@ -16,7 +16,6 @@ log4j-api = { module = "org.apache.logging.log4j:log4j-api", version.ref = "log4
 log4j-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4j" }
 miglayout = "com.miglayout:miglayout:3.7.4"
 mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }
-snakeyaml = "org.yaml:snakeyaml:2.7"
 testng = "org.testng:testng:7.12.0"
 
 [plugins]

@@ -17,7 +17,7 @@ Updated 2026-10-29. Re-measure with the commands in [BUILDING.md › Analysis Re
 |---|---|---|
 | Java source (main) | 242 files, 42.5k lines | 157 files, 27.5k lines |
 | Tests / line coverage | 113 / 9.9% | 457 / 35.8%; still 0% in most views and undo |
-| Runtime dependencies / with known vulnerabilities | 28 / 8 | 13 / 0 at the last check; FlatLaf, added for U5, not yet checked |
+| Runtime dependencies / with known vulnerabilities | 28 / 8 | 12 / 0 at the last check; FlatLaf, added for U5, not yet checked |
 | Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 608 |
 | PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 426 / 74 (none on thread safety, now gated); 16 |
 | Never-invoked methods (`dead-code.py`) | 109+ | 20: test-only accessors, and Swing overrides the script cannot see |
@@ -29,7 +29,7 @@ Updated 2026-10-29. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 **B11. Crash recovery is lost on an ordinary exit, and recovering needs a dialog.** ready, *verified*. `AutoSaveController` marks each autosave `deleteOnExit`, so the JVM deletes it on every orderly exit: quitting, Ctrl+C in the terminal running `make run`, or a plain `kill`. On 2026-10-30 an autosave written after the app's first minute was gone 2 seconds after SIGINT. Only exits that skip the JVM's shutdown hooks (SIGKILL, a JVM crash, a power cut) leave one behind, which is why the recovery dialog no longer appears. When one is left, `DatavyuView.checkForAutosavedFile` asks about every `~*.watavyu.json` in the temporary folder at launch: the dialog itself is a chore (owner), and it includes the autosave a running Watavyu is writing, which answering No deletes. Owner's direction: open unsaved autosaves without asking, and only those no running Watavyu owns (a lock file, or the owning process recorded in the autosave's name). An autosave should go only when its work was saved or knowingly discarded (through `UnsavedWork`'s prompt), not on any exit. With that, add a safeguard against saving over a newer file: if the project file changed on disk since it was opened or last saved (by another Watavyu, a recovered copy or another tool), say so before overwriting it. Settle with R9.
 
-**B13. Times can be negative.** ready (owner: no time is negative), *verified*. A clip may start before time zero (`DatavyuCell.setOnset`; `MediaColumnTest` moves one to -500 ms), and project files may say so: `Timestamp.parse` reads `-HH:MM:SS:mmm`, the schema's time pattern allows it, and `example.watavyu.json` has a clip at `-00:00:02:500`. Refuse negative times when reading a project file (and `.opf`/`.csv`, which may break older files, accepted), keep every onset at zero or later in the app, drop the minus from `Timestamp` and the schema, and update AGENTS.md's format decision.
+**B13. Times can be negative.** ready (owner: no time is negative), *verified*. A clip may start before time zero (`DatavyuCell.setOnset`; `MediaColumnTest` moves one to -500 ms), and project files may say so: `Timestamp.parse` reads `-HH:MM:SS:mmm`, the schema's time pattern allows it, and `example.watavyu.json` has a clip at `-00:00:02:500`. Refuse negative times when reading a project file (and `.csv`, which may break older files, accepted), keep every onset at zero or later in the app, drop the minus from `Timestamp` and the schema, and update AGENTS.md's format decision.
 
 **B14. Adding media cannot be undone.** ready, *from reading*. Spreadsheet > Add Media and dropping files post no undoable edit (`MediaPlayers.addMediaFiles`), while deleting the clip or column afterwards can be undone. Undo should take an added clip or column out again, closing its player.
 
@@ -71,7 +71,6 @@ Updated 2026-10-29. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 | Library | Now → latest stable | Used by | Action |
 |---|---|---|---|
-| SnakeYAML | 2.7 (latest) | opening `.opf` files, citation | drop with `.opf` opening (a migration question, see AGENTS.md › Undecided); the citation can parse its few keys without it |
 | MigLayout | 3.7.4 → `miglayout-swing` 11.x | the controls drawer (`VideoController`) and the Column List (`VariableListV`) | ready: upgrade |
 
 ## Refactors
@@ -84,4 +83,4 @@ The app is to be rewritten in C++ (AGENTS.md › North Star), so refactor only w
 
 **R7. Threading.** Make the boundary between the clock thread, the JavaFX thread and the EDT explicit, as `JavaFxPlayback` already does for the player. `ClockTimer` notifies its listeners on its own pool threads, most of them while holding its lock, so a listener that waits on another thread can deadlock it; the playhead (`PlayheadCarriage.show`) and `MediaPlayers` hand their work to the EDT. Cells still restyle for the needle on the clock thread (`SpreadsheetCell`'s clock listener, through `CellLook`), as they did before U5. SpotBugs's thread-safety findings are at zero and gated.
 
-**R9. Autosave and crash recovery.** ready. `AutoSaveController` saves a `~<name>_*.watavyu.json` project file to the temporary folder every minute; at launch, `DatavyuView.checkForAutosavedFile` offers to recover any left in the temporary folder (Datavyu's `~*.opf`/`~*.csv` too) and opens one as an unsaved project; that flow is checked only by reading, as its dialogs need clicks. The temporary folder is shared with other apps and cleared by macOS. Settle this together with B11.
+**R9. Autosave and crash recovery.** ready. `AutoSaveController` saves a `~<name>_*.watavyu.json` project file to the temporary folder every minute; at launch, `DatavyuView.checkForAutosavedFile` offers to recover any left in the temporary folder (Datavyu's `~*.csv` too) and opens one as an unsaved project; that flow is checked only by reading, as its dialogs need clicks. The temporary folder is shared with other apps and cleared by macOS. Settle this together with B11.
