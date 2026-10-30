@@ -101,7 +101,6 @@ public class SheetLayoutWeakTemporal extends SheetLayout {
             pos += heightMap.getOrDefault(time, 0);
             pos += gapSize;
         }
-        timeAxis = new TimeAxis(onsetMap);
 
         /* Iterate over all spreadsheet cells and set boundaries using onset and offset maps.
            Keep a local copy of the position maps.  Since each time value gets a range of positions
@@ -184,6 +183,17 @@ public class SheetLayoutWeakTemporal extends SheetLayout {
                     sc.setBounds(0, sc.getY(), colWidth - 1, mapHeight);
             }
         }
+
+        // Each time spans from where its cells start to where the cells that end then end; a cell whose offset is
+        // before its onset ends at its onset.
+        HashMap<Long, Integer> bottoms = new HashMap<>();
+        for (SpreadsheetColumn col : visible_columns) {
+            for (SpreadsheetCell sc : cellMap.get(col)) {
+                long end = Math.max(sc.getOnsetTicks(), sc.getOffsetTicksActual());
+                bottoms.merge(end, sc.getY() + sc.getHeight(), Integer::max);
+            }
+        }
+        timeAxis = new TimeAxis(onsetMap, bottoms);
 
         padColumns(mainView, parent);
         laidOut();
