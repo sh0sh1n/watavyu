@@ -60,7 +60,7 @@ Newest first. (owner) marks product decisions; the rest are engineering choices 
   - Clips slide but are not trimmed: a clip's offset is its onset plus its source duration, written for readers and never set by the user. Gaps between clips are black; where clips overlap, the one that starts later wins.
   - No time is negative (owner, 2026-10-29): no use is known for a cell or clip before time zero, and this may break older files. Until B13 lands, a clip may still start before zero, as dragging a track in the old video controller allowed.
   - Every offset is a real time: new cells are point cells (offset = onset), with no "unset" offset. An offset before its onset is allowed, saved as it is, and flagged in the spreadsheet with a red border as in Datavyu (which exempts an offset of `00:00:00:000`, Datavyu's "unset").
-  - Not carried over: the project name, original folder and database file name, plugin UUID, namespace and class, per-object version numbers, and the frame-rate override. Video window size and position wait for U1.
+  - Not carried over: the project name, original folder and database file name, plugin UUID, namespace and class, per-object version numbers, and the frame-rate override. Media windows remember their size and place in Settings, by column name, not in the project file.
 - **2026-10-14 (owner): removed features**: Ruby and R scripting and the script console; the file and favorites drawers; the `.shapa` and `.odb` formats; the Undo History window (an edit list in the controls drawer is planned instead, F12); the playback region of interest; track bookmarks; snapping while dragging a track. Old `.opf` files with bookmarks still open; the bookmarks are dropped.
 - **2026-10-14 (owner): kept features**: JSON import/export; highlight-and-focus mode, on by default and not announced in the window title; quick-key mode, for now.
 - **2026-10-14 (owner): snapping comes back** after F1 (F2).
@@ -80,7 +80,7 @@ Ask the owner before acting on these.
 
 - Project structure beyond one file: folders, templates, and coding passes reused across experiments (U2).
 - Migration from Datavyu: whether `.opf` files keep opening, or a one-off converter replaces that. Dropping it would also drop SnakeYAML (D1).
-- The rest of the UI direction (U1) beyond the controls drawer and playhead (F6) and the long-session look (U5), including which controls stay.
+- Which controls the drawer keeps, found by trial (F6, F7, F16), and whether the Code Editor and Column List windows join the main window as the video controller did.
 - The defaults for the values font (sans or mono) and for dimming past cells, once both have been tried (U5).
 - Whether quick-key mode stays.
 - Whether a scripting shell returns, and in what form. It would start from a clean slate.
