@@ -105,6 +105,22 @@ public class SpreadsheetColumnsTest {
 
     private static final Path FOLDER = Path.of("/Users/someone/study");
 
+    /** A locked annotation column opens with its cells and values in, and locked; it saves locked. */
+    @Test
+    public void aLockedAnnotationColumnOpensWithItsCellsAndLocked() throws Exception {
+        List<Column> columns = List.of(new AnnotationColumn("notes", List.of("mood"), false, true,
+            List.of(new AnnotationCell(1_000, 2_000, List.of("calm")))));
+        DataStore dataStore = DataStoreFactory.newDataStore();
+
+        SpreadsheetColumns.addColumns(dataStore, columns, FOLDER);
+
+        Variable notes = dataStore.getVariable("notes");
+        assertTrue(notes.isLocked());
+        assertEquals(notes.getCells().get(0).getMatrixValue(0).toString(), "calm");
+        assertEquals(notes.getCells().get(0).getOffset(), 2_000L);
+        assertEquals(SpreadsheetColumns.columns(dataStore, FOLDER), columns);
+    }
+
     /** Media and annotation columns open in the file's order, which is the spreadsheet's, and save the same. */
     @Test
     public void mediaColumnsOpenAndSaveInTheFilesOrder() throws Exception {

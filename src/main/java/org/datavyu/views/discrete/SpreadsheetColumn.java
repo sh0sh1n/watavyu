@@ -23,7 +23,7 @@ import org.datavyu.undoableedits.RemoveVariableEdit;
 import org.datavyu.util.ClockTimer;
 import org.datavyu.util.Constants;
 import org.datavyu.util.DragAndDrop.TransparentPanel;
-import org.datavyu.views.Glyph;
+import org.datavyu.views.LockMark;
 
 import javax.swing.*;
 import javax.swing.border.Border;
@@ -179,28 +179,33 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
         return BorderFactory.createCompoundBorder(rule, bar);
     }
 
-    /** The mark on a locked media column's header. */
-    private static final Icon LOCK_MARK = Glyph.of(Glyph.Shape.LOCK, 14);
+    /** The mark on a locked column's header, which shakes when the column refuses a change. */
+    private final LockMark lockMark = new LockMark(14, this);
 
-    /** Shows the lock mark while a media column is locked. */
+    /** Shows the lock mark while the column is locked. */
     private void updateLockMark() {
-        setIcon(variable.isLocked() ? LOCK_MARK : null);
-        setToolTipText(variable.isLocked() ? "Locked: its clips do not move" : null);
+        setIcon(variable.isLocked() ? lockMark : null);
+        setToolTipText(variable.isLocked() ? "Locked: right-click to unlock" : null);
+    }
+
+    /** Returns the mark shown while the column is locked. */
+    LockMark getLockMark() {
+        return lockMark;
     }
 
     /**
-     * Makes the Lock Clips menu item of a media column's header: it shows whether the column is locked and toggles
-     * it, as an undoable edit.
+     * Makes the Lock Column menu item of a column's header: it shows whether the column is locked and toggles it, as
+     * an undoable edit.
      *
      * @param dataStore the spreadsheet holding the column
-     * @param column    a media column
+     * @param column    the column whose header was clicked
      * @param post      takes the edit for the undo history
      * @return the menu item
      */
     static JCheckBoxMenuItem lockItem(final DataStore dataStore, final Variable column,
                                       final Consumer<UndoableEdit> post) {
-        JCheckBoxMenuItem item = new JCheckBoxMenuItem("Lock Clips", column.isLocked());
-        item.setName("lockClips");
+        JCheckBoxMenuItem item = new JCheckBoxMenuItem("Lock Column", column.isLocked());
+        item.setName("lockColumn");
         item.addActionListener(e -> {
             column.setLocked(item.isSelected());
             post.accept(new LockColumnEdit(dataStore, column.getName(), item.isSelected()));
@@ -233,7 +238,8 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
 
     /**
      * Makes the Delete menu item of a column's header: it deletes the column, or every selected column if the column
-     * is one of them, as one undoable edit. The spreadsheet hears of each column leaving through the data store.
+     * is one of them, as one undoable edit. The spreadsheet hears of each column leaving through the data store. It
+     * is disabled while any of those columns is locked.
      *
      * @param dataStore the spreadsheet holding the column
      * @param column    the column whose header was clicked
@@ -245,6 +251,7 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
         List<Variable> deleted = column.isSelected() ? dataStore.getSelectedVariables() : List.of(column);
         JMenuItem item = new JMenuItem(deleted.size() == 1 ? "Delete Column" : "Delete Selected Columns");
         item.setName("deleteColumns");
+        item.setEnabled(deleted.stream().noneMatch(Variable::isLocked));
         item.addActionListener(e -> {
             for (Variable each : deleted) {
                 dataStore.removeVariable(each);
@@ -265,10 +272,8 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
             Datavyu.getView().getComponent().revalidate();
         }));
         menu.add(deleteItem(dataStore, variable, Datavyu.getView().getUndoSupport()::postEdit));
-        if (variable.isMedia()) {
-            menu.addSeparator();
-            menu.add(lockItem(dataStore, variable, Datavyu.getView().getUndoSupport()::postEdit));
-        }
+        menu.addSeparator();
+        menu.add(lockItem(dataStore, variable, Datavyu.getView().getUndoSupport()::postEdit));
         menu.show(this, me.getX(), me.getY());
         me.consume();
         return true;
@@ -523,6 +528,11 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
         this.datapanel.setVisible(!isHidden);
         this.setSelected(false);
         columnVisList.columnVisibilityChanged();
+    }
+
+    @Override
+    public void editRefused() {
+        lockMark.shake();
     }
 
     @Override

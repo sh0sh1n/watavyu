@@ -105,15 +105,6 @@ public class MediaColumnTest {
     }
 
     @Test
-    public void anAnnotationColumnIsNeverLocked() throws Exception {
-        Variable notes = DataStoreFactory.newDataStore().createVariable("notes");
-
-        notes.setLocked(true);
-
-        assertFalse(notes.isLocked());
-    }
-
-    @Test
     public void mediaNamesShareTheSpreadsheetsNames() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
         dataStore.createVariable("media_1");

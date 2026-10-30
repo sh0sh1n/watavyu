@@ -614,6 +614,11 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
                 if(selectedColumn != null && !selectedColumn.getVariable().isMedia()) {
                     CreateNewCellController controller = new CreateNewCellController();
                     Cell c = controller.createCell(selectedColumn.getVariable());
+                    if (c == null) {
+                        // A locked column refuses it.
+                        e.consume();
+                        return true;
+                    }
 
                     CellValue v = c.getCellValue();
                     if(v instanceof MatrixCellValue) {

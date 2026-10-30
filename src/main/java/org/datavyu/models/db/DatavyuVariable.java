@@ -89,6 +89,9 @@ public final class DatavyuVariable implements Variable {
     @Override
 
     public void addCell(Cell cell) {
+        if (refusesEdits()) {
+            return;
+        }
         if (cell.getCellValue().getArgument() == this.getRootNode()) {
             cells.add(cell);
             for (VariableListener vl : getListeners(getID())) {
@@ -117,6 +120,7 @@ public final class DatavyuVariable implements Variable {
         if (media) {
             throw new IllegalStateException("The cells of media column " + name + " are clips");
         }
+        requireUnlocked();
         Cell c = new DatavyuCell(this, this.getRootNode());
 
         cells.add(c);
@@ -134,6 +138,7 @@ public final class DatavyuVariable implements Variable {
         if (!media) {
             throw new IllegalStateException("Annotation column " + name + " has no clips");
         }
+        requireUnlocked();
         Cell c = new DatavyuCell(this, this.getRootNode(), onset, clip);
         cells.add(c);
         for (VariableListener vl : getListeners(getID())) {
@@ -155,12 +160,29 @@ public final class DatavyuVariable implements Variable {
 
     @Override
     public void setLocked(final boolean newLocked) {
-        if (media && newLocked != locked) {
+        if (newLocked != locked) {
             locked = newLocked;
             owningDatastore.markAsChanged();
             for (VariableListener vl : getListeners(getID())) {
                 vl.lockChanged(newLocked);
             }
+        }
+    }
+
+    @Override
+    public boolean refusesEdits() {
+        if (locked) {
+            for (VariableListener vl : getListeners(getID())) {
+                vl.editRefused();
+            }
+        }
+        return locked;
+    }
+
+    /** Refuses a change that would return what it made. */
+    private void requireUnlocked() {
+        if (refusesEdits()) {
+            throw new IllegalStateException("Column " + name + " is locked");
         }
     }
 
@@ -174,6 +196,9 @@ public final class DatavyuVariable implements Variable {
 
     @Override
     public void removeCell(final Cell cell) {
+        if (refusesEdits()) {
+            return;
+        }
         cells.remove(cell);
 
         owningDatastore.markAsChanged();
@@ -202,6 +227,9 @@ public final class DatavyuVariable implements Variable {
 
     @Override
     public void setRootNode(final Argument a) {
+        if (refusesEdits()) {
+            return;
+        }
         owningDatastore.markAsChanged();
         rootNodeArgument = a;
     }
@@ -263,6 +291,9 @@ public final class DatavyuVariable implements Variable {
         if (newName.length() < 1) {
             throw new UserWarningException("Unable to add column, a name must be supplied.");
         }
+        if (refusesEdits()) {
+            throw new UserWarningException("Column " + name + " is locked: unlock it to rename it.");
+        }
 
         // Pre-conditions, check to make sure newName doesn't contain invalid chars or begin with a number or underscore
         if (!grandfathered && !isNameValid(newName)) {
@@ -287,6 +318,7 @@ public final class DatavyuVariable implements Variable {
 
     @Override
     public Argument addArgument() {
+        requireUnlocked();
         Argument arg = getRootNode();
         Argument child = arg.addChildArgument();
 
@@ -301,6 +333,9 @@ public final class DatavyuVariable implements Variable {
 
     @Override
     public void moveArgument(final int old_index, final int new_index) {
+        if (refusesEdits()) {
+            return;
+        }
         Argument arg = getRootNode();
 
         // Test to see if this is out of bounds
@@ -329,6 +364,9 @@ public final class DatavyuVariable implements Variable {
 
     @Override
     public void removeArgument(final String name) {
+        if (refusesEdits()) {
+            return;
+        }
         Argument arg = getRootNode();
         int arg_index = getArgumentIndex(name);
         arg.childArguments.remove(arg_index);

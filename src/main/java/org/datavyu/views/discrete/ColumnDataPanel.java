@@ -55,11 +55,6 @@ public final class ColumnDataPanel extends JPanel implements KeyEventDispatcher 
      */
     private Map<Cell, SpreadsheetCell> viewMap;
     /**
-     * button for creating a new empty cell.
-     */
-    private SpreadsheetEmptyCell newCellButton;
-
-    /**
      * Padding for the bottom of the column.
      */
     private JPanel padding;
@@ -88,9 +83,6 @@ public final class ColumnDataPanel extends JPanel implements KeyEventDispatcher 
         setLayout(null);
         setBorder(BorderFactory.createMatteBorder(0, 0, 0, Constants.BORDER_SIZE,
                 SpreadsheetTheme.PALETTE.rule()));
-
-        newCellButton = new SpreadsheetEmptyCell(variable);
-        this.add(newCellButton);
 
         padding = new JPanel();
         padding.setBackground(SpreadsheetTheme.PALETTE.ground());
@@ -145,7 +137,6 @@ public final class ColumnDataPanel extends JPanel implements KeyEventDispatcher 
             columnHeight += sc.getHeight();
         }
 
-        this.add(newCellButton);
         this.setSize(columnWidth, columnHeight);
     }
 
@@ -220,10 +211,6 @@ public final class ColumnDataPanel extends JPanel implements KeyEventDispatcher 
     @Override
     public Dimension getPreferredSize() {
         return new Dimension(columnWidth, columnHeight);
-    }
-
-    public SpreadsheetEmptyCell getNewCellButton() {
-        return this.newCellButton;
     }
 
     public JPanel getPadding() {

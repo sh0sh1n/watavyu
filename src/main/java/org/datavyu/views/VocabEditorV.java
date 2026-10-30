@@ -263,6 +263,9 @@ public final class VocabEditorV extends DatavyuDialog {
         LOGGER.error("vocEd - move code left");
         Argument va = selectedVocabElement.getModel().childArguments.get(selectedArgumentI);
         Variable var = selectedVocabElement.getVariable();
+        if (var.refusesEdits()) {
+            return;
+        }
         var.moveArgument(va.name, var.getArgumentIndex(va.name) - 1);
 
         selectedVocabElement.rebuildContents();
@@ -282,6 +285,9 @@ public final class VocabEditorV extends DatavyuDialog {
         LOGGER.error("vocEd - move code right");
         Argument va = selectedVocabElement.getModel().childArguments.get(selectedArgumentI);
         Variable var = selectedVocabElement.getVariable();
+        if (var.refusesEdits()) {
+            return;
+        }
         var.moveArgument(va.name, var.getArgumentIndex(va.name) + 1);
 
         selectedVocabElement.rebuildContents();
@@ -341,6 +347,9 @@ public final class VocabEditorV extends DatavyuDialog {
      */
     public void addCode() {
         Variable var = selectedVocabElement.getVariable();
+        if (var.refusesEdits()) {
+            return;
+        }
         Argument fa = var.addArgument();
         selectedVocabElement.setModel(var.getRootNode());
 
@@ -364,6 +373,10 @@ public final class VocabEditorV extends DatavyuDialog {
     public void delete() {
 
         UndoableEdit edit = null;
+        // A locked column, its codes included, is deleted only once it is unlocked.
+        if (selectedVocabElement != null && selectedVocabElement.getVariable().refusesEdits()) {
+            return;
+        }
         // User has vocab element selected - delete it from the editor.
         if (selectedVocabElement != null && selectedArgument == null) {
             if (JOptionPane.showConfirmDialog(this, "Are you sure you want to delete the variable " +

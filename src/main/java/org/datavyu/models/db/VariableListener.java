@@ -57,10 +57,14 @@ public interface VariableListener {
     void cellRemoved(final Cell deletedCell);
 
     /**
-     * A media column has been locked or unlocked.
+     * The column has been locked or unlocked.
      *
-     * @param locked whether the column's clips are now locked
+     * @param locked whether the column is now locked
      */
     default void lockChanged(final boolean locked) {
+    }
+
+    /** A change to the column was refused because it is locked. */
+    default void editRefused() {
     }
 }

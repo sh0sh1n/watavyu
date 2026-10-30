@@ -22,6 +22,7 @@ import org.datavyu.undoableedits.ChangeCellEdit.Granularity;
 import org.datavyu.undoableedits.ChangeOffsetCellEdit;
 import org.datavyu.undoableedits.ChangeOnsetCellEdit;
 import org.datavyu.views.discrete.EditorComponent;
+import org.datavyu.views.discrete.EditorTracker;
 
 import javax.swing.text.JTextComponent;
 import javax.swing.undo.UndoableEdit;
@@ -120,33 +121,40 @@ public final class TimeStampDataValueEditor extends EditorComponent {
      */
     /**
      * @return whether this time can be edited: a clip's offset never can, as it follows from the clip's onset and
-     * length, and neither can the onset of a clip in a locked media column
+     * length, and no time in a locked column can
      */
     public boolean isTypingAllowed() {
-        if (parentCell.getClip() == null) {
-            return true;
+        if (parentCell.getVariable().isLocked()) {
+            return false;
         }
-        return dataSourceType == TimeStampSource.Onset && !parentCell.getVariable().isLocked();
+        return parentCell.getClip() == null || dataSourceType == TimeStampSource.Onset;
+    }
+
+    /** Returns whether an edit may go ahead; if not, a locked column hears it was refused. */
+    private boolean allowsEdit() {
+        if (parentCell.getVariable().refusesEdits()) {
+            return false;
+        }
+        return isTypingAllowed();
     }
 
     @Override
     public void cut() {
-        if (isTypingAllowed()) {
+        if (allowsEdit()) {
             super.cut();
         }
     }
 
     @Override
     public void paste() {
-        if (isTypingAllowed()) {
+        if (allowsEdit()) {
             super.paste();
         }
     }
 
     @Override
     public void keyPressed(final KeyEvent e) {
-        if (!isTypingAllowed()
-                && (e.getKeyCode() == KeyEvent.VK_BACK_SPACE || e.getKeyCode() == KeyEvent.VK_DELETE)) {
+        if ((e.getKeyCode() == KeyEvent.VK_BACK_SPACE || e.getKeyCode() == KeyEvent.VK_DELETE) && !allowsEdit()) {
             e.consume();
             return;
         }
@@ -273,6 +281,9 @@ public final class TimeStampDataValueEditor extends EditorComponent {
     @Override
     public void keyTyped(final KeyEvent e) {
         if (!isTypingAllowed()) {
+            if (EditorTracker.isTypedEdit(e)) {
+                parentCell.getVariable().refusesEdits();
+            }
             e.consume();
             return;
         }

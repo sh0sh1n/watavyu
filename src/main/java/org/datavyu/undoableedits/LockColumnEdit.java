@@ -8,8 +8,8 @@ import javax.swing.undo.CannotRedoException;
 import javax.swing.undo.CannotUndoException;
 
 /**
- * Locking or unlocking a media column's clips. Being in the undo history keeps it in order with the edits around
- * it: undoing past a lock first unlocks the column, so an earlier onset change can be undone too.
+ * Locking or unlocking a column. Being in the undo history keeps it in order with the edits around
+ * it: undoing past a lock first unlocks the column, so an earlier change to it can be undone too.
  */
 public final class LockColumnEdit extends AbstractUndoableEdit {
 
@@ -32,7 +32,7 @@ public final class LockColumnEdit extends AbstractUndoableEdit {
 
     @Override
     public String getPresentationName() {
-        return (locked ? "Lock Clips of " : "Unlock Clips of ") + columnName;
+        return (locked ? "Lock Column " : "Unlock Column ") + columnName;
     }
 
     /** Undoes the lock change; refused, leaving the edit as it was, if the column is gone. */

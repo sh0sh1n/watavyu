@@ -37,14 +37,21 @@ public record ProjectDocument(List<Column> columns) {
      * @param name   the column's name
      * @param codes  the names of its codes, in order; none when the column holds timing only
      * @param hidden whether the column is hidden in the spreadsheet
+     * @param locked whether the column refuses changes to its cells, codes and name
      * @param cells  its cells
      */
-    public record AnnotationColumn(String name, List<String> codes, boolean hidden, List<AnnotationCell> cells)
-            implements Column {
+    public record AnnotationColumn(String name, List<String> codes, boolean hidden, boolean locked,
+                                   List<AnnotationCell> cells) implements Column {
 
         public AnnotationColumn {
             codes = List.copyOf(codes);
             cells = List.copyOf(cells);
+        }
+
+        /** An unlocked column. */
+        public AnnotationColumn(final String name, final List<String> codes, final boolean hidden,
+                                final List<AnnotationCell> cells) {
+            this(name, codes, hidden, false, cells);
         }
     }
 
@@ -69,7 +76,7 @@ public record ProjectDocument(List<Column> columns) {
      *
      * @param name   the column's name
      * @param hidden whether the media window is hidden
-     * @param locked whether the clips are protected from being dragged
+     * @param locked whether the column refuses changes to its clips
      * @param clips  its clips
      */
     public record MediaColumn(String name, boolean hidden, boolean locked, List<Clip> clips) implements Column {

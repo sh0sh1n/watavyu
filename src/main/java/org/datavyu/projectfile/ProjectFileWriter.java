@@ -62,7 +62,8 @@ final class ProjectFileWriter {
             .append("      \"name\": ").append(string(column.name())).append(",\n")
             .append("      \"type\": \"").append(ProjectFileReader.ANNOTATION).append("\",\n")
             .append("      \"codes\": ").append(strings(column.codes())).append(",\n")
-            .append("      \"settings\": { \"hidden\": ").append(column.hidden()).append(" },\n")
+            .append("      \"settings\": { \"hidden\": ").append(column.hidden())
+            .append(", \"locked\": ").append(column.locked()).append(" },\n")
             .append("      \"cells\": [");
         List<AnnotationCell> cells = new ArrayList<>(column.cells());
         cells.sort(CELL_ORDER);

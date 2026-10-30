@@ -82,6 +82,9 @@ public final class CreateNewCellController {
                     if ((i >= 0) && (i < model.getVisibleVariables().size())
                             && !model.getVisibleVariables().get(i).isMedia()) {
                         Variable var = model.getVisibleVariables().get(i);
+                        if (var.refusesEdits()) {
+                            break;
+                        }
                         newCell = var.createCell();
                         newCell.setOnset(sourceCell.getOnset());
                         newCell.setOffset(sourceCell.getOffset());
@@ -115,6 +118,9 @@ public final class CreateNewCellController {
             //To avoid conflict when having multiple column selected, we use the Column of the selected cell
             if(model.getSelectedVariables().size() == 1){
                 //We know that we have only one selected column
+                if (model.getSelectedVariables().get(0).refusesEdits()) {
+                    return;
+                }
                 Cell cellToEdit = findClosestCell(model.getSelectedVariables().get(0),milliseconds);
                 if(cellToEdit != null && cellToEdit.getClip() == null) {
                     UndoableEdit edit = new ChangeOffsetCellEdit(cellToEdit, cellToEdit.getOffset(),
@@ -126,6 +132,9 @@ public final class CreateNewCellController {
                 //There is more than one selected column; we parse the column of the selected cell
                 if(Datavyu.getProjectController().getLastSelectedCell() != null){
                     Variable columnToParse = model.getVariable(Datavyu.getProjectController().getLastSelectedCell());
+                    if (columnToParse != null && columnToParse.refusesEdits()) {
+                        return;
+                    }
                     Cell cellToEdit = findClosestCell(columnToParse, milliseconds);
                     if (cellToEdit == null || cellToEdit.getClip() != null) {
                         createNewCell(milliseconds);
@@ -188,10 +197,11 @@ public final class CreateNewCellController {
      * @return The cell that was just inserted.
      */
     /**
-     * @return a new point cell at the current time, or null in a media column, whose cells are clips
+     * @return a new point cell at the current time, or null in a media column, whose cells are clips, or in a locked
+     * column
      */
     public Cell createCell(final Variable v) {
-        if (v.isMedia()) {
+        if (v.isMedia() || v.refusesEdits()) {
             return null;
         }
         logger.info("create cell in selected column");
@@ -207,27 +217,6 @@ public final class CreateNewCellController {
         Datavyu.getProjectController().setLastCreatedVariable(v);
 
         return newCell;
-    }
-
-    /**
-     * Create a default cell at the end of the nominated variable.
-     *
-     * @param v The variable we are adding a cell to the end of.
-     */
-    public void createDefaultCell(final Variable v) {
-        if (v.isMedia()) {
-            return;
-        }
-        model.deselectAll();
-        Cell c = createCell(v);
-
-        // record the effect
-        UndoableEdit edit = new AddCellEdit(v.getName(), c);
-
-        // Display any changes.
-        Datavyu.getView().getComponent().revalidate();
-        // notify the listeners
-        Datavyu.getView().getUndoSupport().postEdit(edit);
     }
 
     /**
@@ -247,14 +236,12 @@ public final class CreateNewCellController {
 
         if (v != null && !v.isMedia()) {
             newCell = createCell(v);
-
+        }
+        if (newCell != null) {
             // record the effect
             UndoableEdit edit = new AddCellEdit(v.getName(), newCell);
             Datavyu.getView().getComponent().revalidate();
             Datavyu.getView().getUndoSupport().postEdit(edit);
-        }
-
-        if (newCell != null) {
             model.deselectAll();
             newCell.setHighlighted(true);
         }
@@ -309,12 +296,21 @@ public final class CreateNewCellController {
 
         Cell newCell = null;
         boolean newcelladded = false;
+        // A locked column refuses the new cell, and no other column takes it instead.
+        boolean refused = false;
 
         // check for Situation 1: one or more selected columns
         model = Datavyu.getProjectController().getDataStore();
 
         for (Variable var : model.getSelectedVariables()) {
             if (var.isMedia()) {
+                continue;
+            }
+            if (var.refusesEdits()) {
+                refused = true;
+                if (!multiadd) {
+                    break;
+                }
                 continue;
             }
             logger.info("create cell in selected column");
@@ -333,7 +329,7 @@ public final class CreateNewCellController {
             }
         }
 
-        if (!newcelladded) {
+        if (!newcelladded && !refused) {
             for (Cell cell : model.getSelectedCells()) {
                 logger.info("create cell below selected cell");
 
@@ -343,6 +339,13 @@ public final class CreateNewCellController {
                 // only returns DataCells (no ref cells allowed so far)
                 Variable var = model.getVariable(cell);
                 if (var.isMedia()) {
+                    continue;
+                }
+                if (var.refusesEdits()) {
+                    refused = true;
+                    if (!multiadd) {
+                        break;
+                    }
                     continue;
                 }
                 newCell = var.createPointCell(onset);
@@ -363,11 +366,13 @@ public final class CreateNewCellController {
 
         // else check for Situation 3: User is or was editing an existing cell
         // and has requested a new cell
-        if (!newcelladded && multiadd) {
+        if (!newcelladded && !refused && multiadd) {
             if (Datavyu.getProjectController().getLastSelectedCell() != null) {
                 logger.info("create cell while editing existing cell");
                 Variable var = model.getVariable(Datavyu.getProjectController().getLastCreatedCell());
-                if (var != null && !var.isMedia()) {
+                if (var != null && var.refusesEdits()) {
+                    refused = true;
+                } else if (var != null && !var.isMedia()) {
                     newCell = var.createPointCell(onset);
                     Datavyu.getProjectController().setLastCreatedCell(newCell);
                     Datavyu.getProjectController().setLastCreatedVariable(var);
@@ -383,7 +388,7 @@ public final class CreateNewCellController {
 
         // else go with Situation 4: Video controller requested - create in the
         // same column as the last created cell or the last focused cell.
-        if (!newcelladded) {
+        if (!newcelladded && !refused) {
             logger.info("create cell in same location as last created cell");
 
             // Check for presence of columns, else return
@@ -401,6 +406,9 @@ public final class CreateNewCellController {
                 }
                 Datavyu.getProjectController().setLastCreatedVariable(last);
             }
+            if (last.refusesEdits()) {
+                return;
+            }
 
             newCell = Datavyu.getProjectController().getLastCreatedVariable().createPointCell(onset);
             Datavyu.getProjectController().setLastCreatedCell(newCell);
@@ -410,6 +418,9 @@ public final class CreateNewCellController {
             Datavyu.getView().getUndoSupport().postEdit(edit);
         }
 
+        if (newCell == null) {
+            return;
+        }
         model.deselectAll();
         newCell.setHighlighted(true);
     }

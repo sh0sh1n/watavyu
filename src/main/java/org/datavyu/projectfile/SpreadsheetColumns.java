@@ -81,7 +81,7 @@ public final class SpreadsheetColumns {
             }
             cells.add(new AnnotationCell(cell.getOnset(), cell.getOffset(), values));
         }
-        return new AnnotationColumn(variable.getName(), codes, variable.isHidden(), cells);
+        return new AnnotationColumn(variable.getName(), codes, variable.isHidden(), variable.isLocked(), cells);
     }
 
     /**
@@ -141,6 +141,8 @@ public final class SpreadsheetColumns {
                     cell.setMatrixValue(i, annotated.values().get(i));
                 }
             }
+            // Locked last, once its cells are in.
+            variable.setLocked(column.locked());
         }
     }
 }

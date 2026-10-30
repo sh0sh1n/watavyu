@@ -14,6 +14,7 @@
  */
 package org.datavyu.views;
 
+import org.datavyu.util.Dialogs;
 import org.datavyu.util.Resources;
 import org.datavyu.util.Settings;
 import com.fasterxml.jackson.core.JsonParseException;
@@ -725,7 +726,10 @@ public final class DatavyuView implements FileDropEventListener {
             return;
         }
         try {
-            panel.getMediaPlayers().addMediaFiles(files, panel.getVideoController().getCurrentTime());
+            panel.getMediaPlayers().addMediaFiles(files, panel.getVideoController().getCurrentTime(),
+                locked -> Dialogs.confirm(getFrame(), locked.getName()
+                    + " is locked, so no clips can be added to it. Add the media to a new media column instead?",
+                    "Column Locked", "Add to New Column"));
         } catch (UserWarningException e) {
             logger.error("Unable to add media", e);
             Datavyu.getApplication().showWarningDialog(e.getMessage());
@@ -865,8 +869,16 @@ public final class DatavyuView implements FileDropEventListener {
      * Action for removing cells from the database.
      */
     public void deleteCells() {
-        List<Cell> selectedCells = null;
-        selectedCells = Datavyu.getProjectController().getDataStore().getSelectedCells();
+        // Cells in locked columns stay.
+        List<Cell> selectedCells = new ArrayList<>();
+        for (Cell cell : Datavyu.getProjectController().getDataStore().getSelectedCells()) {
+            if (!cell.getVariable().refusesEdits()) {
+                selectedCells.add(cell);
+            }
+        }
+        if (selectedCells.isEmpty()) {
+            return;
+        }
 
         // record the effect
         UndoableEdit edit = new RemoveCellEdit(selectedCells);
