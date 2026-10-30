@@ -36,8 +36,4 @@ public final class StringUtils {
         }
         return escaped.toString();
     }
-
-    public static String escapeCSVQuotes(String s){ //for actual CSV export, not our misnomer "CSV"s
-        return "\"" + s.replaceAll("\"", "\"\"") + "\"";
-    }
 }
