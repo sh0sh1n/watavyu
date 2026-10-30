@@ -379,8 +379,8 @@ public final class VocabEditorV extends DatavyuDialog {
         }
         // User has vocab element selected - delete it from the editor.
         if (selectedVocabElement != null && selectedArgument == null) {
-            if (JOptionPane.showConfirmDialog(this, "Are you sure you want to delete the variable " +
-                    selectedVocabElement.getVariable().getName() + "?", "Confirm delete variable",
+            if (JOptionPane.showConfirmDialog(this, "Are you sure you want to delete the column " +
+                    selectedVocabElement.getVariable().getName() + "?", "Delete Column",
                     JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
                 LOGGER.info("vocEd - delete element");
                 // record the effect
@@ -440,7 +440,7 @@ public final class VocabEditorV extends DatavyuDialog {
         if (errors != 0) {
             switch (errors) {
                 case 1:
-                    JOptionPane.showMessageDialog(this, "Vocab Element name in use.", "Error adding vocab", 2);
+                    JOptionPane.showMessageDialog(this, "Column name in use.", "Duplicate column name", 2);
                     break;
                 case 2:
                     JOptionPane.showMessageDialog(this, "Code name in use.", "Duplicate code name", 2);
@@ -762,22 +762,14 @@ public final class VocabEditorV extends DatavyuDialog {
                     statusBar.setText("Close the editor");
                 } else if (component.equals("addColumnButton")) {
                     statusBar.setText("Add a new column. Hotkey: ctrl + M");
-                } else if (component.equals("undoButton")) {
-                    statusBar.setText("Undo a series of changes. Hotkey: ctrl + Z");
-                } else if (component.equals("redoButton")) {
-                    statusBar.setText("Redo any undone changes. Hotkey: ctrl + Y");
                 } else if (component.equals("addCodeButton")) {
                     statusBar.setText("Add a new code to a column. Hotkey: ctrl + A");
                 } else if (component.equals("deleteButton")) {
                     statusBar.setText("Delete a code or column. Hotkey: ctrl + delete");
                 } else if (component.equals("moveCodeLeftButton")) {
                     statusBar.setText("Move a code left within a column. Hotkey: ctrl + <-");
-                } else if (component.equals("applyButton")) {
-                    statusBar.setText("Apply changes to the vocab elements. Hotkey: ctrl + S");
                 } else if (component.equals("moveCodeRightButton")) {
                     statusBar.setText("Move a code right within a column. Hotkey: ctrl + ->");
-                } else if (component.equals("okButton")) {
-                    statusBar.setText("Save changes and close the window.");
                 }
             }
 
