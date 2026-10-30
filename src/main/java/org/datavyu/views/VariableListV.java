@@ -72,6 +72,10 @@ public final class VariableListV extends DatavyuDialog
      */
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JTable variableList;
+    private JButton showAllButton;
+
+    /** Runs after Show All Columns, to bring the spreadsheet up to date. */
+    private final Runnable afterShowingAll;
 
     /**
      * Mapping between database column identifier - to the table model.
@@ -93,7 +97,26 @@ public final class VariableListV extends DatavyuDialog
     public VariableListV(final java.awt.Frame parent,
                          final boolean modal,
                          final DataStore ds) {
+        this(parent, modal, ds, () -> {
+            Datavyu.getView().getSpreadsheetPanel().deselectAll();
+            Datavyu.getView().getComponent().revalidate();
+        });
+    }
+
+    /**
+     * Creates the list.
+     *
+     * @param parent          the frame that owns the list
+     * @param modal           whether the list is modal
+     * @param ds              the spreadsheet whose columns it lists
+     * @param afterShowingAll runs after Show All Columns
+     */
+    VariableListV(final java.awt.Frame parent,
+                  final boolean modal,
+                  final DataStore ds,
+                  final Runnable afterShowingAll) {
         super(parent, modal);
+        this.afterShowingAll = afterShowingAll;
         tableModel = new VListTableModel();
         dbToTableMap = new HashMap<>();
         initComponents();
@@ -132,6 +155,10 @@ public final class VariableListV extends DatavyuDialog
         variableList.setName("variableList");
         variableList.setAutoCreateRowSorter(true);
         jScrollPane1.setViewportView(variableList);
+
+        showAllButton = new JButton(rMap.getString("showAllButton.text"));
+        showAllButton.setName("showAllColumns");
+        showAllButton.addActionListener(e -> showAllColumns());
         
 
        
@@ -139,8 +166,20 @@ public final class VariableListV extends DatavyuDialog
         MigLayout layout = new MigLayout("wrap");
         getContentPane().setLayout(layout);
         getContentPane().add(jScrollPane1);
+        getContentPane().add(showAllButton);
 
         pack();
+    }
+
+    /** Shows every hidden column of the spreadsheet, and their media windows. */
+    private void showAllColumns() {
+        LOGGER.info("Showing all columns");
+        for (Variable var : dataStore.getAllVariables()) {
+            if (var.isHidden()) {
+                var.setHidden(false);
+            }
+        }
+        afterShowingAll.run();
     }
 
     public void populateTable() {

@@ -909,22 +909,6 @@ public final class DatavyuView implements FileDropEventListener {
     }
 
     /**
-     * Action for showing all columns.
-     */
-    public void showAllColumns() {
-        logger.info("Showing all columns");
-        DataStore ds = Datavyu.getProjectController().getDataStore();
-
-        for (Variable var : ds.getAllVariables()) {
-            if (var.isHidden()) {
-                var.setHidden(false);
-            }
-        }
-
-        getComponent().revalidate();
-    }
-
-    /**
      * Action for removing cells from the database.
      */
     public void deleteCells() {
@@ -1220,10 +1204,6 @@ public final class DatavyuView implements FileDropEventListener {
         action(r.getString("newCellMenuItem.text"), this::newCell);
         action(r.getString("newCellLeftMenuItem.text"), this::newCellLeft);
         action(r.getString("newCellRightMenuItem.text"), this::newCellRight);
-        action(r.getString("showAllColumnsMenuItem.text"), () -> {
-            showAllColumns();
-            getSpreadsheetPanel().deselectAll();
-        });
         action(r.getString("deleteColumnMenuItem.text"), this::deleteColumn);
         action(r.getString("deleteCellMenuItem.text"), this::deleteCells);
         action(UNDO, this::undo);
@@ -1419,8 +1399,6 @@ public final class DatavyuView implements FileDropEventListener {
         newCellMenuItem = spreadsheetMenu.add(item("newCellMenuItem.text"));
         newCellLeftMenuItem = spreadsheetMenu.add(item("newCellLeftMenuItem.text"));
         newCellRightMenuItem = spreadsheetMenu.add(item("newCellRightMenuItem.text"));
-        spreadsheetMenu.addSeparator();
-        spreadsheetMenu.add(item("showAllColumnsMenuItem.text"));
         spreadsheetMenu.addSeparator();
         deleteColumnMenuItem = spreadsheetMenu.add(item("deleteColumnMenuItem.text"));
         deleteCellMenuItem = spreadsheetMenu.add(item("deleteCellMenuItem.text"));
