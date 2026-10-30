@@ -68,9 +68,7 @@ public class SheetLayoutOrdinal extends SheetLayout {
      * @param parent The parent component for the container.
      */
     @Override
-    public void layoutContainer(Container parent) {
-        super.layoutContainer(parent);
-
+    protected void layoutCells(Container parent) {
         Datavyu.getView().setRedraw(false);
 
         // This layout must be applied to a Spreadsheet panel.

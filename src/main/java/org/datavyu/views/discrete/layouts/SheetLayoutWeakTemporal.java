@@ -46,10 +46,8 @@ public class SheetLayoutWeakTemporal extends SheetLayout {
     }
 
     @Override
-    public void layoutContainer(Container parent) {
+    protected void layoutCells(Container parent) {
         //TODO: figure out how to make this whole algorithm neater.
-//        long startTime = System.currentTimeMillis();
-        super.layoutContainer(parent);
         pane = (JScrollPane) parent;
 
         // This layout must be applied to a Spreadsheet panel.

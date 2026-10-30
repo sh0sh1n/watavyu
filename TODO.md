@@ -33,8 +33,6 @@ Updated 2026-10-29. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 **B14. Adding media cannot be undone.** ready, *from reading*. Spreadsheet > Add Media and dropping files post no undoable edit (`MediaPlayers.addMediaFiles`), while deleting the clip or column afterwards can be undone. Undo should take an added clip or column out again, closing its player.
 
-**B15. The UI feels choppy since U5.** ready, *verified* (owner, 2026-10-29), cause not yet measured. Suspects: while playing, the sheet follows the needle by moving the viewport on every clock tick (`PlayheadCarriage.follow`), repainting every visible cell; every cell restyles on the clock thread on each tick (`SpreadsheetCell.updateSelectionDisplay`, see R7); and antialiased IBM Plex text costs more to draw than the old font. Measure paint time per tick before and after, then follow in larger steps or coalesce ticks on the EDT.
-
 ## Features
 
 **F7. Configurable key mapping for playback.** ready. The numpad shortcuts (`Shortcuts`, the keypad section) are condensed into a smaller set of playback and coding keys that the user can map, so coding works on laptops without a numpad. Settings would hold the mapping. Goes with deciding which buttons the controls drawer keeps (U1).

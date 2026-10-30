@@ -341,6 +341,8 @@ public class SpreadsheetCell extends JPanel
     @Override
     public void offsetChanged(final long newOffset) {
         offset.setValue();
+        // The time field is its own validate root; the sheet places its cells by time, so it lays them out again.
+        revalidate();
         if (model.isSelected()) {
             // Update the find windows to the newly selected cell's values
             Datavyu.getVideoController().setOnsetField(model.getOnset());
@@ -351,6 +353,8 @@ public class SpreadsheetCell extends JPanel
     @Override
     public void onsetChanged(final long newOnset) {
         onset.setValue();
+        // The time field is its own validate root; the sheet places its cells by time, so it lays them out again.
+        revalidate();
         if (model.isSelected()) {
             Datavyu.getVideoController().setOnsetField(model.getOnset());
             Datavyu.getVideoController().setOffsetField(model.getOffset());
