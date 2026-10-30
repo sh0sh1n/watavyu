@@ -15,8 +15,5 @@ public class ProjectNameTest {
 
         project.setProjectName("Study.WATAVYU.JSON");
         assertEquals(project.getProjectName(), "Study");
-
-        project.setProjectName("old.csv");
-        assertEquals(project.getProjectName(), "old");
     }
 }

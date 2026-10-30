@@ -13,46 +13,20 @@ import org.datavyu.projectfile.SpreadsheetColumns;
 import org.datavyu.views.discrete.SpreadSheetPanel;
 import org.testng.annotations.Test;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
 
 /**
- * Datavyu's text and nominal columns open as annotation columns with one code, {@code var}, from every file the app
- * reads them from; matrix columns open with their codes.
+ * Datavyu's text and nominal columns open as annotation columns with one code, {@code var}, when Datavyu's
+ * JSON is imported; matrix columns open with their codes.
  */
 public class DatavyuColumnTypesTest {
 
     private static List<AnnotationColumn> byName(final DataStore dataStore) {
         return SpreadsheetColumns.of(dataStore).stream().sorted(Comparator.comparing(AnnotationColumn::name)).toList();
-    }
-
-    @Test
-    public void csvColumnsOpenAsAnnotationColumns() {
-        String csv = """
-            #4
-            notes (TEXT,true,)
-            00:00:01:000,00:00:02:000,first, (with) commas
-            kind (NOMINAL,false,)
-            00:00:03:000,00:00:03:000,happy
-            mother (MATRIX,true,)-mood|NOMINAL,gaze|NOMINAL
-            00:00:04:000,00:00:05:000,(calm,away)
-            """;
-
-        DataStore dataStore = new OpenDataStoreFileController()
-            .openAsCsv(new ByteArrayInputStream(csv.getBytes(StandardCharsets.UTF_8)));
-
-        assertEquals(byName(dataStore), List.of(
-            new AnnotationColumn("kind", List.of("var"), true, List.of(
-                new AnnotationCell(3_000, 3_000, List.of("happy")))),
-            new AnnotationColumn("mother", List.of("mood", "gaze"), false, List.of(
-                new AnnotationCell(4_000, 5_000, List.of("calm", "away")))),
-            new AnnotationColumn("notes", List.of("var"), false, List.of(
-                new AnnotationCell(1_000, 2_000, List.of("first, (with) commas"))))));
     }
 
     @Test

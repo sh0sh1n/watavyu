@@ -15,13 +15,13 @@ Updated 2026-10-30. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
-| Java source (main) | 242 files, 42.5k lines | 148 files, 25.9k lines |
-| Tests / line coverage | 113 / 9.9% | 442 / 38.9%; still 0% in most views and undo |
+| Java source (main) | 242 files, 42.5k lines | 147 files, 25.2k lines |
+| Tests / line coverage | 113 / 9.9% | 438 / 38.2%; still 0% in most views and undo |
 | Runtime dependencies / with known vulnerabilities | 28 / 8 | 12 / 0 at the last check; FlatLaf, added for U5, not yet checked |
-| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 535 |
-| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 390 / 71 (none on thread safety, now gated); 15 |
+| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 512 |
+| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 366 / 70 (none on thread safety, now gated); 15 |
 | Never-invoked methods (`dead-code.py`) | 109+ | 21: test-only accessors, unused settings setters, and Swing overrides the script cannot see |
-| Static global access (`grep -rohP 'Datavyu\.(get\|set)\w*\(' src/main/java \| wc -l`) | about 330 call sites | 236 (259 before F6; earlier figures counted differently) |
+| Static global access (`grep -rohP 'Datavyu\.(get\|set)\w*\(' src/main/java \| wc -l`) | about 330 call sites | 235 (259 before F6; earlier figures counted differently) |
 
 ## Bugs
 
@@ -31,7 +31,7 @@ Updated 2026-10-30. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 **B14. Adding media cannot be undone.** ready, *from reading*. Spreadsheet > Add Media and dropping files post no undoable edit (`MediaPlayers.addMediaFiles`), while deleting the clip or column afterwards can be undone. Undo should take an added clip or column out again, closing its player.
 
-**B16. A Datavyu file with an unreadable time fails to open without saying why.** ready, *from reading*. Opening a `.csv` (`OpenDataStoreFileController.openAsCsv`) counts an unreadable time in a matrix column as a cell it could not read, but in a text or nominal column the exception ends the whole read, which returns null, and `OpenController.openDataStore` then fails on it. JSON import (`DatavyuView.importJSON`) catches only `UserWarningException`, `JsonParseException` and `IOException`, so an unreadable time leaves the columns read so far and no message. Since B13, negative times, which Datavyu could write, are unreadable too. Each should refuse the file and say which time is wrong.
+**B16. JSON import stops silently at an unreadable time.** ready, *from reading*. JSON import (`DatavyuView.importJSON`, `OpenDataStoreFileController.importJSONToSpreadsheet`) catches only `UserWarningException`, `JsonParseException` and `IOException`, so an unreadable time leaves the columns read so far and no message. Since B13, negative times, which Datavyu could write, are unreadable too. It should refuse the file and say which time is wrong.
 
 ## Features
 
@@ -83,4 +83,4 @@ The app is to be rewritten in C++ (AGENTS.md › North Star), so refactor only w
 
 **R7. Threading.** Make the boundary between the clock thread, the JavaFX thread and the EDT explicit, as `JavaFxPlayback` already does for the player. `ClockTimer` notifies its listeners on its own pool threads, most of them while holding its lock, so a listener that waits on another thread can deadlock it; the playhead (`PlayheadCarriage.show`) and `MediaPlayers` hand their work to the EDT. Cells still restyle for the needle on the clock thread (`SpreadsheetCell`'s clock listener, through `CellLook`), as they did before U5. SpotBugs's thread-safety findings are at zero and gated.
 
-**R9. Autosave and crash recovery.** ready. `AutoSaveController` saves a `~<name>_*.watavyu.json` project file to the temporary folder every minute; at launch, `DatavyuView.checkForAutosavedFile` offers to recover any left in the temporary folder (Datavyu's `~*.csv` too) and opens one as an unsaved project; that flow is checked only by reading, as its dialogs need clicks. The temporary folder is shared with other apps and cleared by macOS. Settle this together with B11.
+**R9. Autosave and crash recovery.** ready. `AutoSaveController` saves a `~<name>_*.watavyu.json` project file to the temporary folder every minute; at launch, `DatavyuView.checkForAutosavedFile` offers to recover any left in the temporary folder and opens one as an unsaved project; that flow is checked only by reading, as its dialogs need clicks. The temporary folder is shared with other apps and cleared by macOS. Settle this together with B11.

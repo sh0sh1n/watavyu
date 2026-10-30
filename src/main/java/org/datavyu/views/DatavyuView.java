@@ -252,8 +252,7 @@ public final class DatavyuView implements FileDropEventListener {
                 for (File f : listOfFiles) {
                     // the last time datavyu crashed
                     if ((f.isFile()) &&
-                            ((FilenameUtils.wildcardMatchOnSystem(f.getName(), "~*" + ProjectDocument.EXTENSION)) ||
-                                    (FilenameUtils.wildcardMatchOnSystem(f.getName(), "~*.csv")))) {
+                            FilenameUtils.wildcardMatchOnSystem(f.getName(), "~*" + ProjectDocument.EXTENSION)) {
 
                         // The autosave is deleted once it has opened, or if the user does not want it.
                         if (JOptionPane.showConfirmDialog(null,
@@ -292,8 +291,6 @@ public final class DatavyuView implements FileDropEventListener {
 
         if (lastSaveOption instanceof ProjectFileFilter) {
             extension = ProjectDocument.EXTENSION;
-        } else if (lastSaveOption instanceof CsvFilter) {
-            extension = ".csv";
         }
 
         String projectName = projectController.getProjectName();
@@ -343,8 +340,8 @@ public final class DatavyuView implements FileDropEventListener {
     }
 
     /**
-     * Action for saving the current project. A project not yet saved as a project file, including one opened from an
-     * older Datavyu file, is saved through {@link #saveAs()}.
+     * Action for saving the current project. A project not yet saved as a project file, such as a recovered one, is
+     * saved through {@link #saveAs()}.
      *
      * @return whether the project was saved
      */
@@ -537,7 +534,6 @@ public final class DatavyuView implements FileDropEventListener {
         DatavyuFileChooser fileChooser = new DatavyuFileChooser();
 
         fileChooser.addChoosableFileFilter(ProjectFileFilter.INSTANCE);
-        fileChooser.addChoosableFileFilter(CsvFilter.INSTANCE);
 
         fileChooser.setFileFilter(ProjectFileFilter.INSTANCE);
         int result = fileChooser.showOpenDialog(getComponent());
@@ -581,8 +577,6 @@ public final class DatavyuView implements FileDropEventListener {
         String name = file.getName().toLowerCase(Locale.ROOT);
         if (name.endsWith(ProjectDocument.EXTENSION)) {
             return ProjectFileFilter.INSTANCE;
-        } else if (name.endsWith(".csv")) {
-            return CsvFilter.INSTANCE;
         }
         return null;
     }
@@ -677,19 +671,6 @@ public final class DatavyuView implements FileDropEventListener {
             ? autosave.substring(0, autosave.length() - ProjectDocument.EXTENSION.length())
             : FilenameUtils.removeExtension(autosave);
         return name.replaceFirst("^~", "").replaceFirst("_\\d+$", "");
-    }
-
-    private OpenController openDatabase(final File databaseFile) {
-
-        // Set the database to the freshly loaded database.
-        OpenController openController = new OpenController();
-        openController.openDataStore(databaseFile);
-
-        // Make a project for the new database.
-        if (openController.getDataStore() != null) {
-            return openController;
-        }
-        return null;
     }
 
     private OpenController openProjectFile(final File projectFile) {
@@ -1521,12 +1502,7 @@ public final class DatavyuView implements FileDropEventListener {
             setProgress(10);
             OpenController openController;
 
-            if (filter == ProjectFileFilter.INSTANCE) {
-                openController = openProjectFile(fileChooser.getSelectedFile());
-            } else {
-                // Opening a database file
-                openController = openDatabase(fileChooser.getSelectedFile());
-            }
+            openController = openProjectFile(fileChooser.getSelectedFile());
 
             if (openController != null && openController.getError() != null) {
                 final String error = openController.getError();

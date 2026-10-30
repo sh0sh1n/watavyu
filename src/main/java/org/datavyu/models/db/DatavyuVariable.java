@@ -269,10 +269,6 @@ public final class DatavyuVariable implements Variable {
             throw new UserWarningException("Unable to add column:\n\tOnly alphanumeric characters and underscore are permitted.\n\tName must begin with a letter\n\tMust contain fewer than 255 characters");
         }
 
-        if (grandfathered && !isNameValid(newName)) {
-            owningDatastore.addExemptionVariable(newName);
-        }
-
         // The name is set first, so the data store's listeners see the new one.
         String oldName = name;
         this.name = newName;

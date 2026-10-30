@@ -29,7 +29,7 @@ import java.io.File;
 
 
 /**
- * Controller for opening Datavyu databases and project files.
+ * Controller for opening project files.
  */
 public final class OpenController {
 
@@ -45,17 +45,6 @@ public final class OpenController {
     /** Why the last project file could not be opened. */
     private String error = null;
 
-
-    /**
-     * Opens a file as a Datavyu dataStore.
-     *
-     * @param dataStoreFile The file to use when opening a file as a dataStore.
-     */
-    public void openDataStore(final File dataStoreFile) {
-        OpenDataStoreFileController odc = new OpenDataStoreFileController();
-        dataStore = odc.open(dataStoreFile);
-        dataStore.deselectAll();
-    }
 
     /**
      * Opens a project file. On failure the data store and project stay null and {@link #getError()} says why.

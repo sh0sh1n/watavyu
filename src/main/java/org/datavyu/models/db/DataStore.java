@@ -192,8 +192,5 @@ public interface DataStore {
      * the datastore changes.
      */
     void removeListener(final DataStoreListener listener);
-    
-    void addExemptionVariable(String s);
 
-    String getExemptionVariables();
 }
