@@ -33,6 +33,7 @@ The aim is a smaller app whose every feature was chosen on purpose, with a moder
 
 Newest first. (owner) marks product decisions; the rest are engineering choices that can be revisited with reason.
 
+- **2026-10-30 (owner): hiding columns is in the header menu.** A column's right-click menu hides it, or the selected columns if it is one of them; Spreadsheet > Hide Selected Columns is gone.
 - **2026-10-30 (owner): more removed features**: File > Export File and Export File by Frame, Datavyu's two CSV exports (JSON export stays); the point cell command, the drawer's `=` key and keypad `/` (New Cell already makes a point cell); the drawer's second set-offset key, `.` on the keypad (9 sets the offset); renaming columns anywhere but the Code Editor (Spreadsheet > Change Column Name, double-clicking a header, and the Column List). The Code Editor leaves media columns out, so they keep the names they are given.
 - **2026-10-30 (owner): `.opf` files no longer open.** Datavyu projects are migrated outside Watavyu. SnakeYAML went with them; the citation reads `CITATION.cff` itself.
 - **2026-10-29 (owner): the long-session look** (U5). Research and a live prototype: https://claude.ai/artifact/Ampc7PFCaewSmy6Eb3hA2L (private to the owner).
