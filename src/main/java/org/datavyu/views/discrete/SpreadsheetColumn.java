@@ -207,13 +207,43 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
         return item;
     }
 
-    /** Shows a media column's header menu, if this event asks for one. */
+    /**
+     * Makes the Hide menu item of a column's header: it hides the column, or every selected column if the column is
+     * one of them, deselects what it hid, then runs {@code after}.
+     *
+     * @param dataStore the spreadsheet holding the column
+     * @param column    the column whose header was clicked
+     * @param after     lays the spreadsheet out again
+     * @return the menu item
+     */
+    static JMenuItem hideItem(final DataStore dataStore, final Variable column, final Runnable after) {
+        List<Variable> hidden = column.isSelected() ? dataStore.getSelectedVariables() : List.of(column);
+        JMenuItem item = new JMenuItem(hidden.size() == 1 ? "Hide Column" : "Hide Selected Columns");
+        item.setName("hideColumns");
+        item.addActionListener(e -> {
+            for (Variable each : hidden) {
+                each.setHidden(true);
+                each.setSelected(false);
+            }
+            after.run();
+        });
+        return item;
+    }
+
+    /** Shows the column's header menu, if this event asks for one. */
     private boolean showHeaderMenu(final MouseEvent me) {
-        if (!me.isPopupTrigger() || !variable.isMedia()) {
+        if (!me.isPopupTrigger()) {
             return false;
         }
         JPopupMenu menu = new JPopupMenu();
-        menu.add(lockItem(dataStore, variable, Datavyu.getView().getUndoSupport()::postEdit));
+        menu.add(hideItem(dataStore, variable, () -> {
+            Datavyu.getView().getSpreadsheetPanel().deselectAll();
+            Datavyu.getView().getComponent().revalidate();
+        }));
+        if (variable.isMedia()) {
+            menu.addSeparator();
+            menu.add(lockItem(dataStore, variable, Datavyu.getView().getUndoSupport()::postEdit));
+        }
         menu.show(this, me.getX(), me.getY());
         me.consume();
         return true;
