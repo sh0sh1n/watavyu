@@ -102,8 +102,6 @@ public abstract class SpreadSheetEdit extends AbstractUndoableEdit {
             msg = ((ChangeValCellEdit) this).getPresentationName();
         } else if (this instanceof RemoveCellEdit) {
             msg = ((RemoveCellEdit) this).getPresentationName();
-        } else if (this instanceof RemoveVariableEdit) {
-            msg = ((RemoveVariableEdit) this).getPresentationName();
         } else if (this instanceof VocabEditorEdit) {
             msg = ((VocabEditorEdit) this).getPresentationName();
         } else {

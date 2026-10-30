@@ -373,7 +373,7 @@ public final class VocabEditorV extends DatavyuDialog {
                 // record the effect
                 List<Variable> varsToDelete = new ArrayList<Variable>();
                 varsToDelete.add(selectedVocabElement.getVariable());
-                edit = new RemoveVariableEdit(varsToDelete);
+                edit = new RemoveVariableEdit(Datavyu.getProjectController().getDataStore(), varsToDelete);
                 new DeleteColumnController(varsToDelete);
 
                 deleteElementVFromView(selectedVocabElement.getVariable().getName());
