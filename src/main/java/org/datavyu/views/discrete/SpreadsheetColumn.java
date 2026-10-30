@@ -18,7 +18,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.Datavyu;
 import org.datavyu.models.db.*;
-import org.datavyu.undoableedits.ChangeNameVariableEdit;
 import org.datavyu.undoableedits.LockColumnEdit;
 import org.datavyu.util.ClockTimer;
 import org.datavyu.util.Constants;
@@ -115,7 +114,6 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
      */
     private int dataHeight = 0;
 
-    private TransparentPanel transparentPanel = (TransparentPanel) Datavyu.getView().getFrame().getGlassPane();
 
     private int previouslyFocusedCellIdx = -1;
 
@@ -156,6 +154,11 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
         datapanel.setVisible(!var.isHidden());
 
         Datavyu.getVideoController().getClockTimer().registerListener(this);
+    }
+
+    /** The main window's glass pane, which shows a column's image while it is dragged. */
+    private static TransparentPanel transparentPanel() {
+        return (TransparentPanel) Datavyu.getView().getFrame().getGlassPane();
     }
 
     /** Height of the bar under a selected column's header. */
@@ -256,35 +259,6 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
         removeMouseMotionListener(this);
         variable.removeListener(this);
         datapanel.deregisterListeners();
-    }
-
-    /**
-     * Opens an input dialog to change a variable name.
-     *
-     * @throws HeadlessException
-     */
-    public void showChangeVarNameDialog() throws HeadlessException {
-        //Edit variable name on double click
-        String newName = "";
-
-        boolean exitFlag = false;
-        while (!exitFlag) {
-            newName = (String) JOptionPane.showInputDialog(null, null, "New column name",
-                    JOptionPane.PLAIN_MESSAGE, null, null, getColumnName());
-
-            if (newName != null) {
-                try {
-                    setColumnName(newName);
-                    exitFlag = true;
-
-                } catch (UserWarningException ex) {
-                    exitFlag = false;
-                }
-
-            } else {
-                exitFlag = true;
-            }
-        }
     }
 
     /**
@@ -458,26 +432,6 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
         }
     }
 
-    public void setColumnName(final String newName) throws UserWarningException {
-        try {
-            // Make sure this column name isn't already in the column
-            for (Variable v : dataStore.getAllVariables()) {
-                if (v.getName().equals(newName)) {
-                    Datavyu.getApplication().showWarningDialog("Error: Column name already exists.");
-                    return;
-                }
-            }
-            variable.setName(newName);
-            UndoableEdit edit = new ChangeNameVariableEdit(variable.getName(), newName);
-            Datavyu.getView().getComponent().revalidate();
-            Datavyu.getView().getUndoSupport().postEdit(edit);
-        } catch (UserWarningException uwe) {
-            Datavyu.getApplication().showWarningDialog(uwe);
-            throw new UserWarningException();
-        }
-
-    }
-
     // *************************************************************************
     // Parent Class Overrides
     // *************************************************************************
@@ -577,11 +531,11 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
 
             Point destination = (Point) me.getPoint().clone();
             SwingUtilities.convertPointToScreen(destination, c);
-            SwingUtilities.convertPointFromScreen(destination, transparentPanel);
+            SwingUtilities.convertPointFromScreen(destination, transparentPanel());
 
-            transparentPanel.setDestination(destination);
-            transparentPanel.setVisible(false);
-            transparentPanel.setImage(null);
+            transparentPanel().setDestination(destination);
+            transparentPanel().setVisible(false);
+            transparentPanel().setImage(null);
 
             int x = me.getX();
             logger.info("Released X: " + x);
@@ -624,10 +578,8 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
             me.consume();
             return;
         }
-        if (me.getClickCount() == 2) {
-            showChangeVarNameDialog();
-        }
-        else {
+        // The second click of a double-click leaves the selection as the first made it.
+        if (me.getClickCount() == 1) {
             int keyMask = Toolkit.getDefaultToolkit().getMenuShortcutKeyMask();
 
             boolean groupSel = (((me.getModifiers() & ActionEvent.SHIFT_MASK)
@@ -659,33 +611,33 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
                 this.setWidth(newWidth);
             }
         } else if (moveable) {
-            if (transparentPanel.getImage() == null) {
+            if (transparentPanel().getImage() == null) {
                 Component c = me.getComponent();
 
                 BufferedImage image = new BufferedImage(c.getWidth(), c.getHeight(), BufferedImage.TYPE_INT_ARGB);
                 Graphics g = image.getGraphics();
                 c.paint(g);
 
-                transparentPanel.setVisible(true);
+                transparentPanel().setVisible(true);
 
                 Point destination = (Point) me.getPoint().clone();
                 SwingUtilities.convertPointToScreen(destination, c);
-                SwingUtilities.convertPointFromScreen(destination, transparentPanel);
+                SwingUtilities.convertPointFromScreen(destination, transparentPanel());
 
-                transparentPanel.setDestination(destination);
-                transparentPanel.setImage(image);
-                transparentPanel.setBackground(Color.BLACK);
-                transparentPanel.repaint();
+                transparentPanel().setDestination(destination);
+                transparentPanel().setImage(image);
+                transparentPanel().setBackground(Color.BLACK);
+                transparentPanel().repaint();
             }
 
             Component c = me.getComponent();
 
             Point destination = (Point) me.getPoint().clone();
             SwingUtilities.convertPointToScreen(destination, c);
-            SwingUtilities.convertPointFromScreen(destination, transparentPanel);
-            transparentPanel.setDestination(destination);
+            SwingUtilities.convertPointFromScreen(destination, transparentPanel());
+            transparentPanel().setDestination(destination);
 
-            transparentPanel.repaint();
+            transparentPanel().repaint();
         }
     }
 
