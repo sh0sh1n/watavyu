@@ -1,8 +1,0 @@
-#4
-hiddenColumn (TEXT,false,)
-testColumn (TEXT,true,)
-00:00:00:000,00:00:00:000,cellA
-testColumn3 (MATRIX,true,)-code01|NOMINAL
-00:00:00:000,00:00:00:000,(cellC)
-testColumn2 (NOMINAL,true,)
-00:00:00:000,00:00:00:000,cellB

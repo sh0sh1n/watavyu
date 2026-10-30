@@ -55,7 +55,6 @@ public class DatavyuDataStore implements DataStore {
     /** Compare variable with this class instance */
     private VariableComparator VariableComparator = new VariableComparator();
     
-    private String exemptionVariables = "";
 
 
     public DatavyuDataStore() {
@@ -282,15 +281,4 @@ public class DatavyuDataStore implements DataStore {
         }
     }
     
-    @Override
-    public void addExemptionVariable(String name)
-    {
-        exemptionVariables += name + "\n";
-    }
-    
-    @Override
-    public String getExemptionVariables()
-    {
-        return exemptionVariables;
-    }
 }
