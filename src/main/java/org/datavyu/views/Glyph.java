@@ -35,8 +35,6 @@ public record Glyph(Shape shape, int size, Color colour) implements Icon {
 
     /** What a glyph shows. */
     public enum Shape {
-        /** Point cell: brackets around a dot. */
-        POINT_CELL,
         /** Set onset: an opening bracket and a line out of it. */
         SET_ONSET,
         /** Set offset: a line into a closing bracket. */
@@ -133,7 +131,6 @@ public record Glyph(Shape shape, int size, Color colour) implements Icon {
      */
     static List<java.awt.Shape> lines(final Shape shape) {
         return switch (shape) {
-            case POINT_CELL -> List.of(path(6, 3, 3, 3, 3, 15, 6, 15), path(12, 3, 15, 3, 15, 15, 12, 15));
             case SET_ONSET -> List.of(path(8, 3, 4, 3, 4, 15, 8, 15), line(8, 9, 15, 9));
             case SET_OFFSET -> List.of(path(10, 3, 14, 3, 14, 15, 10, 15), line(3, 9, 10, 9));
             case PLAY -> List.of(closed(5, 3, 15, 9, 5, 15));
@@ -171,7 +168,6 @@ public record Glyph(Shape shape, int size, Color colour) implements Icon {
      */
     static List<java.awt.Shape> dots(final Shape shape) {
         return switch (shape) {
-            case POINT_CELL -> List.of(new Ellipse2D.Double(7.8, 7.8, 2.4, 2.4));
             case WARNING -> List.of(new Ellipse2D.Double(7.9, 13.4, 2.2, 2.2));
             default -> List.of();
         };

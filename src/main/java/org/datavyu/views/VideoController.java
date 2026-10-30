@@ -23,7 +23,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.Datavyu;
 import org.datavyu.controllers.CreateNewCellController;
-import org.datavyu.controllers.SetNewCellStopTimeController;
 import org.datavyu.controllers.SetSelectedCellStartTimeController;
 import org.datavyu.controllers.SetSelectedCellStopTimeController;
 import org.datavyu.models.Identifier;
@@ -154,9 +153,6 @@ public final class VideoController implements ClockListener {
 
     /** */
     private JButton setCellOnsetButton;
-
-    /** */
-    private JButton pointCellButton;
 
     /** */
     private JButton shuttleBackButton;
@@ -552,17 +548,11 @@ public final class VideoController implements ClockListener {
         gridButtonPanel.setBackground(SpreadsheetTheme.PALETTE.chrome());
         gridButtonPanel.setLayout(new MigLayout("wrap 5"));
 
-        // Placeholder at top, left: 'clear' or 'numlock' position
+        // Placeholders along the Mac keypad's top row: clear, equals, slash, and the asterisk, whose key shows or
+        // hides these controls
         gridButtonPanel.add(makePlaceholderButton(), NUM_PAD_KEY_SIZE);
-
-        // Point cell: equals sign on the Mac keypad
-        pointCellButton = buildButton("pointCell", Glyph.Shape.POINT_CELL, "point", "=", this::pointCellAction);
-        gridButtonPanel.add(pointCellButton, NUM_PAD_KEY_SIZE);
-
-        // Placeholder at forward slash on the Mac keypad, whose key shows or hides these controls
         gridButtonPanel.add(makePlaceholderButton(), NUM_PAD_KEY_SIZE);
-
-        // Placeholder at asterisk location
+        gridButtonPanel.add(makePlaceholderButton(), NUM_PAD_KEY_SIZE);
         gridButtonPanel.add(makePlaceholderButton(), NUM_PAD_KEY_SIZE);
         // Placeholder - perhaps eventually the sync video button
         gridButtonPanel.add(makePlaceholderButton(false), WIDE_TEXT_FIELD_SIZE);
@@ -759,13 +749,6 @@ public final class VideoController implements ClockListener {
      */
     public void pressSetCellOffsetNine() {
         nineSetCellOffsetButton.doClick();
-    }
-
-    /**
-     * Simulates set new cell onset button clicked.
-     */
-    public void pressPointCell() {
-        pointCellButton.doClick();
     }
 
     /**
@@ -1106,23 +1089,6 @@ public final class VideoController implements ClockListener {
         }
 
         new CreateNewCellController(time, true);
-    }
-
-    /**
-     * Action to invoke when the user clicks on the new cell offset button.
-     */
-    public void pointCellAction() {
-        logger.info("Set new cell offset");
-
-        // Set precise clock
-        long time = getCurrentTime();
-        if (!clockTimer.isPaused()) {
-            clockTimer.setForceTime(time);
-        }
-
-        new CreateNewCellController(time, false);
-        new SetNewCellStopTimeController(time);
-        setOffsetField(time);
     }
 
     public ClockTimer getClockTimer() {
