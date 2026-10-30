@@ -78,8 +78,11 @@ public class PlayheadCarriageTest {
     }
 
     private void press(final int y) {
-        playhead.dispatchEvent(new MouseEvent(playhead, MouseEvent.MOUSE_PRESSED, 0, 0, 10, y, 1, false,
-                MouseEvent.BUTTON1));
+        mouse(MouseEvent.MOUSE_PRESSED, y);
+    }
+
+    private void mouse(final int id, final int y) {
+        playhead.dispatchEvent(new MouseEvent(playhead, id, 0, 0, 10, y, 1, false, MouseEvent.BUTTON1));
     }
 
     @Test
@@ -115,6 +118,28 @@ public class PlayheadCarriageTest {
         show(10_000, true);
         int bottom = 1_100 - scrollPane.getViewport().getExtentSize().height;
         assertEquals(scrollPane.getViewport().getViewPosition().y, bottom);
+    }
+
+    /**
+     * While the user holds the needle during playback, the sheet stays put: the time under the pointer depends on where
+     * the sheet is scrolled, so following would run the time away under a drag. Let go, it follows again.
+     */
+    @Test
+    public void theSheetDoesNotFollowANeedleTheUserHolds() throws Exception {
+        scrollPane.getViewport().setViewPosition(new Point(0, 400));
+        press(100);
+
+        show(9_000, true);
+        mouse(MouseEvent.MOUSE_DRAGGED, 120);
+        show(9_100, true);
+
+        assertEquals(scrollPane.getViewport().getViewPosition().y, 400);
+        assertEquals(seeks, List.of(5_000L, 5_200L), "each drag gives the time under the pointer");
+
+        mouse(MouseEvent.MOUSE_RELEASED, 120);
+        show(9_200, true);
+        assertEquals(scrollPane.getViewport().getViewPosition().y,
+                920 - Math.round(scrollPane.getViewport().getExtentSize().height / 3.0F));
     }
 
     /** Paused, the sheet stays where the user left it, so the needle may be out of view. */

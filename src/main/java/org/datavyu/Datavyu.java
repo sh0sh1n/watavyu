@@ -42,6 +42,14 @@ import java.io.File;
  */
 public final class Datavyu implements TitleNotifier {
 
+    /** System property that makes window title bars follow the Mac's appearance, as the palette does. */
+    static final String TITLE_BAR_APPEARANCE = "apple.awt.application.appearance";
+
+    static {
+        // AWT reads it when it starts, which loading this class does by making the main frame below.
+        System.setProperty(TITLE_BAR_APPEARANCE, "system");
+    }
+
     /** Logger for this class */
     private static Logger logger = LogManager.getLogger(Datavyu.class);
 
@@ -121,8 +129,6 @@ public final class Datavyu implements TitleNotifier {
      * @param args The command line arguments passed to Datavyu. The first, if any, is a file to open.
      */
     public static void main(final String[] args) {
-        // Window title bars follow the Mac's appearance, as the palette does.
-        System.setProperty("apple.awt.application.appearance", "system");
         SwingUtilities.invokeLater(() -> application.start(args));
     }
 

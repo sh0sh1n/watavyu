@@ -86,10 +86,6 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
     private boolean selected = false;
 
     /**
-     * Background color of the header when unselected.
-     */
-
-    /**
      * Can the column be dragged?
      */
     private boolean draggable;

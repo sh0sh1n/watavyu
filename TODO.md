@@ -16,7 +16,7 @@ Updated 2026-10-29. Re-measure with the commands in [BUILDING.md › Analysis Re
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
 | Java source (main) | 242 files, 42.5k lines | 157 files, 27.5k lines |
-| Tests / line coverage | 113 / 9.9% | 439 / 33.5%; still 0% in most views and undo |
+| Tests / line coverage | 113 / 9.9% | 457 / 35.8%; still 0% in most views and undo |
 | Runtime dependencies / with known vulnerabilities | 28 / 8 | 13 / 0 at the last check; FlatLaf, added for U5, not yet checked |
 | Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 608 |
 | PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 426 / 74 (none on thread safety, now gated); 16 |

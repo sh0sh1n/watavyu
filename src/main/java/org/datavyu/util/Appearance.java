@@ -4,8 +4,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
@@ -19,6 +21,9 @@ public final class Appearance {
     public static final String PROPERTY = "watavyu.appearance";
 
     private static final Logger logger = LogManager.getLogger(Appearance.class);
+
+    /** How long startup waits for macOS to say its appearance before taking light. */
+    private static final long TIMEOUT_MILLIS = 5_000;
 
     private Appearance() {
     }
@@ -51,25 +56,44 @@ public final class Appearance {
     }
 
     private static String readInterfaceStyle() {
+        return run(List.of("defaults", "read", "-g", "AppleInterfaceStyle"), TIMEOUT_MILLIS);
+    }
+
+    /**
+     * Runs a command and returns what it printed, or null if it failed or did not finish in time. Its output goes to a
+     * file rather than a pipe, so waiting for it can time out: reading a pipe would wait for the command to end.
+     *
+     * @param command       the command and its arguments
+     * @param timeoutMillis how long to wait for it
+     */
+    static String run(final List<String> command, final long timeoutMillis) {
+        Path output = null;
         try {
-            Process process = new ProcessBuilder("defaults", "read", "-g", "AppleInterfaceStyle")
-                    .redirectErrorStream(false)
+            output = Files.createTempFile("watavyu-appearance", ".txt");
+            Process process = new ProcessBuilder(command)
+                    .redirectOutput(output.toFile())
+                    .redirectError(ProcessBuilder.Redirect.DISCARD)
                     .start();
-            String output;
-            try (InputStream in = process.getInputStream()) {
-                output = new String(in.readAllBytes(), StandardCharsets.UTF_8);
-            }
-            if (!process.waitFor(5, TimeUnit.SECONDS)) {
-                process.destroy();
+            if (!process.waitFor(timeoutMillis, TimeUnit.MILLISECONDS)) {
+                process.destroyForcibly();
+                logger.warn("Reading the macOS appearance timed out; using light");
                 return null;
             }
-            return process.exitValue() == 0 ? output : null;
+            return process.exitValue() == 0 ? Files.readString(output, StandardCharsets.UTF_8) : null;
         } catch (IOException e) {
             logger.warn("Cannot read the macOS appearance; using light", e);
             return null;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             return null;
+        } finally {
+            if (output != null) {
+                try {
+                    Files.deleteIfExists(output);
+                } catch (IOException e) {
+                    logger.debug("Cannot delete " + output, e);
+                }
+            }
         }
     }
 }

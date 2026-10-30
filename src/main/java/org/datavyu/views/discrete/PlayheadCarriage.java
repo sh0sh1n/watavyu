@@ -60,6 +60,13 @@ public final class PlayheadCarriage extends JComponent implements VideoControlle
     /** What the playhead shows, set by the clock's threads as one, so a time never shows with another tick's rate. */
     private volatile Reading reading = new Reading(0, "stopped", false);
 
+    /**
+     * Whether the user holds the needle. The sheet does not follow it meanwhile: the time under the pointer depends on
+     * where the sheet is scrolled, so following would move the time again on each drag. Set by mouse events on the
+     * EDT, and read wherever {@link #refresh()} is called.
+     */
+    private volatile boolean held;
+
     /** Whether a move of the needle is waiting for the EDT, so the clock's ticks do not pile up there. */
     private final AtomicBoolean moving = new AtomicBoolean();
 
@@ -84,7 +91,13 @@ public final class PlayheadCarriage extends JComponent implements VideoControlle
         MouseAdapter mouse = new MouseAdapter() {
             @Override
             public void mousePressed(final MouseEvent e) {
+                held = true;
                 moveTo(e.getY());
+            }
+
+            @Override
+            public void mouseReleased(final MouseEvent e) {
+                held = false;
             }
 
             @Override
@@ -133,12 +146,12 @@ public final class PlayheadCarriage extends JComponent implements VideoControlle
 
     /**
      * Puts the needle and its line where the time falls now, after the time, the cells or the layout change. While
-     * playback runs, the sheet scrolls to keep the needle {@link #FOLLOW_AT} of the way down.
+     * playback runs, the sheet scrolls to keep the needle {@link #FOLLOW_AT} of the way down, unless the user holds it.
      */
     public void refresh() {
         Reading shown = reading;
         Optional<Integer> sheetY = axis.get().map(a -> a.y(shown.time()));
-        if (shown.playing()) {
+        if (shown.playing() && !held) {
             sheetY.ifPresent(this::follow);
         }
         lineAt.accept(lineAcross.getAsBoolean() ? sheetY.orElse(-1) : -1);
