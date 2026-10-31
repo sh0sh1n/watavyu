@@ -22,10 +22,11 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.Datavyu;
 import org.datavyu.models.db.*;
+import org.datavyu.util.Timestamp;
 import org.datavyu.views.discrete.SpreadSheetPanel;
 
-import javax.swing.*;
 import java.io.*;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -54,19 +55,69 @@ public final class OpenDataStoreFileController {
 
     /**
      * Adds the passes of a Datavyu JSON export to a spreadsheet as annotation columns, leaving out any whose name the
-     * spreadsheet already has.
+     * spreadsheet already has. A file with a time Watavyu cannot read, such as a negative one, adds nothing.
      *
      * @param file        the JSON file
      * @param spreadSheet the spreadsheet to add them to
-     * @throws UserWarningException if a column cannot be made
+     * @throws UserWarningException if a column cannot be made, or a time cannot be read
      * @throws JsonParseException   if the file is not JSON
      * @throws IOException          if the file cannot be read
      */
     public void importJSONToSpreadsheet(File file, SpreadSheetPanel spreadSheet) throws UserWarningException,  JsonParseException, IOException {
+        DataStore dataStore = spreadSheet.getDataStore();
+        boolean changedBefore = dataStore.isChanged();
+        List<Variable> added = new ArrayList<>();
+        try {
+            importPasses(file, spreadSheet, added);
+        } catch (UnreadableTimeException e) {
+            for (Variable column : added) {
+                if (dataStore.getAllVariables().contains(column)) {
+                    dataStore.removeVariable(column);
+                }
+            }
+            if (!changedBefore) {
+                dataStore.markAsUnchanged();
+            }
+            String message = "Cannot import " + file.getName() + ": " + e.getMessage();
+            logger.warn(message);
+            throw new UserWarningException(message);
+        }
+    }
+
+    /** A time in the file that {@link Timestamp#parse} refuses, described for the user. */
+    private static final class UnreadableTimeException extends Exception {
+        UnreadableTimeException(final String message, final Throwable cause) {
+            super(message, cause);
+        }
+    }
+
+    /**
+     * Reads a cell's onset or offset.
+     *
+     * @param parser     the parser, on the time's value
+     * @param field      {@code onset} or {@code offset}
+     * @param column     the cell's column
+     * @param cellNumber the cell's place in its column, from 1
+     * @throws UnreadableTimeException if the value is not a time, or is negative
+     */
+    private static long readTime(final JsonParser parser, final String field, final String column,
+                                 final int cellNumber) throws IOException, UnreadableTimeException {
+        String text = parser.getValueAsString();
+        try {
+            return Timestamp.parse(text);
+        } catch (IllegalArgumentException e) {
+            throw new UnreadableTimeException("cell " + cellNumber + " of column \"" + column + "\" has the " + field
+                    + " " + (text == null ? "null" : "\"" + text + "\"") + " (line "
+                    + parser.currentLocation().getLineNr() + "), which is not a time. Times are HH:MM:SS:mmm and "
+                    + "never negative. Nothing was imported.", e);
+        }
+    }
+
+    private void importPasses(File file, SpreadSheetPanel spreadSheet, List<Variable> added)
+            throws UserWarningException, IOException, UnreadableTimeException {
         if (file.getAbsolutePath().endsWith(".json")) {
             JsonFactory factory = new JsonFactory();
-            JsonParser parser = factory.createParser(file);
-
+            try (JsonParser parser = factory.createParser(file)) {
             while (!parser.isClosed()) {
                 JsonToken token = parser.nextToken();
                 if (token == null) { break; }
@@ -110,6 +161,7 @@ public final class OpenDataStoreFileController {
                                                 if (!JsonToken.START_OBJECT.equals(token)) { break; }
 
                                                 Variable newColumn = dataStore.createVariable(columnName, true);
+                                                added.add(newColumn);
                                                 Argument variableArg = newColumn.getRootNode();
                                                 variableArg.clearChildArguments();
                                                 if (variableType != ColumnKind.MATRIX) {
@@ -148,6 +200,7 @@ public final class OpenDataStoreFileController {
                                                     if (!JsonToken.START_ARRAY.equals(token)) { break; }
 
 
+                                                    int cellNumber = 0;
                                                     while (!JsonToken.END_ARRAY.equals(token)) { // for each cell
                                                         token = parser.nextToken();
                                                         if (!JsonToken.START_OBJECT.equals(token)) { break; }
@@ -155,6 +208,7 @@ public final class OpenDataStoreFileController {
                                                         if (token == null) { break; }
 
                                                         Cell newCell = newColumn.createCell();
+                                                        cellNumber++;
 
                                                         token = parser.nextToken();
                                                         if (JsonToken.FIELD_NAME.equals(token) && "id".equals(parser
@@ -164,15 +218,15 @@ public final class OpenDataStoreFileController {
                                                             if (JsonToken.FIELD_NAME.equals(token) && "onset".equals
                                                                     (parser.currentName())) {
                                                                 token = parser.nextToken();
-                                                                String cellONSET = parser.getValueAsString();
-                                                                newCell.setOnset(cellONSET);
+                                                                newCell.setOnset(readTime(parser, "onset", columnName,
+                                                                        cellNumber));
 
                                                                 token = parser.nextToken();
                                                                 if (JsonToken.FIELD_NAME.equals(token) && "offset"
                                                                         .equals(parser.currentName())) {
                                                                     token = parser.nextToken();
-                                                                    String cellOFFSET = parser.getValueAsString();
-                                                                    newCell.setOffset(cellOFFSET);
+                                                                    newCell.setOffset(readTime(parser, "offset",
+                                                                            columnName, cellNumber));
 
                                                                     token = parser.nextToken();
                                                                     if (JsonToken.FIELD_NAME.equals(token) &&
@@ -301,6 +355,7 @@ public final class OpenDataStoreFileController {
                     Datavyu.getApplication().showWarningDialog(msg);
                     break;
                 }
+            }
             }
         } else {
             String msg = "The selected file is a not a JSON format";
