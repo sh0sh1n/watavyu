@@ -14,7 +14,7 @@ jackson-databind = "com.fasterxml.jackson.core:jackson-databind:2.22.3"
 json-schema-validator = "com.networknt:json-schema-validator:3.0.7"
 log4j-api = { module = "org.apache.logging.log4j:log4j-api", version.ref = "log4j" }
 log4j-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4j" }
-miglayout = "com.miglayout:miglayout:3.7.4"
+miglayout-swing = "com.miglayout:miglayout-swing:11.5.2"
 mockito-core = { module = "org.mockito:mockito-core", version.ref = "mockito" }
 testng = "org.testng:testng:7.12.0"
 

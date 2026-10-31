@@ -60,7 +60,7 @@ val patchedJavafxMedia = tasks.register<Jar>("patchedJavafxMedia") {
 }
 
 dependencies {
-    implementation(variantOf(libs.miglayout) { classifier("swing") })
+    implementation(libs.miglayout.swing)
     implementation(libs.commons.io)
     implementation(libs.flatlaf)
     implementation(libs.log4j.api)

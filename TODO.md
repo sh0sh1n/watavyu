@@ -16,8 +16,8 @@ Updated 2026-10-30. Re-measure with the commands in [BUILDING.md › Analysis Re
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
 | Java source (main) | 242 files, 42.5k lines | 147 files, 25.2k lines |
-| Tests / line coverage | 113 / 9.9% | 438 / 38.2%; still 0% in most views and undo |
-| Runtime dependencies / with known vulnerabilities | 28 / 8 | 12 / 0 at the last check; FlatLaf, added for U5, not yet checked |
+| Tests / line coverage | 113 / 9.9% | 485 / 39.6%; still 0% in most views and undo |
+| Runtime dependencies / with known vulnerabilities | 28 / 8 | 13 / 0 |
 | Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 512 |
 | PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 366 / 70 (none on thread safety, now gated); 15 |
 | Never-invoked methods (`dead-code.py`) | 109+ | 21: test-only accessors, unused settings setters, and Swing overrides the script cannot see |
@@ -63,11 +63,7 @@ Updated 2026-10-30. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 ## Dependencies
 
-**D1. Upgrade or drop old libraries.**
-
-| Library | Now → latest stable | Used by | Action |
-|---|---|---|---|
-| MigLayout | 3.7.4 → `miglayout-swing` 11.x | the controls drawer (`VideoController`) and the Column List (`VariableListV`) | ready: upgrade |
+None open.
 
 ## Refactors
 
