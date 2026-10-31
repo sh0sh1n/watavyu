@@ -26,6 +26,17 @@ public final class Shortcuts implements KeyEventDispatcher {
     private static final int MODIFIERS = InputEvent.SHIFT_DOWN_MASK | InputEvent.CTRL_DOWN_MASK
             | InputEvent.META_DOWN_MASK | InputEvent.ALT_DOWN_MASK;
 
+    /**
+     * Keys kept free for the configurable key mapping (F7). macOS text fields delete with them (⌃H, ⌃D, ⌃W, ⌥⌫ and
+     * ⌥⌦), so until a shortcut uses one, this dispatcher drops it in every window, with the character it types.
+     */
+    public static final Set<KeyStroke> RESERVED = Set.of(
+            KeyStroke.getKeyStroke(KeyEvent.VK_H, InputEvent.CTRL_DOWN_MASK),
+            KeyStroke.getKeyStroke(KeyEvent.VK_D, InputEvent.CTRL_DOWN_MASK),
+            KeyStroke.getKeyStroke(KeyEvent.VK_W, InputEvent.CTRL_DOWN_MASK),
+            KeyStroke.getKeyStroke(KeyEvent.VK_BACK_SPACE, InputEvent.ALT_DOWN_MASK),
+            KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, InputEvent.ALT_DOWN_MASK));
+
     /** Where a shortcut is handled. */
     public enum Scope {
         /**
@@ -186,7 +197,13 @@ public final class Shortcuts implements KeyEventDispatcher {
         if (keypad) {
             keypadKeyDown = true;
         }
-        Shortcut shortcut = find(e.getKeyCode(), e.getModifiersEx() & MODIFIERS, keypad);
+        int modifiers = e.getModifiersEx() & MODIFIERS;
+        Shortcut shortcut = find(e.getKeyCode(), modifiers, keypad);
+        if (shortcut == null && !keypad && RESERVED.contains(KeyStroke.getKeyStroke(e.getKeyCode(), modifiers))) {
+            handledKeyCode = e.getKeyCode();
+            e.consume();
+            return true;
+        }
         if (shortcut == null || shortcut.scope == Scope.REFERENCE) {
             return false;
         }

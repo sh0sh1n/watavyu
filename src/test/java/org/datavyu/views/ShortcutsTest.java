@@ -182,6 +182,50 @@ public class ShortcutsTest {
         assertEquals(shift, List.of(true, false));
     }
 
+    /** macOS text fields delete with these keys; they are kept free for the key mapping (F7). */
+    @Test
+    public void reservedKeysReachNoComponentAndTypeNothing() {
+        int[][] keys = {
+            {KeyEvent.VK_H, InputEvent.CTRL_DOWN_MASK, '\b'},
+            {KeyEvent.VK_D, InputEvent.CTRL_DOWN_MASK, 0x04},
+            {KeyEvent.VK_W, InputEvent.CTRL_DOWN_MASK, 0x17},
+            {KeyEvent.VK_BACK_SPACE, InputEvent.ALT_DOWN_MASK, '\b'},
+            {KeyEvent.VK_DELETE, InputEvent.ALT_DOWN_MASK, 0x7F},
+        };
+        for (int[] key : keys) {
+            for (boolean focused : new boolean[] {true, false}) {
+                mainWindowFocused = focused;
+                KeyEvent pressed = press(key[0], key[1], STANDARD);
+                assertTrue(shortcuts.dispatchKeyEvent(pressed), KeyEvent.getKeyText(key[0]));
+                assertTrue(pressed.isConsumed(), KeyEvent.getKeyText(key[0]));
+                assertTrue(shortcuts.dispatchKeyEvent(type((char) key[2], key[1])), KeyEvent.getKeyText(key[0]));
+                assertFalse(shortcuts.dispatchKeyEvent(release(key[0], STANDARD)));
+            }
+        }
+        assertEquals(Shortcuts.RESERVED.size(), keys.length);
+        assertTrue(ran.isEmpty());
+    }
+
+    @Test
+    public void theSameKeysWithoutTheirModifierAreLeftToTheComponent() {
+        assertFalse(shortcuts.dispatchKeyEvent(press(KeyEvent.VK_H, 0, STANDARD)));
+        assertFalse(shortcuts.dispatchKeyEvent(type('h', 0)));
+        assertFalse(shortcuts.dispatchKeyEvent(press(KeyEvent.VK_BACK_SPACE, 0, STANDARD)));
+        assertFalse(shortcuts.dispatchKeyEvent(press(KeyEvent.VK_DELETE, 0, STANDARD)));
+        assertFalse(shortcuts.dispatchKeyEvent(press(KeyEvent.VK_BACK_SPACE, InputEvent.SHIFT_DOWN_MASK, STANDARD)));
+    }
+
+    @Test
+    public void aShortcutOnAReservedKeyRuns() {
+        Shortcuts mapped = Shortcuts.builder()
+            .global("Video controller", "Play", KeyStroke.getKeyStroke(KeyEvent.VK_H, InputEvent.CTRL_DOWN_MASK),
+                action("play"))
+            .build(() -> mainWindowFocused, shift::add);
+
+        assertTrue(mapped.dispatchKeyEvent(press(KeyEvent.VK_H, InputEvent.CTRL_DOWN_MASK, STANDARD)));
+        assertEquals(ran, List.of("play"));
+    }
+
     @Test
     public void twoShortcutsCannotShareAKey() {
         Shortcuts.Builder builder = Shortcuts.builder()
