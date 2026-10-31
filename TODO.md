@@ -31,8 +31,6 @@ Updated 2026-10-30. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 **B14. Adding media cannot be undone.** ready, *from reading*. Spreadsheet > Add Media and dropping files post no undoable edit (`MediaPlayers.addMediaFiles`), while deleting the clip or column afterwards can be undone. Undo should take an added clip or column out again, closing its player.
 
-**B16. JSON import stops silently at an unreadable time.** ready, *from reading*. JSON import (`DatavyuView.importJSON`, `OpenDataStoreFileController.importJSONToSpreadsheet`) catches only `UserWarningException`, `JsonParseException` and `IOException`, so an unreadable time leaves the columns read so far and no message. Since B13, negative times, which Datavyu could write, are unreadable too. It should refuse the file and say which time is wrong.
-
 ## Features
 
 **F7. Configurable key mapping for playback.** ready. The numpad shortcuts (`Shortcuts`, the keypad section) are condensed into a smaller set of playback and coding keys that the user can map, so coding works on laptops without a numpad. Settings would hold the mapping. ⌃H, ⌃D, ⌃W, ⌥⌫ and ⌥⌦ are reserved for it (`Shortcuts.RESERVED`). Goes with F16 and with finding, by trial, which buttons the controls drawer keeps.

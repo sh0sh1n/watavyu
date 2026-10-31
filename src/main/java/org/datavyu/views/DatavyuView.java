@@ -507,13 +507,13 @@ public final class DatavyuView implements FileDropEventListener {
 
             importJSON.importJSONToSpreadsheet(file, getSpreadsheetPanel());
         } catch (UserWarningException e) {
-            logger.error("Failed export to JSON. Error: ", e);
+            logger.error("Failed import from JSON. Error: ", e);
             Datavyu.getApplication().showWarningDialog(e);
         } catch (JsonParseException e) {
-            logger.error("Failed export to JSON. Error: ", e);
+            logger.error("Failed import from JSON. Error: ", e);
             Datavyu.getApplication().showWarningDialog(e.getMessage());
         } catch (IOException e) {
-            logger.error("Failed export to JSON. Error: ", e);
+            logger.error("Failed import from JSON. Error: ", e);
             Datavyu.getApplication().showWarningDialog(e.getMessage());
         }
     }
