@@ -163,7 +163,7 @@ public final class VariableListV extends DatavyuDialog
 
        
 
-        MigLayout layout = new MigLayout("wrap");
+        MigLayout layout = new MigLayout("wrap, novisualpadding");
         getContentPane().setLayout(layout);
         getContentPane().add(jScrollPane1);
         getContentPane().add(showAllButton);

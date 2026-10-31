@@ -543,7 +543,9 @@ public final class VideoController implements ClockListener {
 
         gridButtonPanel.setName("controls");
         gridButtonPanel.setBackground(SpreadsheetTheme.PALETTE.chrome());
-        gridButtonPanel.setLayout(new MigLayout("wrap 5"));
+        // The tall and wide keys span two keys and the 5-pixel gap between them. Visual padding would size keys
+        // without their focus rings, so they would draw larger than these sizes.
+        gridButtonPanel.setLayout(new MigLayout("wrap 5, novisualpadding, gap 5"));
 
         // Placeholders along the Mac keypad's top row: clear, equals, slash, and the asterisk, whose key shows or
         // hides these controls
