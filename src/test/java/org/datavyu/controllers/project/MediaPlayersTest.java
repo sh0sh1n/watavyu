@@ -410,18 +410,44 @@ public class MediaPlayersTest {
         dataStore.deselectAll();
         media.setSelected(true);
 
-        players.addMediaFiles(List.of(new File(file("b.mp4"))), 12_000);
+        players.addMediaFiles(List.of(new File(file("b.mp4"))), 12_000, column -> false);
 
         assertEquals(dataStore.getAllVariables(), List.of(media));
         assertEquals(media.getCellsTemporally().get(1).getOnset(), 12_000L);
         assertEquals(windows.get(media).clips.size(), 2);
     }
 
+    /** A locked selected column refuses added media; asked once, the files go in new columns or nowhere. */
+    @Test
+    public void addedMediaGoesToNewColumnsOnlyIfAskedWhenTheSelectedColumnIsLocked() throws Exception {
+        Variable media = dataStore.createMediaVariable("media_1");
+        addClip(media, 0, "a.mp4");
+        dataStore.deselectAll();
+        media.setSelected(true);
+        media.setLocked(true);
+        List<Variable> asked = new ArrayList<>();
+        List<File> files = List.of(new File(file("b.mp4")), new File(file("c.mp4")));
+
+        players.addMediaFiles(files, 12_000, column -> {
+            asked.add(column);
+            return false;
+        });
+        assertEquals(asked, List.of(media));
+        assertEquals(dataStore.getAllVariables(), List.of(media));
+        assertEquals(media.getCells().size(), 1);
+
+        players.addMediaFiles(files, 12_000, column -> asked.add(column));
+        assertEquals(asked, List.of(media, media));
+        assertEquals(dataStore.getAllVariables().stream().map(Variable::getName).toList(),
+            List.of("media_1", "media_2", "media_3"));
+        assertEquals(media.getCells().size(), 1);
+    }
+
     @Test
     public void addedMediaWithoutASelectedMediaColumnGetsNewColumns() throws Exception {
         dataStore.createVariable("notes").setSelected(true);
 
-        players.addMediaFiles(List.of(new File(file("a.mp4")), new File(file("b.mp4"))), 12_000);
+        players.addMediaFiles(List.of(new File(file("a.mp4")), new File(file("b.mp4"))), 12_000, column -> false);
 
         assertEquals(dataStore.getAllVariables().stream().map(Variable::getName).toList(),
             List.of("notes", "media_1", "media_2"));

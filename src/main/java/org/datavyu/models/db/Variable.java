@@ -192,16 +192,29 @@ public interface Variable {
     boolean isMedia();
 
     /**
-     * @return whether a media column's clips are kept from moving; always false for an annotation column
+     * A locked column refuses every change to its cells, its codes and its name, so a finished coding pass cannot be
+     * changed by accident. A refused change does nothing, or throws {@link IllegalStateException} from a method that
+     * would return what it made, and the column's listeners hear of it ({@link VariableListener#editRefused}).
+     * Hiding, selecting, reordering and unlocking the column are not changes to it.
+     *
+     * @return whether the column is locked
      */
     boolean isLocked();
 
     /**
-     * Keeps a media column's clips from moving, or lets them move.
+     * Locks or unlocks the column.
      *
-     * @param locked whether the clips are kept from moving
+     * @param locked whether the column refuses changes
      */
     void setLocked(boolean locked);
+
+    /**
+     * Asks whether the column refuses a change, as every place that starts one does first; if it does, its listeners
+     * hear that a change was refused.
+     *
+     * @return whether the column is locked
+     */
+    boolean refusesEdits();
 
     /**
      * Adds a clip to a media column. Its offset is its onset plus the clip's duration.

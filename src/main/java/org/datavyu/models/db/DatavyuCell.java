@@ -91,7 +91,7 @@ public class DatavyuCell implements Cell {
     @Override
     public void setOffset(final long newOffset) {
         // A clip's offset is its onset plus its duration, never set on its own.
-        if (clip != null) {
+        if (clip != null || parent.refusesEdits()) {
             return;
         }
         Timestamp.requireNotNegative(newOffset);
@@ -124,8 +124,7 @@ public class DatavyuCell implements Cell {
 
     @Override
     public void setOnset(final long newOnset) {
-        // A locked media column's clips stay where they are.
-        if (clip != null && parent.isLocked()) {
+        if (parent.refusesEdits()) {
             return;
         }
         Timestamp.requireNotNegative(newOnset);

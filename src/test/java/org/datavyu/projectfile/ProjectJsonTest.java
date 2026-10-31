@@ -120,10 +120,12 @@ public class ProjectJsonTest {
 
         AnnotationColumn mother = (AnnotationColumn) document.columns().get(1);
         assertEquals(mother.codes(), List.of("look", "affect"));
+        assertTrue(mother.locked());
         assertEquals(mother.cells().get(1), new AnnotationCell(130_000L, 130_000L, List.of("", "neutral")));
 
         AnnotationColumn notes = (AnnotationColumn) document.columns().get(2);
         assertTrue(notes.hidden());
+        assertFalse(notes.locked());
         assertEquals(notes.cells().get(0).values(), List.of("Sibling enters \"frame\"\nthen leaves; 日本"));
     }
 
@@ -227,6 +229,23 @@ public class ProjectJsonTest {
         assertEquals(schemaErrors(json), List.of());
     }
 
+    /** A file written before annotation columns could be locked has no "locked" for them, and they open unlocked. */
+    @Test
+    public void anAnnotationColumnWithoutLockedOpensUnlocked() throws Exception {
+        assertTrue(BASE.contains("\"settings\": { \"hidden\": false },"), "BASE's annotation column has no lock");
+        assertFalse(((AnnotationColumn) read(BASE).columns().get(0)).locked());
+    }
+
+    @Test
+    public void aLockedAnnotationColumnSurvivesWritingAndReading() throws Exception {
+        ProjectDocument document = new ProjectDocument(List.of(new AnnotationColumn("A", List.of("x"), false, true,
+            List.of(new AnnotationCell(10, 15, List.of("a"))))));
+        String json = ProjectJson.toJson(document);
+        assertTrue(json.contains("\"settings\": { \"hidden\": false, \"locked\": true }"), json);
+        assertEquals(read(json), document);
+        assertEquals(schemaErrors(json), List.of());
+    }
+
     @DataProvider
     public Object[][] invalidFiles() {
         // what is wrong, where the reader reports it, whether the schema also catches it, the file
@@ -253,6 +272,8 @@ public class ProjectJsonTest {
                 change("\"settings\": { \"hidden\": false },", "")},
             {"hidden not boolean", "columns[0].settings.hidden", true,
                 change("\"settings\": { \"hidden\": false }", "\"settings\": { \"hidden\": \"no\" }")},
+            {"annotation locked not boolean", "columns[0].settings.locked", true,
+                change("\"settings\": { \"hidden\": false }", "\"settings\": { \"hidden\": false, \"locked\": 1 }")},
             {"missing locked", "\"locked\" is missing", true,
                 change("\"hidden\": false, \"locked\": false", "\"hidden\": false")},
             {"values per code", "columns[0].cells[0].values", false,

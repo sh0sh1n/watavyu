@@ -8,6 +8,7 @@ import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.DataStoreFactory;
 import org.datavyu.models.db.MediaClip;
 import org.datavyu.models.db.Variable;
+import org.datavyu.models.db.VariableListener;
 import org.datavyu.views.discrete.datavalues.TimeStampDataValueEditor.TimeStampSource;
 import org.testng.annotations.Test;
 
@@ -61,6 +62,42 @@ public class ClipTimesTest {
 
         assertTrue(typingAllowed(cell, TimeStampSource.Onset));
         assertTrue(typingAllowed(cell, TimeStampSource.Offset));
+    }
+
+    @Test
+    public void aLockedAnnotationCellsTimesCannotBeTyped() throws Exception {
+        Variable notes = DataStoreFactory.newDataStore().createVariable("notes");
+        Cell cell = notes.createPointCell(1_000);
+        notes.setLocked(true);
+
+        assertFalse(typingAllowed(cell, TimeStampSource.Onset));
+        assertFalse(typingAllowed(cell, TimeStampSource.Offset));
+    }
+
+    /** Typing a time in a locked column tells the column, so its padlock shakes; a clip's offset does not. */
+    @Test
+    public void typingInALockedColumnIsHeardAsRefused() throws Exception {
+        Variable media = DataStoreFactory.newDataStore().createMediaVariable("media_1");
+        Cell clip = media.createClip(0, CAM);
+        int[] refusals = {0};
+        VariableListener listener = new VariableListener() {
+            @Override public void nameChanged(final String newName) { }
+            @Override public void visibilityChanged(final boolean isHidden) { }
+            @Override public void cellInserted(final Cell newCell) { }
+            @Override public void cellRemoved(final Cell deletedCell) { }
+            @Override public void editRefused() { refusals[0]++; }
+        };
+        media.addListener(listener);
+        try {
+            typingAllowed(clip, TimeStampSource.Offset);
+            assertEquals(refusals[0], 0, "an unlocked clip's offset just cannot be typed");
+
+            media.setLocked(true);
+            typingAllowed(clip, TimeStampSource.Onset);
+            assertEquals(refusals[0], 1);
+        } finally {
+            media.removeListener(listener);
+        }
     }
 
     /** A clip cell names its file, its frame rate once known for video, and whether the file is missing. */

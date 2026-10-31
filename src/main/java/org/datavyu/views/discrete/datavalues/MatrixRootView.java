@@ -74,7 +74,7 @@ public final class MatrixRootView extends JTextArea implements FocusListener {
 
         parentCell = cell;
         allEditors = new ArrayList<>();
-        edTracker = new EditorTracker(this, allEditors);
+        edTracker = new EditorTracker(this, allEditors, cell.getVariable());
 
         setMatrix(cellValue);
 
@@ -87,7 +87,7 @@ public final class MatrixRootView extends JTextArea implements FocusListener {
                    public void keyPressed(KeyEvent e) {
                        if ((Character.isLetter(e.getKeyChar()) || Character.isDigit(e.getKeyChar())
                                || Character.isSpaceChar(e.getKeyChar())) && !e.isAltDown() && !e.isControlDown() && !e.isMetaDown()
-                               && edTracker.getCurrentEditor().isEditable()) {
+                               && edTracker.getCurrentEditor().isEditable() && !parentCell.getVariable().isLocked()) {
                            UndoableEdit edit = new ChangeValCellEdit(parentCell, oldValue, ChangeCellEdit.Granularity.FINEGRAINED);
                            Datavyu.getView().getUndoSupport().postEdit(edit);
                        }

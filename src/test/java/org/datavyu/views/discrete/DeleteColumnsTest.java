@@ -1,8 +1,10 @@
 package org.datavyu.views.discrete;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
+import static org.testng.Assert.assertTrue;
 
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.DataStore;
@@ -72,6 +74,17 @@ public class DeleteColumnsTest {
 
         assertNull(dataStore.getVariable("first"));
         assertNotNull(dataStore.getVariable("second"));
+    }
+
+    /** A locked column is deleted only once it is unlocked, alone or among the selected columns. */
+    @Test
+    public void deleteIsDisabledWhileAColumnItWouldDeleteIsLocked() {
+        media.setLocked(true);
+        assertFalse(SpreadsheetColumn.deleteItem(dataStore, media, history::addEdit).isEnabled());
+        assertTrue(SpreadsheetColumn.deleteItem(dataStore, first, history::addEdit).isEnabled());
+
+        second.setLocked(true);
+        assertFalse(SpreadsheetColumn.deleteItem(dataStore, first, history::addEdit).isEnabled());
     }
 
     /** Undo brings the deleted columns back with their cells, and redo deletes them again, all in one step. */

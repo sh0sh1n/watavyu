@@ -15,6 +15,7 @@
 package org.datavyu.views.discrete;
 
 import org.datavyu.Datavyu;
+import org.datavyu.models.db.Variable;
 import org.datavyu.views.discrete.datavalues.NoEditor;
 
 import javax.swing.text.JTextComponent;
@@ -61,6 +62,10 @@ public final class EditorTracker
      * How many clicks make up a triple click.
      */
     private static final int TRIPLE_CLICK_COUNT = 2;
+    /**
+     * The column the editors belong to, whose lock refuses edits; null when they belong to none.
+     */
+    private final Variable column;
 
     /**
      * Constructor.
@@ -70,8 +75,35 @@ public final class EditorTracker
      */
     public EditorTracker(final JTextComponent ta,
                          final List<EditorComponent> eds) {
+        this(ta, eds, null);
+    }
+
+    /**
+     * Constructor for editors of a column's cell or of its name and codes, which a locked column refuses.
+     *
+     * @param ta     JTextComponent containing the editors to track.
+     * @param eds    Vector of the EditorComponents.
+     * @param column The column they belong to.
+     */
+    public EditorTracker(final JTextComponent ta, final List<EditorComponent> eds, final Variable column) {
         textArea = ta;
         editors = eds;
+        this.column = column;
+    }
+
+    /**
+     * Returns whether a key typed would change text: a printable character, without the command or control key.
+     *
+     * @param e a key typed
+     */
+    public static boolean isTypedEdit(final KeyEvent e) {
+        return !Character.isISOControl(e.getKeyChar()) && e.getKeyChar() != KeyEvent.CHAR_UNDEFINED
+            && !e.isMetaDown() && !e.isControlDown();
+    }
+
+    /** Returns whether the column refuses an edit, telling its listeners so. */
+    private boolean refused() {
+        return column != null && column.refusesEdits();
     }
 
     /**
@@ -250,14 +282,18 @@ public final class EditorTracker
      * Call the currentEditor to sanitize the text in the clipboard.
      */
     public void paste() {
-        currentEditor.paste();
+        if (!refused()) {
+            currentEditor.paste();
+        }
     }
 
     /**
      * Cut text from the current editor.
      */
     public void cut() {
-        currentEditor.cut();
+        if (!refused()) {
+            currentEditor.cut();
+        }
     }
 
     /**
@@ -306,8 +342,12 @@ public final class EditorTracker
 
     @Override
     public void keyTyped(KeyEvent e) {
-        // A cell with nothing to edit, such as a media clip or a column with no codes, refuses typing.
-        if (!currentEditor.isEditable()) {
+        // A cell with nothing to edit, such as a media clip or a column with no codes, refuses typing, as does a
+        // locked column.
+        if (!currentEditor.isEditable() || (column != null && column.isLocked())) {
+            if (isTypedEdit(e)) {
+                refused();
+            }
             e.consume();
             return;
         }
@@ -331,7 +371,7 @@ public final class EditorTracker
                 break;
 
             case KeyEvent.VK_BACK_SPACE:
-                if (!currentEditor.isEditable()) {
+                if (!currentEditor.isEditable() || refused()) {
                     e.consume();
                     break;
                 }
@@ -344,7 +384,7 @@ public final class EditorTracker
                 break;
 
             case KeyEvent.VK_DELETE:
-                if (!currentEditor.isEditable()) {
+                if (!currentEditor.isEditable() || refused()) {
                     e.consume();
                     break;
                 }

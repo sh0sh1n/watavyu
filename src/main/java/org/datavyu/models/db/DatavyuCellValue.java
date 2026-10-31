@@ -45,6 +45,9 @@ public abstract class DatavyuCellValue implements CellValue, Serializable, Compa
 
     @Override
     public void clear() {
+        if (parent != null && parent.getVariable().refusesEdits()) {
+            return;
+        }
         this.value = null;
     }
 
@@ -78,6 +81,9 @@ public abstract class DatavyuCellValue implements CellValue, Serializable, Compa
 
     @Override
     public void set(final String newValue) {
+        if (parent != null && parent.getVariable().refusesEdits()) {
+            return;
+        }
         if (!newValue.equals(toString()) && !newValue.equals(this.value)) {
             this.value = newValue;
             this.parent.getVariable().getOwningDatastore().markAsChanged();

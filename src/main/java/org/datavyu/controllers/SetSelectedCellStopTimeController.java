@@ -52,6 +52,10 @@ public class SetSelectedCellStopTimeController {
         }
 
         for (Cell cell : selectedCells) {
+            // A locked column's cells do not change, and a clip's offset follows from its onset and length.
+            if (cell.getVariable().refusesEdits() || cell.getClip() != null) {
+                continue;
+            }
             // record the effect
             UndoableEdit edit = new ChangeOffsetCellEdit(cell, cell.getOffset(), milliseconds,
                     ChangeCellEdit.Granularity.FINEGRAINED);

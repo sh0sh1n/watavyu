@@ -31,6 +31,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.DoubleConsumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
  * Plays the spreadsheet's media columns. The spreadsheet holds each column and its clips; this opens a player for each
@@ -169,17 +170,27 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
 
     /**
      * Adds media files to the spreadsheet, as the Add Media command and dropping files do. With one media column
-     * selected, each file becomes a clip in it at the current time; otherwise each gets a new media column.
+     * selected, each file becomes a clip in it at the current time; otherwise each gets a new media column. A locked
+     * selected column refuses them, and {@code intoNewColumns} is asked once whether they go in new columns instead.
      *
-     * @param files media files
-     * @param time  the current time, where clips added to a selected column start
+     * @param files          media files
+     * @param time           the current time, where clips added to a selected column start
+     * @param intoNewColumns given the locked column, whether to add the files to new columns instead
      * @throws UserWarningException if a column cannot be added
      */
-    public void addMediaFiles(final List<File> files, final long time) throws UserWarningException {
+    public void addMediaFiles(final List<File> files, final long time, final Predicate<Variable> intoNewColumns)
+            throws UserWarningException {
         List<Variable> selected = dataStore.getSelectedVariables();
+        Variable target = selected.size() == 1 && selected.get(0).isMedia() ? selected.get(0) : null;
+        if (target != null && target.refusesEdits()) {
+            if (!intoNewColumns.test(target)) {
+                return;
+            }
+            target = null;
+        }
         for (File file : files) {
-            if (selected.size() == 1 && selected.get(0).isMedia()) {
-                addClip(selected.get(0), file, time);
+            if (target != null) {
+                addClip(target, file, time);
             } else {
                 addMedia(file);
             }

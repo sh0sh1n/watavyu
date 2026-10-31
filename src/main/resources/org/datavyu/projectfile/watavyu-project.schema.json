@@ -48,7 +48,11 @@
           "additionalProperties": false,
           "required": ["hidden"],
           "properties": {
-            "hidden": { "type": "boolean" }
+            "hidden": { "type": "boolean" },
+            "locked": {
+              "description": "Whether the column refuses changes to its cells, codes and name. Watavyu always writes it; a file without it opens unlocked.",
+              "type": "boolean"
+            }
           }
         },
         "cells": {
@@ -87,7 +91,7 @@
           "required": ["hidden", "locked"],
           "properties": {
             "hidden": { "description": "Whether the media window is hidden.", "type": "boolean" },
-            "locked": { "description": "Whether the clips are protected from being dragged.", "type": "boolean" }
+            "locked": { "description": "Whether the column refuses changes to its clips.", "type": "boolean" }
           }
         },
         "cells": {

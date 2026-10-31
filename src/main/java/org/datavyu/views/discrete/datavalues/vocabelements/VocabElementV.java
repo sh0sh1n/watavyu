@@ -15,12 +15,15 @@
 package org.datavyu.views.discrete.datavalues.vocabelements;
 
 import org.datavyu.views.Glyph;
+import org.datavyu.views.LockMark;
 import org.datavyu.views.discrete.SpreadsheetTheme;
 import org.datavyu.util.Resources;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.models.db.Argument;
+import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.Variable;
+import org.datavyu.models.db.VariableListener;
 import org.datavyu.views.VocabEditorV;
 import org.datavyu.views.discrete.EditorComponent;
 
@@ -94,6 +97,21 @@ public class VocabElementV extends JPanel {
      * The parent editor for this vocab element view.
      */
     private VocabEditorV parentEditor;
+    /**
+     * The mark beside a locked column's name, which shakes when the column refuses a change.
+     */
+    private final LockMark lockMark;
+    /**
+     * Hears of the column being locked and of changes it refuses, while this view is showing.
+     */
+    private final VariableListener lockListener = new VariableListener() {
+        @Override public void nameChanged(final String newName) { }
+        @Override public void visibilityChanged(final boolean isHidden) { }
+        @Override public void cellInserted(final Cell newCell) { }
+        @Override public void cellRemoved(final Cell deletedCell) { }
+        @Override public void lockChanged(final boolean locked) { updateMark(); }
+        @Override public void editRefused() { lockMark.shake(); }
+    };
 
     public VocabElementV(Argument vocabArgument, Variable var, VocabEditorV vev) {
 
@@ -109,6 +127,7 @@ public class VocabElementV extends JPanel {
         invalidBangIcon.setMaximumSize(ICON_SIZE);
         invalidBangIcon.setMinimumSize(ICON_SIZE);
         invalidBangIcon.setPreferredSize(ICON_SIZE);
+        lockMark = new LockMark(14, invalidBangIcon);
 
         veRootView = new VocabElementRootView(var, this);
 
@@ -144,6 +163,24 @@ public class VocabElementV extends JPanel {
         this.setBorder(LINE_BORDER);
 
         this.rebuildContents();
+        updateMark();
+    }
+
+    @Override
+    public void addNotify() {
+        super.addNotify();
+        varModel.addListener(lockListener);
+    }
+
+    @Override
+    public void removeNotify() {
+        varModel.removeListener(lockListener);
+        super.removeNotify();
+    }
+
+    /** Returns the mark shown while the column is locked. */
+    final LockMark getLockMark() {
+        return lockMark;
     }
 
     /**
@@ -162,16 +199,22 @@ public class VocabElementV extends JPanel {
 
     public final void setInvalid(final boolean invalid, final String lastValidName) {
         invalidState = invalid;
+        updateMark();
+        parentEditor.refreshNameWarnings();
+    }
 
-        if (invalid) {
+    /** Shows the warning beside a name that cannot be applied, or else the lock beside a locked column's name. */
+    private void updateMark() {
+        if (invalidState) {
             invalidBangIcon.setIcon(WARNING_MARK);
             invalidBangIcon.setToolTipText(bangIconText);
+        } else if (varModel.isLocked()) {
+            invalidBangIcon.setIcon(lockMark);
+            invalidBangIcon.setToolTipText("Locked: unlock it from its header in the spreadsheet");
         } else {
             invalidBangIcon.setIcon(null);
             invalidBangIcon.setToolTipText(null);
         }
-
-        parentEditor.refreshNameWarnings();
     }
 
     public boolean getInvalid() {

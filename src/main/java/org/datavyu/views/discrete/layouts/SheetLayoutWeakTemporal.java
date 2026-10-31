@@ -195,7 +195,7 @@ public class SheetLayoutWeakTemporal extends SheetLayout {
         }
         timeAxis = new TimeAxis(onsetMap, bottoms);
 
-        padColumns(mainView, parent);
+        padColumns(mainView);
         laidOut();
     }
 
@@ -244,25 +244,15 @@ public class SheetLayoutWeakTemporal extends SheetLayout {
 
     /**
      * Pads all the columns so that they all fill out to the maximum height of
-     * the spreadsheet. This function also ensures that the new cell button is
-     * added to the bottom of each of the columns.
+     * the spreadsheet.
      *
      * @param mainView The actual spreadsheet that we are populating.
-     * @param parent   The parent container that holds the spreadsheet.
      */
-    private void padColumns(SpreadsheetView mainView, Container parent) {
+    private void padColumns(SpreadsheetView mainView) {
         for (SpreadsheetColumn col : mainView.getColumns()) {
             Integer colHeight = col.getWorkingHeight();
 
-            // Put the new cell button at the end of the column.
-            Dimension d = col.getDataPanel().getNewCellButton().getPreferredSize();
-            col.getDataPanel().getNewCellButton().setBounds(0,
-                    colHeight,
-                    parent.getWidth(),
-                    (int) d.getHeight());
-            colHeight += (int) d.getHeight();
-
-            col.getDataPanel().setHeight(maxHeight + (int) d.getHeight());
+            col.getDataPanel().setHeight(maxHeight);
             col.getDataPanel().getPadding().setBounds(0,
                     colHeight,
                     col.getWidth(),

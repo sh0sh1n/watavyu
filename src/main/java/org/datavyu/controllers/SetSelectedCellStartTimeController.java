@@ -52,8 +52,8 @@ public class SetSelectedCellStartTimeController {
         }
 
         for (Cell cell : selectedCells) {
-            // A locked media column's clips do not move, so there is nothing to record.
-            if (cell.getClip() != null && cell.getVariable().isLocked()) {
+            // A locked column's cells do not change, so there is nothing to record.
+            if (cell.getVariable().refusesEdits()) {
                 continue;
             }
             // record the effect

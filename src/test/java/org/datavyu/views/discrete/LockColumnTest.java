@@ -22,27 +22,47 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** A media column's header menu locks and unlocks its clips, as edits in the undo history. */
-public class LockClipsTest {
+public class LockColumnTest {
 
     private static final MediaClip CAM = new MediaClip("/study/cam.mp4", 10_000, 30, 1280, 720, 1);
 
     @Test
-    public void lockClipsTogglesTheColumnsLock() throws Exception {
+    public void lockColumnTogglesTheColumnsLock() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
-        Variable media = dataStore.createMediaVariable("media_1");
+        for (Variable column : List.of(dataStore.createMediaVariable("media_1"), dataStore.createVariable("notes"))) {
+            UndoManager history = new UndoManager();
+
+            JCheckBoxMenuItem item = SpreadsheetColumn.lockItem(dataStore, column, history::addEdit);
+            assertEquals(item.getText(), "Lock Column");
+            assertFalse(item.isSelected());
+
+            item.doClick();
+            assertTrue(column.isLocked());
+
+            JCheckBoxMenuItem again = SpreadsheetColumn.lockItem(dataStore, column, history::addEdit);
+            assertTrue(again.isSelected());
+            again.doClick();
+            assertFalse(column.isLocked());
+        }
+    }
+
+    /** Undoing past a lock unlocks an annotation column, so a value typed before the lock can be changed back. */
+    @Test
+    public void undoingALockLetsAnAnnotationColumnChangeAgain() throws Exception {
+        DataStore dataStore = DataStoreFactory.newDataStore();
+        Variable notes = dataStore.createVariable("notes");
+        Cell cell = notes.createPointCell(1_000);
         UndoManager history = new UndoManager();
+        SpreadsheetColumn.lockItem(dataStore, notes, history::addEdit).doClick();
 
-        JCheckBoxMenuItem item = SpreadsheetColumn.lockItem(dataStore, media, history::addEdit);
-        assertEquals(item.getText(), "Lock Clips");
-        assertFalse(item.isSelected());
+        assertEquals(history.getUndoPresentationName(), "Undo Lock Column notes");
+        cell.setOnset(2_000);
+        assertEquals(cell.getOnset(), 1_000L);
 
-        item.doClick();
-        assertTrue(media.isLocked());
-
-        JCheckBoxMenuItem again = SpreadsheetColumn.lockItem(dataStore, media, history::addEdit);
-        assertTrue(again.isSelected());
-        again.doClick();
-        assertFalse(media.isLocked());
+        history.undo();
+        cell.setOnset(2_000);
+        assertEquals(cell.getOnset(), 2_000L);
+        assertEquals(history.getRedoPresentationName(), "Redo Lock Column notes");
     }
 
     /** Undoing past a lock unlocks the column, so a clip moved before the lock can be moved back. */
@@ -54,7 +74,7 @@ public class LockClipsTest {
         UndoManager history = new UndoManager();
         SpreadsheetColumn.lockItem(dataStore, media, history::addEdit).doClick();
 
-        assertEquals(history.getUndoPresentationName(), "Undo Lock Clips of media_1");
+        assertEquals(history.getUndoPresentationName(), "Undo Lock Column media_1");
         history.undo();
         assertFalse(media.isLocked());
         clip.setOnset(0);

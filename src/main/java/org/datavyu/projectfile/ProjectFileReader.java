@@ -90,15 +90,18 @@ final class ProjectFileReader {
         if (ANNOTATION.equals(kind)) {
             JsonFields.keys(node, at, "name", "type", "codes", "settings", "cells");
             JsonNode settings = node.get("settings");
-            JsonFields.keys(settings, at + ".settings", "hidden");
+            // Files written before annotation columns could be locked have no "locked"; they open unlocked.
+            JsonFields.keys(settings, at + ".settings", Set.of("locked"), "hidden", "locked");
             List<String> codes = JsonFields.texts(node.get("codes"), at + ".codes");
             List<AnnotationCell> cells = new ArrayList<>();
             JsonNode array = JsonFields.array(node.get("cells"), at + ".cells");
             for (int i = 0; i < array.size(); i++) {
                 cells.add(annotationCell(array.get(i), at + ".cells[" + i + "]"));
             }
+            boolean locked = settings.has("locked")
+                && JsonFields.bool(settings.get("locked"), at + ".settings.locked");
             return new AnnotationColumn(JsonFields.text(node.get("name"), at + ".name"), codes,
-                JsonFields.bool(settings.get("hidden"), at + ".settings.hidden"), cells);
+                JsonFields.bool(settings.get("hidden"), at + ".settings.hidden"), locked, cells);
         }
         if (MEDIA.equals(kind)) {
             JsonFields.keys(node, at, "name", "type", "settings", "cells");

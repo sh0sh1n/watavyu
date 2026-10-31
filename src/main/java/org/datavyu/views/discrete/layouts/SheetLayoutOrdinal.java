@@ -128,13 +128,6 @@ public class SheetLayoutOrdinal extends SheetLayout {
                     prevCell = cell;
                 }
 
-                // Put the new cell button at the end of the column.
-                Dimension d = col.getDataPanel().getNewCellButton().getPreferredSize();
-                col.getDataPanel().getNewCellButton().setBounds(0,
-                        currentHeight,
-                        parent.getWidth(),
-                        (int) d.getHeight());
-                currentHeight += (int) d.getHeight();
                 columnHeight.add(new ColInfo(colID, currentHeight));
                 maxHeight = Math.max(maxHeight, currentHeight);
             }

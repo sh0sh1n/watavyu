@@ -56,7 +56,7 @@ public record Glyph(Shape shape, int size, Color colour) implements Icon {
         NEW_CELL,
         /** New cell and set the previous one's offset: a closing bracket beside a new cell. */
         NEW_CELL_PREVIOUS_OFFSET,
-        /** A locked media column: a padlock. */
+        /** A locked column: a padlock. */
         LOCK,
         /** Volume: a speaker with sound waves. */
         VOLUME,
