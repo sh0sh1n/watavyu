@@ -24,9 +24,9 @@ The aim is a smaller app whose every feature was chosen on purpose, with a moder
 - **Keep the docs true.** README.md, BUILDING.md, TODO.md and this file are the owner's window into the code.
 - **Commit or push only when asked.** A pull request that finishes a TODO item names its ID and title in its title, such as "Fix B1: quitting can discard unsaved work"; squash merging makes that title the commit on `main`.
 - **Pull requests.** The repository allows only squash merging, so each pull request lands on `main` as one commit. Related changes go in one pull request. When one would be too large to review, split it into a stack: one branch and pull request per part, each based on the one below, managed with the `gh stack` extension (`github/gh-stack`).
-  - Build it with `gh stack init <branch>`, then `gh stack add <branch>` for each later part, and open the PRs with `gh stack submit --auto --open`. After any PR in it merges, `gh stack sync --prune` rebases the rest onto `main` and pushes them; no manual `rebase --onto`.
+  - The `gh-stack` skill covers the commands and their non-interactive forms. Open PRs ready for review (`gh stack submit --auto --open`), and land a finished stack in one step with `gh stack merge <stack number> --yes`, which squashes each PR onto `main` in order, rather than merging PRs one at a time.
+  - Unrelated changes that edit the same lines, such as TODO.md's Measures, can be stacked too, so they do not conflict.
   - The repository accepts at most 10 branch and tag updates per push, and `gh stack` pushes every open branch of a stack in one push, so a stack holds at most 10 open PRs.
-  - Agents pass the non-interactive forms (`view --json`, `submit --auto`, `merge <pr> --yes`, a branch name for `init` and `add`) and never run `modify` or `switch`, which only open menus. `sync` exits 0 without doing anything when the local and GitHub stacks have diverged; check its output for "Sync aborted".
 - **Playback tests need an awake display**: run `caffeinate -u -d ./gradlew integrationTest`; JavaFX receives no video frames while the display sleeps, and `-u` wakes a display that is already asleep.
 
 ## Decisions
