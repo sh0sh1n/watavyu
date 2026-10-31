@@ -34,6 +34,18 @@ public class SheetLayoutWeakTemporal extends SheetLayout {
     int maxHeight;
     private JScrollPane pane;
 
+    /** The space between consecutive times, below the cells that start at the first. */
+    static final int GAP = 15;
+
+    /** A tail is a pixel high for each this many milliseconds of it, within the two bounds below. */
+    static final long TAIL_MILLIS_PER_PIXEL = 10_000;
+
+    /** The least height of a tail, in pixels: enough to see and to drag the needle through. */
+    static final int TAIL_MIN = 60;
+
+    /** The most height of a tail, in pixels, reached by tails of 100 minutes and more. */
+    static final int TAIL_MAX = 600;
+
     /** Where times fell down the sheet in the last layout. */
     private TimeAxis timeAxis = TimeAxis.NONE;
 
@@ -90,17 +102,7 @@ public class SheetLayoutWeakTemporal extends SheetLayout {
             intermediateMap.forEach( (k, v) -> heightMap.merge(k, v, Integer::max));
         }
 
-        /* Iterate over sorted set of times and assign position values.
-           For onset times o1, o2 : Map(o2) = Map(o1) + heightMap(o1) + gapSize
-         */
-        int gapSize = 15;   // default space separating unique times
-        HashMap<Long, Integer> onsetMap = new HashMap<>();
-        int pos = 0;    // position to assign to next onset time
-        for(Long time : times){
-            onsetMap.put(time, pos);
-            pos += heightMap.getOrDefault(time, 0);
-            pos += gapSize;
-        }
+        Map<Long, Integer> onsetMap = tops(times, heightMap);
 
         /* Iterate over all spreadsheet cells and set boundaries using onset and offset maps.
            Keep a local copy of the position maps.  Since each time value gets a range of positions
@@ -197,6 +199,42 @@ public class SheetLayoutWeakTemporal extends SheetLayout {
 
         padColumns(mainView);
         laidOut();
+    }
+
+    /**
+     * Where the cells of each time start down the sheet. Times are spaced by the cells between them rather than by
+     * duration: each time is below the previous one by the height of the cells that start at the previous one and a
+     * gap. The tail, the stretch after the last time any cell starts, has no such cells, so on these terms a clip
+     * running on past every annotation would end in a sliver (F15). Instead the tail grows with its duration, within
+     * bounds, and its times lie in it in proportion; a tail with several times keeps at least a gap between each.
+     *
+     * @param times   every onset and offset, in order
+     * @param heights the height of the cells that start at each onset, in the column where they are tallest
+     * @return the height in the sheet of each time
+     */
+    static Map<Long, Integer> tops(final SortedSet<Long> times, final Map<Long, Integer> heights) {
+        Map<Long, Integer> tops = new HashMap<>();
+        if (times.isEmpty()) {
+            return tops;
+        }
+        long lastOnset = heights.keySet().stream().max(Long::compare).orElse(times.first());
+        long duration = times.last() - lastOnset;
+        int tail = Math.clamp(duration / TAIL_MILLIS_PER_PIXEL, TAIL_MIN, TAIL_MAX);
+        int pos = 0;
+        int tailTop = 0;
+        int steps = 0;
+        for (long time : times) {
+            if (time <= lastOnset) {
+                tops.put(time, pos);
+                tailTop = pos + heights.getOrDefault(time, 0);
+                pos = tailTop + GAP;
+            } else {
+                steps++;
+                int share = (int) Math.round((double) tail * (time - lastOnset) / duration);
+                tops.put(time, tailTop + Math.max(GAP * steps, share));
+            }
+        }
+        return tops;
     }
 
     @Override
