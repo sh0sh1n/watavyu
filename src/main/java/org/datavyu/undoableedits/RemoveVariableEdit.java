@@ -14,54 +14,55 @@
  */
 package org.datavyu.undoableedits;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.datavyu.controllers.DeleteColumnController;
+import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.Variable;
 
+import javax.swing.undo.AbstractUndoableEdit;
 import javax.swing.undo.CannotRedoException;
 import javax.swing.undo.CannotUndoException;
 import java.util.List;
 
 /**
- * Undoable edit for removing cells from the spreadsheet.
+ * Deleting columns from the spreadsheet. The spreadsheet and the media players hear of each column leaving and
+ * coming back through the data store.
  */
-public class RemoveVariableEdit extends VocabEditorEdit {
+public final class RemoveVariableEdit extends AbstractUndoableEdit {
+
+    private final DataStore dataStore;
+    private final List<Variable> deletedVariables;
+
     /**
-     * The logger for this class.
+     * Records the deletion of columns, made before or after the edit is made.
+     *
+     * @param dataStore    the spreadsheet that held the columns
+     * @param varsToDelete the columns deleted
      */
-    private static final Logger LOGGER = LogManager.getLogger(RemoveVariableEdit.class);
-
-    private List<Variable> deletedVariables;
-
-    public RemoveVariableEdit(List<Variable> varsToDelete) {
-        deletedVariables = varsToDelete;
+    public RemoveVariableEdit(final DataStore dataStore, final List<Variable> varsToDelete) {
+        this.dataStore = dataStore;
+        this.deletedVariables = List.copyOf(varsToDelete);
     }
 
     @Override
     public String getPresentationName() {
-        String msg;
         if (deletedVariables.size() == 1) {
-            msg = "Delete Variable \"" + deletedVariables.get(0).getName() + "\"";
-        } else {
-            msg = "Delete " + deletedVariables.size() + " Variables";
+            return "Delete Column " + deletedVariables.get(0).getName();
         }
-        return msg;
+        return "Delete " + deletedVariables.size() + " Columns";
     }
 
     @Override
-    public void undo() throws CannotRedoException {
+    public void undo() throws CannotUndoException {
         super.undo();
         for (Variable var : deletedVariables) {
-            model.addVariable(var);
+            dataStore.addVariable(var);
         }
     }
 
     @Override
-    public void redo() throws CannotUndoException {
+    public void redo() throws CannotRedoException {
         super.redo();
-
-        new DeleteColumnController(deletedVariables);
-        unselectAll();
+        for (Variable var : deletedVariables) {
+            dataStore.removeVariable(var);
+        }
     }
 }

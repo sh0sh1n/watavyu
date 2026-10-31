@@ -33,7 +33,6 @@ import org.datavyu.projectfile.ProjectDocument;
 import org.datavyu.projectfile.ProjectPaths;
 import org.datavyu.undoableedits.AddMediaColumnEdit;
 import org.datavyu.undoableedits.RemoveCellEdit;
-import org.datavyu.undoableedits.RemoveVariableEdit;
 import org.datavyu.undoableedits.SpreadsheetUndoManager;
 import org.datavyu.util.ArrayDirection;
 import org.datavyu.util.DragAndDrop.TransparentPanel;
@@ -110,7 +109,6 @@ public final class DatavyuView implements FileDropEventListener {
     private JMenuItem newCellMenuItem;
     private JMenuItem newCellLeftMenuItem;
     private JMenuItem newCellRightMenuItem;
-    private JMenuItem deleteColumnMenuItem;
     private JMenuItem deleteCellMenuItem;
     private JMenuItem exportJSON;
     private JMenuItem importJSON;
@@ -735,13 +733,6 @@ public final class DatavyuView implements FileDropEventListener {
     }
 
     /**
-     * Action for creating a new variable.
-     */
-    public void showNewVariableForm() {
-        new NewVariableController();
-    }
-
-    /**
      * Action for editing vocabs.
      */
     public void showVocabEditor() { vec.showView(); }
@@ -868,25 +859,6 @@ public final class DatavyuView implements FileDropEventListener {
         pc = createNewSpreadsheet(pc);
 
         return pc; //return value not used
-    }
-
-    /**
-     * Action for removing columns from the database.
-     */
-    public void deleteColumn() {
-//        DataStore ds = Datavyu.getProjectController().getDataStore();
-//        List<Variable> selectedVariables = ds.getSelectedVariables();
-
-        List<Variable> selectedVariables = null;
-        selectedVariables = Datavyu.getProjectController().getDataStore().getSelectedVariables();
-        // record the effect
-        UndoableEdit edit = new RemoveVariableEdit(selectedVariables);
-
-        // perform the operation
-        new DeleteColumnController(selectedVariables);
-
-        // notify the listeners
-        Datavyu.getView().getUndoSupport().postEdit(edit);
     }
 
     /**
@@ -1041,18 +1013,6 @@ public final class DatavyuView implements FileDropEventListener {
 
         importJSON.setEnabled(true);
 
-        List<Variable> selectedCols = Datavyu.getProjectController().getDataStore().getSelectedVariables();
-
-        if (selectedCols.isEmpty()) {
-            deleteColumnMenuItem.setEnabled(false);
-        } else if (selectedCols.size() == 1) {
-            deleteColumnMenuItem.setText(rMap.getString("deleteColumnMenuItemSingle.text"));
-            deleteColumnMenuItem.setEnabled(true);
-        } else {
-            deleteColumnMenuItem.setText(rMap.getString("deleteColumnMenuItemPlural.text"));
-            deleteColumnMenuItem.setEnabled(true);
-        }
-
         List<Cell> selectedCells = Datavyu.getProjectController().getDataStore().getSelectedCells();
 
         if (selectedCells.isEmpty()) {
@@ -1177,7 +1137,6 @@ public final class DatavyuView implements FileDropEventListener {
         action(r.getString("saveMenuItem.text"), this::save);
         action(r.getString("saveAsMenuItem.text"), this::saveAs);
 
-        action(r.getString("newColumnMenuItem.text"), this::showNewVariableForm);
         action(r.getString("newMediaColumnMenuItem.text"), this::newMediaColumn);
         action(r.getString("addMediaMenuItem.text"), this::addMedia);
         action(r.getString("columnListMenuItem.text"), this::showVariableList);
@@ -1185,7 +1144,6 @@ public final class DatavyuView implements FileDropEventListener {
         action(r.getString("newCellMenuItem.text"), this::newCell);
         action(r.getString("newCellLeftMenuItem.text"), this::newCellLeft);
         action(r.getString("newCellRightMenuItem.text"), this::newCellRight);
-        action(r.getString("deleteColumnMenuItem.text"), this::deleteColumn);
         action(r.getString("deleteCellMenuItem.text"), this::deleteCells);
         action(UNDO, this::undo);
         action(REDO, this::redo);
@@ -1371,7 +1329,6 @@ public final class DatavyuView implements FileDropEventListener {
             public void menuCanceled(final MenuEvent e) {
             }
         });
-        spreadsheetMenu.add(item("newColumnMenuItem.text"));
         spreadsheetMenu.add(item("newMediaColumnMenuItem.text"));
         spreadsheetMenu.add(item("addMediaMenuItem.text"));
         spreadsheetMenu.add(item("columnListMenuItem.text"));
@@ -1381,7 +1338,6 @@ public final class DatavyuView implements FileDropEventListener {
         newCellLeftMenuItem = spreadsheetMenu.add(item("newCellLeftMenuItem.text"));
         newCellRightMenuItem = spreadsheetMenu.add(item("newCellRightMenuItem.text"));
         spreadsheetMenu.addSeparator();
-        deleteColumnMenuItem = spreadsheetMenu.add(item("deleteColumnMenuItem.text"));
         deleteCellMenuItem = spreadsheetMenu.add(item("deleteCellMenuItem.text"));
         spreadsheetMenu.addSeparator();
         spreadsheetMenu.add(item(actions.get(UNDO)));

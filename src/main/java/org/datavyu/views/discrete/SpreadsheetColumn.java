@@ -19,6 +19,7 @@ import org.apache.logging.log4j.Logger;
 import org.datavyu.Datavyu;
 import org.datavyu.models.db.*;
 import org.datavyu.undoableedits.LockColumnEdit;
+import org.datavyu.undoableedits.RemoveVariableEdit;
 import org.datavyu.util.ClockTimer;
 import org.datavyu.util.Constants;
 import org.datavyu.util.DragAndDrop.TransparentPanel;
@@ -230,6 +231,29 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
         return item;
     }
 
+    /**
+     * Makes the Delete menu item of a column's header: it deletes the column, or every selected column if the column
+     * is one of them, as one undoable edit. The spreadsheet hears of each column leaving through the data store.
+     *
+     * @param dataStore the spreadsheet holding the column
+     * @param column    the column whose header was clicked
+     * @param post      takes the edit for the undo history
+     * @return the menu item
+     */
+    static JMenuItem deleteItem(final DataStore dataStore, final Variable column,
+                                final Consumer<UndoableEdit> post) {
+        List<Variable> deleted = column.isSelected() ? dataStore.getSelectedVariables() : List.of(column);
+        JMenuItem item = new JMenuItem(deleted.size() == 1 ? "Delete Column" : "Delete Selected Columns");
+        item.setName("deleteColumns");
+        item.addActionListener(e -> {
+            for (Variable each : deleted) {
+                dataStore.removeVariable(each);
+            }
+            post.accept(new RemoveVariableEdit(dataStore, deleted));
+        });
+        return item;
+    }
+
     /** Shows the column's header menu, if this event asks for one. */
     private boolean showHeaderMenu(final MouseEvent me) {
         if (!me.isPopupTrigger()) {
@@ -240,6 +264,7 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
             Datavyu.getView().getSpreadsheetPanel().deselectAll();
             Datavyu.getView().getComponent().revalidate();
         }));
+        menu.add(deleteItem(dataStore, variable, Datavyu.getView().getUndoSupport()::postEdit));
         if (variable.isMedia()) {
             menu.addSeparator();
             menu.add(lockItem(dataStore, variable, Datavyu.getView().getUndoSupport()::postEdit));
