@@ -169,6 +169,8 @@ public final class ColumnDataPanel extends JPanel implements KeyEventDispatcher 
         this.remove(sCell);
         cells.remove(sCell);
         viewMap.remove(cell);
+        revalidate();
+        repaint();
     }
 
     /**
@@ -192,6 +194,8 @@ public final class ColumnDataPanel extends JPanel implements KeyEventDispatcher 
         this.cells.add(nCell);
         viewMap.put(cell, nCell);
         nCell.requestFocus();
+        // The view follows the model: a cell added by any command is laid out without the command asking.
+        revalidate();
     }
 
     /**
