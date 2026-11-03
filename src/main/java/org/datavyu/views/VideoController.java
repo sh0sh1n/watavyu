@@ -18,13 +18,9 @@ import org.datavyu.views.discrete.SpreadsheetTheme;
 import org.datavyu.controllers.project.MediaPlayers;
 import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.util.Settings;
-import org.datavyu.models.db.UserWarningException;
 import net.miginfocom.swing.MigLayout;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.datavyu.controllers.CreateNewCellController;
-import org.datavyu.controllers.SetSelectedCellStartTimeController;
-import org.datavyu.controllers.SetSelectedCellStopTimeController;
 import org.datavyu.models.Identifier;
 import org.datavyu.plugins.StreamViewer;
 import org.datavyu.plugins.javafx.JavaFxVideoPlugin;
@@ -714,7 +710,7 @@ public final class VideoController implements ClockListener {
      */
     public void setCellOnsetAction() {
         logger.info("Set cell onset");
-        new SetSelectedCellStartTimeController(spreadsheet, getCurrentTime());
+        spreadsheet.cells().setOnsets(getCurrentTime());
         setOnsetField(getCurrentTime());
     }
 
@@ -723,7 +719,7 @@ public final class VideoController implements ClockListener {
      */
     public void setCellOffsetAction() {
         logger.info("Set cell offset");
-        new SetSelectedCellStopTimeController(spreadsheet, getCurrentTime());
+        spreadsheet.cells().setOffsets(getCurrentTime());
         setOffsetField(getCurrentTime());
     }
 
@@ -1104,7 +1100,7 @@ public final class VideoController implements ClockListener {
             clockTimer.setForceTime(time);
         }
 
-        new CreateNewCellController(spreadsheet).createDefaultCell(true);
+        spreadsheet.cells().newCellInSelectedColumn(time);
     }
 
     /**
@@ -1119,7 +1115,7 @@ public final class VideoController implements ClockListener {
             clockTimer.setForceTime(time);
         }
 
-        new CreateNewCellController(spreadsheet, time, true);
+        spreadsheet.cells().newCellClosingPrevious(time);
     }
 
     public ClockTimer getClockTimer() {

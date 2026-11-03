@@ -18,12 +18,10 @@ import org.datavyu.controllers.project.MediaPlayers;
 import org.datavyu.util.Resources;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.datavyu.controllers.CreateNewCellController;
 import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.event.component.FileDropEvent;
 import org.datavyu.event.component.FileDropEventListener;
 import org.datavyu.models.db.*;
-import org.datavyu.undoableedits.AddCellEdit;
 import org.datavyu.util.ArrayDirection;
 import org.datavyu.util.Constants;
 import org.datavyu.views.VideoController;
@@ -54,7 +52,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
-import javax.swing.undo.UndoableEdit;
 
 
 /**
@@ -628,31 +625,10 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
                     (Character.isAlphabetic(e.getKeyChar()) || Character.isDigit(e.getKeyChar()))
             )) {
 
-                if(selectedColumn != null && !selectedColumn.getVariable().isMedia()) {
-                    CreateNewCellController controller = new CreateNewCellController(projectController);
-                    Cell c = controller.createCell(selectedColumn.getVariable());
-                    if (c == null) {
-                        // A locked column refuses it.
-                        e.consume();
-                        return true;
-                    }
-
-                    CellValue v = c.getCellValue();
-                    if(v instanceof MatrixCellValue) {
-                        List<CellValue> vals = ((MatrixCellValue) v).getArguments();
-                        vals.get(0).set(String.valueOf(e.getKeyChar()));
-                    } else {
-                        v.set(String.valueOf(e.getKeyChar()));
-                    }
-                    c.setOnset(videoController.getCurrentTime());
-                    c.setOffset(videoController.getCurrentTime());
-
-                    //Add the new cell to the Undo Support
-                    UndoableEdit edit = new AddCellEdit(projectController, selectedColumn.getVariable().getName(), c);
-                    revalidate();
-                    projectController.postEdit(edit);
-
-                    redrawCells();
+                if (selectedColumn != null && !selectedColumn.getVariable().isMedia()) {
+                    // A locked column refuses the cell, and the key is still taken.
+                    projectController.cells().newCellTyped(selectedColumn.getVariable(), e.getKeyChar(),
+                        videoController.getCurrentTime());
                     e.consume();
                     return true;
                 }

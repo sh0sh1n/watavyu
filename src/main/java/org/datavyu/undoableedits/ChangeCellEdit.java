@@ -16,7 +16,6 @@ package org.datavyu.undoableedits;
 
 import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.Cell;
-import org.datavyu.models.db.Variable;
 import org.datavyu.util.Constants;
 
 import javax.swing.undo.CannotRedoException;
@@ -27,15 +26,10 @@ import javax.swing.undo.CannotUndoException;
  */
 abstract public class ChangeCellEdit extends SpreadSheetEdit {
     /**
-     * Column's index
+     * The cell changed. Undo and redo put the same cell back, so it is held itself rather than found by its place in
+     * its column, which changes whenever the column is sorted by time.
      */
-    protected int colIndex = -1;
-
-    /**
-     * Index of this cell in its host column. Initially set to -1 as this is not
-     * a valid index.
-     */
-    protected int ord = -1;
+    private final Cell cell;
 
     protected String columnName;
 
@@ -48,18 +42,8 @@ abstract public class ChangeCellEdit extends SpreadSheetEdit {
         super(controller);
         this.granularity = granularity;
 
-        Variable var = model.getVariable(c);
-        if (var != null) {
-            columnName = var.getName();
-
-            for (Cell cell : var.getCells()) {
-                ord++;
-
-                if (cell.equals(c)) {
-                    return;
-                }
-            }
-        }
+        cell = c;
+        columnName = c.getVariable().getName();
     }
 
     protected ChangeCellEdit(final ProjectController controller, Cell c) {
@@ -88,8 +72,6 @@ abstract public class ChangeCellEdit extends SpreadSheetEdit {
     }
 
     protected void updateCell() {
-        Variable var = model.getVariable(columnName);
-        Cell cell = var.getCells().get(ord);
         updateCell(cell);
     }
 
