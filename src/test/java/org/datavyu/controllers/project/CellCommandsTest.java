@@ -98,6 +98,43 @@ public class CellCommandsTest {
     }
 
     @Test
+    public void theFirstSelectedColumnIsTheLeftmost() {
+        gaze.setSelected(true);
+        speech.setSelected(true);
+        assertSame(cells.newCellInSelectedColumn(1_000).getVariable(), gaze);
+
+        gaze.setOrderIndex(1);
+        speech.setOrderIndex(0);
+        gaze.setSelected(true);
+        speech.setSelected(true);
+        assertSame(cells.newCellInSelectedColumn(2_000).getVariable(), speech);
+    }
+
+    /** A deleted column is forgotten as the one last given a cell. */
+    @Test
+    public void aDeletedColumnTakesNoNewCell() {
+        spreadsheet.setLastCreatedVariable(speech);
+        dataStore.removeVariable(speech);
+
+        assertNull(cells.newCell(1_000));
+        assertSame(cells.newCellClosingPrevious(2_000).getVariable(), gaze, "the first annotation column instead");
+    }
+
+    @Test
+    public void undoingANewCellForgetsIt() {
+        spreadsheet.setLastCreatedVariable(gaze);
+        Cell cell = cells.newCell(1_000);
+        spreadsheet.setLastSelectedCell(cell);
+        spreadsheet.setLastSelectedCells(List.of(cell));
+
+        undo();
+
+        assertNull(spreadsheet.getLastCreatedCell());
+        assertNull(spreadsheet.getLastSelectedCell());
+        assertTrue(spreadsheet.getLastSelectedCells().isEmpty());
+    }
+
+    @Test
     public void aSelectedMediaColumnTakesNoNewCell() throws Exception {
         Variable media = dataStore.createMediaVariable("media_1");
         dataStore.deselectAll();
@@ -260,6 +297,16 @@ public class CellCommandsTest {
         assertTrue(gaze.getCells().isEmpty());
     }
 
+    /** A column whose codes have all been deleted holds timing only, with nowhere for the key. */
+    @Test
+    public void aColumnWithNoCodesTakesNoTypedKey() {
+        gaze.getRootNode().clearChildArguments();
+
+        assertNull(cells.newCellTyped(gaze, 'k', 4_000));
+        assertTrue(gaze.getCells().isEmpty());
+        assertFalse(spreadsheet.getUndoManager().canUndo());
+    }
+
     @Test
     public void aLockedColumnRefusesATypedKey() {
         gaze.setLocked(true);
@@ -308,6 +355,37 @@ public class CellCommandsTest {
         assertEquals(other.getOnset(), 3_000);
     }
 
+    /** Cells with the same times are each an edit of their own, not duplicates of one another. */
+    @Test
+    public void eachCellTimedIsAnUndoOfItsOwn() {
+        Cell first = gaze.createPointCell(1_000);
+        Cell second = speech.createPointCell(1_000);
+        first.setSelected(true);
+        second.setSelected(true);
+
+        cells.setOnsets(3_000);
+        undo();
+        undo();
+
+        assertEquals(first.getOnset(), 1_000);
+        assertEquals(second.getOnset(), 1_000);
+    }
+
+    @Test
+    public void aDeletedCellIsNoLongerTimedAsLastSelected() {
+        Cell cell = gaze.createPointCell(1_000);
+        dataStore.deselectAll();
+        cell.setSelected(true);
+        spreadsheet.setLastSelectedCells(List.of(cell));
+        cells.deleteSelected();
+
+        cells.setOnsets(3_000);
+
+        undo();
+        assertEquals(gaze.getCells(), List.of(cell), "only the delete was recorded");
+        assertFalse(spreadsheet.getUndoManager().canUndo());
+    }
+
     @Test
     public void withNothingSelectedTheCellsLastSelectedAreTimed() {
         Cell cell = gaze.createPointCell(1_000);
@@ -353,6 +431,21 @@ public class CellCommandsTest {
         undo();
         assertEquals(gaze.getCells().size(), 2);
         assertFalse(spreadsheet.getUndoManager().canUndo(), "one edit");
+    }
+
+    /** Redo deletes the very cell deleted, not another with the same times and value. */
+    @Test
+    public void redoingADeleteRemovesTheCellDeleted() {
+        Cell deleted = gaze.createPointCell(1_000);
+        Cell kept = gaze.createPointCell(1_000);
+        dataStore.deselectAll();
+        deleted.setSelected(true);
+
+        cells.deleteSelected();
+        undo();
+        spreadsheet.redo();
+
+        assertEquals(gaze.getCells(), List.of(kept));
     }
 
     @Test

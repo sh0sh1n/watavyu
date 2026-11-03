@@ -710,8 +710,9 @@ public final class VideoController implements ClockListener {
      */
     public void setCellOnsetAction() {
         logger.info("Set cell onset");
-        spreadsheet.cells().setOnsets(getCurrentTime());
-        setOnsetField(getCurrentTime());
+        long time = getCurrentTime();
+        spreadsheet.cells().setOnsets(time);
+        setOnsetField(time);
     }
 
     /**
@@ -719,8 +720,9 @@ public final class VideoController implements ClockListener {
      */
     public void setCellOffsetAction() {
         logger.info("Set cell offset");
-        spreadsheet.cells().setOffsets(getCurrentTime());
-        setOffsetField(getCurrentTime());
+        long time = getCurrentTime();
+        spreadsheet.cells().setOffsets(time);
+        setOffsetField(time);
     }
 
     /**

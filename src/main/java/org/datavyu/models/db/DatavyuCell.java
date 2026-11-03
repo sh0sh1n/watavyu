@@ -240,6 +240,9 @@ public class DatavyuCell implements Cell {
         DatavyuMatrixCellValue val = (DatavyuMatrixCellValue) getCellValue();
         List<CellValue> cellValues = val.getArguments();
         cellValues.get(index).set(value);
+        for (CellListener cl : listeners) {
+            cl.valueChange(val);
+        }
     }
 
     @Override

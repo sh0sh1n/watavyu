@@ -16,10 +16,10 @@ Updated 2026-11-03. Re-measure with the commands in [BUILDING.md › Analysis Re
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
 | Java source (main) | 242 files, 42.5k lines | 141 files, 24.9k lines |
-| Tests / line coverage | 113 / 9.9% | 532 / 58.9%; views about half, undo edits about half |
+| Tests / line coverage | 113 / 9.9% | 540 / 59.1%; views about half, undo edits 59% |
 | Runtime dependencies / with known vulnerabilities | 28 / 8 | 13 / 0 |
-| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 492 |
-| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 342 / 65 (none on thread safety, now gated); 15 |
+| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 493 |
+| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 343 / 65 (none on thread safety, now gated); 15 |
 | Never-invoked methods (`dead-code.py`) | 109+ | 21: test-only accessors, unused settings setters, and Swing overrides the script cannot see |
 | Static global access (`grep -rohP 'Datavyu\.(get\|set)\w*\(' src/main/java \| wc -l`) | about 330 call sites | 0: each tab's `ProjectController` is passed to what it owns |
 

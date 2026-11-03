@@ -75,12 +75,19 @@ abstract public class ChangeCellEdit extends SpreadSheetEdit {
         updateCell(cell);
     }
 
+    /**
+     * @param other another edit of a cell
+     * @return whether it changed the same cell; edits of different cells are never duplicates of each other
+     */
+    protected boolean sameCell(final ChangeCellEdit other) {
+        return other.cell == cell;
+    }
+
     abstract protected void updateCell(Cell cell);
 
     @Override
     public boolean equals(Object obj) {
-        return (obj instanceof ChangeCellEdit) &&
-                ((ChangeCellEdit) obj).granularity == this.granularity;
+        return (obj instanceof ChangeCellEdit other) && other.granularity == this.granularity && sameCell(other);
     }
 
     @Override

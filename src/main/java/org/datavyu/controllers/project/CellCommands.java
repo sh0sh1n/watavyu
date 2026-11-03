@@ -3,9 +3,7 @@ package org.datavyu.controllers.project;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.models.db.Cell;
-import org.datavyu.models.db.CellValue;
 import org.datavyu.models.db.DataStore;
-import org.datavyu.models.db.MatrixCellValue;
 import org.datavyu.models.db.Variable;
 import org.datavyu.undoableedits.AddCellEdit;
 import org.datavyu.undoableedits.ChangeCellEdit.Granularity;
@@ -60,8 +58,22 @@ public final class CellCommands {
      * @return the new cell, or null if that column is a media column or is locked
      */
     public Cell newCellInSelectedColumn(final long time) {
-        List<Variable> selected = dataStore().getSelectedVariables();
+        List<Variable> selected = selectedColumns();
         return newCellIn(selected.isEmpty() ? spreadsheet.getLastCreatedVariable() : selected.get(0), time);
+    }
+
+    /** @return the selected columns, in spreadsheet order */
+    private List<Variable> selectedColumns() {
+        return dataStore().getAllVariables().stream().filter(Variable::isSelected).toList();
+    }
+
+    /** @return the selected cells, by column in spreadsheet order and then by time */
+    private List<Cell> selectedCells() {
+        List<Cell> selected = new ArrayList<>();
+        for (Variable column : dataStore().getAllVariables()) {
+            column.getCellsTemporally().stream().filter(Cell::isSelected).forEach(selected::add);
+        }
+        return selected;
     }
 
     /**
@@ -76,7 +88,7 @@ public final class CellCommands {
      * @return the new cell, or null if the column to close or the one for the new cell is locked
      */
     public Cell newCellClosingPrevious(final long time) {
-        List<Variable> selected = dataStore().getSelectedVariables();
+        List<Variable> selected = selectedColumns();
         Cell lastSelected = spreadsheet.getLastSelectedCell();
         Variable closing = selected.size() == 1 ? selected.get(0) : lastSelected == null ? null
             : lastSelected.getVariable();
@@ -109,18 +121,18 @@ public final class CellCommands {
 
     /** @return the column for a new cell at a time, as {@link #newCellClosingPrevious(long)} picks it, or null */
     private Variable columnForNewCellAt() {
-        for (Variable column : dataStore().getSelectedVariables()) {
+        for (Variable column : selectedColumns()) {
             if (!column.isMedia()) {
                 return column;
             }
         }
-        for (Cell cell : dataStore().getSelectedCells()) {
+        for (Cell cell : selectedCells()) {
             if (!cell.getVariable().isMedia()) {
                 return cell.getVariable();
             }
         }
         Variable last = spreadsheet.getLastCreatedVariable();
-        if (last != null && !last.isMedia()) {
+        if (inSpreadsheet(last) && !last.isMedia()) {
             return last;
         }
         return dataStore().getAllVariables().stream().filter(column -> !column.isMedia()).findFirst().orElse(null);
@@ -136,8 +148,13 @@ public final class CellCommands {
         return cell;
     }
 
+    /** @return whether a column is in the spreadsheet, as one remembered as last given a cell may have been deleted */
+    private boolean inSpreadsheet(final Variable column) {
+        return column != null && dataStore().getAllVariables().contains(column);
+    }
+
     private Cell createPointCell(final Variable column, final long time) {
-        if (column == null || column.isMedia() || column.refusesEdits()) {
+        if (!inSpreadsheet(column) || column.isMedia() || column.refusesEdits()) {
             return null;
         }
         logger.info("New cell in " + column.getName() + " at " + time);
@@ -158,7 +175,7 @@ public final class CellCommands {
     public List<Cell> newCellsBeside(final ArrayDirection direction) {
         List<Variable> visible = dataStore().getVisibleVariables();
         List<Cell> made = new ArrayList<>();
-        for (Cell source : dataStore().getSelectedCells()) {
+        for (Cell source : selectedCells()) {
             int own = visible.indexOf(source.getVariable());
             int beside = own + direction.getModifier();
             if (own < 0 || beside < 0 || beside >= visible.size()) {
@@ -184,21 +201,17 @@ public final class CellCommands {
      * @param column the selected column
      * @param typed  the key's character
      * @param time   the new cell's onset and offset
-     * @return the new cell, or null in a media column or a locked one
+     * @return the new cell, or null in a media column, a locked one or one with no codes
      */
     public Cell newCellTyped(final Variable column, final char typed, final long time) {
-        Cell cell = createPointCell(column, time);
-        if (cell == null) {
+        if (column != null && column.getRootNode().childArguments.isEmpty()) {
+            // A column with no codes holds timing only, with nowhere to put the key.
             return null;
         }
-        CellValue value = cell.getCellValue();
-        if (value instanceof MatrixCellValue matrix) {
-            matrix.getArguments().get(0).set(String.valueOf(typed));
-        } else {
-            value.set(String.valueOf(typed));
+        Cell cell = createPointCell(column, time);
+        if (cell != null) {
+            cell.setMatrixValue(0, String.valueOf(typed));
         }
-        // A value set in the model does not reach the cell's view on its own.
-        spreadsheet.redrawCells();
         return cell;
     }
 
@@ -235,14 +248,14 @@ public final class CellCommands {
     }
 
     private List<Cell> cellsToTime() {
-        List<Cell> selected = dataStore().getSelectedCells();
+        List<Cell> selected = selectedCells();
         return List.copyOf(selected.isEmpty() ? spreadsheet.getLastSelectedCells() : selected);
     }
 
     /** Delete Cells: deletes the selected cells, except those in locked columns, as one edit in the undo history. */
     public void deleteSelected() {
         List<Cell> deleted = new ArrayList<>();
-        for (Cell cell : dataStore().getSelectedCells()) {
+        for (Cell cell : selectedCells()) {
             if (!cell.getVariable().refusesEdits()) {
                 deleted.add(cell);
             }

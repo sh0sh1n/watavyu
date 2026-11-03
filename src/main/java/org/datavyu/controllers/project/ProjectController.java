@@ -226,13 +226,16 @@ public final class ProjectController {
     }
 
     /**
-     * Removes cells without recording an edit, as undoing and redoing do; the cells last created and selected are
-     * forgotten if they go, and the selection is cleared.
+     * Removes cells without recording an edit, as deleting and undoing a new cell do; the cells last created and
+     * selected are forgotten if they go, and the selection is cleared.
      *
      * @param removed cells of this spreadsheet
      */
     public void removeCells(final List<Cell> removed) {
         dataStore.deselectAll();
+        List<Cell> stillSelected = new ArrayList<>(lastSelectedCells);
+        stillSelected.removeAll(removed);
+        lastSelectedCells = stillSelected;
         for (Cell cell : removed) {
             if (cell.equals(lastCreatedCell)) {
                 lastCreatedCell = null;

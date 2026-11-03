@@ -67,19 +67,10 @@ public class RemoveCellEdit extends SpreadSheetEdit {
         super.redo();
         LOGGER.info("Redoing remove cells");
 
+        // Undo put these very cells back, so they are removed themselves, not looked up by their times and value.
         List<Cell> cellsToDelete = new ArrayList<Cell>();
-
         for (CellTO cellTO : cellTOV) {
-            Variable var = model.getVariable(cellTO.getParentVariableName());
-
-            for (Cell cell : var.getCells()) {
-                if (cell.getOnset() == cellTO.getOnset() &&
-                        cell.getOffset() == cellTO.getOffset() &&
-                        cell.getValueAsString().equals(cellTO.getValue())) {
-                    cellsToDelete.add(cell);
-                    break;
-                }
-            }
+            cellsToDelete.add(cellTO.getCell());
         }
         controller.removeCells(cellsToDelete);
     }

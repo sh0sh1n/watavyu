@@ -19,6 +19,7 @@ import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.Variable;
 
 import javax.swing.undo.CannotRedoException;
+import java.util.List;
 import javax.swing.undo.CannotUndoException;
 
 /**
@@ -53,7 +54,6 @@ public class AddCellEdit extends SpreadSheetEdit {
     @Override
     public void undo() throws CannotUndoException {
         super.undo();
-        Variable var = model.getVariable(varName);
-        var.removeCell(addedCell);
+        controller.removeCells(List.of(addedCell));
     }
 }
