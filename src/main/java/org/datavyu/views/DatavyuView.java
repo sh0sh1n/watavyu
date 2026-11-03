@@ -227,7 +227,7 @@ public final class DatavyuView implements FileDropEventListener {
      *
      * @param panel the spreadsheet's view
      */
-    private void removeTab(final SpreadSheetPanel panel) {
+    void removeTab(final SpreadSheetPanel panel) {
         tabbedPane.remove(panel);
         panel.close();
     }
@@ -450,8 +450,7 @@ public final class DatavyuView implements FileDropEventListener {
         try {
             new SaveController().saveProject(file, projectController.toDocument(file.getAbsoluteFile().getParentFile()
                 .toPath()));
-            projectController.markProjectAsUnchanged();
-            projectController.getDataStore().markAsUnchanged();
+            projectController.markSaved();
             return true;
         } catch (UserWarningException e) {
             logger.error("Save failed. Error: ", e);

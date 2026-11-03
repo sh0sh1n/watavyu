@@ -68,10 +68,11 @@ public final class AutoSaveController implements ActionListener {
     /** Stops saving and deletes the last autosave, as the spreadsheet's work was saved or knowingly discarded. */
     public void discard() {
         timer.stop();
-        deleteFile();
+        clear();
     }
 
-    private void deleteFile() {
+    /** Deletes the last autosave, as the spreadsheet's work was just saved; saving goes on while it changes. */
+    public void clear() {
         if (file != null) {
             file.delete();
             file = null;
@@ -94,7 +95,7 @@ public final class AutoSaveController implements ActionListener {
      */
     void save() {
         if (!controller.isChanged()) {
-            deleteFile();
+            clear();
             return;
         }
         File next = null;

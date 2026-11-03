@@ -83,6 +83,24 @@ public class AutoSaveControllerTest {
         }
     }
 
+    @Test
+    public void savingTheProjectDeletesItsAutosaveAtOnce() throws Exception {
+        ProjectController spreadsheet = spreadsheet("study", "gaze");
+        spreadsheet.startAutoSave(1);
+        try {
+            spreadsheet.getAutoSave().save();
+            File unsaved = spreadsheet.getAutoSave().getFile();
+            assertTrue(unsaved.exists());
+
+            spreadsheet.markSaved();
+
+            assertFalse(unsaved.exists());
+            assertFalse(spreadsheet.isChanged());
+        } finally {
+            spreadsheet.close();
+        }
+    }
+
     @Test(expectedExceptions = IllegalArgumentException.class)
     public void anIntervalUnderAMinuteIsRefused() throws Exception {
         new AutoSaveController(spreadsheet("study", "gaze"), 0);

@@ -12,6 +12,8 @@ import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.DataStoreFactory;
 import org.datavyu.models.project.Project;
 import org.datavyu.views.discrete.SpreadSheetPanel;
+import org.datavyu.views.discrete.layouts.SheetLayoutFactory;
+import org.datavyu.views.discrete.layouts.SheetLayoutFactory.SheetLayoutType;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -24,8 +26,9 @@ import javax.swing.JTabbedPane;
 import javax.swing.SwingUtilities;
 
 /**
- * The main window holds one tab per open spreadsheet. An untitled spreadsheet with no changes gives way to a project
- * opened, once it has opened, and each tab's title shows its own project, the window's the selected one's.
+ * The main window holds one tab per open spreadsheet. The one open at launch has no unsaved changes, an untitled
+ * spreadsheet with no changes gives way to a project opened, once it has opened, and each tab's title shows its own
+ * project, the window's the selected one's.
  */
 public class DatavyuViewTest {
 
@@ -47,9 +50,7 @@ public class DatavyuViewTest {
         SwingUtilities.invokeAndWait(() -> {
             JTabbedPane tabs = view.getTabbedPane();
             while (tabs.getTabCount() > 0) {
-                SpreadSheetPanel panel = (SpreadSheetPanel) tabs.getComponentAt(0);
-                tabs.remove(0);
-                panel.close();
+                view.removeTab((SpreadSheetPanel) tabs.getComponentAt(0));
             }
             frame.dispose();
         });
@@ -79,6 +80,38 @@ public class DatavyuViewTest {
         });
         // Titles are shown on the EDT after the change that prompts them.
         SwingUtilities.invokeAndWait(() -> { });
+    }
+
+    /** F4: spreadsheets open in temporal layout, so media clips line up with the cells coded from them. */
+    @Test
+    public void spreadsheetsOpenInTemporalLayout() {
+        assertEquals(SheetLayoutFactory.DEFAULT_LAYOUT, SheetLayoutType.WeakTemporal);
+    }
+
+    @Test
+    public void theTitleNamesTheApplicationAndTheProject() {
+        assertEquals(DatavyuView.windowTitle("Watavyu", "study.watavyu.json  *", false), "Watavyu - study.watavyu.json  *");
+    }
+
+    @Test
+    public void theTitleShowsQuickKeyMode() {
+        assertEquals(DatavyuView.windowTitle("Watavyu", "study.watavyu.json  ", true), "Watavyu - study.watavyu.json   <QUICK KEY MODE>");
+    }
+
+    /** B8: a recovered project is named after the project that was autosaved. */
+    @Test
+    public void aRecoveredProjectIsNamedAfterTheOriginal() {
+        assertEquals(DatavyuView.recoveredName("~study_12005522346316252883.watavyu.json"), "study");
+        assertEquals(DatavyuView.recoveredName("~session_04_5415962468724307690.watavyu.json"), "session_04");
+        assertEquals(DatavyuView.recoveredName("~noname_42.watavyu.json"), "noname");
+    }
+
+    /** It has its empty media columns but no unsaved changes, so it is not autosaved and gives way to a project. */
+    @Test
+    public void theSpreadsheetOpenAtLaunchHasNoUnsavedChanges() throws Exception {
+        onEdt(() -> view.startFirstSpreadsheet());
+
+        assertFalse(view.selectedController().isChanged());
     }
 
     @Test

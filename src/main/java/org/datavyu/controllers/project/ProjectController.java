@@ -185,6 +185,20 @@ public final class ProjectController {
         autoSave.start();
     }
 
+    /** @return this spreadsheet's autosave, or null until it is started */
+    public AutoSaveController getAutoSave() {
+        return autoSave;
+    }
+
+    /** Records that the project was just saved: it has no unsaved changes, so its autosave is deleted. */
+    public void markSaved() {
+        markProjectAsUnchanged();
+        dataStore.markAsUnchanged();
+        if (autoSave != null) {
+            autoSave.clear();
+        }
+    }
+
     /** Closes this spreadsheet, once its work is saved or knowingly discarded: its autosave stops and is deleted. */
     public void close() {
         if (autoSave != null) {
