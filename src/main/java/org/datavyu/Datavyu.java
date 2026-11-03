@@ -16,6 +16,7 @@ package org.datavyu;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.util.MacOS;
 import org.datavyu.util.Resources;
 import org.datavyu.util.Settings;
@@ -79,7 +80,7 @@ public final class Datavyu {
     /** File path from the command line */
     private String commandLineFile;
 
-    private Datavyu() {
+    Datavyu() {
     }
 
     /**
@@ -197,10 +198,10 @@ public final class Datavyu {
         mainFrame.setVisible(true);
 
         datavyuView.startFirstSpreadsheet();
+        // The spreadsheet open at launch has no unsaved changes, though a recovered autosave opened next does.
+        ProjectController launched = datavyuView.selectedController();
         datavyuView.checkForAutosavedFile();
-
-        // The spreadsheet open at launch has no unsaved changes.
-        datavyuView.selectedController().getDataStore().markAsUnchanged();
+        launched.getDataStore().markAsUnchanged();
         ready();
     }
 

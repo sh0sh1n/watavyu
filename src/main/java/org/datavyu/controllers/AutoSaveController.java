@@ -28,7 +28,9 @@ import java.io.IOException;
 
 /**
  * Autosaves one spreadsheet: every interval, its project is saved to a project file in the temporary folder, replacing
- * the one saved there before. Each spreadsheet has its own, so every open tab can be recovered after a crash.
+ * the one saved there before. Each spreadsheet has its own, so every open tab can be recovered after a crash. Only
+ * unsaved work is kept: a spreadsheet with no unsaved changes has no autosave, so recovery offers only work that would
+ * otherwise be lost.
  */
 public final class AutoSaveController implements ActionListener {
 
@@ -48,9 +50,12 @@ public final class AutoSaveController implements ActionListener {
      * Makes a stopped autosave.
      *
      * @param controller the spreadsheet to save
-     * @param minutes    how often to save it
+     * @param minutes    how often to save it; at least 1
      */
     public AutoSaveController(final ProjectController controller, final int minutes) {
+        if (minutes < 1) {
+            throw new IllegalArgumentException("Autosave interval must be at least a minute: " + minutes);
+        }
         this.controller = controller;
         timer = new Timer(minutes * 60_000, this);
     }
@@ -63,6 +68,10 @@ public final class AutoSaveController implements ActionListener {
     /** Stops saving and deletes the last autosave, as the spreadsheet's work was saved or knowingly discarded. */
     public void discard() {
         timer.stop();
+        deleteFile();
+    }
+
+    private void deleteFile() {
         if (file != null) {
             file.delete();
             file = null;
@@ -79,8 +88,15 @@ public final class AutoSaveController implements ActionListener {
         save();
     }
 
-    /** Saves the spreadsheet's project to a project file in the temporary folder, replacing the last one. */
+    /**
+     * Saves the spreadsheet's project to a project file in the temporary folder, replacing the last one. Once the
+     * spreadsheet has no unsaved changes, as after saving it, its last autosave is deleted instead.
+     */
     void save() {
+        if (!controller.isChanged()) {
+            deleteFile();
+            return;
+        }
         File next = null;
         try {
             String name = controller.getProjectName() == null ? "noname" : controller.getProjectName();

@@ -63,6 +63,32 @@ public class AutoSaveControllerTest {
     }
 
     @Test
+    public void aSpreadsheetWithoutUnsavedChangesHasNoAutosave() throws Exception {
+        ProjectController spreadsheet = spreadsheet("study", "gaze");
+        AutoSaveController autoSave = new AutoSaveController(spreadsheet, 1);
+        try {
+            autoSave.save();
+            File unsaved = autoSave.getFile();
+            assertTrue(unsaved.exists());
+
+            // As after saving the project.
+            spreadsheet.markProjectAsUnchanged();
+            spreadsheet.getDataStore().markAsUnchanged();
+            autoSave.save();
+
+            assertFalse(unsaved.exists());
+            assertNull(autoSave.getFile());
+        } finally {
+            autoSave.discard();
+        }
+    }
+
+    @Test(expectedExceptions = IllegalArgumentException.class)
+    public void anIntervalUnderAMinuteIsRefused() throws Exception {
+        new AutoSaveController(spreadsheet("study", "gaze"), 0);
+    }
+
+    @Test
     public void discardingDeletesOnlyItsOwnAutosave() throws Exception {
         AutoSaveController closed = new AutoSaveController(spreadsheet("first", "gaze"), 1);
         AutoSaveController open = new AutoSaveController(spreadsheet("second", "speech"), 1);

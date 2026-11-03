@@ -20,7 +20,7 @@ import javax.swing.SwingUtilities;
 
 /**
  * The window has one Code Editor, which edits the selected tab's spreadsheet and takes keys only while it is the active
- * window (B20: each editor ever made had kept its keys and its first spreadsheet, so ⌃M added columns to old ones).
+ * window. (Each editor ever made used to keep its keys and its first spreadsheet, so ⌃M added columns to old ones.)
  */
 public class VocabEditorVTest {
 

@@ -3,7 +3,10 @@ package org.datavyu;
 import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.project.Project;
+import org.datavyu.views.DatavyuView;
 import org.datavyu.views.VideoController;
+
+import javax.swing.JFrame;
 
 /** Spreadsheets for tests, wired as a tab wires its own. */
 public final class TestSpreadsheets {
@@ -22,5 +25,15 @@ public final class TestSpreadsheets {
         ProjectController spreadsheet = new ProjectController(new Project(), dataStore);
         spreadsheet.setVideoController(new VideoController(spreadsheet, null));
         return spreadsheet;
+    }
+
+    /**
+     * Fills a window with the main window's contents, as the app does at launch before showing it. Runs on the EDT.
+     *
+     * @param frame the window
+     * @return the main window's contents, with one untitled spreadsheet
+     */
+    public static DatavyuView mainWindow(final JFrame frame) {
+        return new DatavyuView(new Datavyu(), frame);
     }
 }

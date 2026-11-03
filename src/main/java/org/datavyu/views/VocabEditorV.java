@@ -22,7 +22,6 @@ import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.util.Dialogs;
 import org.datavyu.controllers.DeleteColumnController;
 import org.datavyu.models.db.Argument;
-import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.UserWarningException;
 import org.datavyu.models.db.Variable;
 import org.datavyu.util.StringUtils;
@@ -55,9 +54,6 @@ public final class VocabEditorV extends DatavyuDialog {
 
     /** The spreadsheet whose columns and codes are edited: the selected tab's */
     private ProjectController controller;
-
-    /** Data store for the annotations of streams */
-    private DataStore dataStore;
 
     /** All the vocab views displayed in the editor */
     private List<VocabElementV> veViews;
@@ -109,7 +105,6 @@ public final class VocabEditorV extends DatavyuDialog {
 
         LOGGER.info("vocEd - show");
         this.controller = controller;
-        dataStore = controller.getDataStore();
 
         initComponents();
         componentListnersInit();
@@ -206,13 +201,12 @@ public final class VocabEditorV extends DatavyuDialog {
 
     private void makeElements() {
         // Populate current vocab list with vocab data from the database.
-        dataStore = controller.getDataStore();
         veViews = new ArrayList<VocabElementV>();
         verticalFrame = new JPanel();
         verticalFrame.setName("verticalFrame");
         verticalFrame.setLayout(new BoxLayout(verticalFrame, BoxLayout.Y_AXIS));
 
-        for (Variable var : dataStore.getAllVariables()) {
+        for (Variable var : controller.getDataStore().getAllVariables()) {
             if (var.isMedia()) {
                 continue;
             }
@@ -235,7 +229,7 @@ public final class VocabEditorV extends DatavyuDialog {
     }
 
     private boolean isCurrent() {
-        List<Variable> varList = new ArrayList<>(dataStore.getAllVariables());
+        List<Variable> varList = new ArrayList<>(controller.getDataStore().getAllVariables());
         varList.removeIf(Variable::isMedia);
         java.util.ListIterator<Variable> varIt = varList.listIterator();
         for (VocabElementV v : veViews) //wish i could map...
@@ -261,7 +255,7 @@ public final class VocabEditorV extends DatavyuDialog {
             LOGGER.info("vocEd - add column");
 
             // perform the action
-            Variable v = dataStore.createVariable(varName);
+            Variable v = controller.getDataStore().createVariable(varName);
             // Need to get the template from the variable.
             //Matrix m = v.getCellValue();
 
@@ -416,7 +410,7 @@ public final class VocabEditorV extends DatavyuDialog {
                 // record the effect
                 List<Variable> varsToDelete = new ArrayList<Variable>();
                 varsToDelete.add(selectedVocabElement.getVariable());
-                edit = new RemoveVariableEdit(dataStore, varsToDelete);
+                edit = new RemoveVariableEdit(controller.getDataStore(), varsToDelete);
                 new DeleteColumnController(controller, varsToDelete);
 
                 deleteElementVFromView(selectedVocabElement.getVariable().getName());

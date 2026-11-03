@@ -15,10 +15,10 @@ Updated 2026-11-03. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
-| Java source (main) | 242 files, 42.5k lines | 144 files, 25.3k lines |
-| Tests / line coverage | 113 / 9.9% | 496 / 48.3%; views and undo edits about a third |
+| Java source (main) | 242 files, 42.5k lines | 144 files, 25.2k lines |
+| Tests / line coverage | 113 / 9.9% | 496 / 55.3%; views about half, undo edits 37% |
 | Runtime dependencies / with known vulnerabilities | 28 / 8 | 13 / 0 |
-| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 500 |
+| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 499 |
 | PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 354 / 67 (none on thread safety, now gated); 15 |
 | Never-invoked methods (`dead-code.py`) | 109+ | 21: test-only accessors, unused settings setters, and Swing overrides the script cannot see |
 | Static global access (`grep -rohP 'Datavyu\.(get\|set)\w*\(' src/main/java \| wc -l`) | about 330 call sites | 0: each tab's `ProjectController` is passed to what it owns |
@@ -26,6 +26,8 @@ Updated 2026-11-03. Re-measure with the commands in [BUILDING.md › Analysis Re
 ## Bugs
 
 **B19. Closing a tab leaves its media running.** ready, *from reading*. Closing a tab (`SpreadSheetPanel.close`) stops its playback and deletes its autosave, but `MediaPlayers` has no way to close, so the closed spreadsheet's media windows stay open, and its players and clock (`ClockTimer`'s threads) keep running for the rest of the session.
+
+**B20. The Highlight and Focus menu item can describe another tab.** ready, *from reading*. Each tab has its own highlight-and-focus mode (its `VideoController`), but the Spreadsheet menu item's label is set only when the mode is toggled (`DatavyuView.toggleHighlightAndFocusMode`), not when another tab is selected. After turning it off in one tab and selecting another, the label says the mode is off while it is on. Settle with R10, whose commands can say their own state.
 
 **B2. The app changes a global macOS setting.** ready (owner: scope it to the app), *from reading*. At startup `Datavyu` runs `defaults write -g ApplePressAndHoldEnabled -bool false` for every application on the Mac, and restores it only on a clean shutdown; a crash or force-quit leaves it changed. (It used to run when the class loaded, so every test run turned the setting off and never restored it.) The intent is key repeat instead of the accent popup while holding keys. Scope it to the app: in-app key repeat, or a per-app defaults domain once there is an app bundle; then delete the global write.
 
@@ -71,7 +73,7 @@ None open.
 
 Tech debt is paid down in the Java app rather than left for the C++ rewrite (AGENTS.md › North Star, 2026-11-03). The items run in this order, each behaviour-preserving unless it says otherwise, and each pins the behaviour it touches with tests, since most views and undo have none. R10 comes first because the later items, and the new interaction model, build on its commands.
 
-**R10. One path for each user action.** ready. Actions are spread over controllers that do their work in their constructors (`new DeleteCellController(controller, cells)`), views and menu handlers, and the undo edit is posted by the caller in about 20 places, so an action, its lock check and its undo can drift apart (B14 is one such gap). Each action becomes a command on the document that checks locks, changes the model and records its edit, and menus, keys, the drawer and the Code Editor call commands. This is the ground for F7, F12 and a new interaction model (modal, editor-style keys), which need actions that can be named, bound to keys and listed.
+**R10. One path for each user action.** ready. Actions are spread over controllers that do their work in their constructors (`new DeleteCellController(controller, cells)`), views and menu handlers, and the undo edit is posted by the caller in about 20 places, so an action, its lock check and its undo can drift apart (B14 is one such gap). Each action becomes a command on the document that checks locks, changes the model and records its edit, and menus, keys, the drawer and the Code Editor call commands. This is the ground for F7, F12 and a new interaction model (modal, editor-style keys), which need actions that can be named, bound to keys and listed. With it, the views redraw from the model's listeners rather than from each caller, which now checks for a view first (`getSpreadSheetPanel() != null`).
 
 **R4. Per-editor key handling.** ready, with or after R10. `EditorTracker` and the value editors handle keys per editor, with 21 uses of the deprecated modifier API (`getModifiers`, `*_MASK`, `getMenuShortcutKeyMask`). Keys that are commands go through `Shortcuts` to R10's commands; editors keep only text editing. Do before F7.
 
@@ -79,7 +81,7 @@ Tech debt is paid down in the Java app rather than left for the C++ rewrite (AGE
 
 **R7. Threading.** Make the boundary between the clock thread, the JavaFX thread and the EDT explicit, as `JavaFxPlayback` already does for the player. `ClockTimer` notifies its listeners on its own pool threads, most of them while holding its lock, so a listener that waits on another thread can deadlock it; the playhead (`PlayheadCarriage.show`) and `MediaPlayers` hand their work to the EDT. Cells still restyle for the needle on the clock thread (`SpreadsheetCell`'s clock listener, through `CellLook`), as they did before U5. SpotBugs's thread-safety findings are at zero and gated.
 
-**R9. Autosave and crash recovery.** ready. `AutoSaveController` saves a `~<name>_*.watavyu.json` project file to the temporary folder every minute; at launch, `DatavyuView.checkForAutosavedFile` offers to recover any left in the temporary folder and opens one as an unsaved project; that flow is checked only by reading, as its dialogs need clicks. The temporary folder is shared with other apps and cleared by macOS. Settle this together with B11.
+**R9. Autosave and crash recovery.** ready. `AutoSaveController` saves a `~<name>_*.watavyu.json` project file for each tab with unsaved changes to the temporary folder every minute; at launch, `DatavyuView.checkForAutosavedFile` offers to recover any left in the temporary folder and opens one as an unsaved project; that flow is checked only by reading, as its dialogs need clicks. The temporary folder is shared with other apps and cleared by macOS. Settle this together with B11.
 
 **R12. Warnings and findings to zero, in modern Java.** ready, alongside the others. Measures counts the Error Prone and javac lint warnings (`-PallWarnings`; about half are Javadoc summaries), PMD findings and SpotBugs findings. Clear them category by category and make each one that reaches zero fail the build (AGENTS.md › How to Work Here), so the gates grow until every check is one. Modernise as code is touched: records for plain data, pattern matching and switch expressions (Error Prone suggests both), `java.time` instead of `Date` and `SimpleDateFormat`, and no raw types.
 
