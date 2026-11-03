@@ -62,6 +62,9 @@ public final class ClockTimer {
     /** The rate factor for the clock updates */
     private float rate = 1F;
 
+    /** How long closing waits for a tick already running to finish. */
+    private static final long CLOSE_WAIT_MILLIS = 500;
+
     private final ScheduledExecutorService execService = Executors.newScheduledThreadPool(4);
 
     /** Listeners of this clock */
@@ -267,12 +270,25 @@ public final class ClockTimer {
      * @param listener Listener requiring clockTick updates
      */
     public synchronized void registerListener(final ClockListener listener) {
-        clockListeners.add(listener);
+        if (!isClosed()) {
+            clockListeners.add(listener);
+        }
     }
 
-    /** Stops the clock's threads for good, as its spreadsheet closes; its listeners are told nothing more. */
+    /**
+     * Stops the clock for good, as its spreadsheet closes: its threads stop, waiting briefly for a tick already
+     * running, and its listeners are told nothing more.
+     */
     public void close() {
         execService.shutdownNow();
+        clockListeners.clear();
+        try {
+            if (!execService.awaitTermination(CLOSE_WAIT_MILLIS, TimeUnit.MILLISECONDS)) {
+                logger.warn("A clock tick was still running " + CLOSE_WAIT_MILLIS + " ms after closing");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     /** @return whether {@link #close()} has stopped the clock's threads */
