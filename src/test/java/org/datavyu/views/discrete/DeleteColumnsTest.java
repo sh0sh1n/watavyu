@@ -6,15 +6,17 @@ import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 
+import org.datavyu.controllers.project.ColumnCommands;
+import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.DataStoreFactory;
 import org.datavyu.models.db.Variable;
+import org.datavyu.models.project.Project;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import javax.swing.JMenuItem;
-import javax.swing.undo.UndoManager;
 import java.util.List;
 
 /** A column's header menu deletes the column, or the selected columns when it is one of them, as one undoable edit. */
@@ -24,7 +26,8 @@ public class DeleteColumnsTest {
     private Variable first;
     private Variable second;
     private Variable media;
-    private UndoManager history;
+    private ProjectController spreadsheet;
+    private ColumnCommands columns;
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -35,12 +38,13 @@ public class DeleteColumnsTest {
         first.setSelected(true);
         second.setSelected(true);
         media.setSelected(false);
-        history = new UndoManager();
+        spreadsheet = new ProjectController(new Project(), dataStore);
+        columns = spreadsheet.columns();
     }
 
     @Test
     public void anUnselectedColumnIsDeletedAlone() {
-        JMenuItem item = SpreadsheetColumn.deleteItem(dataStore, media, history::addEdit);
+        JMenuItem item = SpreadsheetColumn.deleteItem(columns, dataStore, media);
         assertEquals(item.getText(), "Delete Column");
 
         item.doClick();
@@ -48,12 +52,12 @@ public class DeleteColumnsTest {
         assertNull(dataStore.getVariable("media_1"));
         assertNotNull(dataStore.getVariable("first"));
         assertNotNull(dataStore.getVariable("second"));
-        assertEquals(history.getUndoPresentationName(), "Undo Delete Column media_1");
+        assertEquals(spreadsheet.getUndoManager().getUndoPresentationName(), "Undo Delete Column media_1");
     }
 
     @Test
     public void aSelectedColumnDeletesTheSelection() {
-        JMenuItem item = SpreadsheetColumn.deleteItem(dataStore, second, history::addEdit);
+        JMenuItem item = SpreadsheetColumn.deleteItem(columns, dataStore, second);
         assertEquals(item.getText(), "Delete Selected Columns");
 
         item.doClick();
@@ -61,14 +65,14 @@ public class DeleteColumnsTest {
         assertNull(dataStore.getVariable("first"));
         assertNull(dataStore.getVariable("second"));
         assertNotNull(dataStore.getVariable("media_1"));
-        assertEquals(history.getUndoPresentationName(), "Undo Delete 2 Columns");
+        assertEquals(spreadsheet.getUndoManager().getUndoPresentationName(), "Undo Delete 2 Columns");
     }
 
     @Test
     public void theOnlySelectedColumnIsDeletedAlone() {
         second.setSelected(false);
 
-        JMenuItem item = SpreadsheetColumn.deleteItem(dataStore, first, history::addEdit);
+        JMenuItem item = SpreadsheetColumn.deleteItem(columns, dataStore, first);
         assertEquals(item.getText(), "Delete Column");
         item.doClick();
 
@@ -80,11 +84,11 @@ public class DeleteColumnsTest {
     @Test
     public void deleteIsDisabledWhileAColumnItWouldDeleteIsLocked() {
         media.setLocked(true);
-        assertFalse(SpreadsheetColumn.deleteItem(dataStore, media, history::addEdit).isEnabled());
-        assertTrue(SpreadsheetColumn.deleteItem(dataStore, first, history::addEdit).isEnabled());
+        assertFalse(SpreadsheetColumn.deleteItem(columns, dataStore, media).isEnabled());
+        assertTrue(SpreadsheetColumn.deleteItem(columns, dataStore, first).isEnabled());
 
         second.setLocked(true);
-        assertFalse(SpreadsheetColumn.deleteItem(dataStore, first, history::addEdit).isEnabled());
+        assertFalse(SpreadsheetColumn.deleteItem(columns, dataStore, first).isEnabled());
     }
 
     /** Undo brings the deleted columns back with their cells, and redo deletes them again, all in one step. */
@@ -93,14 +97,14 @@ public class DeleteColumnsTest {
         Cell cell = first.createCell();
         cell.setOnset(1_000);
 
-        SpreadsheetColumn.deleteItem(dataStore, first, history::addEdit).doClick();
-        history.undo();
+        SpreadsheetColumn.deleteItem(columns, dataStore, first).doClick();
+        spreadsheet.undo();
 
         assertEquals(dataStore.getVariable("first"), first);
         assertEquals(dataStore.getVariable("second"), second);
         assertEquals(first.getCells(), List.of(cell));
 
-        history.redo();
+        spreadsheet.redo();
         assertNull(dataStore.getVariable("first"));
         assertNull(dataStore.getVariable("second"));
     }

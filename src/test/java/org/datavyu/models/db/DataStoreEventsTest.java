@@ -44,12 +44,14 @@ public class DataStoreEventsTest {
     }
 
     @Test
-    public void reorderingColumnsTellsListeners() {
+    public void reorderingColumnsTellsListeners() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
+        Variable first = dataStore.createVariable("first");
+        dataStore.createVariable("second");
         DataStoreListener listener = mock(DataStoreListener.class);
         dataStore.addListener(listener);
 
-        dataStore.columnsReordered();
+        dataStore.moveVariable(first, 1);
 
         verify(listener).variableOrderChanged();
     }

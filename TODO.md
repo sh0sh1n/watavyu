@@ -15,15 +15,17 @@ Updated 2026-11-03. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
-| Java source (main) | 242 files, 42.5k lines | 141 files, 25.0k lines |
-| Tests / line coverage | 113 / 9.9% | 545 / 59.3%; views about half, undo edits 64% |
+| Java source (main) | 242 files, 42.5k lines | 138 files, 24.8k lines |
+| Tests / line coverage | 113 / 9.9% | 571 / 60.3%; views about half, undo edits 69% |
 | Runtime dependencies / with known vulnerabilities | 28 / 8 | 13 / 0 |
-| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 490 |
-| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 342 / 65 (none on thread safety, now gated); 15 |
+| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 486 |
+| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 339 / 61 (none on thread safety, now gated); 15 |
 | Never-invoked methods (`dead-code.py`) | 109+ | 21: test-only accessors, unused settings setters, and Swing overrides the script cannot see |
 | Static global access (`grep -rohP 'Datavyu\.(get\|set)\w*\(' src/main/java \| wc -l`) | about 330 call sites | 0: each tab's `ProjectController` is passed to what it owns |
 
 ## Bugs
+
+**B21. The Code Editor's code edits cannot be undone.** ready, *from reading*. Adding, deleting and moving a code in the Code Editor, and renaming a code or a column, post no undoable edit (`VocabEditorV.addCode`, `delete`, `moveArgumentLeft` and `Right`; `FormalArgEditor` and `VENameEditor` rename), while adding and deleting a column there can be undone. Deleting a code drops its value from every cell of the column. Settle with R10, as a command for each code edit.
 
 **B20. The Highlight and Focus menu item can describe another tab.** ready, *from reading*. Each tab has its own highlight-and-focus mode (its `VideoController`), but the Spreadsheet menu item's label is set only when the mode is toggled (`DatavyuView.toggleHighlightAndFocusMode`), not when another tab is selected. After turning it off in one tab and selecting another, the label says the mode is off while it is on. Settle with R10, whose commands can say their own state.
 
@@ -71,7 +73,7 @@ None open.
 
 Tech debt is paid down in the Java app rather than left for the C++ rewrite (AGENTS.md › North Star, 2026-11-03). The items run in this order, each behaviour-preserving unless it says otherwise, and each pins the behaviour it touches with tests, since most views and undo have none. R10 comes first because the later items, and the new interaction model, build on its commands.
 
-**R10. One path for each user action.** ready. Cell actions are commands (`CellCommands`); column actions, media and the Code Editor still post their own undo edits from views and menu handlers (`DeleteColumnController`, `SpreadsheetColumn`'s header menu, `VocabEditorV`, `NewVariableV`, `DatavyuView.addMediaColumn`, the value editors), so an action, its lock check and its undo can drift apart (B14 is one such gap). Each becomes a command on the document that checks locks, changes the model and records its edit. Then commands get names and state, and menus, keys and the drawer call them by name: the ground for F7, F12 and a new interaction model (modal, editor-style keys), which need actions that can be named, bound to keys and listed. With it, the views redraw from the model's listeners rather than from each caller, which now checks for a view first (`getSpreadSheetPanel() != null`).
+**R10. One path for each user action.** ready. Cell and column actions are commands (`CellCommands`, `ColumnCommands`); adding media, the Code Editor's code edits and the value editors still change the model and post their own undo edits from views (`MediaPlayers.addMediaFiles`, `VocabEditorV`, the value editors), so an action, its lock check and its undo can drift apart (B14 is one such gap, B21 another). Each becomes a command on the document that checks locks, changes the model and records its edit. Then commands get names and state, and menus, keys and the drawer call them by name: the ground for F7, F12 and a new interaction model (modal, editor-style keys), which need actions that can be named, bound to keys and listed. With it, the views redraw from the model's listeners rather than from each caller, which now checks for a view first (`getSpreadSheetPanel() != null`).
 
 **R4. Per-editor key handling.** ready, with or after R10. `EditorTracker` and the value editors handle keys per editor, with 21 uses of the deprecated modifier API (`getModifiers`, `*_MASK`, `getMenuShortcutKeyMask`). Keys that are commands go through `Shortcuts` to R10's commands; editors keep only text editing. Do before F7.
 

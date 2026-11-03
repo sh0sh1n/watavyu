@@ -18,6 +18,7 @@ import org.datavyu.util.Resources;
 import net.miginfocom.swing.MigLayout;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.datavyu.controllers.project.ColumnCommands;
 import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.DataStoreListener;
@@ -29,6 +30,7 @@ import javax.swing.event.TableModelListener;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableModel;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -74,11 +76,8 @@ public final class VariableListV extends DatavyuDialog
     private javax.swing.JTable variableList;
     private JButton showAllButton;
 
-    /** Runs after Show All Columns, to bring the spreadsheet up to date. */
-    private final Runnable afterShowingAll;
-
-    /** Runs after a column is shown or hidden in the list, to bring the spreadsheet up to date. */
-    private final Runnable afterHiding;
+    /** Shows and hides the spreadsheet's columns. */
+    private final ColumnCommands columns;
 
     /**
      * Mapping between database column identifier - to the table model.
@@ -100,34 +99,13 @@ public final class VariableListV extends DatavyuDialog
     public VariableListV(final java.awt.Frame parent,
                          final boolean modal,
                          final ProjectController controller) {
-        this(parent, modal, controller.getDataStore(), () -> {
-            controller.getSpreadSheetPanel().deselectAll();
-            controller.getSpreadSheetPanel().revalidate();
-        }, () -> controller.getSpreadSheetPanel().revalidate());
-    }
-
-    /**
-     * Creates the list.
-     *
-     * @param parent          the frame that owns the list
-     * @param modal           whether the list is modal
-     * @param ds              the spreadsheet whose columns it lists
-     * @param afterShowingAll runs after Show All Columns
-     * @param afterHiding     runs after a column is shown or hidden in the list
-     */
-    VariableListV(final java.awt.Frame parent,
-                  final boolean modal,
-                  final DataStore ds,
-                  final Runnable afterShowingAll,
-                  final Runnable afterHiding) {
         super(parent, modal);
-        this.afterShowingAll = afterShowingAll;
-        this.afterHiding = afterHiding;
+        this.columns = controller.columns();
         tableModel = new VListTableModel();
         dbToTableMap = new HashMap<>();
         initComponents();
         setName(this.getClass().getSimpleName());
-        dataStore = ds;
+        dataStore = controller.getDataStore();
 
         // Set the names of the columns.
         tableModel.addColumn(rMap.getString("Table.orderColumn"));
@@ -180,12 +158,7 @@ public final class VariableListV extends DatavyuDialog
     /** Shows every hidden column of the spreadsheet, and their media windows. */
     private void showAllColumns() {
         LOGGER.info("Showing all columns");
-        for (Variable var : dataStore.getAllVariables()) {
-            if (var.isHidden()) {
-                var.setHidden(false);
-            }
-        }
-        afterShowingAll.run();
+        columns.showAll();
     }
 
     public void populateTable() {
@@ -236,14 +209,13 @@ public final class VariableListV extends DatavyuDialog
                 LOGGER.info("Editied Variable Visbility from VariableList");
 
                 if (var.isHidden() == (Boolean) data) {
-                    var.setHidden(!(Boolean) data);
-                    var.setSelected(false);
+                    if ((Boolean) data) {
+                        columns.show(var);
+                    } else {
+                        columns.hide(List.of(var));
+                    }
                 }
-
             }
-
-            dataStore.markAsChanged();
-            afterHiding.run();
         }
     }
 
@@ -271,8 +243,6 @@ public final class VariableListV extends DatavyuDialog
 
         vals[VCOLUMN] = !variable.isHidden();
         vals[NCOLUMN] = variable.getName();
-        //vals[OCOLUMN] = variable.getOrderIndex() +1;
-            //sometimes getOrderIndex doesn't begin at 0, or there are dupes, etc. is this a big concern?
 
         // Add new row to table model.
         int rowId = tableModel.getRowCount();
@@ -287,7 +257,8 @@ public final class VariableListV extends DatavyuDialog
 
     @Override
     public void variableAdded(final Variable newVariable) {
-        insertRow(newVariable, rMap);
+        // Undo puts a deleted column back in its place, not always last.
+        variableOrderChanged();
     }
 
     @Override

@@ -1,5 +1,6 @@
 package org.datavyu.views.discrete;
 
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
@@ -7,6 +8,7 @@ import org.datavyu.TestSpreadsheets;
 import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.DataStoreFactory;
+import org.datavyu.models.db.UserWarningException;
 import org.datavyu.models.db.Variable;
 import org.testng.annotations.Test;
 
@@ -14,6 +16,8 @@ import java.awt.KeyEventDispatcher;
 import java.awt.KeyboardFocusManager;
 import java.awt.Toolkit;
 import java.awt.event.KeyEvent;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.swing.JTextField;
@@ -64,5 +68,47 @@ public class SpreadSheetPanelTest {
         });
 
         assertTrue(spreadsheet.get().getVideoController().getClockTimer().isClosed());
+    }
+
+    /** The panel shows the columns in the data store's order: after a move, and after undo puts a column back. */
+    @Test
+    public void theColumnsFollowTheSpreadsheetOrder() throws Exception {
+        DataStore dataStore = DataStoreFactory.newDataStore();
+        AtomicReference<List<String>> afterMove = new AtomicReference<>();
+        AtomicReference<List<String>> afterUndo = new AtomicReference<>();
+        AtomicReference<List<String>> headers = new AtomicReference<>();
+        SwingUtilities.invokeAndWait(() -> {
+            ProjectController spreadsheet = TestSpreadsheets.withPlayback(dataStore);
+            SpreadSheetPanel panel = new SpreadSheetPanel(spreadsheet, null);
+            spreadsheet.setSpreadSheetPanel(panel);
+            panel.registerListeners();
+            try {
+                Variable gaze = spreadsheet.columns().newColumn("gaze");
+                spreadsheet.columns().newColumn("speech");
+                Variable gesture = spreadsheet.columns().newColumn("gesture");
+
+                spreadsheet.columns().move(gesture, gaze);
+                afterMove.set(names(panel.getColumns()));
+
+                spreadsheet.columns().delete(List.of(gaze));
+                spreadsheet.undo();
+                afterUndo.set(names(panel.getColumns()));
+                headers.set(Arrays.stream(panel.getColumns().get(0).getParent().getComponents())
+                    .filter(SpreadsheetColumn.class::isInstance)
+                    .map(header -> ((SpreadsheetColumn) header).getVariable().getName()).toList());
+            } catch (UserWarningException e) {
+                throw new AssertionError(e);
+            } finally {
+                panel.close();
+            }
+        });
+
+        assertEquals(afterMove.get(), List.of("gesture", "gaze", "speech"));
+        assertEquals(afterUndo.get(), List.of("gesture", "gaze", "speech"));
+        assertEquals(headers.get(), List.of("gesture", "gaze", "speech"));
+    }
+
+    private static List<String> names(final List<SpreadsheetColumn> columns) {
+        return columns.stream().map(column -> column.getVariable().getName()).toList();
     }
 }

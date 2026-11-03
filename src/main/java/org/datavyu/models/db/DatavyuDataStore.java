@@ -25,7 +25,10 @@ package org.datavyu.models.db;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * TODO: Fill in the comment at the ???
@@ -49,16 +52,13 @@ public class DatavyuDataStore implements DataStore {
     /** All listeners of this data store */
     private List<DataStoreListener> dataStoreListeners = new ArrayList<DataStoreListener>();
 
-    /** The variable that this data store holds */
-    private Map<String, Variable> variables;
+    /** The columns by name. */
+    private final Map<String, Variable> variables = new HashMap<>();
 
-    /** Compare variable with this class instance */
-    private VariableComparator VariableComparator = new VariableComparator();
-    
-
+    /** The columns in spreadsheet order, which this keeps; views follow it. */
+    private final List<Variable> order = new ArrayList<>();
 
     public DatavyuDataStore() {
-        variables = new HashMap<>();
         changed = false;
     }
 
@@ -74,16 +74,15 @@ public class DatavyuDataStore implements DataStore {
 
     @Override
     public List<Variable> getAllVariables() {
-        List<Variable> allVariables = new ArrayList<Variable>();
-        for (String s : variables.keySet()) {
-            allVariables.add(variables.get(s));
-        }
-        Collections.sort(allVariables, VariableComparator);
-        return allVariables;
+        return new ArrayList<>(order);
     }
 
     @Override
+    public int indexOf(final Variable column) {
+        return order.indexOf(column);
+    }
 
+    @Override
     public List<Variable> getVisibleVariables() {
         List<Variable> allVariables = getAllVariables();
         List<Variable> visibleVariables = new ArrayList<Variable>();
@@ -97,26 +96,20 @@ public class DatavyuDataStore implements DataStore {
 
     @Override
     public List<Variable> getSelectedVariables() {
-        List<Variable> selectedVariables = new ArrayList<Variable>();
-        for (String s : variables.keySet()) {
-            if (variables.get(s).isSelected()) {
-                selectedVariables.add(variables.get(s));
-            }
-        }
-        return selectedVariables;
+        return order.stream().filter(Variable::isSelected).toList();
     }
 
     @Override
     public void clearVariableSelection() {
-        for (String s : variables.keySet()) {
-            variables.get(s).setSelected(false);
+        for (Variable variable : order) {
+            variable.setSelected(false);
         }
     }
 
     @Override
     public List<Cell> getSelectedCells() {
         List<Cell> selectedCells = new ArrayList<Cell>();
-        for (Variable variable : variables.values()) {
+        for (Variable variable : order) {
             for (Cell cell : variable.getCells()) {
                 if (cell.isSelected()) {
                     selectedCells.add(cell);
@@ -128,7 +121,7 @@ public class DatavyuDataStore implements DataStore {
 
     @Override
     public void clearCellSelection() {
-        for (Variable variable : variables.values()) {
+        for (Variable variable : order) {
             for (Cell cell : variable.getCells()) {
                 if (cell.isSelected()) {
                     cell.setSelected(false);
@@ -153,7 +146,7 @@ public class DatavyuDataStore implements DataStore {
 
     @Override
     public Variable getVariable(Cell cell) {
-        for (Variable v : variables.values()) {
+        for (Variable v : order) {
             if (v.getCells().contains(cell)) return v;
         }
         return null;
@@ -185,33 +178,50 @@ public class DatavyuDataStore implements DataStore {
         }
 
         Variable v = new DatavyuVariable(name, rootNode, grandfathered, this, media);
-        variables.put(name, v);
-
-        for (DataStoreListener dbl : this.dataStoreListeners) {
-            dbl.variableAdded(v);
-        }
-
-        markAsChanged();
+        addVariable(v, order.size());
         return v;
     }
 
     @Override
     public void removeVariable(final Variable var) {
-        for (DataStoreListener listener : this.dataStoreListeners) {
-            listener.variableRemoved(var);
+        if (!order.remove(var)) {
+            return;
         }
         variables.remove(var.getName());
         markAsChanged();
+        for (DataStoreListener listener : List.copyOf(dataStoreListeners)) {
+            listener.variableRemoved(var);
+        }
     }
 
     @Override
-    public void addVariable(final Variable var) {
-        for (DataStoreListener dbl : this.dataStoreListeners) {
-            dbl.variableAdded(var);
+    public void addVariable(final Variable var, final int index) {
+        if (variables.containsKey(var.getName()) || index < 0 || index > order.size()) {
+            throw new IllegalArgumentException("Cannot add column " + var.getName() + " at " + index);
         }
-
         variables.put(var.getName(), var);
+        order.add(index, var);
         markAsChanged();
+        for (DataStoreListener listener : List.copyOf(dataStoreListeners)) {
+            listener.variableAdded(var);
+        }
+    }
+
+    @Override
+    public void moveVariable(final Variable var, final int index) {
+        int from = order.indexOf(var);
+        if (from < 0 || index < 0 || index >= order.size()) {
+            throw new IllegalArgumentException("Cannot move column " + var.getName() + " to " + index);
+        }
+        if (from == index) {
+            return;
+        }
+        order.remove(from);
+        order.add(index, var);
+        markAsChanged();
+        for (DataStoreListener listener : List.copyOf(dataStoreListeners)) {
+            listener.variableOrderChanged();
+        }
     }
 
     @Override
@@ -249,13 +259,6 @@ public class DatavyuDataStore implements DataStore {
             for (DataStoreListener listener : this.dataStoreListeners) {
                 listener.variableNameChange(variable);
             }
-        }
-    }
-
-    @Override
-    public void columnsReordered() {
-        for (DataStoreListener listener : this.dataStoreListeners) {
-            listener.variableOrderChanged();
         }
     }
 

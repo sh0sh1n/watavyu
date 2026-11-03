@@ -31,7 +31,6 @@ import org.datavyu.models.db.*;
 import org.datavyu.plugins.javafx.JavaFxVideoPlugin;
 import org.datavyu.projectfile.ProjectDocument;
 import org.datavyu.projectfile.ProjectPaths;
-import org.datavyu.undoableedits.AddMediaColumnEdit;
 import org.datavyu.undoableedits.SpreadsheetUndoManager;
 import org.datavyu.util.ArrayDirection;
 import org.datavyu.util.DragAndDrop.TransparentPanel;
@@ -870,11 +869,8 @@ public final class DatavyuView implements FileDropEventListener {
      * Action for adding an empty media column, for media added later.
      */
     public void newMediaColumn() {
-        ProjectController selected = selectedController();
-        DataStore dataStore = selected.getDataStore();
         try {
-            Variable column = MediaColumns.addSelected(dataStore);
-            selected.postEdit(new AddMediaColumnEdit(dataStore, column.getName()));
+            selectedController().columns().newMediaColumn();
         } catch (UserWarningException e) {
             logger.error("Unable to add a media column", e);
             warn(e.getMessage());

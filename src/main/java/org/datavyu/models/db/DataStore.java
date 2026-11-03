@@ -31,9 +31,15 @@ import java.util.List;
 public interface DataStore {
 
     /**
-     * @return All the variables held in the datastore.
+     * @return the columns, in spreadsheet order
      */
     List<Variable> getAllVariables();
+
+    /**
+     * @param column a column
+     * @return its place in the spreadsheet order, or -1 if it is not in the spreadsheet
+     */
+    int indexOf(Variable column);
 
     /**
      * @return All the variables held in the datastore that are visible and not hidden
@@ -115,18 +121,39 @@ public interface DataStore {
         throws UserWarningException;
 
     /**
-     * Removes a variable from the datastore.
+     * Removes a column, then tells the listeners; nothing happens if the column is not in the spreadsheet.
      *
-     * @param var The variable to remove from the datastore.
+     * @param var the column
      */
     void removeVariable(final Variable var);
 
     /**
-     * Adds an already created variable to the datastore (for undo).
+     * Puts a column created earlier back after the others, as undo and redo do, then tells the listeners.
      *
-     * @param var The variable to remove from the datastore.
+     * @param var the column
      */
-    void addVariable(final Variable var);
+    default void addVariable(final Variable var) {
+        addVariable(var, getAllVariables().size());
+    }
+
+    /**
+     * Puts a column created earlier back at a place in the spreadsheet order, as undo and redo do, then tells the
+     * listeners.
+     *
+     * @param var   the column
+     * @param index its place, from 0 to the number of columns
+     * @throws IllegalArgumentException if the spreadsheet has a column of the same name, or the place is out of range
+     */
+    void addVariable(Variable var, int index);
+
+    /**
+     * Moves a column to another place in the spreadsheet order, shifting those between, then tells the listeners.
+     *
+     * @param var   a column in the spreadsheet
+     * @param index its new place, from 0 to one less than the number of columns
+     * @throws IllegalArgumentException if the column is not in the spreadsheet or the place is out of range
+     */
+    void moveVariable(Variable var, int index);
 
     /**
      * Removes a variable from the datastore.
@@ -170,11 +197,6 @@ public interface DataStore {
      * @param variable
      */
     void updateVariableName(String oldname, String newName, Variable variable);
-
-    /**
-     * Tells listeners that the columns' order indices have changed.
-     */
-    void columnsReordered();
 
     /**
      * Sets the title notifier that needs to be informed when the title of the

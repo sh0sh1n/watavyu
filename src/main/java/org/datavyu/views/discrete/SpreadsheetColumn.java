@@ -16,10 +16,9 @@ package org.datavyu.views.discrete;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.datavyu.controllers.project.ColumnCommands;
 import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.*;
-import org.datavyu.undoableedits.LockColumnEdit;
-import org.datavyu.undoableedits.RemoveVariableEdit;
 import org.datavyu.util.ClockTimer;
 import org.datavyu.util.Constants;
 import org.datavyu.util.DragAndDrop.TransparentPanel;
@@ -27,13 +26,11 @@ import org.datavyu.views.LockMark;
 
 import javax.swing.*;
 import javax.swing.border.Border;
-import javax.swing.undo.UndoableEdit;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.function.Consumer;
 
 /**
  * This class maintains the visual representation of the column in the
@@ -203,71 +200,57 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
     }
 
     /**
-     * Makes the Lock Column menu item of a column's header: it shows whether the column is locked and toggles it, as
-     * an undoable edit.
+     * Makes the Lock Column menu item of a column's header: it shows whether the column is locked and toggles it.
      *
-     * @param dataStore the spreadsheet holding the column
-     * @param column    the column whose header was clicked
-     * @param post      takes the edit for the undo history
+     * @param columns the spreadsheet's column commands
+     * @param column  the column whose header was clicked
      * @return the menu item
      */
-    static JCheckBoxMenuItem lockItem(final DataStore dataStore, final Variable column,
-                                      final Consumer<UndoableEdit> post) {
+    static JCheckBoxMenuItem lockItem(final ColumnCommands columns, final Variable column) {
         JCheckBoxMenuItem item = new JCheckBoxMenuItem("Lock Column", column.isLocked());
         item.setName("lockColumn");
-        item.addActionListener(e -> {
-            column.setLocked(item.isSelected());
-            post.accept(new LockColumnEdit(dataStore, column.getName(), item.isSelected()));
-        });
+        item.addActionListener(e -> columns.setLocked(column, item.isSelected()));
         return item;
     }
 
     /**
      * Makes the Hide menu item of a column's header: it hides the column, or every selected column if the column is
-     * one of them, deselects what it hid, then runs {@code after}.
+     * one of them.
      *
+     * @param columns   the spreadsheet's column commands
      * @param dataStore the spreadsheet holding the column
      * @param column    the column whose header was clicked
-     * @param after     lays the spreadsheet out again
      * @return the menu item
      */
-    static JMenuItem hideItem(final DataStore dataStore, final Variable column, final Runnable after) {
-        List<Variable> hidden = column.isSelected() ? dataStore.getSelectedVariables() : List.of(column);
+    static JMenuItem hideItem(final ColumnCommands columns, final DataStore dataStore, final Variable column) {
+        List<Variable> hidden = actedOn(dataStore, column);
         JMenuItem item = new JMenuItem(hidden.size() == 1 ? "Hide Column" : "Hide Selected Columns");
         item.setName("hideColumns");
-        item.addActionListener(e -> {
-            for (Variable each : hidden) {
-                each.setHidden(true);
-                each.setSelected(false);
-            }
-            after.run();
-        });
+        item.addActionListener(e -> columns.hide(hidden));
         return item;
     }
 
     /**
      * Makes the Delete menu item of a column's header: it deletes the column, or every selected column if the column
-     * is one of them, as one undoable edit. The spreadsheet hears of each column leaving through the data store. It
-     * is disabled while any of those columns is locked.
+     * is one of them. It is disabled while any of those columns is locked.
      *
+     * @param columns   the spreadsheet's column commands
      * @param dataStore the spreadsheet holding the column
      * @param column    the column whose header was clicked
-     * @param post      takes the edit for the undo history
      * @return the menu item
      */
-    static JMenuItem deleteItem(final DataStore dataStore, final Variable column,
-                                final Consumer<UndoableEdit> post) {
-        List<Variable> deleted = column.isSelected() ? dataStore.getSelectedVariables() : List.of(column);
+    static JMenuItem deleteItem(final ColumnCommands columns, final DataStore dataStore, final Variable column) {
+        List<Variable> deleted = actedOn(dataStore, column);
         JMenuItem item = new JMenuItem(deleted.size() == 1 ? "Delete Column" : "Delete Selected Columns");
         item.setName("deleteColumns");
         item.setEnabled(deleted.stream().noneMatch(Variable::isLocked));
-        item.addActionListener(e -> {
-            for (Variable each : deleted) {
-                dataStore.removeVariable(each);
-            }
-            post.accept(new RemoveVariableEdit(dataStore, deleted));
-        });
+        item.addActionListener(e -> columns.delete(deleted));
         return item;
+    }
+
+    /** @return the columns a header's menu acts on: the column, or every selected column if it is one of them */
+    private static List<Variable> actedOn(final DataStore dataStore, final Variable column) {
+        return column.isSelected() ? dataStore.getSelectedVariables() : List.of(column);
     }
 
     /** Shows the column's header menu, if this event asks for one. */
@@ -276,13 +259,10 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
             return false;
         }
         JPopupMenu menu = new JPopupMenu();
-        menu.add(hideItem(dataStore, variable, () -> {
-            controller.getSpreadSheetPanel().deselectAll();
-            controller.getSpreadSheetPanel().revalidate();
-        }));
-        menu.add(deleteItem(dataStore, variable, controller::postEdit));
+        menu.add(hideItem(controller.columns(), dataStore, variable));
+        menu.add(deleteItem(controller.columns(), dataStore, variable));
         menu.addSeparator();
-        menu.add(lockItem(dataStore, variable, controller::postEdit));
+        menu.add(lockItem(controller.columns(), variable));
         menu.show(this, me.getX(), me.getY());
         me.consume();
         return true;
@@ -630,7 +610,7 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
                     if (itr.hasNext()) swapCol = itr.next();
                     else break;
                 }
-                sp.moveColumn(this.getVariable(), swapCol.getVariable());
+                controller.columns().move(variable, swapCol.getVariable());
             } else if (x < 0 && itr.hasPrevious()) {
                 swapCol = itr.previous();
                 while (x < 0 && itr.hasPrevious()) {
@@ -638,7 +618,7 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
                     if (itr.hasPrevious() && x < 0) swapCol = itr.previous();
                     else break;
                 }
-                sp.moveColumn(this.getVariable(), swapCol.getVariable());
+                controller.columns().move(variable, swapCol.getVariable());
             }
 
             // Update globals

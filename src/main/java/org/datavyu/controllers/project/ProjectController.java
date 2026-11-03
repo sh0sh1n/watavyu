@@ -100,6 +100,9 @@ public final class ProjectController {
     /** The commands that make, delete and time cells */
     private final CellCommands cells = new CellCommands(this);
 
+    /** The commands that add, delete, lock, hide and move columns */
+    private final ColumnCommands columns = new ColumnCommands(this);
+
     /** Whether quick-key mode is on, in which typing in a selected column makes a cell; an application setting. */
     private BooleanSupplier quickKeyMode = () -> false;
 
@@ -225,6 +228,11 @@ public final class ProjectController {
     /** Returns the commands that make, delete and time this spreadsheet's cells. */
     public CellCommands cells() {
         return cells;
+    }
+
+    /** Returns the commands that add, delete, lock, hide and move this spreadsheet's columns. */
+    public ColumnCommands columns() {
+        return columns;
     }
 
     /**

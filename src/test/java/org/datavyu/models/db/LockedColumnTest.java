@@ -100,14 +100,15 @@ public class LockedColumnTest {
     }
 
     @Test
-    public void hidingSelectingAndReorderingAreNotChanges() {
+    public void hidingSelectingAndReorderingAreNotChanges() throws Exception {
+        dataStore.createVariable("other");
         notes.setHidden(true);
         notes.setSelected(false);
-        notes.setOrderIndex(3);
+        dataStore.moveVariable(notes, 1);
         cell.setSelected(true);
 
         assertTrue(notes.isHidden());
-        assertEquals(notes.getOrderIndex(), 3);
+        assertEquals(dataStore.indexOf(notes), 1);
         assertEquals(refusals, 0);
     }
 

@@ -39,9 +39,7 @@ public class ProjectControllerDocumentTest {
         File cam = Files.createFile(folder.resolve("cam.mp4")).toFile();
         DataStore dataStore = DataStoreFactory.newDataStore();
         Variable notes = dataStore.createVariable("notes");
-        notes.setOrderIndex(0);
         Variable media = dataStore.createMediaVariable("media_1");
-        media.setOrderIndex(1);
         Cell clip = media.createClip(2_500, MediaClip.of(cam.getAbsolutePath()));
 
         // The player opens at once and reports the file; the clip's volume and the column's lock then change.

@@ -4,9 +4,11 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
+import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.DataStoreFactory;
 import org.datavyu.models.db.Variable;
+import org.datavyu.models.project.Project;
 import org.testng.annotations.Test;
 
 import javax.swing.JButton;
@@ -14,7 +16,6 @@ import javax.swing.JTable;
 import javax.swing.SwingUtilities;
 import java.awt.Component;
 import java.awt.Container;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 /** The Column List shows and hides columns, and shows them all; columns are renamed only in the Code Editor. */
@@ -42,7 +43,7 @@ public class VariableListVTest {
         AtomicReference<JTable> table = new AtomicReference<>();
         AtomicReference<VariableListV> list = new AtomicReference<>();
         SwingUtilities.invokeAndWait(() -> {
-            list.set(new VariableListV(null, false, dataStore, () -> { }, () -> { }));
+            list.set(new VariableListV(null, false, new ProjectController(new Project(), dataStore)));
             table.set(find(list.get().getContentPane(), JTable.class, "variableList"));
         });
         try {
@@ -65,10 +66,9 @@ public class VariableListVTest {
         Variable shown = dataStore.createVariable("shown");
         notes.setHidden(true);
         media.setHidden(true);
-        AtomicInteger refreshed = new AtomicInteger();
         AtomicReference<VariableListV> list = new AtomicReference<>();
         SwingUtilities.invokeAndWait(() -> {
-            list.set(new VariableListV(null, false, dataStore, refreshed::incrementAndGet, () -> { }));
+            list.set(new VariableListV(null, false, new ProjectController(new Project(), dataStore)));
             JButton showAll = find(list.get().getContentPane(), JButton.class, "showAllColumns");
             assertEquals(showAll.getText(), "Show All Columns");
             showAll.doClick();
@@ -77,7 +77,6 @@ public class VariableListVTest {
             assertFalse(notes.isHidden());
             assertFalse(media.isHidden());
             assertFalse(shown.isHidden());
-            assertEquals(refreshed.get(), 1);
         } finally {
             SwingUtilities.invokeAndWait(() -> list.get().dispose());
         }

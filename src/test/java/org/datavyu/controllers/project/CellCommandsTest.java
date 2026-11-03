@@ -41,9 +41,7 @@ public class CellCommandsTest {
         spreadsheet = new ProjectController(new Project(), dataStore);
         cells = spreadsheet.cells();
         gaze = dataStore.createVariable("gaze");
-        gaze.setOrderIndex(0);
         speech = dataStore.createVariable("speech");
-        speech.setOrderIndex(1);
         // A new column is selected; each test selects what it needs.
         dataStore.deselectAll();
     }
@@ -106,8 +104,7 @@ public class CellCommandsTest {
         speech.setSelected(true);
         assertSame(cells.newCellInSelectedColumn(1_000).getVariable(), gaze);
 
-        gaze.setOrderIndex(1);
-        speech.setOrderIndex(0);
+        dataStore.moveVariable(speech, 0);
         gaze.setSelected(true);
         speech.setSelected(true);
         assertSame(cells.newCellInSelectedColumn(2_000).getVariable(), speech);
@@ -309,9 +306,7 @@ public class CellCommandsTest {
         assertTrue(cells.newCellsBeside(ArrayDirection.RIGHT).isEmpty());
 
         Variable media = dataStore.createMediaVariable("media_1");
-        media.setOrderIndex(0);
-        gaze.setOrderIndex(1);
-        speech.setOrderIndex(2);
+        dataStore.moveVariable(media, 0);
         assertTrue(cells.newCellsBeside(ArrayDirection.LEFT).isEmpty());
         assertTrue(media.getCells().isEmpty());
     }

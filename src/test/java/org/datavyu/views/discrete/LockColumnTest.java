@@ -5,23 +5,25 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertThrows;
 import static org.testng.Assert.assertTrue;
 
+import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.DataStoreFactory;
 import org.datavyu.models.db.MediaClip;
 import org.datavyu.models.db.Variable;
 import org.datavyu.models.db.VariableListener;
+import org.datavyu.models.project.Project;
+import org.datavyu.undoableedits.LockColumnEdit;
 import org.testng.annotations.Test;
 
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.undo.CannotRedoException;
 import javax.swing.undo.CannotUndoException;
-import javax.swing.undo.UndoManager;
 import javax.swing.undo.UndoableEdit;
 import java.util.ArrayList;
 import java.util.List;
 
-/** A media column's header menu locks and unlocks its clips, as edits in the undo history. */
+/** A column's header menu locks and unlocks it, as edits in the undo history. */
 public class LockColumnTest {
 
     private static final MediaClip CAM = new MediaClip("/study/cam.mp4", 10_000, 30, 1280, 720, 1);
@@ -30,16 +32,16 @@ public class LockColumnTest {
     public void lockColumnTogglesTheColumnsLock() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
         for (Variable column : List.of(dataStore.createMediaVariable("media_1"), dataStore.createVariable("notes"))) {
-            UndoManager history = new UndoManager();
+            ProjectController spreadsheet = new ProjectController(new Project(), dataStore);
 
-            JCheckBoxMenuItem item = SpreadsheetColumn.lockItem(dataStore, column, history::addEdit);
+            JCheckBoxMenuItem item = SpreadsheetColumn.lockItem(spreadsheet.columns(), column);
             assertEquals(item.getText(), "Lock Column");
             assertFalse(item.isSelected());
 
             item.doClick();
             assertTrue(column.isLocked());
 
-            JCheckBoxMenuItem again = SpreadsheetColumn.lockItem(dataStore, column, history::addEdit);
+            JCheckBoxMenuItem again = SpreadsheetColumn.lockItem(spreadsheet.columns(), column);
             assertTrue(again.isSelected());
             again.doClick();
             assertFalse(column.isLocked());
@@ -52,17 +54,17 @@ public class LockColumnTest {
         DataStore dataStore = DataStoreFactory.newDataStore();
         Variable notes = dataStore.createVariable("notes");
         Cell cell = notes.createPointCell(1_000);
-        UndoManager history = new UndoManager();
-        SpreadsheetColumn.lockItem(dataStore, notes, history::addEdit).doClick();
+        ProjectController spreadsheet = new ProjectController(new Project(), dataStore);
+        SpreadsheetColumn.lockItem(spreadsheet.columns(), notes).doClick();
 
-        assertEquals(history.getUndoPresentationName(), "Undo Lock Column notes");
+        assertEquals(spreadsheet.getUndoManager().getUndoPresentationName(), "Undo Lock Column notes");
         cell.setOnset(2_000);
         assertEquals(cell.getOnset(), 1_000L);
 
-        history.undo();
+        spreadsheet.undo();
         cell.setOnset(2_000);
         assertEquals(cell.getOnset(), 2_000L);
-        assertEquals(history.getRedoPresentationName(), "Redo Lock Column notes");
+        assertEquals(spreadsheet.getUndoManager().getRedoPresentationName(), "Redo Lock Column notes");
     }
 
     /** Undoing past a lock unlocks the column, so a clip moved before the lock can be moved back. */
@@ -71,16 +73,16 @@ public class LockColumnTest {
         DataStore dataStore = DataStoreFactory.newDataStore();
         Variable media = dataStore.createMediaVariable("media_1");
         Cell clip = media.createClip(2_000, CAM);
-        UndoManager history = new UndoManager();
-        SpreadsheetColumn.lockItem(dataStore, media, history::addEdit).doClick();
+        ProjectController spreadsheet = new ProjectController(new Project(), dataStore);
+        SpreadsheetColumn.lockItem(spreadsheet.columns(), media).doClick();
 
-        assertEquals(history.getUndoPresentationName(), "Undo Lock Column media_1");
-        history.undo();
+        assertEquals(spreadsheet.getUndoManager().getUndoPresentationName(), "Undo Lock Column media_1");
+        spreadsheet.undo();
         assertFalse(media.isLocked());
         clip.setOnset(0);
         assertEquals(clip.getOnset(), 0L);
 
-        history.redo();
+        spreadsheet.redo();
         assertTrue(media.isLocked());
         clip.setOnset(2_000);
         assertEquals(clip.getOnset(), 0L);
@@ -91,7 +93,7 @@ public class LockColumnTest {
     public void listenersHearOfLockChanges() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
         Variable media = dataStore.createMediaVariable("media_1");
-        UndoManager history = new UndoManager();
+        ProjectController spreadsheet = new ProjectController(new Project(), dataStore);
         List<Boolean> heard = new ArrayList<>();
         VariableListener listener = new VariableListener() {
             @Override public void nameChanged(final String newName) { }
@@ -102,8 +104,8 @@ public class LockColumnTest {
         };
         media.addListener(listener);
         try {
-            SpreadsheetColumn.lockItem(dataStore, media, history::addEdit).doClick();
-            history.undo();
+            SpreadsheetColumn.lockItem(spreadsheet.columns(), media).doClick();
+            spreadsheet.undo();
             assertEquals(heard, List.of(true, false));
         } finally {
             media.removeListener(listener);
@@ -115,9 +117,8 @@ public class LockColumnTest {
     public void aLockWhoseColumnHasGoneIsRefusedAndStaysAsItWas() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
         Variable media = dataStore.createMediaVariable("media_1");
-        List<UndoableEdit> posted = new ArrayList<>();
-        SpreadsheetColumn.lockItem(dataStore, media, posted::add).doClick();
-        UndoableEdit lock = posted.get(0);
+        media.setLocked(true);
+        UndoableEdit lock = new LockColumnEdit(dataStore, "media_1", true);
         dataStore.removeVariable(media);
 
         assertThrows(CannotUndoException.class, lock::undo);
