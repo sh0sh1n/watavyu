@@ -226,6 +226,21 @@ public final class VideoController implements ClockListener {
     }
 
     /**
+     * Closes the spreadsheet's playback, as its tab closes: playback stops, its players and windows close, and its
+     * clock's threads stop.
+     */
+    public void close() {
+        stopAction();
+        if (mediaPlayers != null) {
+            mediaPlayers.close();
+        }
+        for (StreamViewer streamViewer : java.util.List.copyOf(streamViewers)) {
+            shutdown(streamViewer.getIdentifier(), false);
+        }
+        clockTimer.close();
+    }
+
+    /**
      * Opens a stream on a background thread, because the player blocks while its media
      * loads, then adds the track on the Swing EDT. A file that fails to open adds no track
      * and shows the player's error message.

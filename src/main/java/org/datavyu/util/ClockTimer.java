@@ -62,8 +62,7 @@ public final class ClockTimer {
     /** The rate factor for the clock updates */
     private float rate = 1F;
 
-    private ScheduledExecutorService execService
-        =   Executors.newScheduledThreadPool(4);
+    private final ScheduledExecutorService execService = Executors.newScheduledThreadPool(4);
 
     /** Listeners of this clock */
     private final Set<ClockListener> clockListeners = new CopyOnWriteArraySet<>();
@@ -269,6 +268,16 @@ public final class ClockTimer {
      */
     public synchronized void registerListener(final ClockListener listener) {
         clockListeners.add(listener);
+    }
+
+    /** Stops the clock's threads for good, as its spreadsheet closes; its listeners are told nothing more. */
+    public void close() {
+        execService.shutdownNow();
+    }
+
+    /** @return whether {@link #close()} has stopped the clock's threads */
+    public boolean isClosed() {
+        return execService.isShutdown();
     }
 
   /**

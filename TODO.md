@@ -25,8 +25,6 @@ Updated 2026-11-03. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 ## Bugs
 
-**B19. Closing a tab leaves its media running.** ready, *from reading*. Closing a tab (`SpreadSheetPanel.close`) stops its playback and deletes its autosave, but `MediaPlayers` has no way to close, so the closed spreadsheet's media windows stay open, and its players and clock (`ClockTimer`'s threads) keep running for the rest of the session.
-
 **B20. The Highlight and Focus menu item can describe another tab.** ready, *from reading*. Each tab has its own highlight-and-focus mode (its `VideoController`), but the Spreadsheet menu item's label is set only when the mode is toggled (`DatavyuView.toggleHighlightAndFocusMode`), not when another tab is selected. After turning it off in one tab and selecting another, the label says the mode is off while it is on. Settle with R10, whose commands can say their own state.
 
 **B2. The app changes a global macOS setting.** ready (owner: scope it to the app), *from reading*. At startup `Datavyu` runs `defaults write -g ApplePressAndHoldEnabled -bool false` for every application on the Mac, and restores it only on a clean shutdown; a crash or force-quit leaves it changed. (It used to run when the class loaded, so every test run turned the setting off and never restored it.) The intent is key repeat instead of the accent popup while holding keys. Scope it to the app: in-app key repeat, or a per-app defaults domain once there is an app bundle; then delete the global write.

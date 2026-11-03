@@ -267,6 +267,22 @@ public class MediaPlayersTest {
         assertSame(players.getPlayer(clip), opened.get(1));
     }
 
+    /** Closing a spreadsheet's tab closes its players and windows, and it stops following the spreadsheet (B19). */
+    @Test
+    public void closingClosesEveryPlayerAndWindow() throws Exception {
+        Cell clip = clip("media_1", 0, file("cam.mp4"));
+        players.openAll();
+        StreamViewer player = players.getPlayer(clip);
+
+        players.close();
+
+        verify(videoController).shutdown(player.getIdentifier(), false);
+        assertNull(players.getPlayer(clip));
+        assertTrue(windows.get(clip.getVariable()).closed);
+        clip("media_2", 0, file("mic.mp4"));
+        assertEquals(opened.size(), 1);
+    }
+
     @Test
     public void hidingAMediaColumnHidesItsWindow() throws Exception {
         Variable media = dataStore.createMediaVariable("media_1");

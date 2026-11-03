@@ -4,6 +4,7 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
 import org.datavyu.TestSpreadsheets;
+import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.DataStoreFactory;
 import org.datavyu.models.db.Variable;
@@ -19,7 +20,8 @@ import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 
 /**
- * Every open spreadsheet listens for keys, but only the one on screen, in the selected tab, takes them.
+ * Every open spreadsheet listens for keys, but only the one on screen, in the selected tab, takes them; closing a
+ * spreadsheet stops its clock.
  */
 public class SpreadSheetPanelTest {
 
@@ -51,5 +53,16 @@ public class SpreadSheetPanelTest {
                 panel.get().close();
             });
         }
+    }
+
+    @Test
+    public void closingASpreadsheetStopsItsClock() throws Exception {
+        AtomicReference<ProjectController> spreadsheet = new AtomicReference<>();
+        SwingUtilities.invokeAndWait(() -> {
+            spreadsheet.set(TestSpreadsheets.withPlayback(DataStoreFactory.newDataStore()));
+            new SpreadSheetPanel(spreadsheet.get(), null).close();
+        });
+
+        assertTrue(spreadsheet.get().getVideoController().getClockTimer().isClosed());
     }
 }

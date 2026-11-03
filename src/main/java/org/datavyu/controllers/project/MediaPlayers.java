@@ -149,6 +149,20 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
     }
 
     /**
+     * Stops following the spreadsheet, as its tab closes: every player and window closes, and a player still opening
+     * closes once it has opened. The clips are left as they are.
+     */
+    public void close() {
+        dataStore.removeListener(this);
+        if (videoController.getClockTimer() != null) {
+            videoController.getClockTimer().unRegisterListener(this);
+        }
+        for (Variable column : List.copyOf(columnListeners.keySet())) {
+            unfollow(column);
+        }
+    }
+
+    /**
      * Opens a player for every clip whose file exists.
      *
      * @return the files of the clips that are missing
