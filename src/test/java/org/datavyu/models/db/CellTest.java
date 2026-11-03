@@ -161,4 +161,14 @@ public class CellTest {
 
         verify(modelListener).valueChange(model.getCellValue());
     }
+
+    @Test
+    public void aCodeLeftAsItWasTellsNothing() {
+        model.setMatrixValue(0, "smile");
+        model.setMatrixValue(0, "smile");
+        var.setLocked(true);
+        model.setMatrixValue(0, "frown");
+
+        verify(modelListener, times(1)).valueChange(any());
+    }
 }

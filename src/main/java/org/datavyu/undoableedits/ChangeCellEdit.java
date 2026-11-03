@@ -80,7 +80,7 @@ abstract public class ChangeCellEdit extends SpreadSheetEdit {
      * @return whether it changed the same cell; edits of different cells are never duplicates of each other
      */
     protected boolean sameCell(final ChangeCellEdit other) {
-        return other.cell == cell;
+        return other.cell.equals(cell);
     }
 
     abstract protected void updateCell(Cell cell);

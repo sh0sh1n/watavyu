@@ -1,5 +1,7 @@
 package org.datavyu.controllers.project;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNull;
@@ -11,6 +13,7 @@ import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.DataStoreFactory;
 import org.datavyu.models.db.MediaClip;
 import org.datavyu.models.db.Variable;
+import org.datavyu.models.db.VariableListener;
 import org.datavyu.models.project.Project;
 import org.datavyu.util.ArrayDirection;
 import org.testng.annotations.BeforeMethod;
@@ -118,6 +121,36 @@ public class CellCommandsTest {
 
         assertNull(cells.newCell(1_000));
         assertSame(cells.newCellClosingPrevious(2_000).getVariable(), gaze, "the first annotation column instead");
+    }
+
+    @Test
+    public void undoingANewCellKeepsTheSelectionAndRedoingMakesItTheLastCreatedAgain() {
+        spreadsheet.setLastCreatedVariable(gaze);
+        Cell cell = cells.newCell(1_000);
+        speech.setSelected(true);
+
+        undo();
+        assertTrue(speech.isSelected());
+
+        spreadsheet.redo();
+        assertSame(spreadsheet.getLastCreatedCell(), cell);
+        assertEquals(gaze.getCells(), List.of(cell));
+    }
+
+    /** Cells of a deleted column, remembered as last selected, are neither closed nor timed. */
+    @Test
+    public void aDeletedColumnsCellsAreNotTimed() {
+        Cell gone = speech.createPointCell(1_000);
+        spreadsheet.setLastSelectedCell(gone);
+        spreadsheet.setLastSelectedCells(List.of(gone));
+        dataStore.removeVariable(speech);
+        dataStore.deselectAll();
+
+        cells.setOnsets(3_000);
+        cells.newCellClosingPrevious(5_000);
+
+        assertEquals(gone.getOnset(), 1_000);
+        assertEquals(gone.getOffset(), 1_000);
     }
 
     @Test
@@ -305,6 +338,18 @@ public class CellCommandsTest {
         assertNull(cells.newCellTyped(gaze, 'k', 4_000));
         assertTrue(gaze.getCells().isEmpty());
         assertFalse(spreadsheet.getUndoManager().canUndo());
+    }
+
+    @Test
+    public void aLockedColumnWithNoCodesStillShowsItRefusesATypedKey() {
+        VariableListener header = mock(VariableListener.class);
+        gaze.addListener(header);
+        gaze.getRootNode().clearChildArguments();
+        gaze.setLocked(true);
+
+        assertNull(cells.newCellTyped(gaze, 'k', 4_000));
+
+        verify(header).editRefused();
     }
 
     @Test

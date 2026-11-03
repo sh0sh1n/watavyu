@@ -147,7 +147,9 @@ public final class ProjectController {
     }
 
     /**
-     * @param listener told of each edit posted, after the undo history has it
+     * Tells a listener of each edit posted, after the undo history has it.
+     *
+     * @param listener the listener
      */
     public void addUndoableEditListener(final UndoableEditListener listener) {
         undoSupport.addUndoableEditListener(listener);
@@ -220,19 +222,18 @@ public final class ProjectController {
         return quickKeyMode.getAsBoolean();
     }
 
-    /** @return the commands that make, delete and time this spreadsheet's cells */
+    /** Returns the commands that make, delete and time this spreadsheet's cells. */
     public CellCommands cells() {
         return cells;
     }
 
     /**
      * Removes cells without recording an edit, as deleting and undoing a new cell do; the cells last created and
-     * selected are forgotten if they go, and the selection is cleared.
+     * selected are forgotten if they go. A cell already in no column is left as it is.
      *
      * @param removed cells of this spreadsheet
      */
     public void removeCells(final List<Cell> removed) {
-        dataStore.deselectAll();
         List<Cell> stillSelected = new ArrayList<>(lastSelectedCells);
         stillSelected.removeAll(removed);
         lastSelectedCells = stillSelected;
@@ -243,7 +244,9 @@ public final class ProjectController {
             if (cell.equals(lastSelectedCell)) {
                 lastSelectedCell = null;
             }
-            dataStore.removeCell(cell);
+            if (dataStore.getVariable(cell) != null) {
+                dataStore.removeCell(cell);
+            }
         }
     }
 

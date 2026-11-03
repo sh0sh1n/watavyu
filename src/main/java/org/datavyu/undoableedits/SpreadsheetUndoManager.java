@@ -40,8 +40,10 @@ public class SpreadsheetUndoManager extends UndoManager {
                     // Take the last element
                     do {
                         Object o = edits.lastElement();
+                        // Only the same cell's fine edits give way to its coarse one.
                         cond = (ue.getClass() == o.getClass())
-                                && (((ChangeCellEdit) o).granularity == Granularity.FINEGRAINED);
+                                && (((ChangeCellEdit) o).granularity == Granularity.FINEGRAINED)
+                                && ((ChangeCellEdit) o).sameCell(cce);
                         if (cond) {
                             edits.removeElementAt(edits.size() - 1);
                         }

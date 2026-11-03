@@ -14,6 +14,7 @@ import org.datavyu.util.ArrayDirection;
 
 import javax.swing.undo.UndoableEdit;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -25,6 +26,9 @@ import java.util.List;
 public final class CellCommands {
 
     private static final Logger logger = LogManager.getLogger(CellCommands.class);
+
+    /** Cells in time order, sorted as copies: a column's own sort reorders its cells in place. */
+    private static final Comparator<Cell> BY_ONSET = Comparator.comparingLong(Cell::getOnset);
 
     private final ProjectController spreadsheet;
 
@@ -71,7 +75,7 @@ public final class CellCommands {
     private List<Cell> selectedCells() {
         List<Cell> selected = new ArrayList<>();
         for (Variable column : dataStore().getAllVariables()) {
-            column.getCellsTemporally().stream().filter(Cell::isSelected).forEach(selected::add);
+            column.getCells().stream().filter(Cell::isSelected).sorted(BY_ONSET).forEach(selected::add);
         }
         return selected;
     }
@@ -90,8 +94,8 @@ public final class CellCommands {
     public Cell newCellClosingPrevious(final long time) {
         List<Variable> selected = selectedColumns();
         Cell lastSelected = spreadsheet.getLastSelectedCell();
-        Variable closing = selected.size() == 1 ? selected.get(0) : lastSelected == null ? null
-            : lastSelected.getVariable();
+        Variable closing = selected.size() == 1 ? selected.get(0) : inSpreadsheet(lastSelected)
+            ? lastSelected.getVariable() : null;
         if (closing != null) {
             if (closing.refusesEdits()) {
                 return null;
@@ -109,7 +113,8 @@ public final class CellCommands {
 
     /** @return the cell to close before the time, as {@link #newCellClosingPrevious(long)} picks it, or null */
     private Cell cellToClose(final Variable column, final long time) {
-        List<Cell> started = column.getCellsTemporally().stream().filter(cell -> cell.getOnset() <= time).toList();
+        List<Cell> started = column.getCells().stream().filter(cell -> cell.getOnset() <= time).sorted(BY_ONSET)
+            .toList();
         if (started.isEmpty()) {
             return null;
         }
@@ -151,6 +156,11 @@ public final class CellCommands {
     /** @return whether a column is in the spreadsheet, as one remembered as last given a cell may have been deleted */
     private boolean inSpreadsheet(final Variable column) {
         return column != null && dataStore().getAllVariables().contains(column);
+    }
+
+    /** @return whether a cell is in the spreadsheet, as one remembered as last selected may have gone with its column */
+    private boolean inSpreadsheet(final Cell cell) {
+        return cell != null && dataStore().getVariable(cell) != null;
     }
 
     private Cell createPointCell(final Variable column, final long time) {
@@ -204,7 +214,10 @@ public final class CellCommands {
      * @return the new cell, or null in a media column, a locked one or one with no codes
      */
     public Cell newCellTyped(final Variable column, final char typed, final long time) {
-        if (column != null && column.getRootNode().childArguments.isEmpty()) {
+        if (!inSpreadsheet(column) || column.isMedia() || column.refusesEdits()) {
+            return null;
+        }
+        if (column.getRootNode().childArguments.isEmpty()) {
             // A column with no codes holds timing only, with nowhere to put the key.
             return null;
         }
@@ -249,7 +262,10 @@ public final class CellCommands {
 
     private List<Cell> cellsToTime() {
         List<Cell> selected = selectedCells();
-        return List.copyOf(selected.isEmpty() ? spreadsheet.getLastSelectedCells() : selected);
+        if (!selected.isEmpty()) {
+            return selected;
+        }
+        return spreadsheet.getLastSelectedCells().stream().filter(this::inSpreadsheet).distinct().toList();
     }
 
     /** Delete Cells: deletes the selected cells, except those in locked columns, as one edit in the undo history. */
@@ -265,6 +281,7 @@ public final class CellCommands {
         }
         logger.info("Delete cells: " + deleted);
         RemoveCellEdit edit = new RemoveCellEdit(spreadsheet, deleted);
+        dataStore().deselectAll();
         spreadsheet.removeCells(deleted);
         record(edit);
     }

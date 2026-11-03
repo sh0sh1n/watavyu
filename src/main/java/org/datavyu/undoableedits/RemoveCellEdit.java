@@ -72,6 +72,7 @@ public class RemoveCellEdit extends SpreadSheetEdit {
         for (CellTO cellTO : cellTOV) {
             cellsToDelete.add(cellTO.getCell());
         }
+        model.deselectAll();
         controller.removeCells(cellsToDelete);
     }
 
