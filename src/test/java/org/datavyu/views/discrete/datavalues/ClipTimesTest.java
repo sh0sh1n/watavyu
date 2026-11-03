@@ -4,6 +4,7 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
+import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.DataStoreFactory;
 import org.datavyu.models.db.MediaClip;
@@ -26,7 +27,7 @@ public class ClipTimesTest {
 
     /** @return whether a time can be typed; when it cannot, typing a digit leaves the cell as it was */
     private static boolean typingAllowed(final Cell cell, final TimeStampSource time) {
-        TimeStampDataValueEditor editor = new TimeStampDataValueEditor(new JTextField(), cell, time);
+        TimeStampDataValueEditor editor = new TimeStampDataValueEditor(new ProjectController(), new JTextField(), cell, time);
         if (!editor.isTypingAllowed()) {
             long onset = cell.getOnset();
             long offset = cell.getOffset();

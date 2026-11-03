@@ -14,9 +14,9 @@
  */
 package org.datavyu.controllers;
 
+import org.datavyu.controllers.project.ProjectController;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.datavyu.Datavyu;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.Variable;
 import org.datavyu.views.discrete.SpreadSheetPanel;
@@ -32,22 +32,24 @@ public final class DeleteColumnController {
     private static Logger logger = LogManager.getLogger(DeleteColumnController.class);
 
     /**
-     * Constructor.
+     * Deletes columns from a spreadsheet.
      *
+     * @param controller   the spreadsheet
      * @param colsToDelete The columns to remove from the database/spreadsheet.
      */
-    public DeleteColumnController(final List<Variable> colsToDelete) {
+    public DeleteColumnController(final ProjectController controller, final List<Variable> colsToDelete) {
         logger.info("delete columns");
 
-        // The spreadsheet is the view for this controller.
-        SpreadSheetPanel view = (SpreadSheetPanel) Datavyu.getView().getComponent();
-        DataStore dataStore = Datavyu.getProjectController().getDataStore();
-
-        // Deselect everything.
-        view.deselectAll();
+        SpreadSheetPanel view = controller.getSpreadSheetPanel();
+        DataStore dataStore = controller.getDataStore();
+        if (view != null) {
+            view.deselectAll();
+        }
 
         for (Variable var : colsToDelete) {
             dataStore.removeVariable(var);
+        }
+        if (view != null) {
             view.revalidate();
             view.repaint();
         }

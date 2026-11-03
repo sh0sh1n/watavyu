@@ -15,15 +15,11 @@
 package org.datavyu.undoableedits;
 
 
-import org.datavyu.Datavyu;
 import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.DataStore;
-import org.datavyu.views.DatavyuView;
 import org.datavyu.views.discrete.SpreadSheetPanel;
 
 import javax.swing.undo.AbstractUndoableEdit;
-import javax.swing.undo.CannotRedoException;
-import javax.swing.undo.CannotUndoException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -34,47 +30,27 @@ public abstract class SpreadSheetEdit extends AbstractUndoableEdit {
 
     private Date timestamp; // when the action was done
 
-    protected ProjectController controller;
-    protected DataStore model;
-    protected DatavyuView view;
+    /** The spreadsheet the edit was made in, which undoing and redoing change. */
+    protected final ProjectController controller;
+    protected final DataStore model;
 
-    public SpreadSheetEdit() {
+    /**
+     * @param controller the spreadsheet the edit was made in
+     */
+    protected SpreadSheetEdit(final ProjectController controller) {
         super();
         timestamp = new Date();
-        controller = Datavyu.getProjectController();
+        this.controller = controller;
         model = controller.getDataStore();
-        view = Datavyu.getView();
-    }
-
-    @Override
-    public String getPresentationName() {
-        return super.getPresentationName();
-    }
-
-    @Override
-    public void redo() throws CannotRedoException {
-        super.redo();
-    }
-
-    @Override
-    public void undo() throws CannotUndoException {
-        super.undo();
     }
 
     protected void unselectAll() {
-//        view.getSpreadsheetPanel().clearColumnSelection();
-        view.getSpreadsheetPanel().clearCellSelection();
-    }
-
-    protected class CellPos {
-        public String varName; // Column
-        public int ord;      // Row
-
-        public CellPos(String varName, int index) {
-            this.varName = varName;
-            this.ord = index;
+        SpreadSheetPanel panel = controller.getSpreadSheetPanel();
+        if (panel != null) {
+            panel.clearCellSelection();
         }
     }
+
 
     protected String getStyle() {
         String style;
@@ -90,23 +66,7 @@ public abstract class SpreadSheetEdit extends AbstractUndoableEdit {
     public String toString() {
         String msg;
         SimpleDateFormat formatter = new SimpleDateFormat("HH:mm:ss");
-        if (this instanceof AddCellEdit) {
-            msg = ((AddCellEdit) this).getPresentationName();
-        } else if (this instanceof AddVariableEdit) {
-            msg = ((AddVariableEdit) this).getPresentationName();
-        } else if (this instanceof ChangeOffsetCellEdit) {
-            msg = ((ChangeOffsetCellEdit) this).getPresentationName();
-        } else if (this instanceof ChangeOnsetCellEdit) {
-            msg = ((ChangeOnsetCellEdit) this).getPresentationName();
-        } else if (this instanceof ChangeValCellEdit) {
-            msg = ((ChangeValCellEdit) this).getPresentationName();
-        } else if (this instanceof RemoveCellEdit) {
-            msg = ((RemoveCellEdit) this).getPresentationName();
-        } else if (this instanceof VocabEditorEdit) {
-            msg = ((VocabEditorEdit) this).getPresentationName();
-        } else {
-            msg = "";
-        }
+        msg = getPresentationName();
         return "<html><font " + getStyle() + ">" + formatter.format(this.timestamp)
                 + "\t" + msg + "</font></html>";
     }

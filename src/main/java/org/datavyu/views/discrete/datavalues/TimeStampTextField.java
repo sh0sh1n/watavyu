@@ -16,7 +16,7 @@ package org.datavyu.views.discrete.datavalues;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.datavyu.Datavyu;
+import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.Variable;
 import org.datavyu.views.discrete.datavalues.TimeStampDataValueEditor.TimeStampSource;
@@ -47,17 +47,22 @@ public final class TimeStampTextField extends JTextField
      */
     private TimeStampDataValueEditor myEditor;
 
+    /** The spreadsheet the cell is in */
+    private final ProjectController controller;
+
     /**
      * Creates a new instance of MatrixV.
      *
+     * @param controller the spreadsheet the cell is in
      * @param cell   The parent datacell for this spreadsheet cell.
      * @param tsType Which TimeStamp of the cell to display. represent.
      */
-    public TimeStampTextField(final Cell cell, final TimeStampSource tsType) {
+    public TimeStampTextField(final ProjectController controller, final Cell cell, final TimeStampSource tsType) {
         super();
 
+        this.controller = controller;
         parentCell = cell;
-        myEditor = new TimeStampDataValueEditor(this, cell, tsType);
+        myEditor = new TimeStampDataValueEditor(controller, this, cell, tsType);
 
         setValue();
         // Set visual appearance.
@@ -136,11 +141,10 @@ public final class TimeStampTextField extends JTextField
         if (parentCell != null) {
             // method names don't reflect usage - we didn't really create this
             // cell just now.
-            Variable var = Datavyu.getProjectController().getDataStore()
-                    .getVariable(parentCell);
+            Variable var = controller.getDataStore().getVariable(parentCell);
 
-            Datavyu.getProjectController().setLastCreatedVariable(var);
-            Datavyu.getProjectController().setLastSelectedCell(parentCell);
+            controller.setLastCreatedVariable(var);
+            controller.setLastSelectedCell(parentCell);
         }
 
         myEditor.focusGained(fe);

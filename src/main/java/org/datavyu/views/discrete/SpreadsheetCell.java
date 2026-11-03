@@ -17,7 +17,7 @@ package org.datavyu.views.discrete;
 import org.datavyu.util.Resources;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.datavyu.Datavyu;
+import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.CellListener;
 import org.datavyu.models.db.CellValue;
@@ -100,11 +100,15 @@ public class SpreadsheetCell extends JPanel
 
     private final SpreadsheetColumn parentColumn;
 
+    /** The spreadsheet the cell is in */
+    private final ProjectController controller;
+
     public SpreadsheetCell(final SpreadsheetColumn parentColumn,
                            final Cell cell,
                            final CellSelectionListener listener) {
 
         this.parentColumn = parentColumn;
+        controller = parentColumn.getProjectController();
         model = cell;
         setName(this.getClass().getSimpleName());
 
@@ -135,7 +139,7 @@ public class SpreadsheetCell extends JPanel
         ord.addMouseListener(this);
         ord.setFocusable(true);
 
-        onset = new TimeStampTextField(model, TimeStampSource.Onset);
+        onset = new TimeStampTextField(controller, model, TimeStampSource.Onset);
         onset.setFont(SpreadsheetTheme.labelFont());
         onset.setForeground(SpreadsheetTheme.PALETTE.time());
         onset.setToolTipText(rMap.getString("onset.tooltip"));
@@ -143,7 +147,7 @@ public class SpreadsheetCell extends JPanel
         onset.addMouseListener(this);
         onset.setName("onsetTextField");
 
-        offset = new TimeStampTextField(model, TimeStampSource.Offset);
+        offset = new TimeStampTextField(controller, model, TimeStampSource.Offset);
         offset.setFont(SpreadsheetTheme.labelFont());
         offset.setForeground(SpreadsheetTheme.PALETTE.time());
         offset.setToolTipText(rMap.getString("offset.tooltip"));
@@ -151,7 +155,7 @@ public class SpreadsheetCell extends JPanel
         offset.addMouseListener(this);
         offset.setName("offsetTextField");
 
-        dataPanel = new MatrixRootView(model, cell.getCellValue());
+        dataPanel = new MatrixRootView(controller, model, cell.getCellValue());
         dataPanel.setFont(SpreadsheetTheme.dataFont());
         dataPanel.setForeground(SpreadsheetTheme.PALETTE.text());
 
@@ -193,9 +197,14 @@ public class SpreadsheetCell extends JPanel
         stretcher = new Filler(d, d, d);
         cellPanel.add(stretcher, BorderLayout.SOUTH);
 
-        Datavyu.getVideoController().getClockTimer().registerListener(this);
+        controller.getVideoController().getClockTimer().registerListener(this);
 
         brandNew = true;
+    }
+
+    /** Stops following the clock, once the cell's view leaves the sheet. */
+    public void dispose() {
+        controller.getVideoController().getClockTimer().unRegisterListener(this);
     }
 
     /**
@@ -301,7 +310,7 @@ public class SpreadsheetCell extends JPanel
      * ({@link CellLook}). Where it stands shows only while cells are highlighted by time.
      */
     public void updateSelectionDisplay() {
-        boolean highlightAndFocus = Datavyu.getVideoController().getCellHighlightAndFocus();
+        boolean highlightAndFocus = controller.getVideoController().getCellHighlightAndFocus();
         CellLook.Selection selection;
         if (model.isHighlighted() && !highlightAndFocus) {
             selection = CellLook.Selection.HIGHLIGHTED;
@@ -310,8 +319,8 @@ public class SpreadsheetCell extends JPanel
         } else {
             selection = CellLook.Selection.NONE;
         }
-        CellLook.Time time = highlightAndFocus || Datavyu.getVideoController().getCellHighlighting()
-                ? CellLook.timeOf(model.getOnset(), model.getOffset(), Datavyu.getVideoController().getCurrentTime())
+        CellLook.Time time = highlightAndFocus || controller.getVideoController().getCellHighlighting()
+                ? CellLook.timeOf(model.getOnset(), model.getOffset(), controller.getVideoController().getCurrentTime())
                 : CellLook.Time.AHEAD;
         cellPanel.setBorder(CellLook.border(SpreadsheetTheme.PALETTE, selection, cellOverlap,
                 time == CellLook.Time.IN_PLAY));
@@ -345,8 +354,8 @@ public class SpreadsheetCell extends JPanel
         revalidate();
         if (model.isSelected()) {
             // Update the find windows to the newly selected cell's values
-            Datavyu.getVideoController().setOnsetField(model.getOnset());
-            Datavyu.getVideoController().setOffsetField(model.getOffset());
+            controller.getVideoController().setOnsetField(model.getOnset());
+            controller.getVideoController().setOffsetField(model.getOffset());
         }
     }
 
@@ -356,8 +365,8 @@ public class SpreadsheetCell extends JPanel
         // The time field is its own validate root; the sheet places its cells by time, so it lays them out again.
         revalidate();
         if (model.isSelected()) {
-            Datavyu.getVideoController().setOnsetField(model.getOnset());
-            Datavyu.getVideoController().setOffsetField(model.getOffset());
+            controller.getVideoController().setOnsetField(model.getOnset());
+            controller.getVideoController().setOffsetField(model.getOffset());
         }
     }
 
@@ -366,8 +375,8 @@ public class SpreadsheetCell extends JPanel
         updateSelectionDisplay();
         if (model.isSelected()) {
             // Update the find windows to the newly selected cell's values
-            Datavyu.getVideoController().setOnsetField(model.getOnset());
-            Datavyu.getVideoController().setOffsetField(model.getOffset());
+            controller.getVideoController().setOnsetField(model.getOnset());
+            controller.getVideoController().setOffsetField(model.getOffset());
         }
     }
 
@@ -376,8 +385,8 @@ public class SpreadsheetCell extends JPanel
         updateSelectionDisplay();
         if (model.isSelected()) {
             // Update the find windows to the newly selected cell's values
-            Datavyu.getVideoController().setOnsetField(model.getOnset());
-            Datavyu.getVideoController().setOffsetField(model.getOffset());
+            controller.getVideoController().setOnsetField(model.getOnset());
+            controller.getVideoController().setOffsetField(model.getOffset());
         } else if(getDataView().getEdTracker().indexOfCurrentEditor() > -1) {
             parentColumn.setIndexOfPreviousFocusedCell(getDataView().getEdTracker().indexOfCurrentEditor());
         }
@@ -456,8 +465,8 @@ public class SpreadsheetCell extends JPanel
         }
 
         // Update the find windows to the newly selected cell's values
-        Datavyu.getVideoController().setOnsetField(model.getOnset());
-        Datavyu.getVideoController().setOffsetField(model.getOffset());
+        controller.getVideoController().setOnsetField(model.getOnset());
+        controller.getVideoController().setOffsetField(model.getOffset());
     }
 
     @Override
@@ -479,8 +488,8 @@ public class SpreadsheetCell extends JPanel
 //                || cellPanel.getBorder().equals(OVERLAP_BORDER))) {
             model.setSelected(true);
 //        }
-        Datavyu.getView().getSpreadsheetPanel().validate();
-        Datavyu.getView().getSpreadsheetPanel().reorientView(this);
+        controller.getSpreadSheetPanel().validate();
+        controller.getSpreadSheetPanel().reorientView(this);
 
         parentColumn.setSelected(true);
     }
@@ -492,18 +501,18 @@ public class SpreadsheetCell extends JPanel
 
         parentColumn.setIndexOfPreviousFocusedCell(getDataView().getEdTracker().indexOfCurrentEditor());
 
-        List<Cell> selectedCells = Datavyu.getProjectController().getDataStore().getSelectedCells();
+        List<Cell> selectedCells = controller.getDataStore().getSelectedCells();
         List<Cell> newSelectedCell =  new ArrayList<>();
 
         if (selectedCells.size() == 0){
             newSelectedCell.add(model);
-            Datavyu.getProjectController().setLastSelectedCell(model);
+            controller.setLastSelectedCell(model);
         } else {
             newSelectedCell =  selectedCells;
             newSelectedCell.add(model);
         }
 
-        Datavyu.getProjectController().setLastSelectedCells(newSelectedCell);
+        controller.setLastSelectedCells(newSelectedCell);
 
         model.setSelected(false);
         parentColumn.setSelected(false);

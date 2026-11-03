@@ -3,15 +3,13 @@ package org.datavyu.views;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
+import org.datavyu.TestSpreadsheets;
+import org.datavyu.models.db.DataStoreFactory;
 import org.datavyu.views.discrete.SpreadsheetTheme;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
-import javax.swing.JComponent;
-import javax.swing.LookAndFeel;
-import javax.swing.UIManager;
-import javax.swing.UnsupportedLookAndFeelException;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
@@ -22,6 +20,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import javax.swing.JComponent;
+import javax.swing.LookAndFeel;
+import javax.swing.UIManager;
+import javax.swing.UnsupportedLookAndFeelException;
 
 /**
  * The keypad's keys show a glyph, a label that fits, and the keypad key that does the same.
@@ -44,7 +46,7 @@ public class KeypadKeyTest {
 
     @Test
     public void everyKeyOfTheDrawerIsAGlyphKeyWhoseLabelFits() {
-        JComponent controls = new VideoController().getControls();
+        JComponent controls = TestSpreadsheets.withPlayback(DataStoreFactory.newDataStore()).getVideoController().getControls();
         controls.setSize(controls.getPreferredSize());
         layOut(controls);
         List<KeypadKey> keys = new ArrayList<>();
@@ -71,7 +73,7 @@ public class KeypadKeyTest {
      */
     @Test
     public void theKeysSitInAKeypadGrid() {
-        JComponent controls = new VideoController().getControls();
+        JComponent controls = TestSpreadsheets.withPlayback(DataStoreFactory.newDataStore()).getVideoController().getControls();
         controls.setSize(controls.getPreferredSize());
         layOut(controls);
         List<KeypadKey> keys = new ArrayList<>();

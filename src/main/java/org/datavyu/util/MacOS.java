@@ -1,8 +1,8 @@
 package org.datavyu.util;
 
+import org.datavyu.Datavyu;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.datavyu.Datavyu;
 
 import java.awt.Desktop;
 import java.io.BufferedReader;
@@ -81,15 +81,15 @@ public class MacOS {
     /**
      * Load compile handler for MacOS.
      *
+     * @param application the running application, which the handlers ask to open files, show About and quit
      * @return True if load was successful; otherwise false.
      */
-    public static boolean loadCompileHandler() {
+    public static boolean loadCompileHandler(final Datavyu application) {
         if (!Desktop.isDesktopSupported()) {
             return false;
         }
 
         Desktop desktop = Desktop.getDesktop();
-        Datavyu application = Datavyu.getApplication();
         if (desktop.isSupported(Desktop.Action.APP_ABOUT)) {
             desktop.setAboutHandler(event -> application.showAboutWindow());
         }

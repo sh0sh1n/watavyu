@@ -16,7 +16,7 @@ package org.datavyu.views.discrete.datavalues;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.datavyu.Datavyu;
+import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.CellValue;
 import org.datavyu.models.db.Variable;
@@ -60,21 +60,26 @@ public final class MatrixRootView extends JTextArea implements FocusListener {
      */
     private EditorTracker edTracker;
 
+    /** The spreadsheet the cell is in */
+    private final ProjectController controller;
+
     /**
      * Creates a new instance of MatrixV.
      *
+     * @param controller the spreadsheet the cell is in
      * @param cell  The parent cell for this spread sheet cell.
      * @param cellValue The Matrix holding data values that this view label will represent.
      */
-    public MatrixRootView(final Cell cell, final CellValue cellValue) {
+    public MatrixRootView(final ProjectController controller, final Cell cell, final CellValue cellValue) {
         super();
+        this.controller = controller;
 
         setLineWrap(true);
         setWrapStyleWord(true);
 
         parentCell = cell;
         allEditors = new ArrayList<>();
-        edTracker = new EditorTracker(this, allEditors, cell.getVariable());
+        edTracker = new EditorTracker(this, allEditors, cell.getVariable(), controller::deleteSelectedCells);
 
         setMatrix(cellValue);
 
@@ -88,8 +93,9 @@ public final class MatrixRootView extends JTextArea implements FocusListener {
                        if ((Character.isLetter(e.getKeyChar()) || Character.isDigit(e.getKeyChar())
                                || Character.isSpaceChar(e.getKeyChar())) && !e.isAltDown() && !e.isControlDown() && !e.isMetaDown()
                                && edTracker.getCurrentEditor().isEditable() && !parentCell.getVariable().isLocked()) {
-                           UndoableEdit edit = new ChangeValCellEdit(parentCell, oldValue, ChangeCellEdit.Granularity.FINEGRAINED);
-                           Datavyu.getView().getUndoSupport().postEdit(edit);
+                           UndoableEdit edit = new ChangeValCellEdit(controller, parentCell, oldValue,
+                               ChangeCellEdit.Granularity.FINEGRAINED);
+                           controller.postEdit(edit);
                        }
                        if (e.getKeyCode() == KeyEvent.VK_ENTER) { //&& getSelectedText() != null) {
                            e.consume();
@@ -141,7 +147,7 @@ public final class MatrixRootView extends JTextArea implements FocusListener {
         if (v != null) {
             // No editors exist yet - build some to begin with.
             allEditors.clear();
-            allEditors.addAll(DataValueEditorFactory.buildMatrix(this, parentCell));
+            allEditors.addAll(DataValueEditorFactory.buildMatrix(this, parentCell, controller::isQuickKeyMode));
         }
 
         rebuildText();
@@ -186,9 +192,9 @@ public final class MatrixRootView extends JTextArea implements FocusListener {
             oldValue = parentCell.getValueAsString();
             // method names don't reflect usage - we didn't really create
             // this column just now.
-            Variable v = Datavyu.getProjectController().getDataStore().getVariable(parentCell);
-            Datavyu.getProjectController().setLastCreatedVariable(v);
-            Datavyu.getProjectController().setLastSelectedCell(parentCell);
+            Variable v = controller.getDataStore().getVariable(parentCell);
+            controller.setLastCreatedVariable(v);
+            controller.setLastSelectedCell(parentCell);
         }
         parentCell.setSelected(true);
     }
@@ -198,8 +204,9 @@ public final class MatrixRootView extends JTextArea implements FocusListener {
         // do nothing
         parentCell.setSelected(false);
         if(!parentCell.getValueAsString().equals(oldValue)) {
-            UndoableEdit edit = new ChangeValCellEdit(parentCell, oldValue, ChangeCellEdit.Granularity.COARSEGRAINED);
-            Datavyu.getView().getUndoSupport().postEdit(edit);
+            UndoableEdit edit = new ChangeValCellEdit(controller, parentCell, oldValue,
+                ChangeCellEdit.Granularity.COARSEGRAINED);
+            controller.postEdit(edit);
         }
     }
 

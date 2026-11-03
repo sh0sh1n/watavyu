@@ -18,7 +18,8 @@ import org.datavyu.views.discrete.SpreadsheetTheme;
 import org.datavyu.util.Resources;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.datavyu.Datavyu;
+import org.datavyu.controllers.project.ProjectController;
+import org.datavyu.util.Dialogs;
 import org.datavyu.controllers.DeleteColumnController;
 import org.datavyu.models.db.Argument;
 import org.datavyu.models.db.DataStore;
@@ -51,6 +52,9 @@ public final class VocabEditorV extends DatavyuDialog {
 
     /** Width and height of the arrows on the move buttons, in pixels. */
     private static final int ARROW_SIZE = 14;
+
+    /** The spreadsheet whose columns and codes are edited: the selected tab's */
+    private ProjectController controller;
 
     /** Data store for the annotations of streams */
     private DataStore dataStore;
@@ -96,14 +100,16 @@ public final class VocabEditorV extends DatavyuDialog {
     /**
      * Constructor.
      *
-     * @param parent The parent frame for the vocab editor.
-     * @param modal  Is this dialog to be modal or not?
+     * @param parent     The parent frame for the vocab editor.
+     * @param modal      Is this dialog to be modal or not?
+     * @param controller the spreadsheet whose columns and codes are edited
      */
-    public VocabEditorV(final Frame parent, final boolean modal) {
+    public VocabEditorV(final Frame parent, final boolean modal, final ProjectController controller) {
         super(parent, modal);
 
         LOGGER.info("vocEd - show");
-        dataStore = Datavyu.getProjectController().getDataStore();
+        this.controller = controller;
+        dataStore = controller.getDataStore();
 
         initComponents();
         componentListnersInit();
@@ -118,6 +124,10 @@ public final class VocabEditorV extends DatavyuDialog {
                 ked = new KeyEventDispatcher() {
                     @Override
                     public boolean dispatchKeyEvent(final KeyEvent ke) {
+                        // The editor's keys work only while it is the active window.
+                        if (!isActive()) {
+                            return false;
+                        }
 
                         boolean result = false;
                         //determine what key was pressed
@@ -174,9 +184,29 @@ public final class VocabEditorV extends DatavyuDialog {
         makeElements();
     }
 
+    /**
+     * Edits another spreadsheet's columns and codes, as when another tab is selected.
+     *
+     * @param controller the spreadsheet
+     */
+    public void setProjectController(final ProjectController controller) {
+        if (controller != this.controller) {
+            this.controller = controller;
+            selectedVocabElement = null;
+            selectedArgument = null;
+            selectedArgumentI = -1;
+            makeElements();
+        }
+    }
+
+    /** @return the spreadsheet whose columns and codes are edited */
+    public ProjectController getProjectController() {
+        return controller;
+    }
+
     private void makeElements() {
         // Populate current vocab list with vocab data from the database.
-        dataStore = Datavyu.getProjectController().getDataStore();
+        dataStore = controller.getDataStore();
         veViews = new ArrayList<VocabElementV>();
         verticalFrame = new JPanel();
         verticalFrame.setName("verticalFrame");
@@ -200,12 +230,12 @@ public final class VocabEditorV extends DatavyuDialog {
         refreshNameWarnings(true);
         updateDialogState();
 
-        String titleName = Datavyu.getProjectController().getProjectNamePretty();
+        String titleName = controller.getProjectNamePretty();
         setTitle(bundle.getString("window.title") + " - " + titleName);
     }
 
     private boolean isCurrent() {
-        List<Variable> varList = new ArrayList<>(Datavyu.getProjectController().getDataStore().getAllVariables());
+        List<Variable> varList = new ArrayList<>(dataStore.getAllVariables());
         varList.removeIf(Variable::isMedia);
         java.util.ListIterator<Variable> varIt = varList.listIterator();
         for (VocabElementV v : veViews) //wish i could map...
@@ -240,8 +270,8 @@ public final class VocabEditorV extends DatavyuDialog {
             veViews.add(matrixV);
 
             // record the effect
-            UndoableEdit edit = new AddVariableEdit(varName);
-            Datavyu.getView().getUndoSupport().postEdit(edit);
+            UndoableEdit edit = new AddVariableEdit(controller, varName);
+            controller.postEdit(edit);
 
             matrixV.requestFocus();
             matrixV.rebuildContents();
@@ -252,7 +282,7 @@ public final class VocabEditorV extends DatavyuDialog {
 
             // Whoops, user has done something strange - show warning dialog.
         } catch (UserWarningException fe) {
-            Datavyu.getApplication().showWarningDialog(fe);
+            Dialogs.warn(this, fe.getMessage());
         }
     }
 
@@ -309,7 +339,7 @@ public final class VocabEditorV extends DatavyuDialog {
         VocabElementV v = selectedVocabElement;
         int idx = getVocabElements().indexOf(v);
         if(idx > 0) {
-            SpreadSheetPanel sp = Datavyu.getView().getSpreadsheetPanel();
+            SpreadSheetPanel sp = controller.getSpreadSheetPanel();
             Variable varToSwap = getVocabElements().get(idx-1).getVariable();
             sp.moveColumn(var, varToSwap);
             makeElements();
@@ -330,7 +360,7 @@ public final class VocabEditorV extends DatavyuDialog {
         VocabElementV v = selectedVocabElement;
         int idx = getVocabElements().indexOf(v);
         if(idx < getVocabElements().size() - 1) {
-            SpreadSheetPanel sp = Datavyu.getView().getSpreadsheetPanel();
+            SpreadSheetPanel sp = controller.getSpreadSheetPanel();
             Variable varToSwap = getVocabElements().get(idx+1).getVariable();
             sp.moveColumn(var, varToSwap);
             makeElements();
@@ -386,8 +416,8 @@ public final class VocabEditorV extends DatavyuDialog {
                 // record the effect
                 List<Variable> varsToDelete = new ArrayList<Variable>();
                 varsToDelete.add(selectedVocabElement.getVariable());
-                edit = new RemoveVariableEdit(Datavyu.getProjectController().getDataStore(), varsToDelete);
-                new DeleteColumnController(varsToDelete);
+                edit = new RemoveVariableEdit(dataStore, varsToDelete);
+                new DeleteColumnController(controller, varsToDelete);
 
                 deleteElementVFromView(selectedVocabElement.getVariable().getName());
                 applyChanges();
@@ -405,7 +435,7 @@ public final class VocabEditorV extends DatavyuDialog {
         updateDialogState();
         if (edit != null) {
             // notify the listeners
-            Datavyu.getView().getUndoSupport().postEdit(edit);
+            controller.postEdit(edit);
         }
     }
 
@@ -428,7 +458,9 @@ public final class VocabEditorV extends DatavyuDialog {
 
         int errors = 0;
         updateDialogState();
-        Datavyu.getView().getSpreadsheetPanel().redrawCells();
+        if (controller.getSpreadSheetPanel() != null) {
+            controller.getSpreadSheetPanel().redrawCells();
+        }
 
         for (int i = veViews.size() - 1; i >= 0; i--) {
             VocabElementV vev = veViews.get(i);

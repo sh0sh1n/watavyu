@@ -14,7 +14,6 @@
  */
 package org.datavyu.views.discrete.layouts;
 
-import org.datavyu.Datavyu;
 import org.datavyu.views.discrete.SpreadsheetCell;
 import org.datavyu.views.discrete.SpreadsheetColumn;
 import org.datavyu.views.discrete.SpreadsheetView;
@@ -69,8 +68,6 @@ public class SheetLayoutOrdinal extends SheetLayout {
      */
     @Override
     protected void layoutCells(Container parent) {
-        Datavyu.getView().setRedraw(false);
-
         // This layout must be applied to a Spreadsheet panel.
         pane = (JScrollPane) parent;
         SpreadsheetView mainView = (SpreadsheetView) pane.getViewport()

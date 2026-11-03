@@ -1,22 +1,24 @@
 package org.datavyu.views.discrete;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
-import org.datavyu.Datavyu;
+import org.datavyu.TestSpreadsheets;
 import org.datavyu.models.db.Cell;
+import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.DataStoreFactory;
-import org.datavyu.views.VideoController;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.util.ArrayList;
+import java.util.List;
 import javax.swing.JComponent;
 import javax.swing.JPanel;
 import javax.swing.RepaintManager;
 import javax.swing.SwingUtilities;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * A cell whose onset or offset changes asks for the sheet to be laid out again, since the sheet places cells by time
@@ -25,7 +27,6 @@ import java.util.List;
  */
 public class SpreadsheetCellTimeTest {
 
-    private VideoController previousController;
     private RepaintManager previousManager;
     private Cell model;
     private SpreadsheetCell cell;
@@ -35,11 +36,12 @@ public class SpreadsheetCellTimeTest {
 
     @BeforeMethod
     public void setUp() throws Exception {
-        model = DataStoreFactory.newDataStore().createVariable("column").createPointCell(1_000);
+        DataStore dataStore = DataStoreFactory.newDataStore();
+        model = dataStore.createVariable("column").createPointCell(1_000);
         SwingUtilities.invokeAndWait(() -> {
-            previousController = Datavyu.getVideoController();
-            Datavyu.setVideoController(new VideoController());
-            cell = new SpreadsheetCell(null, model, null);
+            SpreadsheetColumn column = mock(SpreadsheetColumn.class);
+            when(column.getProjectController()).thenReturn(TestSpreadsheets.withPlayback(dataStore));
+            cell = new SpreadsheetCell(column, model, null);
             new JPanel(null).add(cell);
             previousManager = RepaintManager.currentManager(cell);
             RepaintManager.setCurrentManager(new RepaintManager() {
@@ -55,7 +57,6 @@ public class SpreadsheetCellTimeTest {
     public void tearDown() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
             RepaintManager.setCurrentManager(previousManager);
-            Datavyu.setVideoController(previousController);
         });
     }
 

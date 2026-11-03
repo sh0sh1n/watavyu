@@ -17,7 +17,8 @@ package org.datavyu.views;
 import org.datavyu.util.Resources;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.datavyu.Datavyu;
+import org.datavyu.controllers.project.ProjectController;
+import org.datavyu.util.Dialogs;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.UserWarningException;
 import org.datavyu.models.db.Variable;
@@ -42,21 +43,26 @@ public final class NewVariableV extends DatavyuDialog {
     private javax.swing.JButton cancelButton;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JTextField nameField;
+    /** The spreadsheet the column is added to */
+    private final ProjectController controller;
+
     private javax.swing.JButton okButton;
 
     /**
      * Constructor, creates a new form to create a new variable.
      *
-     * @param parent The parent of this form.
-     * @param modal  Should the dialog be modal or not?
+     * @param parent     The parent of this form.
+     * @param modal      Should the dialog be modal or not?
+     * @param controller the spreadsheet the column is added to
      */
-    public NewVariableV(final java.awt.Frame parent, final boolean modal) {
+    public NewVariableV(final java.awt.Frame parent, final boolean modal, final ProjectController controller) {
         super(parent, modal);
+        this.controller = controller;
         logger.info("newVar - show");
         initComponents();
         setName(this.getClass().getSimpleName());
 
-        dataStore = Datavyu.getProjectController().getDataStore();
+        dataStore = controller.getDataStore();
 
         getRootPane().setDefaultButton(okButton);
     }
@@ -150,20 +156,20 @@ public final class NewVariableV extends DatavyuDialog {
         try {
             logger.info("newVar - create column:" + getVariableName());
             Variable var = dataStore.createVariable(getVariableName());
-            Datavyu.getProjectController().setLastCreatedVariable(var);
+            controller.setLastCreatedVariable(var);
 
             // record the effect
-            UndoableEdit edit = new AddVariableEdit(getVariableName());
+            UndoableEdit edit = new AddVariableEdit(controller, getVariableName());
 
             // Display any changes.
-            Datavyu.getView().getComponent().validate();
-            Datavyu.getView().getUndoSupport().postEdit(edit);
+            controller.getSpreadSheetPanel().validate();
+            controller.postEdit(edit);
 
             dispose();
 
             // Whoops, user has done something strange - show warning dialog.
         } catch (UserWarningException fe) {
-            Datavyu.getApplication().showWarningDialog(fe);
+            Dialogs.warn(this, fe.getMessage());
 
         }
     }// GEN-LAST:event_okButtonActionPerformed

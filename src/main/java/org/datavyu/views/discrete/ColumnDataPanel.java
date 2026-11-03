@@ -108,6 +108,9 @@ public final class ColumnDataPanel extends JPanel implements KeyEventDispatcher 
      */
     public void deregisterListeners() {
         KeyboardFocusManager.getCurrentKeyboardFocusManager().removeKeyEventDispatcher(this);
+        for (SpreadsheetCell cell : cells) {
+            cell.dispose();
+        }
     }
 
     /**
@@ -146,6 +149,7 @@ public final class ColumnDataPanel extends JPanel implements KeyEventDispatcher 
     public void clear() {
         for (SpreadsheetCell cell : cells) {
             cell.getCell().removeListener(cell);
+            cell.dispose();
             this.remove(cell);
         }
 
@@ -161,6 +165,7 @@ public final class ColumnDataPanel extends JPanel implements KeyEventDispatcher 
     public void deleteCell(final Cell cell) {
         SpreadsheetCell sCell = viewMap.get(cell);
         cell.removeListener(sCell);
+        sCell.dispose();
         this.remove(sCell);
         cells.remove(sCell);
         viewMap.remove(cell);

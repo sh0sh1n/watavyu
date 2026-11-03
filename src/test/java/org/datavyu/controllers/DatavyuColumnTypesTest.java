@@ -85,7 +85,7 @@ public class DatavyuColumnTypesTest {
         Path file = Files.createTempFile("import", ".json");
         try {
             Files.writeString(file, json);
-            new OpenDataStoreFileController().importJSONToSpreadsheet(new File(file.toString()), spreadsheet);
+            new OpenDataStoreFileController(message -> { }).importJSONToSpreadsheet(new File(file.toString()), spreadsheet);
         } finally {
             Files.delete(file);
         }

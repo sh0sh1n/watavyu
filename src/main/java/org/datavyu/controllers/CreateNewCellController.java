@@ -16,7 +16,7 @@ package org.datavyu.controllers;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.datavyu.Datavyu;
+import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.Variable;
@@ -38,14 +38,18 @@ public final class CreateNewCellController {
     /** The logger instance for this class */
     private static Logger logger = LogManager.getLogger(CreateNewCellController.class);
 
+    /** The spreadsheet the cells are created in */
+    private final ProjectController controller;
+
     /** The model (the database) for this controller */
     private DataStore model;
 
     /**
-     * Default constructor.
+     * @param controller the spreadsheet the cells are created in
      */
-    public CreateNewCellController() {
-        model = Datavyu.getProjectController().getDataStore();
+    public CreateNewCellController(final ProjectController controller) {
+        this.controller = controller;
+        model = controller.getDataStore();
     }
 
     /**
@@ -53,13 +57,14 @@ public final class CreateNewCellController {
      * supplied cells. If no column is adjacent in the specified direction, no
      * cell will be created.
      *
+     * @param controller  the spreadsheet the cells are created in
      * @param sourceCells The list of source cells that we wish to create cells
      *                    adjacent too.
      * @param direction   The direction in which we wish to create adjacent cells.
      */
-    public CreateNewCellController(final List<Cell> sourceCells,
+    public CreateNewCellController(final ProjectController controller, final List<Cell> sourceCells,
                                    final ArrayDirection direction) {
-        model = Datavyu.getProjectController().getDataStore();
+        this(controller);
 
         Cell newCell = null;
 
@@ -88,13 +93,13 @@ public final class CreateNewCellController {
                         newCell = var.createCell();
                         newCell.setOnset(sourceCell.getOnset());
                         newCell.setOffset(sourceCell.getOffset());
-                        Datavyu.getProjectController().setLastCreatedCell(newCell);
+                        controller.setLastCreatedCell(newCell);
 
                         // Add the undoable action
-                        UndoableEdit edit = new AddCellEdit(var.getName(), newCell);
+                        UndoableEdit edit = new AddCellEdit(controller, var.getName(), newCell);
 
                         // notify the listeners
-                        Datavyu.getView().getUndoSupport().postEdit(edit);
+                        controller.postEdit(edit);
                         newCell.setHighlighted(true);
                         break;
                     }
@@ -107,11 +112,13 @@ public final class CreateNewCellController {
     /**
      * Constructor - creates new controller.
      *
+     * @param controller    the spreadsheet the cell is created in
      * @param milliseconds The milliseconds to use for the onset for the new cell.
      * @param setPrevOffset Determine whether or not to set previous offset to milliseconds-1
      */
-    public CreateNewCellController(final long milliseconds, boolean setPrevOffset) {
-        model = Datavyu.getProjectController().getDataStore();
+    public CreateNewCellController(final ProjectController controller, final long milliseconds,
+                                   boolean setPrevOffset) {
+        this(controller);
 
         //We see if setPrevOffset is true
         if(setPrevOffset){
@@ -123,15 +130,15 @@ public final class CreateNewCellController {
                 }
                 Cell cellToEdit = findClosestCell(model.getSelectedVariables().get(0),milliseconds);
                 if(cellToEdit != null && cellToEdit.getClip() == null) {
-                    UndoableEdit edit = new ChangeOffsetCellEdit(cellToEdit, cellToEdit.getOffset(),
+                    UndoableEdit edit = new ChangeOffsetCellEdit(controller, cellToEdit, cellToEdit.getOffset(),
                             milliseconds - 1, ChangeCellEdit.Granularity.FINEGRAINED);
-                    Datavyu.getView().getUndoSupport().postEdit(edit);
+                    controller.postEdit(edit);
                     cellToEdit.setOffset(Math.max(0, (milliseconds - 1)));
                 }
             }else{
                 //There is more than one selected column; we parse the column of the selected cell
-                if(Datavyu.getProjectController().getLastSelectedCell() != null){
-                    Variable columnToParse = model.getVariable(Datavyu.getProjectController().getLastSelectedCell());
+                if(controller.getLastSelectedCell() != null){
+                    Variable columnToParse = model.getVariable(controller.getLastSelectedCell());
                     if (columnToParse != null && columnToParse.refusesEdits()) {
                         return;
                     }
@@ -140,9 +147,9 @@ public final class CreateNewCellController {
                         createNewCell(milliseconds);
                         return;
                     }
-                    UndoableEdit edit = new ChangeOffsetCellEdit(cellToEdit, cellToEdit.getOffset(),
+                    UndoableEdit edit = new ChangeOffsetCellEdit(controller, cellToEdit, cellToEdit.getOffset(),
                             milliseconds - 1, ChangeCellEdit.Granularity.FINEGRAINED);
-                    Datavyu.getView().getUndoSupport().postEdit(edit);
+                    controller.postEdit(edit);
                     cellToEdit.setOffset(Math.max(0, (milliseconds - 1)));
                 }
             }
@@ -181,13 +188,13 @@ public final class CreateNewCellController {
         } else if (cellsToEdit.size() > 1) {
             //find the selected cell if there is any
             for(Cell cell : cellsToEdit){
-                if(cell.equals(Datavyu.getProjectController().getLastSelectedCell())){
+                if(cell.equals(controller.getLastSelectedCell())){
                     return cell;
                 }
             }
         }
 
-        return Datavyu.getProjectController().getLastSelectedCell();
+        return controller.getLastSelectedCell();
     }
 
     /**
@@ -210,11 +217,11 @@ public final class CreateNewCellController {
         List<Cell> cells = v.getCellsTemporally();
 
         long newOnset = 0;
-        newOnset = Datavyu.getVideoController().getCurrentTime();
+        newOnset = controller.getVideoController().getCurrentTime();
 
         Cell newCell = v.createPointCell(newOnset);
-        Datavyu.getProjectController().setLastCreatedCell(newCell);
-        Datavyu.getProjectController().setLastCreatedVariable(v);
+        controller.setLastCreatedCell(newCell);
+        controller.setLastCreatedVariable(v);
 
         return newCell;
     }
@@ -226,9 +233,9 @@ public final class CreateNewCellController {
      */
     public void createDefaultCell(boolean preferFirstSelected) {
         Cell newCell = null;
-        Variable v = Datavyu.getProjectController().getLastCreatedVariable();
+        Variable v = controller.getLastCreatedVariable();
         if (preferFirstSelected) {
-            List<Variable> vlist = Datavyu.getProjectController().getDataStore().getSelectedVariables();
+            List<Variable> vlist = controller.getDataStore().getSelectedVariables();
             if (!vlist.isEmpty()) {
                 v = vlist.get(0);
             }
@@ -239,9 +246,11 @@ public final class CreateNewCellController {
         }
         if (newCell != null) {
             // record the effect
-            UndoableEdit edit = new AddCellEdit(v.getName(), newCell);
-            Datavyu.getView().getComponent().revalidate();
-            Datavyu.getView().getUndoSupport().postEdit(edit);
+            UndoableEdit edit = new AddCellEdit(controller, v.getName(), newCell);
+            if (controller.getSpreadSheetPanel() != null) {
+                controller.getSpreadSheetPanel().revalidate();
+            }
+            controller.postEdit(edit);
             model.deselectAll();
             newCell.setHighlighted(true);
         }
@@ -300,7 +309,6 @@ public final class CreateNewCellController {
         boolean refused = false;
 
         // check for Situation 1: one or more selected columns
-        model = Datavyu.getProjectController().getDataStore();
 
         for (Variable var : model.getSelectedVariables()) {
             if (var.isMedia()) {
@@ -315,12 +323,12 @@ public final class CreateNewCellController {
             }
             logger.info("create cell in selected column");
             newCell = var.createPointCell(onset);
-            Datavyu.getProjectController().setLastCreatedCell(newCell);
-            Datavyu.getProjectController().setLastCreatedVariable(var);
+            controller.setLastCreatedCell(newCell);
+            controller.setLastCreatedVariable(var);
 
             // Add the undoable action
-            UndoableEdit edit = new AddCellEdit(var.getName(), newCell);
-            Datavyu.getView().getUndoSupport().postEdit(edit);
+            UndoableEdit edit = new AddCellEdit(controller, var.getName(), newCell);
+            controller.postEdit(edit);
 
             newcelladded = true;
 
@@ -349,12 +357,12 @@ public final class CreateNewCellController {
                     continue;
                 }
                 newCell = var.createPointCell(onset);
-                Datavyu.getProjectController().setLastCreatedCell(newCell);
-                Datavyu.getProjectController().setLastCreatedVariable(var);
+                controller.setLastCreatedCell(newCell);
+                controller.setLastCreatedVariable(var);
 
                 // Add the undoable action
-                UndoableEdit edit = new AddCellEdit(var.getName(), newCell);
-                Datavyu.getView().getUndoSupport().postEdit(edit);
+                UndoableEdit edit = new AddCellEdit(controller, var.getName(), newCell);
+                controller.postEdit(edit);
 
                 newcelladded = true;
 
@@ -367,19 +375,19 @@ public final class CreateNewCellController {
         // else check for Situation 3: User is or was editing an existing cell
         // and has requested a new cell
         if (!newcelladded && !refused && multiadd) {
-            if (Datavyu.getProjectController().getLastSelectedCell() != null) {
+            if (controller.getLastSelectedCell() != null) {
                 logger.info("create cell while editing existing cell");
-                Variable var = model.getVariable(Datavyu.getProjectController().getLastCreatedCell());
+                Variable var = model.getVariable(controller.getLastCreatedCell());
                 if (var != null && var.refusesEdits()) {
                     refused = true;
                 } else if (var != null && !var.isMedia()) {
                     newCell = var.createPointCell(onset);
-                    Datavyu.getProjectController().setLastCreatedCell(newCell);
-                    Datavyu.getProjectController().setLastCreatedVariable(var);
+                    controller.setLastCreatedCell(newCell);
+                    controller.setLastCreatedVariable(var);
 
                     // Add the undoable action
-                    UndoableEdit edit = new AddCellEdit(var.getName(), newCell);
-                    Datavyu.getView().getUndoSupport().postEdit(edit);
+                    UndoableEdit edit = new AddCellEdit(controller, var.getName(), newCell);
+                    controller.postEdit(edit);
 
                     newcelladded = true;
                 }
@@ -396,7 +404,7 @@ public final class CreateNewCellController {
                 return;
             }
 
-            Variable last = Datavyu.getProjectController().getLastCreatedVariable();
+            Variable last = controller.getLastCreatedVariable();
             if (last == null || last.isMedia()) {
                 // Media columns' cells are clips; a new cell goes in the first annotation column.
                 last = model.getAllVariables().stream().filter(variable -> !variable.isMedia()).findFirst()
@@ -404,18 +412,18 @@ public final class CreateNewCellController {
                 if (last == null) {
                     return;
                 }
-                Datavyu.getProjectController().setLastCreatedVariable(last);
+                controller.setLastCreatedVariable(last);
             }
             if (last.refusesEdits()) {
                 return;
             }
 
-            newCell = Datavyu.getProjectController().getLastCreatedVariable().createPointCell(onset);
-            Datavyu.getProjectController().setLastCreatedCell(newCell);
+            newCell = controller.getLastCreatedVariable().createPointCell(onset);
+            controller.setLastCreatedCell(newCell);
 
             // Add the undoable action
-            UndoableEdit edit = new AddCellEdit(Datavyu.getProjectController().getLastCreatedVariable().getName(), newCell);
-            Datavyu.getView().getUndoSupport().postEdit(edit);
+            UndoableEdit edit = new AddCellEdit(controller, controller.getLastCreatedVariable().getName(), newCell);
+            controller.postEdit(edit);
         }
 
         if (newCell == null) {

@@ -16,12 +16,12 @@ package org.datavyu.views;
 
 import org.datavyu.views.discrete.SpreadsheetTheme;
 import org.datavyu.controllers.project.MediaPlayers;
+import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.util.Settings;
 import org.datavyu.models.db.UserWarningException;
 import net.miginfocom.swing.MigLayout;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.datavyu.Datavyu;
 import org.datavyu.controllers.CreateNewCellController;
 import org.datavyu.controllers.SetSelectedCellStartTimeController;
 import org.datavyu.controllers.SetSelectedCellStopTimeController;
@@ -177,10 +177,21 @@ public final class VideoController implements ClockListener {
 
     private volatile int jumpDirection = -1;
 
+    /** The spreadsheet whose cells the coding commands change */
+    private final ProjectController spreadsheet;
+
+    /** The window that owns the players' windows and this controller's dialogs; null for none */
+    private final Frame owner;
+
     /**
      * Makes a spreadsheet's player, stopped at time zero, with its controls.
+     *
+     * @param spreadsheet the spreadsheet whose cells the coding commands change
+     * @param owner       the window that owns the players' windows and the dialogs; null for none
      */
-    public VideoController() {
+    public VideoController(final ProjectController spreadsheet, final Frame owner) {
+        this.spreadsheet = spreadsheet;
+        this.owner = owner;
         clockTimer.registerListener(this);
         resourceMap = Resources.of(VideoController.class);
         initComponents();
@@ -240,11 +251,11 @@ public final class VideoController implements ClockListener {
             final StreamViewer streamViewer;
             try {
                 logger.debug("Open video " + file);
-                streamViewer = JavaFxVideoPlugin.open(id, file, Datavyu.getApplication().getMainFrame(), false);
+                streamViewer = JavaFxVideoPlugin.open(id, file, owner, clockTimer, false);
             } catch (Throwable t) {
                 logger.error("Unable to open " + file, t);
                 SwingUtilities.invokeLater(() -> {
-                    JOptionPane.showMessageDialog(Datavyu.getApplication().getMainFrame(),
+                    JOptionPane.showMessageDialog(owner,
                             t.getMessage() != null ? t.getMessage() : "Unable to open " + file.getName(),
                             "Cannot Open Video", JOptionPane.ERROR_MESSAGE);
                     failed.run();
@@ -479,8 +490,8 @@ public final class VideoController implements ClockListener {
      * @return True if the plugin should be removed, false otherwise.
      */
     private boolean shouldRemove() {
-        Resources rMap = Resources.of(Datavyu.class);
-        return Dialogs.confirm(Datavyu.getApplication().getMainFrame(), rMap.getString("ClosePluginDialog.message"),
+        Resources rMap = Resources.of(VideoController.class);
+        return Dialogs.confirm(owner, rMap.getString("ClosePluginDialog.message"),
                 rMap.getString("ClosePluginDialog.title"), "OK");
     }
 
@@ -673,7 +684,7 @@ public final class VideoController implements ClockListener {
      */
     public void setCellOnsetAction() {
         logger.info("Set cell onset");
-        new SetSelectedCellStartTimeController(getCurrentTime());
+        new SetSelectedCellStartTimeController(spreadsheet, getCurrentTime());
         setOnsetField(getCurrentTime());
     }
 
@@ -682,7 +693,7 @@ public final class VideoController implements ClockListener {
      */
     public void setCellOffsetAction() {
         logger.info("Set cell offset");
-        new SetSelectedCellStopTimeController(getCurrentTime());
+        new SetSelectedCellStopTimeController(spreadsheet, getCurrentTime());
         setOffsetField(getCurrentTime());
     }
 
@@ -1063,8 +1074,7 @@ public final class VideoController implements ClockListener {
             clockTimer.setForceTime(time);
         }
 
-        CreateNewCellController controller = new CreateNewCellController();
-        controller.createDefaultCell(true);
+        new CreateNewCellController(spreadsheet).createDefaultCell(true);
     }
 
     /**
@@ -1079,7 +1089,7 @@ public final class VideoController implements ClockListener {
             clockTimer.setForceTime(time);
         }
 
-        new CreateNewCellController(time, true);
+        new CreateNewCellController(spreadsheet, time, true);
     }
 
     public ClockTimer getClockTimer() {

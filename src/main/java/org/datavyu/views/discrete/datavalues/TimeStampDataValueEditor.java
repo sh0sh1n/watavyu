@@ -16,7 +16,7 @@ package org.datavyu.views.discrete.datavalues;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.datavyu.Datavyu;
+import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.Cell;
 import org.datavyu.undoableedits.ChangeCellEdit.Granularity;
 import org.datavyu.undoableedits.ChangeOffsetCellEdit;
@@ -50,27 +50,24 @@ public final class TimeStampDataValueEditor extends EditorComponent {
      */
     private TimeStampSource dataSourceType;
 
-    /**
-     * Text when editor gained focus (became current editor).
-     */
-    private String textOnFocus;
 
-    /**
-     * UndoableEdit
-     */
-    private UndoableEdit edit = null;
+    /** The spreadsheet the cell is in */
+    private final ProjectController controller;
 
     /**
      * Constructor.
      *
+     * @param controller the spreadsheet the cell is in
      * @param ta         The parent JTextComponent the editor is in.
      * @param cell       The parent data cell this editor resides within.
      * @param sourceType What timestamp are we displaying.
      */
-    public TimeStampDataValueEditor(final JTextComponent ta,
+    public TimeStampDataValueEditor(final ProjectController controller,
+                                    final JTextComponent ta,
                                     final Cell cell,
                                     final TimeStampSource sourceType) {
         super(ta);
+        this.controller = controller;
         setEditable(true);
         parentCell = cell;
         dataSourceType = sourceType;
@@ -101,17 +98,17 @@ public final class TimeStampDataValueEditor extends EditorComponent {
             case Onset:
                 long oldOnset = parentCell.getOnset();
                 parentCell.setOnset(value);
-                edit = new ChangeOnsetCellEdit(parentCell, oldOnset, parentCell.getOnset(), Granularity.FINEGRAINED);
+                edit = new ChangeOnsetCellEdit(controller, parentCell, oldOnset, parentCell.getOnset(), Granularity.FINEGRAINED);
                 break;
             default:
                 long oldOffset = parentCell.getOffset();
                 parentCell.setOffset(value);
-                edit = new ChangeOffsetCellEdit(parentCell, oldOffset, parentCell.getOffset(), Granularity.FINEGRAINED);
+                edit = new ChangeOffsetCellEdit(controller, parentCell, oldOffset, parentCell.getOffset(), Granularity.FINEGRAINED);
                 break;
         }
 
         resetValue();
-        Datavyu.getView().getUndoSupport().postEdit(edit);
+        controller.postEdit(edit);
     }
 
     /**
@@ -320,15 +317,7 @@ public final class TimeStampDataValueEditor extends EditorComponent {
      */
     @Override
     public void focusGained(final FocusEvent fe) {
-        textOnFocus = getText();
-    }
-
-    @Override
-    public void focusLost(FocusEvent fe) {
-        super.focusLost(fe);
-        if (!getText().equals(textOnFocus)) {
-            Datavyu.getView().getUndoSupport().postEdit(edit);
-        }
+        // Each change of the time is recorded as it is made, so there is nothing to remember here.
     }
 
     /**

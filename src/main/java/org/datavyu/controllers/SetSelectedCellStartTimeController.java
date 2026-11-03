@@ -14,9 +14,9 @@
  */
 package org.datavyu.controllers;
 
+import org.datavyu.controllers.project.ProjectController;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.datavyu.Datavyu;
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.undoableedits.ChangeCellEdit.Granularity;
@@ -36,17 +36,18 @@ public class SetSelectedCellStartTimeController {
     /**
      * Sets all selected cells to have the specified start time / onset.
      *
+     * @param controller   the spreadsheet
      * @param milliseconds The time in milliseconds to use for all selected cells onset / start time.
      */
-    public SetSelectedCellStartTimeController(final long milliseconds) {
+    public SetSelectedCellStartTimeController(final ProjectController controller, final long milliseconds) {
         logger.info("Set selected cell onset to: " + milliseconds);
 
         // Get the dataStore that we are manipulating.
-        DataStore dataStore = Datavyu.getProjectController().getDataStore();
+        DataStore dataStore = controller.getDataStore();
         List<Cell> selectedCells;
 
         if(dataStore.getSelectedCells().size() == 0){
-          selectedCells = Datavyu.getProjectController().getLastSelectedCells();
+          selectedCells = controller.getLastSelectedCells();
         }else{
           selectedCells = dataStore.getSelectedCells();
         }
@@ -57,8 +58,8 @@ public class SetSelectedCellStartTimeController {
                 continue;
             }
             // record the effect
-            UndoableEdit edit = new ChangeOnsetCellEdit(cell, cell.getOnset(), milliseconds, Granularity.FINEGRAINED);
-            Datavyu.getView().getUndoSupport().postEdit(edit);
+            UndoableEdit edit = new ChangeOnsetCellEdit(controller, cell, cell.getOnset(), milliseconds, Granularity.FINEGRAINED);
+            controller.postEdit(edit);
             cell.setOnset(milliseconds);
         }
     }

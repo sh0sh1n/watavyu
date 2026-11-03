@@ -16,7 +16,7 @@ package org.datavyu.views.discrete;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.datavyu.Datavyu;
+import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.*;
 import org.datavyu.undoableedits.LockColumnEdit;
 import org.datavyu.undoableedits.RemoveVariableEdit;
@@ -118,20 +118,24 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
 
     private int previouslyFocusedCellIdx = -1;
 
+    /** The spreadsheet this column is in */
+    private final ProjectController controller;
+
     /**
      * Creates new SpreadsheetColumn.
      *
-     * @param db       Database reference.
+     * @param controller the spreadsheet this column is in
      * @param var    the variable this column displays.
      * @param cellSelL Spreadsheet cell selection listener to notify
      * @param colSelL  Column selection listener to notify.
      */
-    public SpreadsheetColumn(final DataStore db,
+    public SpreadsheetColumn(final ProjectController controller,
                              final Variable var,
                              final CellSelectionListener cellSelL,
                              final ColumnSelectionListener colSelL,
                              final ColumnVisibilityListener colVisL) {
-        this.dataStore = db;
+        this.controller = controller;
+        this.dataStore = controller.getDataStore();
         this.variable = var;
         this.cellSelList = cellSelL;
         this.columnSelList = colSelL;
@@ -154,12 +158,17 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
         this.setVisible(!var.isHidden());
         datapanel.setVisible(!var.isHidden());
 
-        Datavyu.getVideoController().getClockTimer().registerListener(this);
+        controller.getVideoController().getClockTimer().registerListener(this);
     }
 
-    /** The main window's glass pane, which shows a column's image while it is dragged. */
-    private static TransparentPanel transparentPanel() {
-        return (TransparentPanel) Datavyu.getView().getFrame().getGlassPane();
+    /** @return the spreadsheet this column is in */
+    public ProjectController getProjectController() {
+        return controller;
+    }
+
+    /** The window's glass pane, which shows a column's image while it is dragged. */
+    private TransparentPanel transparentPanel() {
+        return (TransparentPanel) SwingUtilities.getRootPane(this).getGlassPane();
     }
 
     /** Height of the bar under a selected column's header. */
@@ -268,12 +277,12 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
         }
         JPopupMenu menu = new JPopupMenu();
         menu.add(hideItem(dataStore, variable, () -> {
-            Datavyu.getView().getSpreadsheetPanel().deselectAll();
-            Datavyu.getView().getComponent().revalidate();
+            controller.getSpreadSheetPanel().deselectAll();
+            controller.getSpreadSheetPanel().revalidate();
         }));
-        menu.add(deleteItem(dataStore, variable, Datavyu.getView().getUndoSupport()::postEdit));
+        menu.add(deleteItem(dataStore, variable, controller::postEdit));
         menu.addSeparator();
-        menu.add(lockItem(dataStore, variable, Datavyu.getView().getUndoSupport()::postEdit));
+        menu.add(lockItem(dataStore, variable, controller::postEdit));
         menu.show(this, me.getX(), me.getY());
         me.consume();
         return true;
@@ -319,6 +328,7 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
         removeMouseMotionListener(this);
         variable.removeListener(this);
         datapanel.deregisterListeners();
+        controller.getVideoController().getClockTimer().unRegisterListener(this);
     }
 
     /**
@@ -456,7 +466,7 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
     }
 
     private void focusNextCell() {
-        long time = Datavyu.getVideoController().getCurrentTime();
+        long time = controller.getVideoController().getCurrentTime();
         List<SpreadsheetCell> tempCells = getCellsTemporally();
         for(int i = 0; i < tempCells.size(); i++) {
             SpreadsheetCell c = tempCells.get(i);
@@ -497,8 +507,8 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
     // *************************************************************************
     @Override
     public void requestFocus() {
-        Datavyu.getView().getSpreadsheetPanel().revalidate();
-        Datavyu.getView().getSpreadsheetPanel().reorientView(this);
+        controller.getSpreadSheetPanel().revalidate();
+        controller.getSpreadSheetPanel().reorientView(this);
         /**
          * Request focus for this column. It will request focus for the first
          * SpreadsheetCell in the column if one exists. If no cells exist it
@@ -606,7 +616,7 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
             logger.info("Released X: " + x);
             // Iterate over the spreadsheet columns, starting at current column, to figure out how many
             // positions to shift by.
-            SpreadSheetPanel sp = (SpreadSheetPanel) Datavyu.getView().getComponent();
+            SpreadSheetPanel sp = controller.getSpreadSheetPanel();
             List<SpreadsheetColumn> cols = sp.getVisibleColumns();
             ListIterator<SpreadsheetColumn> itr = cols.listIterator(cols.indexOf(this));
 
@@ -732,8 +742,8 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
     @Override
     public void clockPeriodicSync(double clockTime) {
         if(isSelected()
-            && Datavyu.getVideoController().getCellHighlightAndFocus()
-            && !Datavyu.getVideoController().getClockTimer().isPaused()) {
+            && controller.getVideoController().getCellHighlightAndFocus()
+            && !controller.getVideoController().getClockTimer().isPaused()) {
             focusNextCell();
         }
     }

@@ -44,10 +44,6 @@ public abstract class DataValueEditor extends EditorComponent {
      * The specific type of model this view represents.
      */
     private Class modelType = null;
-    /**
-     * Text when editor gained focus (became current editor).
-     */
-    private String textOnFocus;
 
     /**
      * Constructor.
@@ -91,20 +87,7 @@ public abstract class DataValueEditor extends EditorComponent {
     // *************************************************************************
     @Override
     public void focusGained(final FocusEvent fe) {
-        textOnFocus = getText();
-    }
-
-    @Override
-    public void focusLost(final FocusEvent fe) {
-        super.focusLost(fe);
-        if (!getText().equals(textOnFocus)) {
-/*  
-            //Q: How can I get the Cell reference from the value
-            UndoableEdit edit = new ChangeValCellEdit(cell);                        
-            // notify the listeners
-            Datavyu.getTimescaleComponent().getUndoSupport().postEdit(edit);
-*/
-        }
+        // The cell records a change of its values when it loses focus (MatrixRootView).
     }
 
     // *************************************************************************

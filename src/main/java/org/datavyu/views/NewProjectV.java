@@ -17,8 +17,7 @@ package org.datavyu.views;
 import org.datavyu.util.Resources;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.datavyu.Datavyu;
-import org.datavyu.controllers.NewProjectController;
+import org.datavyu.util.Dialogs;
 
 import java.awt.*;
 
@@ -40,14 +39,19 @@ public final class NewProjectV extends DatavyuDialog {
     private javax.swing.JButton okButton;
     // End of variables declaration//GEN-END:variables
 
+    /** The main window, which makes the new spreadsheet */
+    private final DatavyuView view;
+
     /**
      * Creates new form NewDatabaseView.
      *
      * @param parent The parent of this JDialog.
      * @param modal  Is this dialog modal or not?
+     * @param view   The main window, which makes the new spreadsheet.
      */
-    public NewProjectV(final Frame parent, final boolean modal) {
+    public NewProjectV(final Frame parent, final boolean modal, final DatavyuView view) {
         super(parent, modal);
+        this.view = view;
         LOGGER.info("newProj - show");
         initComponents();
 
@@ -152,28 +156,16 @@ public final class NewProjectV extends DatavyuDialog {
     private void okButtonActionPerformed(final java.awt.event.ActionEvent evt) { // GEN-FIRST:event_okButtonActionPerformed
         LOGGER.info("create new project");
         Resources r = Resources.of(NewProjectV.class);
-        DatavyuView s = (DatavyuView) Datavyu.getView();
-
-        // clear the contents of the existing spreadsheet.
-        Datavyu.getProjectController().setLastCreatedCell(null);
 
         if (!isValidProjectName(getProjectName())) {
-            Datavyu.getApplication().showWarningDialog(r.getString("Error.invalidName"));
+            Dialogs.warn(this, r.getString("Error.invalidName"));
             dispose();
-            new NewProjectController();
+            view.showNewProjectForm();
         } else {
-
-            s.createNewSpreadsheet(getProjectName());
-
-            // The DB we just created doesn't really have any unsaved changes.
-            Datavyu.getProjectController().getDataStore().markAsUnchanged();
+            // The spreadsheet just created has no unsaved changes.
+            view.createNewSpreadsheet(getProjectName()).getDataStore().markAsUnchanged();
             dispose();
         }
-
-//        Datavyu.getApplication().resetApp();
-
-        // Show data controller after creating a new project.
-//        Datavyu.getApplication().show(Datavyu.getVideoController());
     } // GEN-LAST:event_okButtonActionPerformed
 
     private boolean isValidProjectName(final String name) {

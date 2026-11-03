@@ -14,7 +14,6 @@
  */
 package org.datavyu.views.discrete;
 
-import org.datavyu.Datavyu;
 import org.datavyu.models.db.Variable;
 import org.datavyu.views.discrete.datavalues.NoEditor;
 
@@ -67,16 +66,8 @@ public final class EditorTracker
      */
     private final Variable column;
 
-    /**
-     * Constructor.
-     *
-     * @param ta  JTextComponent containing the editors to track.
-     * @param eds Vector of the EditorComponents.
-     */
-    public EditorTracker(final JTextComponent ta,
-                         final List<EditorComponent> eds) {
-        this(ta, eds, null);
-    }
+    /** Deletes the spreadsheet's selected cells */
+    private final Runnable deleteCells;
 
     /**
      * Constructor for editors of a column's cell or of its name and codes, which a locked column refuses.
@@ -84,11 +75,14 @@ public final class EditorTracker
      * @param ta     JTextComponent containing the editors to track.
      * @param eds    Vector of the EditorComponents.
      * @param column The column they belong to.
+     * @param deleteCells deletes the spreadsheet's selected cells, which ⌘\ asks for
      */
-    public EditorTracker(final JTextComponent ta, final List<EditorComponent> eds, final Variable column) {
+    public EditorTracker(final JTextComponent ta, final List<EditorComponent> eds, final Variable column,
+                         final Runnable deleteCells) {
         textArea = ta;
         editors = eds;
         this.column = column;
+        this.deleteCells = deleteCells;
     }
 
     /**
@@ -365,7 +359,7 @@ public final class EditorTracker
             case KeyEvent.VK_BACK_SLASH:
                 // ⌘\ deletes the selected cells; a backslash on its own is typed.
                 if (e.getModifiers() == KeyEvent.META_MASK) {
-                    Datavyu.getView().deleteCells();
+                    deleteCells.run();
                     e.consume();
                 }
                 break;

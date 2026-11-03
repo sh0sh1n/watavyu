@@ -11,25 +11,21 @@ Items are in priority order within each section.
 
 ## Measures
 
-Updated 2026-10-30. Re-measure with the commands in [BUILDING.md › Analysis Reports](BUILDING.md#analysis-reports).
+Updated 2026-11-03. Re-measure with the commands in [BUILDING.md › Analysis Reports](BUILDING.md#analysis-reports).
 
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
-| Java source (main) | 242 files, 42.5k lines | 147 files, 25.2k lines |
-| Tests / line coverage | 113 / 9.9% | 485 / 39.6%; still 0% in most views and undo |
+| Java source (main) | 242 files, 42.5k lines | 144 files, 25.3k lines |
+| Tests / line coverage | 113 / 9.9% | 496 / 48.3%; views and undo edits about a third |
 | Runtime dependencies / with known vulnerabilities | 28 / 8 | 13 / 0 |
-| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 512 |
-| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 366 / 70 (none on thread safety, now gated); 15 |
+| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 500 |
+| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 354 / 67 (none on thread safety, now gated); 15 |
 | Never-invoked methods (`dead-code.py`) | 109+ | 21: test-only accessors, unused settings setters, and Swing overrides the script cannot see |
-| Static global access (`grep -rohP 'Datavyu\.(get\|set)\w*\(' src/main/java \| wc -l`) | about 330 call sites | 235 (259 before F6; earlier figures counted differently) |
+| Static global access (`grep -rohP 'Datavyu\.(get\|set)\w*\(' src/main/java \| wc -l`) | about 330 call sites | 0: each tab's `ProjectController` is passed to what it owns |
 
 ## Bugs
 
-**B17. Undo can change the wrong spreadsheet.** ready (fixed by R3), *from reading*. The main window keeps one undo history for every tab (`DatavyuView.spreadsheetUndoManager`), and edits find their spreadsheet through `Datavyu.getProjectController()`, the selected tab's, when they are undone (`ChangeCellEdit.updateCell`, `SpreadSheetEdit`'s fields, `ChangeValCellEdit`). Editing a cell in one tab, switching tabs and pressing ⌘Z changes the cell at the same column and row in the other tab, or throws if it has none.
-
-**B18. Autosave keeps only the selected tab.** ready (fixed by R3), *from reading*. `AutoSaveController` is one static timer that saves `Datavyu.getProjectController()`, the selected tab's project, and deletes the autosave it wrote last, which may be another tab's. With two tabs open, a crash leaves an autosave of at most one, and of the other only if it was selected at the last tick.
-
-**B19. Closing a tab leaves its media running.** ready (with R3's per-spreadsheet close), *from reading*. Closing a tab removes its panel (`DatavyuView.closeTab`) and nothing else: `MediaPlayers` has no way to close, so the closed spreadsheet's media windows stay open, and its players and clock (`ClockTimer`'s threads) keep running for the rest of the session.
+**B19. Closing a tab leaves its media running.** ready, *from reading*. Closing a tab (`SpreadSheetPanel.close`) stops its playback and deletes its autosave, but `MediaPlayers` has no way to close, so the closed spreadsheet's media windows stay open, and its players and clock (`ClockTimer`'s threads) keep running for the rest of the session.
 
 **B2. The app changes a global macOS setting.** ready (owner: scope it to the app), *from reading*. At startup `Datavyu` runs `defaults write -g ApplePressAndHoldEnabled -bool false` for every application on the Mac, and restores it only on a clean shutdown; a crash or force-quit leaves it changed. (It used to run when the class loaded, so every test run turned the setting off and never restored it.) The intent is key repeat instead of the accent popup while holding keys. Scope it to the app: in-app key repeat, or a per-app defaults domain once there is an app bundle; then delete the global write.
 
@@ -73,15 +69,13 @@ None open.
 
 ## Refactors
 
-Tech debt is paid down in the Java app rather than left for the C++ rewrite (AGENTS.md › North Star, 2026-11-03). The items run in this order, each behaviour-preserving unless it says otherwise, and each pins the behaviour it touches with tests, since most views and undo have none. R3 comes first because global state is what keeps the views untestable and what the later items would otherwise have to work around.
+Tech debt is paid down in the Java app rather than left for the C++ rewrite (AGENTS.md › North Star, 2026-11-03). The items run in this order, each behaviour-preserving unless it says otherwise, and each pins the behaviour it touches with tests, since most views and undo have none. R10 comes first because the later items, and the new interaction model, build on its commands.
 
-**R3. Replace static singletons with explicit wiring.** ready. About 235 call sites reach the app through `Datavyu.getView()`, `getApplication()`, `getVideoController()` and `getProjectController()`, and `getProjectController()` returns different objects depending on whether a tab exists. Introduce a per-document object (data store, project, undo history, playback, media players, the cell last created and selected) owned by each tab and passed explicitly to its views, controllers and undo edits, and an application object for the main window and the selected document. Undo and redo then act on the selected tab's own history (fixes B17). Global state is what keeps the views untestable: `ProjectController.loadProject`, which opens a project file's videos and keeps missing ones for saving, is checked only by hand because its dialogs reach the app through `Datavyu.getApplication()`.
-
-**R10. One path for each user action.** ready, after R3. Actions are spread over controllers that do their work in their constructors (`new DeleteCellController(cells)`), views and menu handlers, and the undo edit is posted by the caller in about 20 places, so an action, its lock check and its undo can drift apart (B14 is one such gap). Each action becomes a command on the document that checks locks, changes the model and records its edit, and menus, keys, the drawer and the Code Editor call commands. This is the ground for F7, F12 and a new interaction model (modal, editor-style keys), which need actions that can be named, bound to keys and listed.
+**R10. One path for each user action.** ready. Actions are spread over controllers that do their work in their constructors (`new DeleteCellController(controller, cells)`), views and menu handlers, and the undo edit is posted by the caller in about 20 places, so an action, its lock check and its undo can drift apart (B14 is one such gap). Each action becomes a command on the document that checks locks, changes the model and records its edit, and menus, keys, the drawer and the Code Editor call commands. This is the ground for F7, F12 and a new interaction model (modal, editor-style keys), which need actions that can be named, bound to keys and listed.
 
 **R4. Per-editor key handling.** ready, with or after R10. `EditorTracker` and the value editors handle keys per editor, with 21 uses of the deprecated modifier API (`getModifiers`, `*_MASK`, `getMenuShortcutKeyMask`). Keys that are commands go through `Shortcuts` to R10's commands; editors keep only text editing. Do before F7.
 
-**R11. One cell value model.** ready, after R3. The data model still carries Datavyu's layers: a cell holds a `MatrixCellValue` of `NominalCellValue` arguments described by `Argument`s, with interface and `Datavyu*` implementation pairs for each, and the value editors mirror them (`MatrixRootView`, `NominalDataValueEditor`, `views/discrete/datavalues`). Since 2026-10-14 the app has one kind of column, a list of codes, so a cell is an onset, an offset and one value per code. Collapse the model and its editors to that, with the project file format unchanged.
+**R11. One cell value model.** ready. The data model still carries Datavyu's layers: a cell holds a `MatrixCellValue` of `NominalCellValue` arguments described by `Argument`s, with interface and `Datavyu*` implementation pairs for each, and the value editors mirror them (`MatrixRootView`, `NominalDataValueEditor`, `views/discrete/datavalues`). Since 2026-10-14 the app has one kind of column, a list of codes, so a cell is an onset, an offset and one value per code. Collapse the model and its editors to that, with the project file format unchanged.
 
 **R7. Threading.** Make the boundary between the clock thread, the JavaFX thread and the EDT explicit, as `JavaFxPlayback` already does for the player. `ClockTimer` notifies its listeners on its own pool threads, most of them while holding its lock, so a listener that waits on another thread can deadlock it; the playhead (`PlayheadCarriage.show`) and `MediaPlayers` hand their work to the EDT. Cells still restyle for the needle on the clock thread (`SpreadsheetCell`'s clock listener, through `CellLook`), as they did before U5. SpotBugs's thread-safety findings are at zero and gated.
 
@@ -91,4 +85,4 @@ Tech debt is paid down in the Java app rather than left for the C++ rewrite (AGE
 
 **R13. Watavyu names.** ready, last. Packages are `org.datavyu` and many classes are `Datavyu*` (`DatavyuView`, `DatavyuVariable`, `DatavyuCell`). Rename to `org.watavyu` and names that say what a class is. It touches every file, so it goes after the structural items. The GPL notices stay.
 
-**R14. A drawn spreadsheet.** after R3, R10 and R11. Each cell is a tree of Swing components (`SpreadsheetCell`, its time fields and value editors), which is what limits how large a sheet stays smooth. A sheet that paints its visible cells and puts one editor over the cell being edited, as `JTable` does, would lift that limit and move the cursor and selection into the model, which the planned interaction model wants. The largest item; it changes how much the C++ rewrite's one objective, performance, is still needed.
+**R14. A drawn spreadsheet.** after R10 and R11. Each cell is a tree of Swing components (`SpreadsheetCell`, its time fields and value editors), which is what limits how large a sheet stays smooth. A sheet that paints its visible cells and puts one editor over the cell being edited, as `JTable` does, would lift that limit and move the cursor and selection into the model, which the planned interaction model wants. The largest item; it changes how much the C++ rewrite's one objective, performance, is still needed.

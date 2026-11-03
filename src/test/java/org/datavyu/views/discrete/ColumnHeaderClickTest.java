@@ -5,43 +5,34 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
-import org.datavyu.Datavyu;
+import org.datavyu.TestSpreadsheets;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.DataStoreFactory;
-import org.datavyu.views.VideoController;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import javax.swing.SwingUtilities;
 import java.awt.event.InputEvent;
 import java.awt.event.MouseEvent;
+import javax.swing.SwingUtilities;
 
 /** Clicking a column's header selects it; columns are renamed only in the Code Editor, so a double-click does not. */
 public class ColumnHeaderClickTest {
 
-    private VideoController previousController;
     private SpreadsheetColumn header;
 
     @BeforeMethod
     public void setUp() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
         SwingUtilities.invokeAndWait(() -> {
-            previousController = Datavyu.getVideoController();
-            Datavyu.setVideoController(new VideoController());
             try {
-                header = new SpreadsheetColumn(dataStore, dataStore.createVariable("notes"),
+                header = new SpreadsheetColumn(TestSpreadsheets.withPlayback(dataStore), dataStore.createVariable("notes"),
                     mock(CellSelectionListener.class), mock(ColumnSelectionListener.class),
                     mock(ColumnVisibilityListener.class));
             } catch (Exception e) {
                 throw new IllegalStateException(e);
             }
         });
-    }
-
-    @AfterMethod
-    public void tearDown() throws Exception {
-        SwingUtilities.invokeAndWait(() -> Datavyu.setVideoController(previousController));
     }
 
     private MouseEvent click(final int count) {

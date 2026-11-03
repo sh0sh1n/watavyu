@@ -34,9 +34,9 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public final class DatavyuVariable implements Variable {
 
-    // All the listeners for variables in the data store
     private static Logger logger = LogManager.getLogger(DatavyuVariable.class);
-    private static Map<UUID, List<VariableListener>> allListeners = new HashMap<UUID, List<VariableListener>>();
+    /** Told of changes to this column. */
+    private final List<VariableListener> listeners = new CopyOnWriteArrayList<>();
     private static CellComparator CellComparator = new CellComparator();
     final private UUID variableId = UUID.randomUUID();
     private List<Cell> cells = new CopyOnWriteArrayList<>();
@@ -73,18 +73,6 @@ public final class DatavyuVariable implements Variable {
         owningDatastore.markAsChanged();
     }
 
-    /**
-     * @param variableId The Identifier of the variable we want the listeners for.
-     * @return The list of listeners for the specified variableId.
-     */
-    private static List<VariableListener> getListeners(UUID variableId) {
-        List<VariableListener> result = allListeners.get(variableId);
-        if (result == null) {
-            result = new ArrayList<>();
-            allListeners.put(variableId, result);
-        }
-        return result;
-    }
 
     @Override
 
@@ -94,7 +82,7 @@ public final class DatavyuVariable implements Variable {
         }
         if (cell.getCellValue().getArgument() == this.getRootNode()) {
             cells.add(cell);
-            for (VariableListener vl : getListeners(getID())) {
+            for (VariableListener vl : listeners) {
                 vl.cellInserted(cell);
             }
             owningDatastore.markAsChanged();
@@ -125,7 +113,7 @@ public final class DatavyuVariable implements Variable {
 
         cells.add(c);
 
-        for (VariableListener vl : getListeners(getID())) {
+        for (VariableListener vl : listeners) {
             vl.cellInserted(c);
         }
 
@@ -141,7 +129,7 @@ public final class DatavyuVariable implements Variable {
         requireUnlocked();
         Cell c = new DatavyuCell(this, this.getRootNode(), onset, clip);
         cells.add(c);
-        for (VariableListener vl : getListeners(getID())) {
+        for (VariableListener vl : listeners) {
             vl.cellInserted(c);
         }
         owningDatastore.markAsChanged();
@@ -163,7 +151,7 @@ public final class DatavyuVariable implements Variable {
         if (newLocked != locked) {
             locked = newLocked;
             owningDatastore.markAsChanged();
-            for (VariableListener vl : getListeners(getID())) {
+            for (VariableListener vl : listeners) {
                 vl.lockChanged(newLocked);
             }
         }
@@ -172,7 +160,7 @@ public final class DatavyuVariable implements Variable {
     @Override
     public boolean refusesEdits() {
         if (locked) {
-            for (VariableListener vl : getListeners(getID())) {
+            for (VariableListener vl : listeners) {
                 vl.editRefused();
             }
         }
@@ -203,7 +191,7 @@ public final class DatavyuVariable implements Variable {
 
         owningDatastore.markAsChanged();
 
-        for (VariableListener vl : getListeners(getID())) {
+        for (VariableListener vl : listeners) {
             vl.cellRemoved(cell);
         }
 
@@ -266,7 +254,7 @@ public final class DatavyuVariable implements Variable {
             owningDatastore.markAsChanged();
             hidden = hiddenParm;
 
-            for (VariableListener vl : getListeners(getID())) {
+            for (VariableListener vl : listeners) {
                 vl.visibilityChanged(hidden);
             }
         }
@@ -306,7 +294,7 @@ public final class DatavyuVariable implements Variable {
         if (oldName != null && owningDatastore != null) {
             owningDatastore.updateVariableName(oldName, newName, this);
         }
-        for (VariableListener vl : getListeners(getID())) {
+        for (VariableListener vl : listeners) {
             vl.nameChanged(newName);
         }
     }
@@ -393,12 +381,12 @@ public final class DatavyuVariable implements Variable {
 
     @Override
     public void addListener(final VariableListener listener) {
-        getListeners(getID()).add(listener);
+        listeners.add(listener);
     }
 
     @Override
     public void removeListener(final VariableListener listener) {
-        getListeners(getID()).remove(listener);
+        listeners.remove(listener);
     }
 
     @Override

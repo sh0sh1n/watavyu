@@ -1,11 +1,9 @@
 package org.datavyu.plugins.javafx;
 
 import javafx.application.Platform;
-import org.datavyu.Datavyu;
 import org.datavyu.models.Identifier;
 import org.datavyu.plugins.StreamViewer;
 import org.datavyu.util.ClockTimer;
-import org.datavyu.views.VideoController;
 import org.testng.SkipException;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
@@ -23,7 +21,6 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
@@ -137,10 +134,8 @@ public class PlaybackIntegrationTest {
     /** A video window reports what a project file stores about its clip and source. */
     @Test
     public void aVideoWindowReportsWhatAProjectFileStores() throws Exception {
-        VideoController videoController = mock(VideoController.class);
-        when(videoController.getClockTimer()).thenReturn(mock(ClockTimer.class));
-        Datavyu.setVideoController(videoController);
-        StreamViewer viewer = JavaFxVideoPlugin.open(Identifier.generateIdentifier(), mp4, null, false);
+        ClockTimer clock = mock(ClockTimer.class);
+        StreamViewer viewer = JavaFxVideoPlugin.open(Identifier.generateIdentifier(), mp4, null, clock, false);
         try {
             assertEquals(viewer.getVideoSize(), new Dimension(1280, 720));
             assertEquals(viewer.getFramesPerSecond(), (float) FPS, 1e-3);
@@ -158,17 +153,14 @@ public class PlaybackIntegrationTest {
                 viewer.close();
                 return null;
             });
-            Datavyu.setVideoController(null);
         }
     }
 
     /** Audio opens as media without a picture: it has a length, no size, no frame stepping, and it plays. */
     @Test
     public void audioOpensAsMediaWithoutAPicture() throws Exception {
-        VideoController videoController = mock(VideoController.class);
-        when(videoController.getClockTimer()).thenReturn(mock(ClockTimer.class));
-        Datavyu.setVideoController(videoController);
-        StreamViewer viewer = JavaFxVideoPlugin.open(Identifier.generateIdentifier(), m4a, null, false);
+        ClockTimer clock = mock(ClockTimer.class);
+        StreamViewer viewer = JavaFxVideoPlugin.open(Identifier.generateIdentifier(), m4a, null, clock, false);
         try {
             assertEquals(viewer.getDuration(), 4_000L, 50L);
             assertEquals(viewer.getVideoSize(), new Dimension(0, 0));
@@ -186,20 +178,17 @@ public class PlaybackIntegrationTest {
                 viewer.close();
                 return null;
             });
-            Datavyu.setVideoController(null);
         }
     }
 
     /** Two clips in different media columns play together, each at its own volume. */
     @Test
     public void twoClipsPlayTogetherAtTheirOwnVolumes() throws Exception {
-        VideoController videoController = mock(VideoController.class);
-        when(videoController.getClockTimer()).thenReturn(mock(ClockTimer.class));
-        Datavyu.setVideoController(videoController);
+        ClockTimer clock = mock(ClockTimer.class);
         JavaFxVideoViewer video = (JavaFxVideoViewer) JavaFxVideoPlugin.open(Identifier.generateIdentifier(), mp4,
-                null, false);
+                null, clock, false);
         JavaFxVideoViewer audio = (JavaFxVideoViewer) JavaFxVideoPlugin.open(Identifier.generateIdentifier(), m4a,
-                null, false);
+                null, clock, false);
         try {
             // What MediaPlayers does as each opens, then as the clock starts.
             JavaFxToolkit.onEdtAndWait(() -> {
@@ -229,17 +218,14 @@ public class PlaybackIntegrationTest {
                 audio.close();
                 return null;
             });
-            Datavyu.setVideoController(null);
         }
     }
 
     /** A clip that is not its media column's clip in play pauses, and does not start with the clock. */
     @Test
     public void aClipOutOfPlayPauses() throws Exception {
-        VideoController videoController = mock(VideoController.class);
-        when(videoController.getClockTimer()).thenReturn(mock(ClockTimer.class));
-        Datavyu.setVideoController(videoController);
-        StreamViewer viewer = JavaFxVideoPlugin.open(Identifier.generateIdentifier(), mp4, null, false);
+        ClockTimer clock = mock(ClockTimer.class);
+        StreamViewer viewer = JavaFxVideoPlugin.open(Identifier.generateIdentifier(), mp4, null, clock, false);
         try {
             viewer.start();
             long deadline = System.nanoTime() + 2_000_000_000L;
@@ -259,7 +245,6 @@ public class PlaybackIntegrationTest {
                 viewer.close();
                 return null;
             });
-            Datavyu.setVideoController(null);
         }
     }
 

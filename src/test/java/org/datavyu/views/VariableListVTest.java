@@ -42,7 +42,7 @@ public class VariableListVTest {
         AtomicReference<JTable> table = new AtomicReference<>();
         AtomicReference<VariableListV> list = new AtomicReference<>();
         SwingUtilities.invokeAndWait(() -> {
-            list.set(new VariableListV(null, false, dataStore));
+            list.set(new VariableListV(null, false, dataStore, () -> { }, () -> { }));
             table.set(find(list.get().getContentPane(), JTable.class, "variableList"));
         });
         try {
@@ -68,7 +68,7 @@ public class VariableListVTest {
         AtomicInteger refreshed = new AtomicInteger();
         AtomicReference<VariableListV> list = new AtomicReference<>();
         SwingUtilities.invokeAndWait(() -> {
-            list.set(new VariableListV(null, false, dataStore, refreshed::incrementAndGet));
+            list.set(new VariableListV(null, false, dataStore, refreshed::incrementAndGet, () -> { }));
             JButton showAll = find(list.get().getContentPane(), JButton.class, "showAllColumns");
             assertEquals(showAll.getText(), "Show All Columns");
             showAll.doClick();

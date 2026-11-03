@@ -14,9 +14,9 @@
  */
 package org.datavyu.controllers;
 
+import org.datavyu.controllers.project.ProjectController;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.datavyu.Datavyu;
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.undoableedits.ChangeCellEdit;
@@ -36,17 +36,18 @@ public class SetSelectedCellStopTimeController {
     /**
      * Sets all selected cells to have the specified stop time / offset.
      *
+     * @param controller   the spreadsheet
      * @param milliseconds The time in milliseconds to use for all selected cells offset / stop time.
      */
-    public SetSelectedCellStopTimeController(final long milliseconds) {
+    public SetSelectedCellStopTimeController(final ProjectController controller, final long milliseconds) {
         logger.info("Set selected cell offset: " + milliseconds);
 
         // Get the dataStore that we are manipulating.
-        DataStore dataStore = Datavyu.getProjectController().getDataStore();
+        DataStore dataStore = controller.getDataStore();
         List<Cell> selectedCells;
 
         if(dataStore.getSelectedCells().size() == 0){
-            selectedCells = Datavyu.getProjectController().getLastSelectedCells();
+            selectedCells = controller.getLastSelectedCells();
         }else{
             selectedCells = dataStore.getSelectedCells();
         }
@@ -57,9 +58,9 @@ public class SetSelectedCellStopTimeController {
                 continue;
             }
             // record the effect
-            UndoableEdit edit = new ChangeOffsetCellEdit(cell, cell.getOffset(), milliseconds,
+            UndoableEdit edit = new ChangeOffsetCellEdit(controller, cell, cell.getOffset(), milliseconds,
                     ChangeCellEdit.Granularity.FINEGRAINED);
-            Datavyu.getView().getUndoSupport().postEdit(edit);
+            controller.postEdit(edit);
             cell.setOffset(milliseconds);
         }
     }

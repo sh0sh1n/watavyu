@@ -18,9 +18,7 @@ import org.datavyu.controllers.project.MediaPlayers;
 import org.datavyu.util.Resources;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.datavyu.Datavyu;
 import org.datavyu.controllers.CreateNewCellController;
-import org.datavyu.controllers.NewVariableController;
 import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.event.component.FileDropEvent;
 import org.datavyu.event.component.FileDropEventListener;
@@ -28,8 +26,9 @@ import org.datavyu.models.db.*;
 import org.datavyu.undoableedits.AddCellEdit;
 import org.datavyu.util.ArrayDirection;
 import org.datavyu.util.Constants;
-import org.datavyu.views.DataviewProgressBar;
 import org.datavyu.views.VideoController;
+import org.datavyu.views.WindowPlacement;
+import org.datavyu.views.NewVariableV;
 import org.datavyu.views.discrete.layouts.SheetLayout;
 import org.datavyu.views.discrete.layouts.SheetLayoutFactory;
 import org.datavyu.views.discrete.layouts.SheetLayoutFactory.SheetLayoutType;
@@ -52,6 +51,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import javax.swing.undo.UndoableEdit;
@@ -122,7 +122,17 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
     /** Drop down menu for hidden columns */
     private JPopupMenu dropdown = new JPopupMenu();
 
-    public SpreadSheetPanel(final ProjectController projectController, DataviewProgressBar progressBar) {
+    /**
+     * Shows a spreadsheet, with its controls drawer and playhead.
+     *
+     * @param projectController the spreadsheet, whose video controller is already set
+     * @param owner             the window that owns its media windows; null for none
+     */
+    public SpreadSheetPanel(final ProjectController projectController, final Frame owner) {
+        this.projectController = projectController;
+        videoController = Objects.requireNonNull(projectController.getVideoController(),
+            "A spreadsheet's video controller is set before its view is made");
+        projectController.setSpreadSheetPanel(this);
         setName(this.getClass().getSimpleName());
         setLayout(new BorderLayout());
 
@@ -193,9 +203,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
 
 
         //layout the columns
-        this.projectController = projectController;
-        buildColumns(progressBar);
-        projectController.setSpreadSheetPanel(this);
+        buildColumns();
 
         setName(dataStore.getName());
 
@@ -208,6 +216,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
         updateHiddenVars();
         headerView.add(hiddenVariablesButton);
 
+        attachVideoController(owner);
         this.projectController.getDataStore().markAsUnchanged();
     }
     
@@ -287,9 +296,9 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
         return videoController;
     }
 
-    public void setVideoController(VideoController videoController) {
-        this.videoController = videoController;
-        mediaPlayers = new MediaPlayers(projectController.getDataStore(), videoController);
+    /** Plays the spreadsheet's media columns, and puts the controls drawer and playhead beside the columns. */
+    private void attachVideoController(final Frame owner) {
+        mediaPlayers = new MediaPlayers(projectController.getDataStore(), videoController, owner);
         videoController.setMediaPlayers(mediaPlayers);
 
         playhead = new PlayheadCarriage(scrollPane.getViewport(), this::timeAxis, videoController::setCurrentTime,
@@ -361,6 +370,20 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
     }
 
     /**
+     * Closes the spreadsheet once its tab is gone and its work saved or knowingly discarded: it stops listening for
+     * keys, its columns stop following the clock, playback stops and its autosave is deleted.
+     */
+    public void close() {
+        deregisterListeners();
+        for (SpreadsheetColumn column : columns) {
+            column.deregisterListeners();
+        }
+        dataStore.removeListener(this);
+        videoController.stopAction();
+        projectController.close();
+    }
+
+    /**
      * Registers this column data panel with everything that needs to notify
      * this class of events.
      */
@@ -381,19 +404,8 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
     /**
      * Populate from the database.
      */
-    private void buildColumns(DataviewProgressBar progressBar) {
-        List<Variable> vlist = getDataStore().getAllVariables();
-        int pb_increment = 0;
-        int i = 0;
-
-        if (progressBar != null) {
-            pb_increment = (100 - progressBar.getProgress()) / vlist.size();
-        }
-
-        for (Variable v : vlist) {
-            if (progressBar != null) {
-                progressBar.setProgress(progressBar.getProgress() + pb_increment, "Adding column " + ++i + " of " + vlist.size());
-            }
+    private void buildColumns() {
+        for (Variable v : getDataStore().getAllVariables()) {
             addColumn(getDataStore(), v);
         }
     }
@@ -412,7 +424,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
         mainView.remove(hiddenVariablesSpacerLabel);
 
         // Create the spreadsheet column and register it.
-        SpreadsheetColumn col = new SpreadsheetColumn(db, var, this, this, this);
+        SpreadsheetColumn col = new SpreadsheetColumn(projectController, var, this, this, this);
         col.registerListeners();
 
         // add the datapanel to the scrollpane viewport
@@ -566,11 +578,15 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
      */
     @Override
     public boolean dispatchKeyEvent(final KeyEvent e) {
-        SpreadsheetColumn selectedColumn = Datavyu.getView().getSpreadsheetPanel().getSelectedColumn();
+        // Every open spreadsheet listens; only the one on screen, in the selected tab, takes keys.
+        if (!isShowing()) {
+            return false;
+        }
+        SpreadsheetColumn selectedColumn = getSelectedColumn();
         // ⌘← and ⌘→ select the column to the left or right; plain arrows move the caret in a cell.
         if (isColumnMove(e, Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx())) {
 
-            List<SpreadsheetColumn> visibleColumns = Datavyu.getView().getSpreadsheetPanel().getVisibleColumns();
+            List<SpreadsheetColumn> visibleColumns = getVisibleColumns();
 
             // No visible columns: do nothing and consume event.
             // One visible: select it and consume event
@@ -607,12 +623,12 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
                 return true;
             }
         } else if (e.getID() == KeyEvent.KEY_PRESSED && !e.isMetaDown() && !e.isControlDown()) {
-            if ((Datavyu.getView().isQuickKeyMode() &&
+            if ((projectController.isQuickKeyMode() &&
                     (Character.isAlphabetic(e.getKeyChar()) || Character.isDigit(e.getKeyChar()))
             )) {
 
                 if(selectedColumn != null && !selectedColumn.getVariable().isMedia()) {
-                    CreateNewCellController controller = new CreateNewCellController();
+                    CreateNewCellController controller = new CreateNewCellController(projectController);
                     Cell c = controller.createCell(selectedColumn.getVariable());
                     if (c == null) {
                         // A locked column refuses it.
@@ -627,15 +643,15 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
                     } else {
                         v.set(String.valueOf(e.getKeyChar()));
                     }
-                    c.setOnset(Datavyu.getVideoController().getCurrentTime());
-                    c.setOffset(Datavyu.getVideoController().getCurrentTime());
+                    c.setOnset(videoController.getCurrentTime());
+                    c.setOffset(videoController.getCurrentTime());
 
                     //Add the new cell to the Undo Support
-                    UndoableEdit edit = new AddCellEdit(selectedColumn.getVariable().getName(), c);
-                    Datavyu.getView().getComponent().revalidate();
-                    Datavyu.getView().getUndoSupport().postEdit(edit);
+                    UndoableEdit edit = new AddCellEdit(projectController, selectedColumn.getVariable().getName(), c);
+                    revalidate();
+                    projectController.postEdit(edit);
 
-                    Datavyu.getProjectController().getSpreadSheetPanel().redrawCells();
+                    redrawCells();
                     e.consume();
                     return true;
                 }
@@ -695,7 +711,8 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
      * header.
      */
     public void openNewVarMenu() {
-        new NewVariableController();
+        WindowPlacement.show(new NewVariableV((Frame) SwingUtilities.getWindowAncestor(this), false,
+            projectController));
     }
 
     /**
@@ -983,7 +1000,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
 
     public void selectColumn(final SpreadsheetColumn selectedColumn, final int shift) {
         // Find currently selected cell, if there is one
-        List<SpreadsheetColumn> visibleColumns = Datavyu.getView().getSpreadsheetPanel().getVisibleColumns();
+        List<SpreadsheetColumn> visibleColumns = getVisibleColumns();
         SpreadsheetCell sc = lastSelectedCell;
         int vcIndex = visibleColumns.indexOf(selectedColumn);
         int newIndex = Math.floorMod(vcIndex+shift, visibleColumns.size()); // wrap around visible columns
@@ -1000,7 +1017,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
             SpreadsheetCell newCell = null;
             if(!newColumn.getCells().isEmpty()) {
                 if (sc != null) {
-                    if (Datavyu.getView().getSheetLayout() == SheetLayoutType.WeakTemporal) {
+                    if (currentLayoutType == SheetLayoutType.WeakTemporal) {
                         newCell = newColumn.getNearestCellTemporally(sc);
                     } else {
                         int ord = selectedColumn.getCellsTemporally().indexOf(sc);

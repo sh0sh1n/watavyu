@@ -33,7 +33,6 @@ import org.datavyu.plugins.javafx.JavaFxVideoPlugin;
 import org.datavyu.projectfile.ProjectDocument;
 import org.datavyu.projectfile.ProjectPaths;
 import org.datavyu.undoableedits.AddMediaColumnEdit;
-import org.datavyu.undoableedits.RemoveCellEdit;
 import org.datavyu.undoableedits.SpreadsheetUndoManager;
 import org.datavyu.util.ArrayDirection;
 import org.datavyu.util.DragAndDrop.TransparentPanel;
@@ -49,8 +48,6 @@ import javax.swing.Action;
 import javax.swing.event.*;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.undo.UndoableEdit;
-import javax.swing.undo.UndoableEditSupport;
 import java.awt.*;
 import java.awt.event.*;
 import java.beans.PropertyChangeEvent;
@@ -77,24 +74,19 @@ public final class DatavyuView implements FileDropEventListener {
 
     /** The logger instance for this class */
     private static Logger logger = LogManager.getLogger(DatavyuView.class);
-    private static boolean redraw = true;
 
-    /**
-     * undo system elements
-     */
-    private SpreadsheetUndoManager spreadsheetUndoManager; // history list
-    private UndoableEditSupport undoSupport; // event support
+    /** How often each spreadsheet is autosaved, in minutes */
+    private static final int AUTOSAVE_MINUTES = 1;
 
-    /**
-     * The spreadsheet panel for this view.
-     */
-    private SpreadSheetPanel panel;
     private DataviewProgressBar progressBar;
     private OpenTask task;
-    /**
-     * the code editor's controller
-     */
-    private VocabEditorController vec = VocabEditorController.getController();
+
+    /** The Code Editor, which edits the selected tab's columns and codes; null until first shown */
+    private VocabEditorV codeEditor;
+
+    /** The running application, which quits and asks about unsaved work */
+    private final Datavyu app;
+
     /** The main window */
     private final JFrame frame;
 
@@ -122,9 +114,11 @@ public final class DatavyuView implements FileDropEventListener {
     /**
      * Fills the main window with the menu bar and an empty spreadsheet. The caller places and shows it.
      *
+     * @param app   The running application.
      * @param frame The main window.
      */
-    public DatavyuView(final JFrame frame) {
+    public DatavyuView(final Datavyu app, final JFrame frame) {
+        this.app = app;
         this.frame = frame;
         frame.setName("mainFrame");
         frame.setTitle(Resources.of(Datavyu.class).getString("Application.title"));
@@ -158,48 +152,32 @@ public final class DatavyuView implements FileDropEventListener {
                 if (tabbedPane.getComponentCount() > 0 && tabbedPane.getSelectedIndex() >= 0) {
 
                     SpreadSheetPanel spreadSheetPanel = (SpreadSheetPanel) tabbedPane.getSelectedComponent();
-                    if (Datavyu.getView() != null) {
-                        Datavyu.setProjectController(spreadSheetPanel.getProjectController());
-                        Datavyu.setVideoController(spreadSheetPanel.getVideoController());
-                        Datavyu.getView().panel = spreadSheetPanel;
-                        spreadSheetPanel.revalidate();
-                        Datavyu.getView().tabbedPane.revalidate();
-                        if (spreadSheetPanel.getMediaPlayers() != null) {
-                            spreadSheetPanel.getMediaPlayers().setShowing(true);
-                        }
+                    spreadSheetPanel.revalidate();
+                    tabbedPane.revalidate();
+                    if (spreadSheetPanel.getMediaPlayers() != null) {
+                        spreadSheetPanel.getMediaPlayers().setShowing(true);
                     }
 
                     updateTitle();
-                    vec.updateView();
+                    refreshUndoRedo();
+                    if (codeEditor != null) {
+                        codeEditor.setProjectController(spreadSheetPanel.getProjectController());
+                    }
                 }
             }
         });
 
         frame.getContentPane().add(tabbedPane, BorderLayout.CENTER);
 
-        panel = new SpreadSheetPanel(new ProjectController(), null);
-        panel.getProjectController().setSpreadSheetPanel(panel);
-        panel.setVideoController(new VideoController());
-
-        Datavyu.setProjectController(panel.getProjectController());
-        panel.registerListeners();
-        panel.addFileDropEventListener(this);
-
-        tabbedPane.add(panel);
-        tabbedPane.setSelectedComponent(panel);
-        tabbedPane.setTabComponentAt(0, new TabWithCloseButton(tabbedPane));
-
-        // initialize the undo/redo system
-        spreadsheetUndoManager = new SpreadsheetUndoManager();
-        undoSupport = new UndoableEditSupport();
-        undoSupport.addUndoableEditListener(new UndoAdapter());
+        addTab(new ProjectController());
         refreshUndoRedo();
 
         WindowListener exitListener = new WindowAdapter() {
             @Override
             public void windowIconified(WindowEvent e) {
                 frame.setState(WindowEvent.WINDOW_ICONIFIED);
-                if (panel.getMediaPlayers() != null) {
+                SpreadSheetPanel panel = getSpreadsheetPanel();
+                if (panel != null && panel.getMediaPlayers() != null) {
                     panel.getMediaPlayers().setShowing(false);
                 }
             }
@@ -207,21 +185,66 @@ public final class DatavyuView implements FileDropEventListener {
             @Override
             public void windowDeiconified(WindowEvent e) {
                 frame.setState(WindowEvent.WINDOW_DEICONIFIED);
-                if (panel.getMediaPlayers() != null) {
+                SpreadSheetPanel panel = getSpreadsheetPanel();
+                if (panel != null && panel.getMediaPlayers() != null) {
                     panel.getMediaPlayers().setShowing(true);
                 }
             }
 
             @Override
             public void windowClosing(WindowEvent e) {
-                Datavyu.getApplication().exit();
+                app.exit();
             }
         };
         frame.addWindowListener(exitListener);
     }
 
-    public UndoableEditSupport getUndoSupport() {
-        return undoSupport;
+    /**
+     * Makes a tab for a spreadsheet, with its playback, autosave and view, and selects it.
+     *
+     * @param pc the spreadsheet
+     * @return its view
+     */
+    private SpreadSheetPanel addTab(final ProjectController pc) {
+        pc.setVideoController(new VideoController(pc, frame));
+        pc.setTitleListener(() -> SwingUtilities.invokeLater(() -> updateTitle(pc)));
+        pc.setQuickKeyMode(this::isQuickKeyMode);
+        pc.addUndoableEditListener(event -> refreshUndoRedo());
+
+        SpreadSheetPanel panel = new SpreadSheetPanel(pc, frame);
+        panel.registerListeners();
+        panel.addFileDropEventListener(this);
+        tabbedPane.add(panel);
+        tabbedPane.setTabComponentAt(tabbedPane.indexOfComponent(panel),
+            new TabWithCloseButton(tabbedPane, this::closeTab));
+        tabbedPane.setSelectedComponent(panel);
+        pc.startAutoSave(AUTOSAVE_MINUTES);
+        return panel;
+    }
+
+    /**
+     * Takes a spreadsheet's tab away, once its work is saved or knowingly discarded.
+     *
+     * @param panel the spreadsheet's view
+     */
+    private void removeTab(final SpreadSheetPanel panel) {
+        tabbedPane.remove(panel);
+        panel.close();
+    }
+
+    /** @return the selected tab's spreadsheet, or null when no tab is open */
+    public ProjectController selectedController() {
+        SpreadSheetPanel panel = getSpreadsheetPanel();
+        return panel == null ? null : panel.getProjectController();
+    }
+
+    /**
+     * Shows a warning over the main window.
+     *
+     * @param message the warning
+     */
+    private void warn(final String message) {
+        Dialogs.warn(frame, message);
     }
 
     /**
@@ -272,8 +295,6 @@ public final class DatavyuView implements FileDropEventListener {
         } catch (IOException e) {
             logger.error("Auto save failed. Error: ", e);
         }
-        // Initialize auto save feature
-        AutoSaveController.setInterval(1);
     }
 
 
@@ -281,9 +302,25 @@ public final class DatavyuView implements FileDropEventListener {
      * Update the title of the application.
      */
     public void updateTitle() {
+        ProjectController selected = selectedController();
+        if (selected != null) {
+            updateTitle(selected);
+        }
+    }
+
+    /**
+     * Shows a spreadsheet's name and whether it has unsaved changes on its tab, and on the window if it is selected.
+     *
+     * @param projectController the spreadsheet
+     */
+    private void updateTitle(final ProjectController projectController) {
+        SpreadSheetPanel sheet = projectController.getSpreadSheetPanel();
+        int index = tabbedPane.indexOfComponent(sheet);
+        if (index < 0) {
+            return;
+        }
         // Show the project name instead of database.
         Resources resourceMap = Resources.of(Datavyu.class);
-        ProjectController projectController = getSpreadsheetPanel().getProjectController();
         String postFix = projectController.isChanged() ? "  *" : "  ";
         String extension = "";
         final FileFilter lastSaveOption = projectController.getLastSaveOption();
@@ -299,11 +336,13 @@ public final class DatavyuView implements FileDropEventListener {
                 isQuickKeyMode());
         String tabTitle = projectName + postFix;
 
-        Datavyu.getProjectController().getProject().setDatabaseFileName(projectName + extension);
-        this.getSpreadsheetPanel().setName(tabTitle);
-        tabbedPane.setTitleAt(tabbedPane.getSelectedIndex(), tabTitle);
+        projectController.getProject().setDatabaseFileName(projectName + extension);
+        sheet.setName(tabTitle);
+        tabbedPane.setTitleAt(index, tabTitle);
 
-        frame.setTitle(title);
+        if (sheet == tabbedPane.getSelectedComponent()) {
+            frame.setTitle(title);
+        }
     }
 
 
@@ -323,18 +362,27 @@ public final class DatavyuView implements FileDropEventListener {
      * Action for creating a new project.
      */
     public void showNewProjectForm() {
-        new NewProjectController();
+        WindowPlacement.show(new NewProjectV(frame, true, this));
     }
 
     /**
      * Action for closing current tab
      */
     public void closeTab() {
-        if(Datavyu.getApplication().safeQuit(getTabbedPane().getSelectedComponent())) {
-            getTabbedPane().remove(getTabbedPane().getSelectedComponent());
+        closeTab(getTabbedPane().getSelectedComponent());
+    }
+
+    /**
+     * Closes a tab, after asking about its unsaved work, and quits once no tab is left.
+     *
+     * @param tab the tab's spreadsheet
+     */
+    private void closeTab(final Component tab) {
+        if (app.safeQuit(tab)) {
+            removeTab((SpreadSheetPanel) tab);
         }
-        if(getTabbedPane().getTabCount() == 0) {
-            Datavyu.getApplication().exit();
+        if (getTabbedPane().getTabCount() == 0) {
+            app.exit();
         }
     }
 
@@ -345,7 +393,7 @@ public final class DatavyuView implements FileDropEventListener {
      * @return whether the project was saved
      */
     public boolean save() {
-        ProjectController projectController = Datavyu.getProjectController();
+        ProjectController projectController = selectedController();
         if (projectController.isNewProject() || (projectController.getProjectName() == null)
                 || !(projectController.getLastSaveOption() instanceof ProjectFileFilter)) {
             return saveAs();
@@ -379,7 +427,7 @@ public final class DatavyuView implements FileDropEventListener {
             // Only save if the project file does not exist or the user confirms overwriting it.
             saved = canSave(folder, fileName) && saveProject(new File(folder, fileName));
             if (saved) {
-                ProjectController projectController = Datavyu.getProjectController();
+                ProjectController projectController = selectedController();
                 projectController.setProjectName(fileName);
                 projectController.setProjectDirectory(folder);
                 projectController.setDatabaseFileName(fileName);
@@ -398,7 +446,7 @@ public final class DatavyuView implements FileDropEventListener {
      * @return whether it was saved
      */
     private boolean saveProject(final File file) {
-        ProjectController projectController = Datavyu.getProjectController();
+        ProjectController projectController = selectedController();
         try {
             new SaveController().saveProject(file, projectController.toDocument(file.getAbsoluteFile().getParentFile()
                 .toPath()));
@@ -407,7 +455,7 @@ public final class DatavyuView implements FileDropEventListener {
             return true;
         } catch (UserWarningException e) {
             logger.error("Save failed. Error: ", e);
-            Datavyu.getApplication().showWarningDialog(e);
+            warn(e.getMessage());
             return false;
         }
     }
@@ -419,12 +467,11 @@ public final class DatavyuView implements FileDropEventListener {
     }
 
     public void toggleHighlightAndFocusMode() {
-        Datavyu.getVideoController().toggleCellHighlightingAutoFocus();
-        if (Datavyu.getProjectController().getSpreadSheetPanel() != null) {
-            Datavyu.getProjectController().getSpreadSheetPanel().redrawCells();
-        }
+        ProjectController selected = selectedController();
+        selected.getVideoController().toggleCellHighlightingAutoFocus();
+        selected.getSpreadSheetPanel().redrawCells();
         actions.get(HIGHLIGHT_AND_FOCUS).putValue(Action.NAME,
-                highlightAndFocusText(Datavyu.getVideoController().getCellHighlightAndFocus()));
+                highlightAndFocusText(selected.getVideoController().getCellHighlightAndFocus()));
     }
 
     public boolean isQuickKeyMode() {
@@ -449,7 +496,7 @@ public final class DatavyuView implements FileDropEventListener {
     }
 
     private void exportJSON(DatavyuFileChooser fc){
-        ProjectController projectController = Datavyu.getProjectController();
+        ProjectController projectController = selectedController();
 
         try{
             ExportDatabaseFileController exportJSON = new ExportDatabaseFileController();
@@ -488,15 +535,14 @@ public final class DatavyuView implements FileDropEventListener {
             importJSON(fileChooser);
         }
 
-        Datavyu.getView().getSpreadsheetPanel().redrawCells();
-
+        getSpreadsheetPanel().redrawCells();
     }
 
     private void importJSON(DatavyuFileChooser fc){
-        ProjectController projectController = Datavyu.getProjectController();
+        ProjectController projectController = selectedController();
 
         try{
-            OpenDataStoreFileController importJSON = new OpenDataStoreFileController();
+            OpenDataStoreFileController importJSON = new OpenDataStoreFileController(this::warn);
 
             String dbFileName = fc.getSelectedFile().getPath();
             if (!dbFileName.endsWith(".json")) {
@@ -508,13 +554,13 @@ public final class DatavyuView implements FileDropEventListener {
             importJSON.importJSONToSpreadsheet(file, getSpreadsheetPanel());
         } catch (UserWarningException e) {
             logger.error("Failed import from JSON. Error: ", e);
-            Datavyu.getApplication().showWarningDialog(e);
+            warn(e.getMessage());
         } catch (JsonParseException e) {
             logger.error("Failed import from JSON. Error: ", e);
-            Datavyu.getApplication().showWarningDialog(e.getMessage());
+            warn(e.getMessage());
         } catch (IOException e) {
             logger.error("Failed import from JSON. Error: ", e);
-            Datavyu.getApplication().showWarningDialog(e.getMessage());
+            warn(e.getMessage());
         }
     }
 
@@ -522,7 +568,18 @@ public final class DatavyuView implements FileDropEventListener {
 
     private boolean canSave(final String directory, final String file) {
         File newFile = new File(directory, file);
-        return (newFile.exists() && Datavyu.getApplication().overwriteExisting()) || !newFile.exists();
+        return (newFile.exists() && overwriteExisting()) || !newFile.exists();
+    }
+
+    /**
+     * Asks whether to save over a file that exists.
+     *
+     * @return whether to overwrite it
+     */
+    private boolean overwriteExisting() {
+        Resources resourceMap = Resources.of(Datavyu.class);
+        return Dialogs.confirm(frame, resourceMap.getString("OverwriteDialog.message"),
+                resourceMap.getString("OverwriteDialog.title"), "Overwrite");
     }
 
     /**
@@ -554,7 +611,7 @@ public final class DatavyuView implements FileDropEventListener {
         try {
             if (checkIfFileAlreadyOpen(file.getCanonicalPath())) {
                 // TODO: Replace by a language specific error message!
-                Datavyu.getApplication().showWarningDialog("Error: File is already open.");
+                warn("Error: File is already open.");
                 return;
             }
         } catch (IOException e) {
@@ -586,6 +643,10 @@ public final class DatavyuView implements FileDropEventListener {
      * @param fileChooser The file chooser to use.
      */
     private void open(final DatavyuFileChooser fileChooser) {
+        // An untitled spreadsheet with no changes gives way to the project opened.
+        ProjectController selected = selectedController();
+        SpreadSheetPanel replaced = tabbedPane.getTabCount() == 1 && selected != null
+            && selected.getProjectName() == null && !selected.isChanged() ? selected.getSpreadSheetPanel() : null;
         progressBar = new DataviewProgressBar(this.getFrame(), false);
         task = new OpenTask(fileChooser);
         task.addPropertyChangeListener(new PropertyChangeListener() {
@@ -623,8 +684,10 @@ public final class DatavyuView implements FileDropEventListener {
         try {
             ProjectController p = task.get();
             if (p != null) {
-                Datavyu.setProjectController(p);
                 createNewSpreadsheet(p);
+                if (replaced != null) {
+                    removeTab(replaced);
+                }
             }
 
             progressBar.close();
@@ -650,7 +713,7 @@ public final class DatavyuView implements FileDropEventListener {
      */
     private boolean recover(final File autosave) {
         open(autosave);
-        ProjectController projectController = Datavyu.getProjectController();
+        ProjectController projectController = selectedController();
         if (projectController == null || !autosave.getName().equals(projectController.getDatabaseFileName())) {
             return false;
         }
@@ -694,7 +757,7 @@ public final class DatavyuView implements FileDropEventListener {
         }
         addMediaFiles(media);
 
-        if (projects.isEmpty() || !Datavyu.getApplication().safeQuit()) {
+        if (projects.isEmpty() || !app.safeQuit()) {
             return;
         }
 
@@ -722,7 +785,8 @@ public final class DatavyuView implements FileDropEventListener {
     }
 
     private void addMediaFiles(final List<File> files) {
-        if (files.isEmpty() || panel.getMediaPlayers() == null) {
+        SpreadSheetPanel panel = getSpreadsheetPanel();
+        if (files.isEmpty() || panel == null || panel.getMediaPlayers() == null) {
             return;
         }
         try {
@@ -732,19 +796,30 @@ public final class DatavyuView implements FileDropEventListener {
                     "Column Locked", "Add to New Column"));
         } catch (UserWarningException e) {
             logger.error("Unable to add media", e);
-            Datavyu.getApplication().showWarningDialog(e.getMessage());
+            warn(e.getMessage());
         }
     }
 
     /**
      * Action for editing vocabs.
      */
-    public void showVocabEditor() { vec.showView(); }
+    public void showVocabEditor() {
+        if (codeEditor == null) {
+            codeEditor = new VocabEditorV(frame, false, selectedController());
+        } else {
+            codeEditor.setProjectController(selectedController());
+        }
+        WindowPlacement.show(codeEditor);
+    }
 
     /**
      * Action for showing the variable list.
      */
-    public void showVariableList() { Datavyu.getApplication().showVariableList(); }
+    public void showVariableList() {
+        VariableListV list = new VariableListV(frame, false, selectedController());
+        list.registerListeners();
+        WindowPlacement.show(list);
+    }
 
     /**
      * Action for showing the quicktime video controller.
@@ -778,7 +853,7 @@ public final class DatavyuView implements FileDropEventListener {
      * made only once the application has its view and video controller, after this view is made.
      */
     public void startFirstSpreadsheet() {
-        startNewSpreadsheet(panel.getProjectController().getDataStore());
+        startNewSpreadsheet(selectedController().getDataStore());
     }
 
     /**
@@ -798,13 +873,14 @@ public final class DatavyuView implements FileDropEventListener {
      * Action for adding an empty media column, for media added later.
      */
     public void newMediaColumn() {
-        DataStore dataStore = Datavyu.getProjectController().getDataStore();
+        ProjectController selected = selectedController();
+        DataStore dataStore = selected.getDataStore();
         try {
             Variable column = MediaColumns.addSelected(dataStore);
-            undoSupport.postEdit(new AddMediaColumnEdit(dataStore, column.getName()));
+            selected.postEdit(new AddMediaColumnEdit(dataStore, column.getName()));
         } catch (UserWarningException e) {
             logger.error("Unable to add a media column", e);
-            Datavyu.getApplication().showWarningDialog(e.getMessage());
+            warn(e.getMessage());
         }
     }
 
@@ -812,46 +888,28 @@ public final class DatavyuView implements FileDropEventListener {
      * Action for showing the about window.
      */
     public void showAboutWindow() {
-        Datavyu.getApplication().showAboutWindow();
+        app.showAboutWindow();
     }
 
     /**
      * Action for showing how to cite Watavyu.
      */
     public void showCitationDialog() {
-        Datavyu.getApplication().show(new CitationDialog(getFrame()));
+        WindowPlacement.show(new CitationDialog(getFrame()));
     }
 
+    /**
+     * Opens a spreadsheet in a new tab, and opens its media.
+     *
+     * @param pc the spreadsheet
+     * @return the spreadsheet
+     */
     public ProjectController createNewSpreadsheet(ProjectController pc) {
-        Datavyu.setProjectController(pc);
-
-        // Data controller needs to be registered before load for the cell positioning highlighting
-        VideoController dcv = new VideoController();
-        Datavyu.setVideoController(dcv);
-
-
-        pc.setSpreadSheetPanel(new SpreadSheetPanel(pc, null));
-        SpreadSheetPanel panel = pc.getSpreadSheetPanel();
-        panel.registerListeners();
-        panel.addFileDropEventListener(this);
-        panel.setVideoController(dcv);
-
-        tabbedPane.add(panel);
-        tabbedPane.setTabComponentAt(tabbedPane.indexOfComponent(panel), new TabWithCloseButton(tabbedPane));
-        tabbedPane.setSelectedComponent(panel);
+        SpreadSheetPanel panel = addTab(pc);
         panel.clearCellSelection();
         setSheetLayout();
         pc.loadProject();
-
-        return pc; //return value not used
-    }
-
-    //no usages as of 5/5/2014
-    public ProjectController createNewSpreadsheet(DataStore ds) {
-        ProjectController pc = new ProjectController();
-        pc.setDataStore(ds);
-
-        return createNewSpreadsheet(pc);
+        return pc;
     }
 
     public ProjectController createNewSpreadsheet(String name) {
@@ -860,34 +918,14 @@ public final class DatavyuView implements FileDropEventListener {
         startNewSpreadsheet(dataStore);
         pc.setDataStore(dataStore);
         pc.setProjectName(name);
-        pc = createNewSpreadsheet(pc);
-
-        return pc; //return value not used
+        return createNewSpreadsheet(pc);
     }
 
     /**
      * Action for removing cells from the database.
      */
     public void deleteCells() {
-        // Cells in locked columns stay.
-        List<Cell> selectedCells = new ArrayList<>();
-        for (Cell cell : Datavyu.getProjectController().getDataStore().getSelectedCells()) {
-            if (!cell.getVariable().refusesEdits()) {
-                selectedCells.add(cell);
-            }
-        }
-        if (selectedCells.isEmpty()) {
-            return;
-        }
-
-        // record the effect
-        UndoableEdit edit = new RemoveCellEdit(selectedCells);
-        // perform the operation
-        new DeleteCellController(selectedCells);
-
-
-        // notify the listeners
-        Datavyu.getView().getUndoSupport().postEdit(edit);
+        selectedController().deleteSelectedCells();
     }
 
     /**
@@ -900,19 +938,7 @@ public final class DatavyuView implements FileDropEventListener {
             type = SheetLayoutType.WeakTemporal;
         }
 
-        panel.setLayoutType(type);
-    }
-
-    public SheetLayoutType getSheetLayout() {
-        if(weakTemporalAlignmentMenuItem.isSelected()) {
-            return SheetLayoutType.WeakTemporal;
-        } else {
-            return SheetLayoutType.Ordinal;
-        }
-    }
-
-    public void setRedraw(boolean b) {
-        redraw = b;
+        getSpreadsheetPanel().setLayoutType(type);
     }
 
     public boolean checkIfFileAlreadyOpen(String filepath) {
@@ -932,7 +958,7 @@ public final class DatavyuView implements FileDropEventListener {
      * Undo Action.
      */
     public void undo() {
-        spreadsheetUndoManager.undo();
+        selectedController().undo();
         refreshUndoRedo();
     }
 
@@ -940,7 +966,7 @@ public final class DatavyuView implements FileDropEventListener {
      * Redo Action.
      */
     public void redo() {
-        spreadsheetUndoManager.redo();
+        selectedController().redo();
         refreshUndoRedo();
     }
 
@@ -971,8 +997,8 @@ public final class DatavyuView implements FileDropEventListener {
         boolean monospaced = !Settings.get().isMonospacedValues();
         Settings.get().setMonospacedValues(monospaced);
         SpreadsheetTheme.setMonospacedValues(monospaced);
-        panel.revalidate();
-        panel.repaint();
+        getSpreadsheetPanel().revalidate();
+        getSpreadsheetPanel().repaint();
     }
 
     /**
@@ -1013,7 +1039,8 @@ public final class DatavyuView implements FileDropEventListener {
     private void spreadsheetMenuSelected(final MenuEvent evt) {
         Resources rMap = Resources.of(DatavyuView.class);
 
-        int totalNumberOfVisibleColumns = Datavyu.getProjectController().getDataStore().getVisibleVariables().size();
+        SpreadSheetPanel panel = getSpreadsheetPanel();
+        int totalNumberOfVisibleColumns = panel.getDataStore().getVisibleVariables().size();
 
         if (totalNumberOfVisibleColumns == 0) {
             newCellMenuItem.setEnabled(false);
@@ -1025,7 +1052,7 @@ public final class DatavyuView implements FileDropEventListener {
 
         importJSON.setEnabled(true);
 
-        List<Cell> selectedCells = Datavyu.getProjectController().getDataStore().getSelectedCells();
+        List<Cell> selectedCells = panel.getDataStore().getSelectedCells();
 
         if (selectedCells.isEmpty()) {
             deleteCellMenuItem.setEnabled(false);
@@ -1059,19 +1086,13 @@ public final class DatavyuView implements FileDropEventListener {
     }
 
     public void newCellLeft() {
-        List<Cell> selectedCells = null;
-
-        selectedCells = Datavyu.getProjectController().getDataStore().getSelectedCells();
-
-        new CreateNewCellController(selectedCells, ArrayDirection.LEFT);
+        ProjectController selected = selectedController();
+        new CreateNewCellController(selected, selected.getDataStore().getSelectedCells(), ArrayDirection.LEFT);
     }
 
     public void newCellRight() {
-        List<Cell> selectedCells = null;
-
-        selectedCells = Datavyu.getProjectController().getDataStore().getSelectedCells();
-
-        new CreateNewCellController(selectedCells, ArrayDirection.RIGHT);
+        ProjectController selected = selectedController();
+        new CreateNewCellController(selected, selected.getDataStore().getSelectedCells(), ArrayDirection.RIGHT);
     }
 
     /**
@@ -1087,8 +1108,8 @@ public final class DatavyuView implements FileDropEventListener {
         int size = SpreadsheetTheme.dataFont().getSize() + diff;
         SpreadsheetTheme.setDataFontSize(Math.max(Math.min(size, ZOOM_MAX_SIZE), ZOOM_MIN_SIZE));
         // Create and redraw fresh window pane so all of the fonts are new again.
-        panel.revalidate();
-        panel.repaint();
+        getSpreadsheetPanel().revalidate();
+        getSpreadsheetPanel().repaint();
     }
 
     /**
@@ -1100,21 +1121,20 @@ public final class DatavyuView implements FileDropEventListener {
         return (SpreadSheetPanel) tabbedPane.getSelectedComponent();
     }
 
+    /** Shows the selected spreadsheet's undo history in the Undo and Redo commands. */
     public void refreshUndoRedo() {
+        ProjectController selected = selectedController();
+        if (selected == null) {
+            return;
+        }
+        SpreadsheetUndoManager history = selected.getUndoManager();
+        actions.get(UNDO).putValue(Action.NAME, history.getUndoPresentationName());
+        actions.get(UNDO).setEnabled(history.canUndo());
+        actions.get(REDO).putValue(Action.NAME, history.getRedoPresentationName());
+        actions.get(REDO).setEnabled(history.canRedo());
 
-        // refresh undo
-        actions.get(UNDO).putValue(Action.NAME, spreadsheetUndoManager.getUndoPresentationName());
-        actions.get(UNDO).setEnabled(spreadsheetUndoManager.canUndo());
-
-        // refresh redo
-        actions.get(REDO).putValue(Action.NAME, spreadsheetUndoManager.getRedoPresentationName());
-        actions.get(REDO).setEnabled(spreadsheetUndoManager.canRedo());
-
-        // Display any changes.
-        //showSpreadsheet();
-
-        panel.revalidate();
-        panel.repaint();
+        getSpreadsheetPanel().revalidate();
+        getSpreadsheetPanel().repaint();
     }
 
     public JTabbedPane getTabbedPane() {
@@ -1161,10 +1181,8 @@ public final class DatavyuView implements FileDropEventListener {
         action(REDO, this::redo);
         action(r.getString("exportJSONMenuItem.text"), this::exportToJSON);
         action(r.getString("importJSONMenuItem.text"), this::importJSONToSpreadsheet);
-        action(r.getString("weakTemporalAlignmentMenuItem.text"), () -> {
-            setRedraw(true);
-            setSheetLayout();
-        }).putValue(Action.SELECTED_KEY, false);
+        action(r.getString("weakTemporalAlignmentMenuItem.text"), this::setSheetLayout)
+                .putValue(Action.SELECTED_KEY, false);
         action(r.getString("zoomInMenuItem.text"), this::zoomIn);
         action(r.getString("zoomOutMenuItem.text"), this::zoomOut);
         action(r.getString("resetZoomMenuItem.text"), this::resetZoom);
@@ -1191,8 +1209,10 @@ public final class DatavyuView implements FileDropEventListener {
         return action;
     }
 
-    private static VideoController controller() {
-        return Datavyu.getVideoController();
+    /** @return the selected spreadsheet's playback, which the keypad drives; null when no tab is open */
+    private VideoController controller() {
+        ProjectController selected = selectedController();
+        return selected == null ? null : selected.getVideoController();
     }
 
     private static Action run(final Runnable command) {
@@ -1414,7 +1434,7 @@ public final class DatavyuView implements FileDropEventListener {
      * Creates a cell in the selected column, as the New Cell menu item does.
      */
     public void newCell() {
-        new CreateNewCellController().createDefaultCell();
+        new CreateNewCellController(selectedController()).createDefaultCell();
     }
 
     /**
@@ -1450,21 +1470,6 @@ public final class DatavyuView implements FileDropEventListener {
                 return null;
             }
 
-            if (fileChooser != null &&
-                    tabbedPane != null && Datavyu.getProjectController() != null &&
-                    tabbedPane.getTabCount() == 1 &&
-                    Datavyu.getProjectController().getProjectName() == null &&
-                    !Datavyu.getProjectController().isChanged() &&
-                    fileChooser.getSelectedFile().exists()) {
-                SwingUtilities.invokeLater(new Runnable() {
-                    @Override
-                    public void run() {
-                        tabbedPane.remove(0);
-                    }
-                });
-            }
-
-
             setProgress(0);
             FileFilter filter = fileChooser.getFileFilter();
             setProgress(10);
@@ -1474,7 +1479,7 @@ public final class DatavyuView implements FileDropEventListener {
 
             if (openController != null && openController.getError() != null) {
                 final String error = openController.getError();
-                SwingUtilities.invokeLater(() -> Datavyu.getApplication().showWarningDialog(error));
+                SwingUtilities.invokeLater(() -> warn(error));
                 openController = null;
             }
 
@@ -1520,16 +1525,4 @@ public final class DatavyuView implements FileDropEventListener {
         }
     }
 
-    /**
-     * An undo/redo adapter. The adapter is notified when an undo edit occur.
-     * The adaptor extract the edit from the event, add it to the UndoManager, and refresh the GUI
-     */
-    private class UndoAdapter implements UndoableEditListener {
-        @Override
-        public void undoableEditHappened(UndoableEditEvent evt) {
-            UndoableEdit edit = evt.getEdit();
-            spreadsheetUndoManager.addEdit(edit);
-            refreshUndoRedo();
-        }
-    }
 }

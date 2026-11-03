@@ -16,7 +16,6 @@ package org.datavyu.plugins;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.datavyu.Datavyu;
 import org.datavyu.models.Identifier;
 import org.datavyu.util.ClockTimer;
 import org.datavyu.util.ClockTimer.ClockListener;
@@ -66,12 +65,19 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     /** Where the clip starts on the timeline, in milliseconds. */
     private volatile long offset;
 
+    /** The clock the player follows: its spreadsheet's */
+    protected final ClockTimer clockTimer;
+
     /**
      * Constructs a base data video viewer.
+     *
+     * @param clockTimer the clock the player follows
      */
-    public StreamViewerDialog(Identifier identifier, final Frame parent, final boolean modal) {
+    public StreamViewerDialog(Identifier identifier, final Frame parent, final ClockTimer clockTimer,
+                              final boolean modal) {
         super(parent, modal);
         this.identifier = identifier;
+        this.clockTimer = clockTimer;
         offset = 0;
         initComponents();
     }
@@ -289,7 +295,6 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
 
     @Override
     public synchronized void clockSeekPlayback(final double clockTime) {
-        ClockTimer clockTimer = Datavyu.getVideoController().getClockTimer();
         if (!clockTimer.isPaused() && isSeekPlaybackEnabled()) {
             setCurrentTime(clipTime(clockTime));
         }
@@ -303,7 +308,6 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     @Override
     public synchronized void streamsBoundaryCheck(final double clockTime) {
         try {
-            ClockTimer clockTimer = Datavyu.getVideoController().getClockTimer();
             if (!clockTimer.isPaused() && getCurrentTime() != -1) {
                 if (inPlay && holds(clockTime) && !isPlaying() && !isSeekPlaybackEnabled()) {
                     logger.info("Stream Boundary Starting " + getIdentifier() + " at clock " + clockTime);

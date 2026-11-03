@@ -14,6 +14,7 @@
  */
 package org.datavyu.undoableedits;
 
+import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.Cell;
 import org.datavyu.util.Constants;
 
@@ -25,8 +26,9 @@ public class ChangeOnsetCellEdit extends ChangeCellEdit {
     private long oldOnset = -1;
     private long newOnset = -1;
 
-    public ChangeOnsetCellEdit(Cell c, long oldOnset, long newOnset, Granularity granularity) {
-        super(c, granularity);
+    public ChangeOnsetCellEdit(final ProjectController controller, Cell c, long oldOnset, long newOnset,
+                               Granularity granularity) {
+        super(controller, c, granularity);
         this.oldOnset = oldOnset;
         this.newOnset = newOnset;
     }

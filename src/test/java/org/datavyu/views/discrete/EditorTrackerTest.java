@@ -45,7 +45,7 @@ public class EditorTrackerTest {
     public void aBackslashAtTheStartOfAValueIsTyped() {
         JTextArea textArea = new JTextArea("value");
         Value value = new Value(textArea);
-        EditorTracker tracker = new EditorTracker(textArea, List.of(value));
+        EditorTracker tracker = new EditorTracker(textArea, List.of(value), null, () -> { });
         tracker.setEditor(value, 0, 0);
         KeyEvent backslash = new KeyEvent(textArea, KeyEvent.KEY_PRESSED, 0, 0, KeyEvent.VK_BACK_SLASH, '\\');
 
@@ -62,7 +62,7 @@ public class EditorTrackerTest {
     public void aCellWithNothingToEditRefusesTyping() {
         JTextArea textArea = new JTextArea("()");
         EditorTracker tracker = new EditorTracker(textArea,
-            List.of(new FixedText(textArea, "("), new FixedText(textArea, ")")));
+            List.of(new FixedText(textArea, "("), new FixedText(textArea, ")")), null, () -> { });
         tracker.focusGained(null);
         KeyEvent typed = new KeyEvent(textArea, KeyEvent.KEY_TYPED, 0, 0, KeyEvent.VK_UNDEFINED, 'x');
         KeyEvent backspace = new KeyEvent(textArea, KeyEvent.KEY_PRESSED, 0, 0, KeyEvent.VK_BACK_SPACE, '\b');
@@ -82,7 +82,7 @@ public class EditorTrackerTest {
     public void anEditableValueTakesTyping() {
         JTextArea textArea = new JTextArea("value");
         Value value = new Value(textArea);
-        EditorTracker tracker = new EditorTracker(textArea, List.of(value));
+        EditorTracker tracker = new EditorTracker(textArea, List.of(value), null, () -> { });
         tracker.setEditor(value, 0, 0);
         KeyEvent typed = new KeyEvent(textArea, KeyEvent.KEY_TYPED, 0, 0, KeyEvent.VK_UNDEFINED, 'x');
 
