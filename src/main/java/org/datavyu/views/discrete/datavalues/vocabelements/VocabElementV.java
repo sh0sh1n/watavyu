@@ -91,10 +91,6 @@ public class VocabElementV extends JPanel {
     /** How many changes typed into this view's editors are being applied. */
     private int typing;
     /**
-     * Is this vocab element view marked for removal?
-     */
-    private boolean deleteVE;
-    /**
      * The underlying variable model that this vocab element view represents.
      */
     private Variable varModel;
@@ -126,7 +122,6 @@ public class VocabElementV extends JPanel {
 
         bangIconText = rMap.getString("delta.tooltip");
 
-        deleteVE = false;
         parentEditor = vev;
         varModel = var;
 
@@ -149,16 +144,12 @@ public class VocabElementV extends JPanel {
         veRootView.addFocusListener(new FocusAdapter() {
             @Override
             public void focusGained(FocusEvent fe) {
-                if (!deleteVE) {
-                    setBG(FOCUSED);
-                }
+                setBG(FOCUSED);
             }
 
             @Override
             public void focusLost(FocusEvent fe) {
-                if (!deleteVE) {
-                    setBG(SpreadsheetTheme.PALETTE.cell());
-                }
+                setBG(SpreadsheetTheme.PALETTE.cell());
             }
         });
 
@@ -363,14 +354,6 @@ public class VocabElementV extends JPanel {
      */
     public final void requestArgFocus(FormalArgEditor argEd) {
         veRootView.getEdTracker().setEditor(argEd);
-    }
-
-    /**
-     * @return True if this entire vocab element is flagged for deletion, false
-     * otherwise.
-     */
-    public final boolean isDeletable() {
-        return deleteVE;
     }
 
     /**

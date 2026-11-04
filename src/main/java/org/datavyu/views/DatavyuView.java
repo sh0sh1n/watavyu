@@ -1241,7 +1241,6 @@ public final class DatavyuView implements FileDropEventListener {
                 .keypad(Command.NEW_CELL_IN_SELECTED_COLUMN, KeyEvent.VK_ENTER, 0)
                 .reference("Code editor", "Add column", "⌃M")
                 .reference("Code editor", "Add code to the selected column", "⌃A")
-                .reference("Code editor", "Apply changes", "⌃S")
                 .reference("Code editor", "Delete", "⌃⌦")
                 .reference("Code editor", "Close", "Esc")
                 .build(() -> frame.isFocused(), held -> {

@@ -48,7 +48,7 @@ public final class CellCommands {
      * edited.
      *
      * @param time the new cell's onset and offset
-     * @return the new cell, or null if there is no such column or it is locked
+     * @return the new cell, or null if there is no such column or it is hidden or locked
      */
     public Cell newCell(final long time) {
         return newCellIn(spreadsheet.getLastCreatedVariable(), time);
@@ -59,7 +59,7 @@ public final class CellCommands {
      * with none selected, as {@link #newCell(long)}.
      *
      * @param time the new cell's onset and offset
-     * @return the new cell, or null if that column is a media column or is locked
+     * @return the new cell, or null if that column is a media column or is hidden or locked
      */
     public Cell newCellInSelectedColumn(final long time) {
         List<Variable> selected = selectedColumns();
@@ -83,10 +83,10 @@ public final class CellCommands {
     /**
      * New Cell and Set Offset, from the keypad and the controls drawer: closes the cell before the time, setting its
      * offset to a millisecond before it, and makes a point cell at the time. The cell closed is in the one selected
-     * column, or else in the column of the cell last selected: of its cells starting at or before the time, the
-     * latest, and among several starting then, the one last selected, or else the last of them. The new cell goes in
-     * the first selected annotation column, else the column of the first selected cell, else the column last given a
-     * cell, else the first annotation column.
+     * column, or else in the column of the cell last selected, unless it is hidden: of its cells starting at or before
+     * the time, the latest, and among several starting then, the one last selected, or else the last of them. The new
+     * cell goes in the first selected annotation column, else the column of the first selected cell, else the column
+     * last given a cell, else the first annotation column, passing over hidden columns.
      *
      * @param time the new cell's onset and offset
      * @return the new cell, or null if the column to close or the one for the new cell is locked
@@ -96,7 +96,7 @@ public final class CellCommands {
         Cell lastSelected = spreadsheet.getLastSelectedCell();
         Variable closing = selected.size() == 1 ? selected.get(0) : inSpreadsheet(lastSelected)
             ? lastSelected.getVariable() : null;
-        if (closing != null) {
+        if (closing != null && !closing.isHidden()) {
             if (closing.refusesEdits()) {
                 return null;
             }
@@ -127,20 +127,25 @@ public final class CellCommands {
     /** @return the column for a new cell at a time, as {@link #newCellClosingPrevious(long)} picks it, or null */
     private Variable columnForNewCellAt() {
         for (Variable column : selectedColumns()) {
-            if (!column.isMedia()) {
+            if (takesCells(column)) {
                 return column;
             }
         }
         for (Cell cell : selectedCells()) {
-            if (!cell.getVariable().isMedia()) {
+            if (takesCells(cell.getVariable())) {
                 return cell.getVariable();
             }
         }
         Variable last = spreadsheet.getLastCreatedVariable();
-        if (inSpreadsheet(last) && !last.isMedia()) {
+        if (inSpreadsheet(last) && takesCells(last)) {
             return last;
         }
-        return dataStore().getAllVariables().stream().filter(column -> !column.isMedia()).findFirst().orElse(null);
+        return dataStore().getAllVariables().stream().filter(this::takesCells).findFirst().orElse(null);
+    }
+
+    /** @return whether a column can be given a new cell, locks aside: a shown annotation column */
+    private boolean takesCells(final Variable column) {
+        return !column.isMedia() && !column.isHidden();
     }
 
     /** Makes a point cell in a column, which is then the one last given a cell, and records it; null if refused. */
@@ -164,7 +169,8 @@ public final class CellCommands {
     }
 
     private Cell createPointCell(final Variable column, final long time) {
-        if (!inSpreadsheet(column) || column.isMedia() || column.refusesEdits()) {
+        // A hidden column takes no new cells (owner, B22), and refuses them quietly: it cannot be seen to.
+        if (!inSpreadsheet(column) || column.isMedia() || column.isHidden() || column.refusesEdits()) {
             return null;
         }
         logger.info("New cell in " + column.getName() + " at " + time);
@@ -211,10 +217,10 @@ public final class CellCommands {
      * @param column the selected column
      * @param typed  the key's character
      * @param time   the new cell's onset and offset
-     * @return the new cell, or null in a media column, a locked one or one with no codes
+     * @return the new cell, or null in a media column, a hidden or locked one or one with no codes
      */
     public Cell newCellTyped(final Variable column, final char typed, final long time) {
-        if (!inSpreadsheet(column) || column.isMedia() || column.refusesEdits()) {
+        if (!inSpreadsheet(column) || column.isMedia() || column.isHidden() || column.refusesEdits()) {
             return null;
         }
         if (column.getRootNode().childArguments.isEmpty()) {

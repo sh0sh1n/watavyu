@@ -86,6 +86,19 @@ public class CellCommandsTest {
         assertFalse(spreadsheet.getUndoManager().canUndo());
     }
 
+    /** B22: a hidden column takes no new cell, though it was the one last given a cell. */
+    @Test
+    public void aHiddenColumnTakesNoNewCell() {
+        spreadsheet.setLastCreatedVariable(speech);
+        spreadsheet.columns().hide(List.of(speech));
+
+        assertNull(cells.newCell(2_500));
+        assertNull(cells.newCellInSelectedColumn(2_500));
+        assertNull(cells.newCellTyped(speech, 'a', 2_500));
+        assertTrue(speech.getCells().isEmpty());
+        assertFalse(spreadsheet.getUndoManager().canUndo());
+    }
+
     // New Cell, from the keypad and drawer
 
     @Test
@@ -258,6 +271,28 @@ public class CellCommandsTest {
         assertNull(cells.newCellClosingPrevious(5_000));
         assertEquals(previous.getOffset(), 3_000);
         assertEquals(gaze.getCells().size(), 1);
+        assertFalse(spreadsheet.getUndoManager().canUndo());
+    }
+
+    /** B22: a cell last selected in a column since hidden is not closed, and the new cell goes in a shown column. */
+    @Test
+    public void aHiddenColumnIsNotClosedAndTakesNoNewCell() {
+        Cell previous = gaze.createPointCell(3_000);
+        spreadsheet.setLastSelectedCell(previous);
+        spreadsheet.setLastCreatedVariable(gaze);
+        spreadsheet.columns().hide(List.of(gaze));
+
+        Cell cell = cells.newCellClosingPrevious(5_000);
+
+        assertEquals(previous.getOffset(), 3_000);
+        assertSame(cell.getVariable(), speech, "the first shown annotation column");
+    }
+
+    @Test
+    public void withEveryAnnotationColumnHiddenNewCellAndSetOffsetMakesNothing() {
+        spreadsheet.columns().hide(List.of(gaze, speech));
+
+        assertNull(cells.newCellClosingPrevious(5_000));
         assertFalse(spreadsheet.getUndoManager().canUndo());
     }
 
