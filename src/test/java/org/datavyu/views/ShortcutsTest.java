@@ -10,7 +10,10 @@ import java.awt.event.ActionEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import javax.swing.AbstractAction;
 import javax.swing.Action;
 import javax.swing.JPanel;
@@ -27,6 +30,7 @@ public class ShortcutsTest {
     private boolean mainWindowFocused;
     private Action save;
     private Shortcuts shortcuts;
+    private int refreshed;
 
     private Action action(final String name) {
         return new AbstractAction(name) {
@@ -37,21 +41,35 @@ public class ShortcutsTest {
         };
     }
 
+    /** Each command's action, as a command table gives them. */
+    private final Map<Command, Action> actions = new EnumMap<>(Command.class);
+
+    private Function<Command, Action> actions() {
+        return actions::get;
+    }
+
     @BeforeMethod
     public void setUp() {
         ran = new ArrayList<>();
         shift = new ArrayList<>();
+        refreshed = 0;
         mainWindowFocused = true;
         save = action("save");
-        shortcuts = Shortcuts.builder()
-            .menu("File", "Save", KeyStroke.getKeyStroke(KeyEvent.VK_S, Shortcuts.COMMAND), save)
-            .global("Spreadsheet", "New cell to left", KeyStroke.getKeyStroke(KeyEvent.VK_L, Shortcuts.COMMAND),
-                action("left"))
-            .keypad("Play", KeyEvent.VK_NUMPAD8, 0, action("play"))
-            .keypad("Jump back", KeyEvent.VK_SUBTRACT, 0, action("back"))
-            .keypad("Jump forward", KeyEvent.VK_SUBTRACT, InputEvent.SHIFT_DOWN_MASK, action("forward"))
+        actions.clear();
+        actions.put(Command.SAVE, save);
+        actions.put(Command.NEW_CELL_LEFT, action("left"));
+        actions.put(Command.PLAY, action("play"));
+        actions.put(Command.JUMP_BACK, action("back"));
+        actions.put(Command.JUMP_FORWARD, action("forward"));
+        actions.put(Command.TEMPORAL_LAYOUT, action("ordering"));
+        shortcuts = Shortcuts.builder(actions())
+            .menu("File", Command.SAVE, KeyStroke.getKeyStroke(KeyEvent.VK_S, Shortcuts.COMMAND))
+            .global("Spreadsheet", Command.NEW_CELL_LEFT, KeyStroke.getKeyStroke(KeyEvent.VK_L, Shortcuts.COMMAND))
+            .keypad(Command.PLAY, KeyEvent.VK_NUMPAD8, 0)
+            .keypad(Command.JUMP_BACK, KeyEvent.VK_SUBTRACT, 0)
+            .keypad(Command.JUMP_FORWARD, KeyEvent.VK_SUBTRACT, InputEvent.SHIFT_DOWN_MASK)
             .reference("Spreadsheet", "Select column to left", "⌘←")
-            .build(() -> mainWindowFocused, shift::add);
+            .build(() -> mainWindowFocused, shift::add, () -> refreshed++);
     }
 
     private KeyEvent press(final int keyCode, final int modifiers, final int location) {
@@ -85,13 +103,12 @@ public class ShortcutsTest {
 
     @Test
     public void aCheckBoxMenuShortcutFlipsItsStateFromOtherWindows() {
-        Action ordering = action("ordering");
+        Action ordering = actions.get(Command.TEMPORAL_LAYOUT);
         ordering.putValue(Action.SELECTED_KEY, false);
         mainWindowFocused = false;
-        Shortcuts withCheckBox = Shortcuts.builder()
-            .menu("Spreadsheet", "Weak temporal ordering", KeyStroke.getKeyStroke(KeyEvent.VK_T, Shortcuts.COMMAND),
-                ordering)
-            .build(() -> mainWindowFocused, shift::add);
+        Shortcuts withCheckBox = Shortcuts.builder(actions())
+            .menu("Spreadsheet", Command.TEMPORAL_LAYOUT, KeyStroke.getKeyStroke(KeyEvent.VK_T, Shortcuts.COMMAND))
+            .build(() -> mainWindowFocused, shift::add, () -> { });
 
         assertTrue(withCheckBox.dispatchKeyEvent(press(KeyEvent.VK_T, Shortcuts.COMMAND, STANDARD)));
         assertEquals(ordering.getValue(Action.SELECTED_KEY), true);
@@ -102,12 +119,11 @@ public class ShortcutsTest {
 
     @Test
     public void aCheckBoxMenuShortcutInTheMainWindowIsLeftToTheMenuBar() {
-        Action ordering = action("ordering");
+        Action ordering = actions.get(Command.TEMPORAL_LAYOUT);
         ordering.putValue(Action.SELECTED_KEY, false);
-        Shortcuts withCheckBox = Shortcuts.builder()
-            .menu("Spreadsheet", "Weak temporal ordering", KeyStroke.getKeyStroke(KeyEvent.VK_T, Shortcuts.COMMAND),
-                ordering)
-            .build(() -> mainWindowFocused, shift::add);
+        Shortcuts withCheckBox = Shortcuts.builder(actions())
+            .menu("Spreadsheet", Command.TEMPORAL_LAYOUT, KeyStroke.getKeyStroke(KeyEvent.VK_T, Shortcuts.COMMAND))
+            .build(() -> mainWindowFocused, shift::add, () -> { });
 
         assertFalse(withCheckBox.dispatchKeyEvent(press(KeyEvent.VK_T, Shortcuts.COMMAND, STANDARD)));
         assertEquals(ordering.getValue(Action.SELECTED_KEY), false);
@@ -119,6 +135,27 @@ public class ShortcutsTest {
         save.setEnabled(false);
         assertFalse(shortcuts.dispatchKeyEvent(press(KeyEvent.VK_S, Shortcuts.COMMAND, STANDARD)));
         assertTrue(ran.isEmpty());
+    }
+
+    /** The commands' state is worked out before a shortcut runs, so the menu bar too sees whether it can run now. */
+    @Test
+    public void commandsAreRefreshedBeforeAShortcutButNotForOtherKeys() {
+        shortcuts.dispatchKeyEvent(press(KeyEvent.VK_S, Shortcuts.COMMAND, STANDARD));
+        shortcuts.dispatchKeyEvent(press(KeyEvent.VK_NUMPAD8, 0, KEYPAD));
+        shortcuts.dispatchKeyEvent(press(KeyEvent.VK_A, 0, STANDARD));
+        shortcuts.dispatchKeyEvent(press(KeyEvent.VK_LEFT, Shortcuts.COMMAND, STANDARD));
+
+        assertEquals(refreshed, 2);
+    }
+
+    /** A shortcut names its command, as a key mapping will, and is listed by the command's label. */
+    @Test
+    public void aShortcutNamesItsCommand() {
+        Shortcuts.Shortcut play = shortcuts.all().stream()
+            .filter(shortcut -> shortcut.getCommand() == Command.PLAY).findFirst().orElseThrow();
+
+        assertEquals(play.getName(), "Play");
+        assertEquals(play.getKeyText(), "Keypad 8");
     }
 
     @Test
@@ -217,10 +254,9 @@ public class ShortcutsTest {
 
     @Test
     public void aShortcutOnAReservedKeyRuns() {
-        Shortcuts mapped = Shortcuts.builder()
-            .global("Video controller", "Play", KeyStroke.getKeyStroke(KeyEvent.VK_H, InputEvent.CTRL_DOWN_MASK),
-                action("play"))
-            .build(() -> mainWindowFocused, shift::add);
+        Shortcuts mapped = Shortcuts.builder(actions())
+            .global("Video controller", Command.PLAY, KeyStroke.getKeyStroke(KeyEvent.VK_H, InputEvent.CTRL_DOWN_MASK))
+            .build(() -> mainWindowFocused, shift::add, () -> { });
 
         assertTrue(mapped.dispatchKeyEvent(press(KeyEvent.VK_H, InputEvent.CTRL_DOWN_MASK, STANDARD)));
         assertEquals(ran, List.of("play"));
@@ -228,10 +264,10 @@ public class ShortcutsTest {
 
     @Test
     public void twoShortcutsCannotShareAKey() {
-        Shortcuts.Builder builder = Shortcuts.builder()
-            .menu("File", "Save", KeyStroke.getKeyStroke(KeyEvent.VK_S, Shortcuts.COMMAND), save)
-            .global("File", "Save again", KeyStroke.getKeyStroke(KeyEvent.VK_S, Shortcuts.COMMAND), save);
-        expectThrows(IllegalStateException.class, () -> builder.build(() -> true, b -> { }));
+        Shortcuts.Builder builder = Shortcuts.builder(actions())
+            .menu("File", Command.SAVE, KeyStroke.getKeyStroke(KeyEvent.VK_S, Shortcuts.COMMAND))
+            .global("File", Command.SAVE_AS, KeyStroke.getKeyStroke(KeyEvent.VK_S, Shortcuts.COMMAND));
+        expectThrows(IllegalStateException.class, () -> builder.build(() -> true, b -> { }, () -> { }));
     }
 
     @Test

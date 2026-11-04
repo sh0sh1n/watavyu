@@ -90,23 +90,16 @@ public final class DatavyuView implements FileDropEventListener {
     /** Text of this view's menus and dialogs */
     private final Resources resources = Resources.of(DatavyuView.class);
 
-    /** Commands of the menu bar, by name */
-    private final Map<String, Action> actions = new LinkedHashMap<>();
+    /** Every command's action, which menus, shortcuts and the controls drawer share */
+    private final CommandTable commands = new CommandTable();
 
     private final Shortcuts shortcuts;
 
     private JMenu openRecentFileMenu;
-    private JMenuItem newCellMenuItem;
-    private JMenuItem newCellLeftMenuItem;
-    private JMenuItem newCellRightMenuItem;
-    private JMenuItem deleteCellMenuItem;
-    private JMenuItem exportJSON;
-    private JMenuItem importJSON;
-    private JCheckBoxMenuItem weakTemporalAlignmentMenuItem;
 
     private boolean quickKeyMode = false;
 
-    private JTabbedPane tabbedPane;
+    private final JTabbedPane tabbedPane = new JTabbedPane();
 
     /**
      * Fills the main window with the menu bar and an empty spreadsheet. The caller places and shows it.
@@ -121,15 +114,13 @@ public final class DatavyuView implements FileDropEventListener {
         frame.setTitle(Resources.of(Datavyu.class).getString("Application.title"));
         frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 
-        createActions();
+        defineCommands();
         shortcuts = createShortcuts();
         frame.setJMenuBar(createMenuBar());
         KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(shortcuts);
 
         frame.setGlassPane(new TransparentPanel());
         frame.getGlassPane().setVisible(true);
-
-        tabbedPane = new JTabbedPane();
 
         tabbedPane.addChangeListener(new ChangeListener() {
             @Override
@@ -156,7 +147,7 @@ public final class DatavyuView implements FileDropEventListener {
                     }
 
                     updateTitle();
-                    refreshUndoRedo();
+                    refreshCommands();
                     if (codeEditor != null) {
                         codeEditor.setProjectController(spreadSheetPanel.getProjectController());
                     }
@@ -167,7 +158,7 @@ public final class DatavyuView implements FileDropEventListener {
         frame.getContentPane().add(tabbedPane, BorderLayout.CENTER);
 
         addTab(new ProjectController());
-        refreshUndoRedo();
+        refreshCommands();
 
         WindowListener exitListener = new WindowAdapter() {
             @Override
@@ -206,7 +197,7 @@ public final class DatavyuView implements FileDropEventListener {
         pc.setVideoController(new VideoController(pc, frame));
         pc.setTitleListener(() -> SwingUtilities.invokeLater(() -> updateTitle(pc)));
         pc.setQuickKeyMode(this::isQuickKeyMode);
-        pc.addUndoableEditListener(event -> refreshUndoRedo());
+        pc.addUndoableEditListener(event -> refreshCommands());
 
         SpreadSheetPanel panel = new SpreadSheetPanel(pc, frame);
         panel.registerListeners();
@@ -458,7 +449,6 @@ public final class DatavyuView implements FileDropEventListener {
 
     public void toggleQuickKeys() {
         quickKeyMode = !quickKeyMode;
-        actions.get(QUICK_KEYS).putValue(Action.NAME, quickKeyModeText());
         updateTitle();
     }
 
@@ -466,8 +456,6 @@ public final class DatavyuView implements FileDropEventListener {
         ProjectController selected = selectedController();
         selected.getVideoController().toggleCellHighlightingAutoFocus();
         selected.getSpreadSheetPanel().redrawCells();
-        actions.get(HIGHLIGHT_AND_FOCUS).putValue(Action.NAME,
-                highlightAndFocusText(selected.getVideoController().getCellHighlightAndFocus()));
     }
 
     public boolean isQuickKeyMode() {
@@ -828,7 +816,6 @@ public final class DatavyuView implements FileDropEventListener {
                 ((SpreadSheetPanel) tab).setControlsShown(show);
             }
         }
-        actions.get(resources.getString("showControlsMenuItem.text")).putValue(Action.SELECTED_KEY, show);
     }
 
     /**
@@ -898,10 +885,15 @@ public final class DatavyuView implements FileDropEventListener {
      * @return the spreadsheet
      */
     public ProjectController createNewSpreadsheet(ProjectController pc) {
+        // A new tab takes the layout of the one selected before it.
+        SheetLayoutType layout = getSpreadsheetPanel() == null ? SheetLayoutFactory.DEFAULT_LAYOUT
+            : getSpreadsheetPanel().getLayoutType();
         SpreadSheetPanel panel = addTab(pc);
         panel.clearCellSelection();
-        setSheetLayout();
+        panel.setLayoutType(layout);
         pc.loadProject();
+        // Selecting the tab refreshed the commands before it had its layout and project.
+        refreshCommands();
         return pc;
     }
 
@@ -921,17 +913,11 @@ public final class DatavyuView implements FileDropEventListener {
         selectedController().cells().deleteSelected();
     }
 
-    /**
-     * Set the SheetLayoutType for the spreadsheet.
-     */
-    private void setSheetLayout() {
-        SheetLayoutType type = SheetLayoutType.Ordinal;
-
-        if (weakTemporalAlignmentMenuItem.isSelected()) {
-            type = SheetLayoutType.WeakTemporal;
-        }
-
-        getSpreadsheetPanel().setLayoutType(type);
+    /** Switches the selected spreadsheet between temporal and ordinal layout. */
+    private void toggleTemporalLayout() {
+        SpreadSheetPanel panel = getSpreadsheetPanel();
+        panel.setLayoutType(panel.getLayoutType() == SheetLayoutType.WeakTemporal ? SheetLayoutType.Ordinal
+            : SheetLayoutType.WeakTemporal);
     }
 
     public boolean checkIfFileAlreadyOpen(String filepath) {
@@ -955,7 +941,7 @@ public final class DatavyuView implements FileDropEventListener {
         if (refusal != null) {
             warn(refusal);
         }
-        refreshUndoRedo();
+        refreshCommands();
     }
 
     /**
@@ -966,7 +952,7 @@ public final class DatavyuView implements FileDropEventListener {
         if (refusal != null) {
             warn(refusal);
         }
-        refreshUndoRedo();
+        refreshCommands();
     }
 
 
@@ -1030,60 +1016,6 @@ public final class DatavyuView implements FileDropEventListener {
         return menu;
     }
 
-    /**
-     * The method to invoke when the use selects the spreadsheet menu item.
-     *
-     * @param evt The event that triggered this action.
-     */
-    private void spreadsheetMenuSelected(final MenuEvent evt) {
-        Resources rMap = Resources.of(DatavyuView.class);
-
-        SpreadSheetPanel panel = getSpreadsheetPanel();
-        int totalNumberOfVisibleColumns = panel.getDataStore().getVisibleVariables().size();
-
-        if (totalNumberOfVisibleColumns == 0) {
-            newCellMenuItem.setEnabled(false);
-            exportJSON.setEnabled(false);
-        } else {
-            newCellMenuItem.setEnabled(true);
-            exportJSON.setEnabled(true);
-        }
-
-        importJSON.setEnabled(true);
-
-        List<Cell> selectedCells = panel.getDataStore().getSelectedCells();
-
-        if (selectedCells.isEmpty()) {
-            deleteCellMenuItem.setEnabled(false);
-        } else if (selectedCells.size() == 1) {
-            deleteCellMenuItem.setText(rMap.getString("deleteCellMenuItemSingle.text"));
-            deleteCellMenuItem.setEnabled(true);
-        } else {
-            deleteCellMenuItem.setText(rMap.getString("deleteCellMenuItemPlural.text"));
-            deleteCellMenuItem.setEnabled(true);
-        }
-
-        if (panel.getAdjacentSelectedCells(ArrayDirection.LEFT) == 0) {
-            newCellLeftMenuItem.setEnabled(false);
-        } else if (panel.getAdjacentSelectedCells(ArrayDirection.LEFT) == 1) {
-            newCellLeftMenuItem.setText(rMap.getString("newCellLeftMenuItemSingle.text"));
-            newCellLeftMenuItem.setEnabled(true);
-        } else {
-            newCellLeftMenuItem.setText(rMap.getString("newCellLeftMenuItemPlural.text"));
-            newCellLeftMenuItem.setEnabled(true);
-        }
-
-        if (panel.getAdjacentSelectedCells(ArrayDirection.RIGHT) == 0) {
-            newCellRightMenuItem.setEnabled(false);
-        } else if (panel.getAdjacentSelectedCells(ArrayDirection.RIGHT) == 1) {
-            newCellRightMenuItem.setText(rMap.getString("newCellRightMenuItemSingle.text"));
-            newCellRightMenuItem.setEnabled(true);
-        } else {
-            newCellRightMenuItem.setText(rMap.getString("newCellRightMenuItemPlural.text"));
-            newCellRightMenuItem.setEnabled(true);
-        }
-    }
-
     public void newCellLeft() {
         selectedController().cells().newCellsBeside(ArrayDirection.LEFT);
     }
@@ -1118,92 +1050,120 @@ public final class DatavyuView implements FileDropEventListener {
         return (SpreadSheetPanel) tabbedPane.getSelectedComponent();
     }
 
-    /** Shows the selected spreadsheet's undo history in the Undo and Redo commands. */
-    public void refreshUndoRedo() {
-        ProjectController selected = selectedController();
-        if (selected == null) {
-            return;
+    /**
+     * Shows the state of the commands, which follows the selected spreadsheet: Undo and Redo name its edits, and its
+     * modes and layout are shown checked or named as they are in it (B20).
+     */
+    public void refreshCommands() {
+        commands.refresh();
+        if (getSpreadsheetPanel() != null) {
+            getSpreadsheetPanel().revalidate();
+            getSpreadsheetPanel().repaint();
         }
-        SpreadsheetUndoManager history = selected.getUndoManager();
-        actions.get(UNDO).putValue(Action.NAME, history.getUndoPresentationName());
-        actions.get(UNDO).setEnabled(history.canUndo());
-        actions.get(REDO).putValue(Action.NAME, history.getRedoPresentationName());
-        actions.get(REDO).setEnabled(history.canRedo());
-
-        getSpreadsheetPanel().revalidate();
-        getSpreadsheetPanel().repaint();
     }
 
     public JTabbedPane getTabbedPane() {
         return tabbedPane;
     }
 
-    // Names of commands whose menu text or state changes
-    private static final String UNDO = "Undo";
-    private static final String REDO = "Redo";
-    private static final String QUICK_KEYS = "Quick Key Mode";
-    private static final String HIGHLIGHT_AND_FOCUS = "Highlight and Focus Mode";
-
-    private Action action(final String name, final Runnable command) {
-        Action action = new AbstractAction(name) {
-            @Override
-            public void actionPerformed(final ActionEvent e) {
-                command.run();
-            }
-        };
-        actions.put(name, action);
-        return action;
+    /**
+     * Returns a command's action, which its menu item, shortcut and controls share.
+     *
+     * @param command the command
+     * @return its action
+     */
+    Action action(final Command command) {
+        return commands.get(command);
     }
 
     /**
-     * Creates the commands of the menu bar. Their names are also the names of their keyboard shortcuts.
+     * Defines what each command does and the state it shows, worked out from the selected spreadsheet whenever the
+     * commands are refreshed.
      */
-    private void createActions() {
-        Resources r = resources;
-        action(r.getString("newMenuItem.text"), this::showNewProjectForm);
-        action(r.getString("openMenuItem.text"), this::open);
-        action(r.getString("closeTabMenuItem.text"), this::closeTab);
-        action(r.getString("saveMenuItem.text"), this::save);
-        action(r.getString("saveAsMenuItem.text"), this::saveAs);
+    private void defineCommands() {
+        commands.define(Command.NEW_PROJECT, this::showNewProjectForm);
+        commands.define(Command.OPEN, this::open);
+        commands.define(Command.CLOSE_TAB, this::closeTab);
+        commands.define(Command.SAVE, this::save);
+        commands.define(Command.SAVE_AS, this::saveAs);
 
-        action(r.getString("newMediaColumnMenuItem.text"), this::newMediaColumn);
-        action(r.getString("addMediaMenuItem.text"), this::addMedia);
-        action(r.getString("columnListMenuItem.text"), this::showVariableList);
-        action(r.getString("codeEditorMenuItem.text"), this::showVocabEditor);
-        action(r.getString("newCellMenuItem.text"), this::newCell);
-        action(r.getString("newCellLeftMenuItem.text"), this::newCellLeft);
-        action(r.getString("newCellRightMenuItem.text"), this::newCellRight);
-        action(r.getString("deleteCellMenuItem.text"), this::deleteCells);
-        action(UNDO, this::undo);
-        action(REDO, this::redo);
-        action(r.getString("exportJSONMenuItem.text"), this::exportToJSON);
-        action(r.getString("importJSONMenuItem.text"), this::importJSONToSpreadsheet);
-        action(r.getString("weakTemporalAlignmentMenuItem.text"), this::setSheetLayout)
-                .putValue(Action.SELECTED_KEY, false);
-        action(r.getString("zoomInMenuItem.text"), this::zoomIn);
-        action(r.getString("zoomOutMenuItem.text"), this::zoomOut);
-        action(r.getString("resetZoomMenuItem.text"), this::resetZoom);
-        action(r.getString("monospacedValuesMenuItem.text"), this::toggleMonospacedValues)
-                .putValue(Action.SELECTED_KEY, Settings.get().isMonospacedValues());
-        action(QUICK_KEYS, this::toggleQuickKeys).putValue(Action.NAME, quickKeyModeText());
-        action(HIGHLIGHT_AND_FOCUS, this::toggleHighlightAndFocusMode)
-                .putValue(Action.NAME, highlightAndFocusText(VideoController.HIGHLIGHT_AND_FOCUS_BY_DEFAULT));
+        commands.define(Command.NEW_MEDIA_COLUMN, this::newMediaColumn);
+        commands.define(Command.ADD_MEDIA, this::addMedia);
+        commands.define(Command.COLUMN_LIST, this::showVariableList);
+        commands.define(Command.CODE_EDITOR, this::showVocabEditor);
+        commands.define(Command.NEW_CELL, this::newCell).enabledWhen(this::hasVisibleColumns);
+        commands.define(Command.NEW_CELL_LEFT, this::newCellLeft)
+                .labelled(() -> countedLabel("newCellLeftMenuItem", adjacentSelectedCells(ArrayDirection.LEFT)))
+                .enabledWhen(() -> adjacentSelectedCells(ArrayDirection.LEFT) > 0);
+        commands.define(Command.NEW_CELL_RIGHT, this::newCellRight)
+                .labelled(() -> countedLabel("newCellRightMenuItem", adjacentSelectedCells(ArrayDirection.RIGHT)))
+                .enabledWhen(() -> adjacentSelectedCells(ArrayDirection.RIGHT) > 0);
+        commands.define(Command.DELETE_CELLS, this::deleteCells)
+                .labelled(() -> countedLabel("deleteCellMenuItem", selectedCells()))
+                .enabledWhen(() -> selectedCells() > 0);
+        commands.define(Command.UNDO, this::undo)
+                .labelled(() -> history() == null ? Command.UNDO.label() : history().getUndoPresentationName())
+                .enabledWhen(() -> history() != null && history().canUndo());
+        commands.define(Command.REDO, this::redo)
+                .labelled(() -> history() == null ? Command.REDO.label() : history().getRedoPresentationName())
+                .enabledWhen(() -> history() != null && history().canRedo());
+        commands.define(Command.EXPORT_JSON, this::exportToJSON).enabledWhen(this::hasVisibleColumns);
+        commands.define(Command.IMPORT_JSON, this::importJSONToSpreadsheet);
+        commands.define(Command.TEMPORAL_LAYOUT, this::toggleTemporalLayout)
+                .checked(() -> getSpreadsheetPanel() != null
+                        && getSpreadsheetPanel().getLayoutType() == SheetLayoutType.WeakTemporal);
+        commands.define(Command.ZOOM_IN, this::zoomIn);
+        commands.define(Command.ZOOM_OUT, this::zoomOut);
+        commands.define(Command.RESET_ZOOM, this::resetZoom);
+        commands.define(Command.MONOSPACED_VALUES, this::toggleMonospacedValues)
+                .checked(() -> Settings.get().isMonospacedValues());
+        commands.define(Command.QUICK_KEYS, this::toggleQuickKeys).labelled(this::quickKeyModeText);
+        commands.define(Command.HIGHLIGHT_AND_FOCUS, this::toggleHighlightAndFocusMode)
+                .labelled(() -> highlightAndFocusText(controller() == null
+                        ? VideoController.HIGHLIGHT_AND_FOCUS_BY_DEFAULT : controller().getCellHighlightAndFocus()));
 
-        action(r.getString("showControlsMenuItem.text"), this::toggleControls)
-                .putValue(Action.SELECTED_KEY, Settings.get().isShowControls());
-        action(r.getString("playheadAcrossColumnsMenuItem.text"), this::togglePlayheadAcrossColumns)
-                .putValue(Action.SELECTED_KEY, Settings.get().isPlayheadAcrossColumns());
+        commands.define(Command.SHOW_CONTROLS, this::toggleControls).checked(() -> Settings.get().isShowControls());
+        commands.define(Command.PLAYHEAD_ACROSS_COLUMNS, this::togglePlayheadAcrossColumns)
+                .checked(() -> Settings.get().isPlayheadAcrossColumns());
+        for (Command playback : PLAYBACK) {
+            commands.define(playback, () -> {
+                if (controller() != null) {
+                    controller().run(playback);
+                }
+            });
+        }
 
-        action(r.getString("hotkeysMenuItem.text"), this::showHotkeysDialog);
-        action(r.getString("citationMenuItem.text"), this::showCitationDialog);
+        commands.define(Command.SHORTCUTS, this::showHotkeysDialog);
+        commands.define(Command.CITATION, this::showCitationDialog);
     }
 
-    private Action command(final String key) {
-        Action action = actions.get(resources.getString(key));
-        if (action == null) {
-            throw new IllegalArgumentException("No command for " + key);
-        }
-        return action;
+    /** The commands of the controls drawer and the keypad, which the selected spreadsheet's playback runs. */
+    private static final List<Command> PLAYBACK = List.of(Command.SET_ONSET, Command.PLAY, Command.SET_OFFSET,
+            Command.SHUTTLE_BACK, Command.STOP, Command.SHUTTLE_FORWARD, Command.JOG_BACK, Command.PAUSE,
+            Command.JOG_FORWARD, Command.NEW_CELL_CLOSING_PREVIOUS, Command.JUMP_BACK, Command.JUMP_FORWARD,
+            Command.FIND_ONSET, Command.FIND_OFFSET, Command.NEW_CELL_IN_SELECTED_COLUMN);
+
+    /** Returns the selected spreadsheet's undo history, or null when no tab is open. */
+    private SpreadsheetUndoManager history() {
+        ProjectController selected = selectedController();
+        return selected == null ? null : selected.getUndoManager();
+    }
+
+    private boolean hasVisibleColumns() {
+        return getSpreadsheetPanel() != null && !getSpreadsheetPanel().getDataStore().getVisibleVariables().isEmpty();
+    }
+
+    private int selectedCells() {
+        return getSpreadsheetPanel() == null ? 0 : getSpreadsheetPanel().getDataStore().getSelectedCells().size();
+    }
+
+    private int adjacentSelectedCells(final ArrayDirection direction) {
+        return getSpreadsheetPanel() == null ? 0 : getSpreadsheetPanel().getAdjacentSelectedCells(direction);
+    }
+
+    /** Returns a command's label for one cell or for several, such as Delete Cell or Delete Cells. */
+    private String countedLabel(final String key, final int count) {
+        return resources.getString(key + (count > 1 ? "Plural" : "Single") + ".text");
     }
 
     /** @return the selected spreadsheet's playback, which the keypad drives; null when no tab is open */
@@ -1212,75 +1172,47 @@ public final class DatavyuView implements FileDropEventListener {
         return selected == null ? null : selected.getVideoController();
     }
 
-    private static Action run(final Runnable command) {
-        return new AbstractAction() {
-            @Override
-            public void actionPerformed(final ActionEvent e) {
-                command.run();
-            }
-        };
-    }
-
     /**
      * @return Every keyboard shortcut of the application.
      */
     private Shortcuts createShortcuts() {
         final int cmd = Shortcuts.COMMAND;
         final int shift = InputEvent.SHIFT_DOWN_MASK;
-        return Shortcuts.builder()
-                .menu("File", resources.getString("newMenuItem.text"),
-                        KeyStroke.getKeyStroke(KeyEvent.VK_N, cmd), command("newMenuItem.text"))
-                .menu("File", resources.getString("openMenuItem.text"),
-                        KeyStroke.getKeyStroke(KeyEvent.VK_O, cmd), command("openMenuItem.text"))
-                .menu("File", resources.getString("closeTabMenuItem.text"),
-                        KeyStroke.getKeyStroke(KeyEvent.VK_W, cmd), command("closeTabMenuItem.text"))
-                .menu("File", resources.getString("saveMenuItem.text"),
-                        KeyStroke.getKeyStroke(KeyEvent.VK_S, cmd), command("saveMenuItem.text"))
-                .menu("File", resources.getString("saveAsMenuItem.text"),
-                        KeyStroke.getKeyStroke(KeyEvent.VK_S, cmd | shift), command("saveAsMenuItem.text"))
-                .global("Spreadsheet", resources.getString("newCellLeftMenuItem.text"),
-                        KeyStroke.getKeyStroke(KeyEvent.VK_L, cmd), command("newCellLeftMenuItem.text"))
-                .global("Spreadsheet", resources.getString("newCellRightMenuItem.text"),
-                        KeyStroke.getKeyStroke(KeyEvent.VK_R, cmd), command("newCellRightMenuItem.text"))
-                .menu("Spreadsheet", resources.getString("deleteCellMenuItem.text"),
-                        KeyStroke.getKeyStroke(KeyEvent.VK_BACK_SLASH, cmd), command("deleteCellMenuItem.text"))
-                .menu("Spreadsheet", UNDO, KeyStroke.getKeyStroke(KeyEvent.VK_Z, cmd), actions.get(UNDO))
-                .menu("Spreadsheet", REDO, KeyStroke.getKeyStroke(KeyEvent.VK_Y, cmd), actions.get(REDO))
-                .menu("Spreadsheet", resources.getString("weakTemporalAlignmentMenuItem.text"),
-                        KeyStroke.getKeyStroke(KeyEvent.VK_T, cmd), command("weakTemporalAlignmentMenuItem.text"))
-                .global("Spreadsheet", resources.getString("zoomInMenuItem.text"),
-                        KeyStroke.getKeyStroke(KeyEvent.VK_EQUALS, cmd), command("zoomInMenuItem.text"))
-                .global("Spreadsheet", resources.getString("zoomOutMenuItem.text"),
-                        KeyStroke.getKeyStroke(KeyEvent.VK_MINUS, cmd), command("zoomOutMenuItem.text"))
-                .menu("Spreadsheet", resources.getString("resetZoomMenuItem.text"),
-                        KeyStroke.getKeyStroke(KeyEvent.VK_0, cmd), command("resetZoomMenuItem.text"))
-                .menu("Spreadsheet", QUICK_KEYS, KeyStroke.getKeyStroke(KeyEvent.VK_K, cmd | shift),
-                        actions.get(QUICK_KEYS))
-                .menu("Spreadsheet", HIGHLIGHT_AND_FOCUS, KeyStroke.getKeyStroke(KeyEvent.VK_F, cmd | shift),
-                        actions.get(HIGHLIGHT_AND_FOCUS))
+        return Shortcuts.builder(commands::get)
+                .menu("File", Command.NEW_PROJECT, KeyStroke.getKeyStroke(KeyEvent.VK_N, cmd))
+                .menu("File", Command.OPEN, KeyStroke.getKeyStroke(KeyEvent.VK_O, cmd))
+                .menu("File", Command.CLOSE_TAB, KeyStroke.getKeyStroke(KeyEvent.VK_W, cmd))
+                .menu("File", Command.SAVE, KeyStroke.getKeyStroke(KeyEvent.VK_S, cmd))
+                .menu("File", Command.SAVE_AS, KeyStroke.getKeyStroke(KeyEvent.VK_S, cmd | shift))
+                .global("Spreadsheet", Command.NEW_CELL_LEFT, KeyStroke.getKeyStroke(KeyEvent.VK_L, cmd))
+                .global("Spreadsheet", Command.NEW_CELL_RIGHT, KeyStroke.getKeyStroke(KeyEvent.VK_R, cmd))
+                .menu("Spreadsheet", Command.DELETE_CELLS, KeyStroke.getKeyStroke(KeyEvent.VK_BACK_SLASH, cmd))
+                .menu("Spreadsheet", Command.UNDO, KeyStroke.getKeyStroke(KeyEvent.VK_Z, cmd))
+                .menu("Spreadsheet", Command.REDO, KeyStroke.getKeyStroke(KeyEvent.VK_Y, cmd))
+                .menu("Spreadsheet", Command.TEMPORAL_LAYOUT, KeyStroke.getKeyStroke(KeyEvent.VK_T, cmd))
+                .global("Spreadsheet", Command.ZOOM_IN, KeyStroke.getKeyStroke(KeyEvent.VK_EQUALS, cmd))
+                .global("Spreadsheet", Command.ZOOM_OUT, KeyStroke.getKeyStroke(KeyEvent.VK_MINUS, cmd))
+                .menu("Spreadsheet", Command.RESET_ZOOM, KeyStroke.getKeyStroke(KeyEvent.VK_0, cmd))
+                .menu("Spreadsheet", Command.QUICK_KEYS, KeyStroke.getKeyStroke(KeyEvent.VK_K, cmd | shift))
+                .menu("Spreadsheet", Command.HIGHLIGHT_AND_FOCUS, KeyStroke.getKeyStroke(KeyEvent.VK_F, cmd | shift))
                 .reference("Spreadsheet", "Select column to left", "⌘←")
                 .reference("Spreadsheet", "Select column to right", "⌘→")
-                .keypad("Show or hide the controls", KeyEvent.VK_MULTIPLY, 0, command("showControlsMenuItem.text"))
-                .keypad("Set cell onset", KeyEvent.VK_NUMPAD7, 0, run(() -> controller().pressSetCellOnset()))
-                .keypad("Play", KeyEvent.VK_NUMPAD8, 0, run(() -> controller().pressPlay()))
-                .keypad("Set cell offset", KeyEvent.VK_NUMPAD9, 0, run(() -> controller().pressSetCellOffset()))
-                .keypad("Shuttle back", KeyEvent.VK_NUMPAD4, 0, run(() -> controller().pressShuttleBack()))
-                .keypad("Stop", KeyEvent.VK_NUMPAD5, 0, run(() -> controller().pressStop()))
-                .keypad("Shuttle forward", KeyEvent.VK_NUMPAD6, 0, run(() -> controller().pressShuttleForward()))
-                .keypad("Jog back one frame", KeyEvent.VK_NUMPAD1, 0, run(() -> controller().jogBackAction()))
-                .keypad("Pause", KeyEvent.VK_NUMPAD2, 0, run(() -> controller().pressPause()))
-                .keypad("Jog forward one frame", KeyEvent.VK_NUMPAD3, 0, run(() -> controller().jogForwardAction()))
-                .keypad("New cell, setting the previous cell's offset", KeyEvent.VK_NUMPAD0, 0,
-                        run(() -> controller().pressCreateNewCellSettingOffset()))
-                .keypad("Jump back by the jump time", KeyEvent.VK_SUBTRACT, 0, run(() -> controller().pressJumpBack()))
-                .keypad("Jump forward by the jump time", KeyEvent.VK_SUBTRACT, shift,
-                        run(() -> controller().pressJumpForward()))
-                .keypad("Go to the onset field's time", KeyEvent.VK_ADD, 0, run(() -> controller().pressFind()))
-                .keypad("Go to the offset field's time", KeyEvent.VK_ADD, shift, run(() -> {
-                    controller().findOffsetAction();
-                    controller().pressFind();
-                }))
-                .keypad("New cell", KeyEvent.VK_ENTER, 0, run(() -> controller().pressCreateNewCell()))
+                .keypad(Command.SHOW_CONTROLS, KeyEvent.VK_MULTIPLY, 0)
+                .keypad(Command.SET_ONSET, KeyEvent.VK_NUMPAD7, 0)
+                .keypad(Command.PLAY, KeyEvent.VK_NUMPAD8, 0)
+                .keypad(Command.SET_OFFSET, KeyEvent.VK_NUMPAD9, 0)
+                .keypad(Command.SHUTTLE_BACK, KeyEvent.VK_NUMPAD4, 0)
+                .keypad(Command.STOP, KeyEvent.VK_NUMPAD5, 0)
+                .keypad(Command.SHUTTLE_FORWARD, KeyEvent.VK_NUMPAD6, 0)
+                .keypad(Command.JOG_BACK, KeyEvent.VK_NUMPAD1, 0)
+                .keypad(Command.PAUSE, KeyEvent.VK_NUMPAD2, 0)
+                .keypad(Command.JOG_FORWARD, KeyEvent.VK_NUMPAD3, 0)
+                .keypad(Command.NEW_CELL_CLOSING_PREVIOUS, KeyEvent.VK_NUMPAD0, 0)
+                .keypad(Command.JUMP_BACK, KeyEvent.VK_SUBTRACT, 0)
+                .keypad(Command.JUMP_FORWARD, KeyEvent.VK_SUBTRACT, shift)
+                .keypad(Command.FIND_ONSET, KeyEvent.VK_ADD, 0)
+                .keypad(Command.FIND_OFFSET, KeyEvent.VK_ADD, shift)
+                .keypad(Command.NEW_CELL_IN_SELECTED_COLUMN, KeyEvent.VK_ENTER, 0)
                 .reference("Code editor", "Add column", "⌃M")
                 .reference("Code editor", "Add code to the selected column", "⌃A")
                 .reference("Code editor", "Apply changes", "⌃S")
@@ -1290,21 +1222,23 @@ public final class DatavyuView implements FileDropEventListener {
                     if (controller() != null) {
                         controller().setShiftMask(held);
                     }
-                });
+                }, commands::refresh);
     }
 
-    private JMenuItem item(final String key) {
-        return item(command(key));
+    /** Makes a menu item for a command, with its shortcut. */
+    private JMenuItem item(final Command command) {
+        return withAccelerator(new JMenuItem(commands.get(command)), command);
     }
 
-    private JMenuItem item(final Action action) {
-        return withAccelerator(new JMenuItem(action), action);
+    /** Makes a check box menu item for a command, with its shortcut. */
+    private JCheckBoxMenuItem checkItem(final Command command) {
+        return withAccelerator(new JCheckBoxMenuItem(commands.get(command)), command);
     }
 
-    private <T extends JMenuItem> T withAccelerator(final T item, final Action action) {
+    private <T extends JMenuItem> T withAccelerator(final T item, final Command command) {
         for (Shortcuts.Shortcut shortcut : shortcuts.all()) {
             if (shortcut.getKey() != null && shortcut.getScope() != Shortcuts.Scope.KEYPAD
-                    && shortcut.getAction() == action) {
+                    && shortcut.getCommand() == command) {
                 item.setAccelerator(shortcut.getKey());
             }
         }
@@ -1312,16 +1246,16 @@ public final class DatavyuView implements FileDropEventListener {
     }
 
     /**
-     * @return The menu bar, whose items run the actions created by {@link #createActions()}.
+     * @return The menu bar, whose items run the commands defined by {@link #defineCommands()}.
      */
     private JMenuBar createMenuBar() {
         JMenuBar menuBar = new JMenuBar();
         menuBar.setFocusable(false);
 
         JMenu fileMenu = new JMenu(resources.getString("fileMenu.text"));
-        fileMenu.add(item("newMenuItem.text"));
-        fileMenu.add(item("openMenuItem.text"));
-        fileMenu.add(item("closeTabMenuItem.text"));
+        fileMenu.add(item(Command.NEW_PROJECT));
+        fileMenu.add(item(Command.OPEN));
+        fileMenu.add(item(Command.CLOSE_TAB));
         openRecentFileMenu = new JMenu(resources.getString("openRecentFileMenu.text"));
         openRecentFileMenu.addMenuListener(new MenuListener() {
             @Override
@@ -1339,15 +1273,16 @@ public final class DatavyuView implements FileDropEventListener {
         });
         fileMenu.add(openRecentFileMenu);
         fileMenu.addSeparator();
-        fileMenu.add(item("saveMenuItem.text"));
-        fileMenu.add(item("saveAsMenuItem.text"));
+        fileMenu.add(item(Command.SAVE));
+        fileMenu.add(item(Command.SAVE_AS));
         menuBar.add(fileMenu);
 
         JMenu spreadsheetMenu = new JMenu(resources.getString("spreadsheetMenu.text"));
         spreadsheetMenu.addMenuListener(new MenuListener() {
             @Override
             public void menuSelected(final MenuEvent e) {
-                spreadsheetMenuSelected(e);
+                // Delete Cells and New Cell to Left and Right follow the selection.
+                refreshCommands();
             }
 
             @Override
@@ -1358,51 +1293,46 @@ public final class DatavyuView implements FileDropEventListener {
             public void menuCanceled(final MenuEvent e) {
             }
         });
-        spreadsheetMenu.add(item("newMediaColumnMenuItem.text"));
-        spreadsheetMenu.add(item("addMediaMenuItem.text"));
-        spreadsheetMenu.add(item("columnListMenuItem.text"));
-        spreadsheetMenu.add(item("codeEditorMenuItem.text"));
+        spreadsheetMenu.add(item(Command.NEW_MEDIA_COLUMN));
+        spreadsheetMenu.add(item(Command.ADD_MEDIA));
+        spreadsheetMenu.add(item(Command.COLUMN_LIST));
+        spreadsheetMenu.add(item(Command.CODE_EDITOR));
         spreadsheetMenu.addSeparator();
-        newCellMenuItem = spreadsheetMenu.add(item("newCellMenuItem.text"));
-        newCellLeftMenuItem = spreadsheetMenu.add(item("newCellLeftMenuItem.text"));
-        newCellRightMenuItem = spreadsheetMenu.add(item("newCellRightMenuItem.text"));
+        spreadsheetMenu.add(item(Command.NEW_CELL));
+        spreadsheetMenu.add(item(Command.NEW_CELL_LEFT));
+        spreadsheetMenu.add(item(Command.NEW_CELL_RIGHT));
         spreadsheetMenu.addSeparator();
-        deleteCellMenuItem = spreadsheetMenu.add(item("deleteCellMenuItem.text"));
+        spreadsheetMenu.add(item(Command.DELETE_CELLS));
         spreadsheetMenu.addSeparator();
-        spreadsheetMenu.add(item(actions.get(UNDO)));
-        spreadsheetMenu.add(item(actions.get(REDO)));
+        spreadsheetMenu.add(item(Command.UNDO));
+        spreadsheetMenu.add(item(Command.REDO));
         spreadsheetMenu.addSeparator();
-        exportJSON = spreadsheetMenu.add(item("exportJSONMenuItem.text"));
-        importJSON = spreadsheetMenu.add(item("importJSONMenuItem.text"));
+        spreadsheetMenu.add(item(Command.EXPORT_JSON));
+        spreadsheetMenu.add(item(Command.IMPORT_JSON));
         spreadsheetMenu.addSeparator();
-        weakTemporalAlignmentMenuItem = withAccelerator(
-                new JCheckBoxMenuItem(command("weakTemporalAlignmentMenuItem.text")),
-                command("weakTemporalAlignmentMenuItem.text"));
-        weakTemporalAlignmentMenuItem.setSelected(SheetLayoutFactory.DEFAULT_LAYOUT == SheetLayoutType.WeakTemporal);
-        spreadsheetMenu.add(weakTemporalAlignmentMenuItem);
+        spreadsheetMenu.add(checkItem(Command.TEMPORAL_LAYOUT));
         JMenu zoomMenu = new JMenu(resources.getString("zoomMenu.text"));
-        zoomMenu.add(item("zoomInMenuItem.text"));
-        zoomMenu.add(item("zoomOutMenuItem.text"));
+        zoomMenu.add(item(Command.ZOOM_IN));
+        zoomMenu.add(item(Command.ZOOM_OUT));
         zoomMenu.addSeparator();
-        zoomMenu.add(item("resetZoomMenuItem.text"));
+        zoomMenu.add(item(Command.RESET_ZOOM));
         spreadsheetMenu.add(zoomMenu);
-        spreadsheetMenu.add(new JCheckBoxMenuItem(command("monospacedValuesMenuItem.text")));
+        spreadsheetMenu.add(checkItem(Command.MONOSPACED_VALUES));
         spreadsheetMenu.add(pastCellDimMenu());
-        JMenuItem quickKeysItem = spreadsheetMenu.add(item(actions.get(QUICK_KEYS)));
+        JMenuItem quickKeysItem = spreadsheetMenu.add(item(Command.QUICK_KEYS));
         quickKeysItem.setToolTipText(resources.getString("quickKeysMenuItem.toolTipText"));
-        JMenuItem highlightAndFocusItem = spreadsheetMenu.add(item(actions.get(HIGHLIGHT_AND_FOCUS)));
+        JMenuItem highlightAndFocusItem = spreadsheetMenu.add(item(Command.HIGHLIGHT_AND_FOCUS));
         highlightAndFocusItem.setToolTipText(resources.getString("highlightAndFocusMenuItem.toolTipText"));
         menuBar.add(spreadsheetMenu);
 
         JMenu playbackMenu = new JMenu(resources.getString("playbackMenu.text"));
-        playbackMenu.add(withAccelerator(new JCheckBoxMenuItem(command("showControlsMenuItem.text")),
-                command("showControlsMenuItem.text")));
-        playbackMenu.add(new JCheckBoxMenuItem(command("playheadAcrossColumnsMenuItem.text")));
+        playbackMenu.add(checkItem(Command.SHOW_CONTROLS));
+        playbackMenu.add(checkItem(Command.PLAYHEAD_ACROSS_COLUMNS));
         menuBar.add(playbackMenu);
 
         JMenu helpMenu = new JMenu(resources.getString("helpMenu.text"));
-        helpMenu.add(item("hotkeysMenuItem.text"));
-        helpMenu.add(item("citationMenuItem.text"));
+        helpMenu.add(item(Command.SHORTCUTS));
+        helpMenu.add(item(Command.CITATION));
         menuBar.add(helpMenu);
         return menuBar;
     }

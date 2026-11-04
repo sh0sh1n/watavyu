@@ -15,11 +15,11 @@ Updated 2026-11-03. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
-| Java source (main) | 242 files, 42.5k lines | 147 files, 25.7k lines |
-| Tests / line coverage | 113 / 9.9% | 617 / 63.1%; views about half, undo edits 78% |
+| Java source (main) | 242 files, 42.5k lines | 149 files, 25.8k lines |
+| Tests / line coverage | 113 / 9.9% | 632 / 64.9%; views 59%, undo edits 78% |
 | Runtime dependencies / with known vulnerabilities | 28 / 8 | 13 / 0 |
-| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 478 |
-| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 333 / 59 (none on thread safety, now gated); 15 |
+| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 477 |
+| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 330 / 59 (none on thread safety, now gated); 15 |
 | Never-invoked methods (`dead-code.py`) | 109+ | 21: test-only accessors, unused settings setters, and Swing overrides the script cannot see |
 | Static global access (`grep -rohP 'Datavyu\.(get\|set)\w*\(' src/main/java \| wc -l`) | about 330 call sites | 0: each tab's `ProjectController` is passed to what it owns |
 
@@ -28,8 +28,6 @@ Updated 2026-11-03. Re-measure with the commands in [BUILDING.md › Analysis Re
 **B23. A Datavyu JSON import can bring code names a project file refuses.** ready, *from reading*. The importer adds a matrix column's codes from the JSON keys as they come (`OpenDataStoreFileController`, around `variableArg.childArguments.add`), so repeated or empty keys become repeated or empty code names, and saving the project then fails its own check (`ProjectRules`: "is named twice", "must not be empty"). The import should refuse such a file, saying which column and key, as it does a negative time.
 
 **B22. New Cell can add a cell to a hidden column.** ready, *from reading*; a question for the owner. Hiding a column deselects it and its cells, but it stays the column last given a cell (`ProjectController.getLastCreatedVariable`) and can hold the last selected cell, so Spreadsheet > New Cell, and New Cell and Set Offset with nothing selected, can add or close a cell no one can see (`CellCommands.newCell`, `newCellClosingPrevious`). Whether a hidden column takes new cells is a rule to settle before fixing.
-
-**B20. The Highlight and Focus menu item can describe another tab.** ready, *from reading*. Each tab has its own highlight-and-focus mode (its `VideoController`), but the Spreadsheet menu item's label is set only when the mode is toggled (`DatavyuView.toggleHighlightAndFocusMode`), not when another tab is selected. After turning it off in one tab and selecting another, the label says the mode is off while it is on. Settle with R10, whose commands can say their own state.
 
 **B2. The app changes a global macOS setting.** ready (owner: scope it to the app), *from reading*. At startup `Datavyu` runs `defaults write -g ApplePressAndHoldEnabled -bool false` for every application on the Mac, and restores it only on a clean shutdown; a crash or force-quit leaves it changed. (It used to run when the class loaded, so every test run turned the setting off and never restored it.) The intent is key repeat instead of the accent popup while holding keys. Scope it to the app: in-app key repeat, or a per-app defaults domain once there is an app bundle; then delete the global write.
 
@@ -73,7 +71,7 @@ None open.
 
 Tech debt is paid down in the Java app rather than left for the C++ rewrite (AGENTS.md › North Star, 2026-11-03). The items run in this order, each behaviour-preserving unless it says otherwise, and each pins the behaviour it touches with tests, since most views and undo have none. R10 comes first because the later items, and the new interaction model, build on its commands.
 
-**R10. One path for each user action.** ready. Cell, column, media and code actions are commands (`CellCommands`, `ColumnCommands`, `MediaCommands`, `CodeCommands`); the value editors still change the model and post their own undo edits from views, so an action, its lock check and its undo can drift apart. Each becomes a command on the document that checks locks, changes the model and records its edit. Then commands get names and state, and menus, keys and the drawer call them by name: the ground for F7, F12 and a new interaction model (modal, editor-style keys), which need actions that can be named, bound to keys and listed. With it, the views redraw from the model's listeners rather than from each caller, which now checks for a view first (`getSpreadSheetPanel() != null`).
+**R10. One path for each user action.** ready. Cell, column, media and code actions are commands (`CellCommands`, `ColumnCommands`, `MediaCommands`, `CodeCommands`), and menus, shortcuts, the keypad and the drawer run them by name (`Command`), with state that follows the selected tab (`CommandTable`). Left: the value editors (`MatrixRootView`, `TimeStampDataValueEditor`) still change the model and post their own undo edits from views, so a typed value or time, its lock check and its undo can drift apart. Each becomes a command on the document that checks locks, changes the model and records its edit. With it, the views redraw from the model's listeners rather than from each caller, which now checks for a view first (`getSpreadSheetPanel() != null`).
 
 **R4. Per-editor key handling.** ready, with or after R10. `EditorTracker` and the value editors handle keys per editor, with 21 uses of the deprecated modifier API (`getModifiers`, `*_MASK`, `getMenuShortcutKeyMask`). Keys that are commands go through `Shortcuts` to R10's commands; editors keep only text editing. Do before F7.
 

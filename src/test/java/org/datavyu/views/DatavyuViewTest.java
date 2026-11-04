@@ -21,6 +21,7 @@ import org.testng.annotations.Test;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import javax.swing.Action;
 import javax.swing.JFrame;
 import javax.swing.JTabbedPane;
 import javax.swing.SwingUtilities;
@@ -171,5 +172,81 @@ public class DatavyuViewTest {
         onEdt(() -> tabs.setSelectedIndex(0));
         assertTrue(frame.getTitle().contains("untitled"), frame.getTitle());
         assertNull(study.getDataStore().getVariable("speech"));
+    }
+
+    /** Opens a second tab, after the untitled one, which has a change so it stays. */
+    private ProjectController secondTab() throws Exception {
+        ProjectController untitled = view.selectedController();
+        onEdt(() -> {
+            untitled.getDataStore().createVariable("notes");
+            view.open(projectFile("study", "gaze"));
+        });
+        return view.selectedController();
+    }
+
+    private void select(final int tab) throws Exception {
+        onEdt(() -> view.getTabbedPane().setSelectedIndex(tab));
+    }
+
+    private void run(final Command command) throws Exception {
+        onEdt(() -> view.action(command).actionPerformed(null));
+    }
+
+    /** B20: each tab has its own highlight-and-focus mode, and the menu item names the selected tab's. */
+    @Test
+    public void highlightAndFocusNamesTheSelectedTabsMode() throws Exception {
+        ProjectController study = secondTab();
+        Action highlight = view.action(Command.HIGHLIGHT_AND_FOCUS);
+        assertEquals(highlight.getValue(Action.NAME), "Disable Highlight and Focus Mode");
+
+        run(Command.HIGHLIGHT_AND_FOCUS);
+        assertFalse(study.getVideoController().getCellHighlightAndFocus());
+        assertEquals(highlight.getValue(Action.NAME), "Enable Highlight and Focus Mode");
+
+        select(0);
+        assertEquals(highlight.getValue(Action.NAME), "Disable Highlight and Focus Mode");
+        select(1);
+        assertEquals(highlight.getValue(Action.NAME), "Enable Highlight and Focus Mode");
+    }
+
+    /** Each tab has its own layout, and the menu's check mark shows the selected tab's. */
+    @Test
+    public void temporalLayoutIsCheckedForTheSelectedTab() throws Exception {
+        secondTab();
+        Action temporal = view.action(Command.TEMPORAL_LAYOUT);
+        assertEquals(temporal.getValue(Action.SELECTED_KEY), true);
+
+        run(Command.TEMPORAL_LAYOUT);
+        assertEquals(view.getSpreadsheetPanel().getLayoutType(), SheetLayoutType.Ordinal);
+        assertEquals(temporal.getValue(Action.SELECTED_KEY), false);
+
+        select(0);
+        assertEquals(view.getSpreadsheetPanel().getLayoutType(), SheetLayoutType.WeakTemporal);
+        assertEquals(temporal.getValue(Action.SELECTED_KEY), true);
+    }
+
+    /** A new tab opens in the layout of the tab selected before it, as the menu showed it. */
+    @Test
+    public void aNewTabTakesTheSelectedTabsLayout() throws Exception {
+        run(Command.TEMPORAL_LAYOUT);
+
+        secondTab();
+
+        assertEquals(view.getSpreadsheetPanel().getLayoutType(), SheetLayoutType.Ordinal);
+        assertEquals(view.action(Command.TEMPORAL_LAYOUT).getValue(Action.SELECTED_KEY), false);
+    }
+
+    /** Undo names the selected tab's last edit, and is disabled in a tab with none. */
+    @Test
+    public void undoNamesTheSelectedTabsEdit() throws Exception {
+        ProjectController study = secondTab();
+        Action undo = view.action(Command.UNDO);
+        onEdt(() -> study.columns().newColumn("speech"));
+        assertEquals(undo.getValue(Action.NAME), "Undo New Column \"speech\"");
+        assertTrue(undo.isEnabled());
+
+        select(0);
+        assertEquals(undo.getValue(Action.NAME), "Undo");
+        assertFalse(undo.isEnabled());
     }
 }

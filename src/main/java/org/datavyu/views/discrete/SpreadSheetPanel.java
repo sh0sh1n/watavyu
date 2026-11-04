@@ -671,6 +671,11 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
         return result;
     }
 
+    /** Returns how the cells are laid out: in time (temporal) or one after another (ordinal). */
+    public SheetLayoutType getLayoutType() {
+        return currentLayoutType;
+    }
+
     /**
      * Set the layout type for the spreadsheet.
      *

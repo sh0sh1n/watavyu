@@ -111,23 +111,11 @@ public final class VideoController implements ClockListener {
     /** Set once the spreadsheet's tab has closed. */
     private volatile boolean closed;
 
-    /** Button to create a new cell */
-    private JButton createNewCell;
-
-    /** Button to create a new cell setting offset */
-    private JButton createNewCellSettingOffset;
-
-    /** */
-    private JButton findButton;
-
     /** */
     private JTextField offsetTextField;
 
     /** */
     private JTextField onsetTextField;
-
-    /** */
-    private JButton jumpByButton;
 
     /** */
     private JTextField jumpByTextField;
@@ -138,28 +126,10 @@ public final class VideoController implements ClockListener {
     /** */
     private JPanel gridButtonPanel;
 
-    /** */
-    private JButton pauseButton;
-
-    /** */
-    private JButton playButton;
-
-    /** */
-    private JButton setCellOffsetButton;
-
-    /** */
-    private JButton setCellOnsetButton;
-
-    /** */
-    private JButton shuttleBackButton;
-
-    /** */
-    private JButton shuttleForwardButton;
-
-    /** */
-    private JButton stopButton;
-
     private Resources resourceMap;
+
+    /** The drawer's key for each command it has, which {@link #run} presses. */
+    private final Map<Command, JButton> keys = new EnumMap<>(Command.class);
 
     /**
      * Whether video controllers start in highlight and focus mode, which highlights the cell at the current time in
@@ -531,20 +501,24 @@ public final class VideoController implements ClockListener {
     }
 
     /**
-     * Makes a key of the keypad.
+     * Makes a key of the keypad, the drawer's key for a command, which {@link #run} presses.
      *
-     * @param name   prefix of the button's name, which tests find it by
-     * @param glyph  what the key shows
-     * @param label  what it does, in a word or two
-     * @param key    the keypad key that does the same
-     * @param action what the key does
+     * @param command the command, or null for a key that only the drawer has
+     * @param name    prefix of the button's name, which tests find it by
+     * @param glyph   what the key shows
+     * @param label   what it does, in a word or two
+     * @param key     the keypad key that does the same
+     * @param action  what the key does
      * @return the key
      */
-    private JButton buildButton(final String name, final Glyph.Shape glyph, final String label, final String key,
-                                final Runnable action) {
+    private JButton buildButton(final Command command, final String name, final Glyph.Shape glyph, final String label,
+                                final String key, final Runnable action) {
         JButton jButton = new KeypadKey(glyph, label, key);
         jButton.addActionListener(e -> action.run());
         jButton.setName(name + "Button");
+        if (command != null) {
+            keys.put(command, jButton);
+        }
         return jButton;
     }
 
@@ -584,7 +558,6 @@ public final class VideoController implements ClockListener {
         gridButtonPanel = new JPanel();
         jumpByTextField = new JTextField();
         onsetTextField = new JTextField();
-        createNewCell = new JButton();
         offsetTextField = new JTextField();
 
         gridButtonPanel.setName("controls");
@@ -603,53 +576,53 @@ public final class VideoController implements ClockListener {
         gridButtonPanel.add(makePlaceholderButton(false), WIDE_TEXT_FIELD_SIZE);
 
         // Set cell onset button with 7
-        setCellOnsetButton = buildButton("setCellOnset", Glyph.Shape.SET_ONSET, "onset", "7", this::setCellOnsetAction);
+        JButton setCellOnsetButton = buildButton(Command.SET_ONSET, "setCellOnset", Glyph.Shape.SET_ONSET, "onset", "7", this::setCellOnsetAction);
         gridButtonPanel.add(setCellOnsetButton, NUM_PAD_KEY_SIZE);
 
         // Play video button with 8
-        playButton = buildButton("start", Glyph.Shape.PLAY, "play", "8", this::startAction);
+        JButton playButton = buildButton(Command.PLAY, "start", Glyph.Shape.PLAY, "play", "8", this::startAction);
         playButton.setRequestFocusEnabled(false);
         gridButtonPanel.add(playButton, NUM_PAD_KEY_SIZE);
 
         // Set cell offset button with 9
-        setCellOffsetButton = buildButton("setCellOffset", Glyph.Shape.SET_OFFSET, "offset", "9", this::setCellOffsetAction);
+        JButton setCellOffsetButton = buildButton(Command.SET_OFFSET, "setCellOffset", Glyph.Shape.SET_OFFSET, "offset", "9", this::setCellOffsetAction);
         gridButtonPanel.add(setCellOffsetButton, NUM_PAD_KEY_SIZE);
 
         addJumpByPair();
 
         // Shuttle back button with 4
-        shuttleBackButton = buildButton("shuttleBack", Glyph.Shape.SHUTTLE_BACK, "shuttle", "4", this::shuttleBackAction);
+        JButton shuttleBackButton = buildButton(Command.SHUTTLE_BACK, "shuttleBack", Glyph.Shape.SHUTTLE_BACK, "shuttle", "4", this::shuttleBackAction);
         gridButtonPanel.add(shuttleBackButton, NUM_PAD_KEY_SIZE);
 
         // Stop button with 5
-        stopButton = buildButton("stop", Glyph.Shape.STOP, "stop", "5", this::stopAction);
+        JButton stopButton = buildButton(Command.STOP, "stop", Glyph.Shape.STOP, "stop", "5", this::stopAction);
         gridButtonPanel.add(stopButton, NUM_PAD_KEY_SIZE);
 
         // Shuttle forward button with 6
-        shuttleForwardButton = buildButton("shuttleForward", Glyph.Shape.SHUTTLE_FORWARD, "shuttle", "6", this::shuttleForwardAction);
+        JButton shuttleForwardButton = buildButton(Command.SHUTTLE_FORWARD, "shuttleForward", Glyph.Shape.SHUTTLE_FORWARD, "shuttle", "6", this::shuttleForwardAction);
         gridButtonPanel.add(shuttleForwardButton, NUM_PAD_KEY_SIZE);
 
 
         // Find button (small plus)
-        findButton = buildButton("find", Glyph.Shape.FIND, "find", "+", this::findAction);
+        JButton findButton = buildButton(Command.FIND_ONSET, "find", Glyph.Shape.FIND, "find", "+", this::findAction);
         gridButtonPanel.add(findButton, NUM_PAD_KEY_SIZE);
         // Where the frame rate was: the grid keeps its shape.
         gridButtonPanel.add(new JLabel(), WIDE_TEXT_FIELD_SIZE);
 
         // Jog back button with 1
-        JButton jogBackButton = buildButton("jogBack", Glyph.Shape.JOG_BACK, "jog", "1", this::jogBackAction);
+        JButton jogBackButton = buildButton(Command.JOG_BACK, "jogBack", Glyph.Shape.JOG_BACK, "jog", "1", this::jogBackAction);
         gridButtonPanel.add(jogBackButton, NUM_PAD_KEY_SIZE);
 
         // Pause button with 2
-        pauseButton = buildButton("pause", Glyph.Shape.PAUSE, "pause", "2", this::pauseAction);
+        JButton pauseButton = buildButton(Command.PAUSE, "pause", Glyph.Shape.PAUSE, "pause", "2", this::pauseAction);
         gridButtonPanel.add(pauseButton, NUM_PAD_KEY_SIZE);
 
         // Jog forward button with 3
-        JButton jogForwardButton = buildButton("jogForward", Glyph.Shape.JOG_FORWARD, "jog", "3", this::jogForwardAction);
+        JButton jogForwardButton = buildButton(Command.JOG_FORWARD, "jogForward", Glyph.Shape.JOG_FORWARD, "jog", "3", this::jogForwardAction);
         gridButtonPanel.add(jogForwardButton, NUM_PAD_KEY_SIZE);
 
         // Create new cell button with enter
-        createNewCell = buildButton("createNewCell", Glyph.Shape.NEW_CELL, "new cell", "enter", this::createNewCellAction);
+        JButton createNewCell = buildButton(Command.NEW_CELL_IN_SELECTED_COLUMN, "createNewCell", Glyph.Shape.NEW_CELL, "new cell", "enter", this::createNewCellAction);
         createNewCell.setAlignmentY(0.0F);
         createNewCell.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
         gridButtonPanel.add(createNewCell, TALL_NUM_PAD_KEY_SIZE);
@@ -663,7 +636,7 @@ public final class VideoController implements ClockListener {
         gridButtonPanel.add(makeLabelAndTextFieldPanel(new JLabel("Onset"), onsetTextField), WIDE_TEXT_FIELD_SIZE);
 
         // Create new cell setting offset button with zero
-        createNewCellSettingOffset = buildButton("createNewCellAndSetOffset", Glyph.Shape.NEW_CELL_PREVIOUS_OFFSET,
+        JButton createNewCellSettingOffset = buildButton(Command.NEW_CELL_CLOSING_PREVIOUS, "createNewCellAndSetOffset", Glyph.Shape.NEW_CELL_PREVIOUS_OFFSET,
                 "new + prev offset", "0", this::createNewCellAndSetOffsetAction);
         gridButtonPanel.add(createNewCellSettingOffset, "span 2, w 95!, h 45!");
 
@@ -683,7 +656,7 @@ public final class VideoController implements ClockListener {
 
     private void addJumpByPair() {
         //Go back button - minus key
-        jumpByButton = buildButton("jumpBy", Glyph.Shape.JUMP_BACK, "jump", "−", this::jumpByAction);
+        JButton jumpByButton = buildButton(Command.JUMP_BACK, "jumpBy", Glyph.Shape.JUMP_BACK, "jump", "−", this::jumpByAction);
         gridButtonPanel.add(jumpByButton, NUM_PAD_KEY_SIZE);
         //Go back text field
         jumpByTextField.setHorizontalAlignment(SwingConstants.CENTER);
@@ -735,89 +708,29 @@ public final class VideoController implements ClockListener {
     }
 
     /**
-     * Simulates start button clicked.
+     * Runs a playback or coding command, as its keypad key does, by pressing the drawer's key for it, which shows the
+     * press while the drawer is open. Jogging and finding the offset field's time have no key of their own to press.
+     *
+     * @param command the command
+     * @throws IllegalArgumentException if it is not a command of the drawer
      */
-    public void pressPlay() {
-        playButton.doClick();
-    }
-
-    /**
-     * Simulates pause button clicked.
-     */
-    public void pressPause() {
-        pauseButton.doClick();
-    }
-
-    /**
-     * Simulates stop button clicked.
-     */
-    public void pressStop() {
-        stopButton.doClick();
-    }
-
-    /**
-     * Simulates shuttle forward button clicked.
-     */
-    public void pressShuttleForward() {
-        shuttleForwardButton.doClick();
-    }
-
-    /**
-     * Simulates shuttle back button clicked.
-     */
-    public void pressShuttleBack() {
-        shuttleBackButton.doClick();
-    }
-
-    /**
-     * Simulates find button clicked.
-     */
-    public void pressFind() {
-        findButton.doClick();
-    }
-
-    /**
-     * Simulates set cell onset button clicked.
-     */
-    public void pressSetCellOnset() {
-        setCellOnsetButton.doClick();
-    }
-
-    /**
-     * Simulates set cell offset button clicked.
-     */
-    public void pressSetCellOffset() {
-        setCellOffsetButton.doClick();
-    }
-
-    /**
-     * Simulates go back button clicked.
-     */
-    public void pressJumpBack() {
-        jumpDirection = -1;
-        jumpByButton.doClick();
-    }
-
-    /**
-     * Simulates go back button clicked.
-     */
-    public void pressJumpForward() {
-        jumpDirection = 1;
-        jumpByButton.doClick();
-    }
-
-    /**
-     * Simulates create new cell button clicked.
-     */
-    public void pressCreateNewCell() {
-        createNewCell.doClick();
-    }
-
-    /**
-     * Simulates create new cell setting offset button clicked.
-     */
-    public void pressCreateNewCellSettingOffset() {
-        createNewCellSettingOffset.doClick();
+    public void run(final Command command) {
+        switch (command) {
+            case JOG_BACK -> jogBackAction();
+            case JOG_FORWARD -> jogForwardAction();
+            case JUMP_BACK, JUMP_FORWARD -> {
+                jumpDirection = command == Command.JUMP_BACK ? -1 : 1;
+                keys.get(Command.JUMP_BACK).doClick();
+            }
+            case FIND_OFFSET -> findOffsetAction();
+            default -> {
+                JButton key = keys.get(command);
+                if (key == null) {
+                    throw new IllegalArgumentException(command + " is not a playback command");
+                }
+                key.doClick();
+            }
+        }
     }
 
     /**
