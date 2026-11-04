@@ -786,7 +786,7 @@ public final class DatavyuView implements FileDropEventListener {
             return;
         }
         try {
-            panel.getMediaPlayers().addMediaFiles(files, panel.getVideoController().getCurrentTime(),
+            selectedController().media().addMedia(files, panel.getVideoController().getCurrentTime(),
                 locked -> Dialogs.confirm(getFrame(), locked.getName()
                     + " is locked, so no clips can be added to it. Add the media to a new media column instead?",
                     "Column Locked", "Add to New Column"));

@@ -15,11 +15,11 @@ Updated 2026-11-03. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
-| Java source (main) | 242 files, 42.5k lines | 139 files, 25.0k lines |
-| Tests / line coverage | 113 / 9.9% | 580 / 60.5%; views about half, undo edits 71% |
+| Java source (main) | 242 files, 42.5k lines | 140 files, 25.1k lines |
+| Tests / line coverage | 113 / 9.9% | 583 / 60.5%; views about half, undo edits 72% |
 | Runtime dependencies / with known vulnerabilities | 28 / 8 | 13 / 0 |
 | Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 482 |
-| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 337 / 61 (none on thread safety, now gated); 15 |
+| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 335 / 61 (none on thread safety, now gated); 15 |
 | Never-invoked methods (`dead-code.py`) | 109+ | 21: test-only accessors, unused settings setters, and Swing overrides the script cannot see |
 | Static global access (`grep -rohP 'Datavyu\.(get\|set)\w*\(' src/main/java \| wc -l`) | about 330 call sites | 0: each tab's `ProjectController` is passed to what it owns |
 
@@ -35,13 +35,11 @@ Updated 2026-11-03. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 **B11. Crash recovery is lost on an ordinary exit, and recovering needs a dialog.** ready, *verified*. `AutoSaveController` marks each autosave `deleteOnExit`, so the JVM deletes it on every orderly exit: quitting, Ctrl+C in the terminal running `make run`, or a plain `kill`. On 2026-10-30 an autosave written after the app's first minute was gone 2 seconds after SIGINT. Only exits that skip the JVM's shutdown hooks (SIGKILL, a JVM crash, a power cut) leave one behind, which is why the recovery dialog no longer appears. When one is left, `DatavyuView.checkForAutosavedFile` asks about every `~*.watavyu.json` in the temporary folder at launch: the dialog itself is a chore (owner), and it includes the autosave a running Watavyu is writing, which answering No deletes. Owner's direction: open unsaved autosaves without asking, and only those no running Watavyu owns (a lock file, or the owning process recorded in the autosave's name). An autosave should go only when its work was saved or knowingly discarded (through `UnsavedWork`'s prompt), not on any exit. With that, add a safeguard against saving over a newer file: if the project file changed on disk since it was opened or last saved (by another Watavyu, a recovered copy or another tool), say so before overwriting it. Settle with R9.
 
-**B14. Adding media cannot be undone.** ready, *from reading*. Spreadsheet > Add Media and dropping files post no undoable edit (`MediaPlayers.addMediaFiles`), while deleting the clip or column afterwards can be undone. Undo should take an added clip or column out again, closing its player. Until it can, undoing New Media Column takes out the column with any clips added to it since, and a deleted media column whose name new media has taken cannot be undone until that column is renamed or deleted.
-
 ## Features
 
 **F7. Configurable key mapping for playback.** ready. The numpad shortcuts (`Shortcuts`, the keypad section) are condensed into a smaller set of playback and coding keys that the user can map, so coding works on laptops without a numpad. Settings would hold the mapping. ⌃H, ⌃D, ⌃W, ⌥⌫ and ⌥⌦ are reserved for it (`Shortcuts.RESERVED`). Goes with F16 and with finding, by trial, which buttons the controls drawer keeps.
 
-**F12. Edit history in the controls drawer.** ready, medium priority (owner). Below the controls, a list of the edits that can be undone and redone, newest first, from the spreadsheet's undo history (`SpreadsheetUndoManager`; each edit has a presentation name, and `SpreadSheetEdit.toString` already formats one with its time). Hiding the drawer hides both, so the space can be reclaimed with one toggle. Datavyu's separate Undo History window was removed in the cleanup; this replaces it. B14 (adding media is not undoable) shows up here.
+**F12. Edit history in the controls drawer.** ready, medium priority (owner). Below the controls, a list of the edits that can be undone and redone, newest first, from the spreadsheet's undo history (`SpreadsheetUndoManager`; each edit has a presentation name, and `SpreadSheetEdit.toString` already formats one with its time). Hiding the drawer hides both, so the space can be reclaimed with one toggle. Datavyu's separate Undo History window was removed in the cleanup; this replaces it.
 
 **F10. Offsets below onsets, and point cells without offsets.** ready, medium to low priority (owner). A cell shows its onset and offset side by side, which sets a column's minimum width. Put the offset at the bottom of the cell, so columns can shrink thinner, and add a setting to leave the offset out entirely for point cells (offset = onset), which new cells are by default (`SpreadsheetCell`, `TimeStampDataValueEditor`, the column width limits in `SpreadsheetColumn`).
 
@@ -75,7 +73,7 @@ None open.
 
 Tech debt is paid down in the Java app rather than left for the C++ rewrite (AGENTS.md › North Star, 2026-11-03). The items run in this order, each behaviour-preserving unless it says otherwise, and each pins the behaviour it touches with tests, since most views and undo have none. R10 comes first because the later items, and the new interaction model, build on its commands.
 
-**R10. One path for each user action.** ready. Cell and column actions are commands (`CellCommands`, `ColumnCommands`); adding media, the Code Editor's code edits and the value editors still change the model and post their own undo edits from views (`MediaPlayers.addMediaFiles`, `VocabEditorV`, the value editors), so an action, its lock check and its undo can drift apart (B14 is one such gap, B21 another). Each becomes a command on the document that checks locks, changes the model and records its edit. Then commands get names and state, and menus, keys and the drawer call them by name: the ground for F7, F12 and a new interaction model (modal, editor-style keys), which need actions that can be named, bound to keys and listed. With it, the views redraw from the model's listeners rather than from each caller, which now checks for a view first (`getSpreadSheetPanel() != null`).
+**R10. One path for each user action.** ready. Cell, column and media actions are commands (`CellCommands`, `ColumnCommands`, `MediaCommands`); the Code Editor's code edits and the value editors still change the model and post their own undo edits from views (`VocabEditorV`, the value editors), so an action, its lock check and its undo can drift apart (B21 is one such gap). Each becomes a command on the document that checks locks, changes the model and records its edit. Then commands get names and state, and menus, keys and the drawer call them by name: the ground for F7, F12 and a new interaction model (modal, editor-style keys), which need actions that can be named, bound to keys and listed. With it, the views redraw from the model's listeners rather than from each caller, which now checks for a view first (`getSpreadSheetPanel() != null`).
 
 **R4. Per-editor key handling.** ready, with or after R10. `EditorTracker` and the value editors handle keys per editor, with 21 uses of the deprecated modifier API (`getModifiers`, `*_MASK`, `getMenuShortcutKeyMask`). Keys that are commands go through `Shortcuts` to R10's commands; editors keep only text editing. Do before F7.
 

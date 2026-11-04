@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertSame;
 import static org.testng.Assert.assertTrue;
@@ -18,6 +19,7 @@ import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.DataStoreFactory;
 import org.datavyu.models.db.MediaClip;
 import org.datavyu.models.db.Variable;
+import org.datavyu.models.project.Project;
 import org.datavyu.plugins.StreamViewer;
 import org.datavyu.util.ClockTimer;
 import org.datavyu.views.VideoController;
@@ -53,6 +55,7 @@ public class MediaPlayersTest {
     private List<InvocationOnMock> pending;
     private Map<Variable, FakeWindow> windows;
     private MediaPlayers players;
+    private ProjectController spreadsheet;
 
     /** A column's window, recording what it shows. */
     private static final class FakeWindow implements MediaPlayers.ColumnWindow {
@@ -130,6 +133,9 @@ public class MediaPlayersTest {
             windows.put(column, window);
             return window;
         }, Runnable::run);
+        when(videoController.getMediaPlayers()).thenReturn(players);
+        spreadsheet = new ProjectController(new Project(), dataStore);
+        spreadsheet.setVideoController(videoController);
     }
 
     /** A player that reports a 10 s, 30 fps, 1280x720 file, and remembers the offset it is given. */
@@ -467,7 +473,7 @@ public class MediaPlayersTest {
         dataStore.deselectAll();
         media.setSelected(true);
 
-        players.addMediaFiles(List.of(new File(file("b.mp4"))), 12_000, column -> false);
+        spreadsheet.media().addMedia(List.of(new File(file("b.mp4"))), 12_000, column -> false);
 
         assertEquals(dataStore.getAllVariables(), List.of(media));
         assertEquals(media.getCellsTemporally().get(1).getOnset(), 12_000L);
@@ -485,7 +491,7 @@ public class MediaPlayersTest {
         List<Variable> asked = new ArrayList<>();
         List<File> files = List.of(new File(file("b.mp4")), new File(file("c.mp4")));
 
-        players.addMediaFiles(files, 12_000, column -> {
+        spreadsheet.media().addMedia(files, 12_000, column -> {
             asked.add(column);
             return false;
         });
@@ -493,7 +499,7 @@ public class MediaPlayersTest {
         assertEquals(dataStore.getAllVariables(), List.of(media));
         assertEquals(media.getCells().size(), 1);
 
-        players.addMediaFiles(files, 12_000, column -> asked.add(column));
+        spreadsheet.media().addMedia(files, 12_000, column -> asked.add(column));
         assertEquals(asked, List.of(media, media));
         assertEquals(dataStore.getAllVariables().stream().map(Variable::getName).toList(),
             List.of("media_1", "media_2", "media_3"));
@@ -504,11 +510,67 @@ public class MediaPlayersTest {
     public void addedMediaWithoutASelectedMediaColumnGetsNewColumns() throws Exception {
         dataStore.createVariable("notes").setSelected(true);
 
-        players.addMediaFiles(List.of(new File(file("a.mp4")), new File(file("b.mp4"))), 12_000, column -> false);
+        spreadsheet.media().addMedia(List.of(new File(file("a.mp4")), new File(file("b.mp4"))), 12_000, column -> false);
 
         assertEquals(dataStore.getAllVariables().stream().map(Variable::getName).toList(),
             List.of("notes", "media_1", "media_2"));
         assertEquals(dataStore.getVariable("media_2").getCells().get(0).getOnset(), 0L);
+    }
+
+    /** B14: each file added is an edit, so undo takes the clip out again and closes its player, and redo reopens it. */
+    @Test
+    public void addingAClipCanBeUndoneAndRedone() throws Exception {
+        Variable media = dataStore.createMediaVariable("media_1");
+        dataStore.deselectAll();
+        media.setSelected(true);
+
+        spreadsheet.media().addMedia(List.of(new File(file("b.mp4"))), 12_000, column -> false);
+        Cell clip = media.getCells().get(0);
+        StreamViewer player = players.getPlayer(clip);
+        assertEquals(spreadsheet.getUndoManager().getUndoPresentationName(), "Undo Add Media b.mp4");
+
+        FakeWindow window = windows.get(media);
+        spreadsheet.undo();
+        assertTrue(media.getCells().isEmpty());
+        verify(videoController).shutdown(player.getIdentifier(), false);
+        assertTrue(window.closed);
+
+        spreadsheet.redo();
+        assertEquals(media.getCells(), List.of(clip));
+        assertEquals(opened.size(), 2);
+    }
+
+    @Test
+    public void addingMediaInNewColumnsIsAnEditForEachFile() throws Exception {
+        spreadsheet.media().addMedia(List.of(new File(file("a.mp4")), new File(file("b.mp4"))), 0, column -> false);
+        assertEquals(spreadsheet.getUndoManager().getUndoPresentationName(), "Undo Add Media b.mp4");
+        Variable first = dataStore.getVariable("media_1");
+
+        spreadsheet.undo();
+        assertEquals(dataStore.getAllVariables(), List.of(first));
+        assertFalse(windows.get(first).closed);
+        spreadsheet.undo();
+        assertTrue(dataStore.getAllVariables().isEmpty());
+        assertTrue(windows.values().stream().allMatch(window -> window.closed));
+
+        spreadsheet.redo();
+        assertSame(dataStore.getVariable("media_1"), first);
+        assertEquals(first.getCells().size(), 1);
+    }
+
+    /** A file that does not open is taken out again; its edit, made while it opened, then changes nothing. */
+    @Test
+    public void mediaThatFailsToOpenLeavesNothingToUndoOrRedo() throws Exception {
+        Variable notes = dataStore.createVariable("notes");
+        pending = new ArrayList<>();
+
+        spreadsheet.media().addMedia(List.of(new File(file("broken.mp4"))), 0, column -> false);
+        pending.get(0).<Runnable>getArgument(4).run();
+        assertEquals(dataStore.getAllVariables(), List.of(notes));
+
+        assertNull(spreadsheet.undo());
+        assertNull(spreadsheet.redo());
+        assertEquals(dataStore.getAllVariables(), List.of(notes));
     }
 
     @Test

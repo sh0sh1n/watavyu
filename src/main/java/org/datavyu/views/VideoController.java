@@ -225,6 +225,15 @@ public final class VideoController implements ClockListener {
     }
 
     /**
+     * Returns what keeps the players and the spreadsheet's media columns in step.
+     *
+     * @return the spreadsheet's media players, or null until its view is made
+     */
+    public MediaPlayers getMediaPlayers() {
+        return mediaPlayers;
+    }
+
+    /**
      * Closes the spreadsheet's playback, as its tab closes: playback stops, the clock stops, and then the players and
      * their windows close, so no tick reaches a player as it closes. A player still opening is closed once it opens.
      */

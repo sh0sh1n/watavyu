@@ -31,6 +31,12 @@ public class AddCellEdit extends SpreadSheetEdit {
     private String varName;
     private Cell addedCell;
 
+    /**
+     * Whether undo found the cell already taken out without an edit, as a clip whose file does not open is; redo then
+     * leaves it out too.
+     */
+    private boolean takenOut;
+
     public AddCellEdit(final ProjectController controller, String varName, Cell c) {
         super(controller);
         this.varName = varName;
@@ -39,12 +45,18 @@ public class AddCellEdit extends SpreadSheetEdit {
 
     @Override
     public String getPresentationName() {
+        if (addedCell.getClip() != null) {
+            return "Add Media " + addedCell.getClip().fileName();
+        }
         return "New Cell to " + varName;
     }
 
     @Override
     public void redo() throws CannotRedoException {
         super.redo();
+        if (takenOut) {
+            return;
+        }
         addedCell.getVariable().addCell(addedCell);
         controller.setLastCreatedCell(addedCell);
         unselectAll();
@@ -53,6 +65,7 @@ public class AddCellEdit extends SpreadSheetEdit {
     @Override
     public void undo() throws CannotUndoException {
         super.undo();
+        takenOut = model.getVariable(addedCell) == null;
         controller.removeCells(List.of(addedCell));
     }
 }

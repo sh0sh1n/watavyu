@@ -31,6 +31,13 @@ public final class AddColumnEdit extends AbstractUndoableEdit implements Guarded
     private final DataStore dataStore;
     private final Variable column;
     private final int index;
+    private final String presentationName;
+
+    /**
+     * Whether undo found the column already taken out without an edit, as a media column whose file does not open is;
+     * redo then leaves it out too.
+     */
+    private boolean takenOut;
 
     /**
      * Records a column that has just been added.
@@ -46,11 +53,18 @@ public final class AddColumnEdit extends AbstractUndoableEdit implements Guarded
         if (index < 0) {
             throw new IllegalArgumentException("Column " + column.getName() + " is not in the spreadsheet");
         }
+        if (!column.isMedia()) {
+            presentationName = "New Column \"" + column.getName() + "\"";
+        } else if (column.getCells().isEmpty()) {
+            presentationName = "New Media Column " + column.getName();
+        } else {
+            presentationName = "Add Media " + column.getCells().get(0).getClip().fileName();
+        }
     }
 
     @Override
     public String getPresentationName() {
-        return column.isMedia() ? "New Media Column " + column.getName() : "New Column \"" + column.getName() + "\"";
+        return presentationName;
     }
 
     /** Never refused: a column already taken out without an edit is left out. */
@@ -61,7 +75,7 @@ public final class AddColumnEdit extends AbstractUndoableEdit implements Guarded
 
     @Override
     public String redoRefusal() {
-        return dataStore.getVariable(column.getName()) == null ? null
+        return takenOut || dataStore.getVariable(column.getName()) == null ? null
             : "Another column is named " + column.getName() + ". Rename or delete it to redo this.";
     }
 
@@ -69,7 +83,8 @@ public final class AddColumnEdit extends AbstractUndoableEdit implements Guarded
     @Override
     public void undo() throws CannotUndoException {
         super.undo();
-        if (dataStore.contains(column)) {
+        takenOut = !dataStore.contains(column);
+        if (!takenOut) {
             dataStore.deselectAll();
             dataStore.removeVariable(column);
         }
@@ -85,6 +100,9 @@ public final class AddColumnEdit extends AbstractUndoableEdit implements Guarded
             throw new CannotRedoException();
         }
         super.redo();
+        if (takenOut) {
+            return;
+        }
         dataStore.deselectAll();
         dataStore.addVariable(column, Math.min(index, dataStore.getAllVariables().size()));
         column.setSelected(true);
