@@ -33,7 +33,7 @@ abstract class TypedRenameEdit extends AbstractUndoableEdit {
     /**
      * Tells whether another rename is of the same thing.
      *
-     * @param other a rename, of any kind
+     * @param other a rename of the same class
      * @return whether it renames what this edit renames
      */
     abstract boolean sameTarget(TypedRenameEdit other);
@@ -70,8 +70,8 @@ abstract class TypedRenameEdit extends AbstractUndoableEdit {
 
     @Override
     public final boolean addEdit(final UndoableEdit edit) {
-        if (!closed && canUndo() && edit instanceof TypedRenameEdit next && next.continuing && sameTarget(next)
-                && next.from.equals(to)) {
+        if (!closed && canUndo() && edit instanceof TypedRenameEdit next && next.getClass() == getClass()
+                && next.continuing && sameTarget(next) && next.from.equals(to)) {
             to = next.to;
             return true;
         }

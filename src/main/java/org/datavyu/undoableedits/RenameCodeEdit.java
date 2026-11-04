@@ -24,7 +24,8 @@ public final class RenameCodeEdit extends TypedRenameEdit {
 
     @Override
     boolean sameTarget(final TypedRenameEdit other) {
-        return other instanceof RenameCodeEdit code && code.column.equals(column) && code.index == index;
+        RenameCodeEdit code = (RenameCodeEdit) other;
+        return code.column.equals(column) && code.index == index;
     }
 
     @Override

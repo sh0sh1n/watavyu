@@ -359,10 +359,6 @@ public final class DatavyuVariable implements Variable {
         if (refusesEdits()) {
             return;
         }
-        int named = getArgumentIndex(newName);
-        if (newName.isEmpty() || (named >= 0 && named != index)) {
-            throw new IllegalArgumentException("Column " + name + " cannot have a code named \"" + newName + "\"");
-        }
         getRootNode().childArguments.get(index).name = newName;
         owningDatastore.markAsChanged();
         for (VariableListener vl : listeners) {

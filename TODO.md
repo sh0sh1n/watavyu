@@ -16,7 +16,7 @@ Updated 2026-11-03. Re-measure with the commands in [BUILDING.md › Analysis Re
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
 | Java source (main) | 242 files, 42.5k lines | 147 files, 25.7k lines |
-| Tests / line coverage | 113 / 9.9% | 613 / 62.8%; views about half, undo edits 78% |
+| Tests / line coverage | 113 / 9.9% | 614 / 63.0%; views about half, undo edits 78% |
 | Runtime dependencies / with known vulnerabilities | 28 / 8 | 13 / 0 |
 | Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 479 |
 | PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 335 / 59 (none on thread safety, now gated); 15 |
@@ -24,6 +24,8 @@ Updated 2026-11-03. Re-measure with the commands in [BUILDING.md › Analysis Re
 | Static global access (`grep -rohP 'Datavyu\.(get\|set)\w*\(' src/main/java \| wc -l`) | about 330 call sites | 0: each tab's `ProjectController` is passed to what it owns |
 
 ## Bugs
+
+**B23. A Datavyu JSON import can bring code names a project file refuses.** ready, *from reading*. The importer adds a matrix column's codes from the JSON keys as they come (`OpenDataStoreFileController`, around `variableArg.childArguments.add`), so repeated or empty keys become repeated or empty code names, and saving the project then fails its own check (`ProjectRules`: "is named twice", "must not be empty"). The import should refuse such a file, saying which column and key, as it does a negative time.
 
 **B22. New Cell can add a cell to a hidden column.** ready, *from reading*; a question for the owner. Hiding a column deselects it and its cells, but it stays the column last given a cell (`ProjectController.getLastCreatedVariable`) and can hold the last selected cell, so Spreadsheet > New Cell, and New Cell and Set Offset with nothing selected, can add or close a cell no one can see (`CellCommands.newCell`, `newCellClosingPrevious`). Whether a hidden column takes new cells is a rule to settle before fixing.
 

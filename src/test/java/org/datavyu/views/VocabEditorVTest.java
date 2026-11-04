@@ -19,6 +19,7 @@ import java.awt.KeyEventDispatcher;
 import java.awt.KeyboardFocusManager;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -194,6 +195,35 @@ public class VocabEditorVTest {
         try {
             assertEquals(before.get().getArgPos(), 1);
             assertNull(after.get());
+        } finally {
+            SwingUtilities.invokeAndWait(() -> editor.get().dispose());
+        }
+    }
+
+    /** The rows follow the spreadsheet's columns as they are deleted, put back by undo and moved, from anywhere. */
+    @Test
+    public void theRowsFollowTheSpreadsheetsColumns() throws Exception {
+        ProjectController spreadsheet = spreadsheet();
+        Variable gaze = spreadsheet.getDataStore().createVariable("gaze");
+        Variable speech = spreadsheet.getDataStore().createVariable("speech");
+        AtomicReference<VocabEditorV> editor = new AtomicReference<>();
+        List<List<Variable>> rows = new ArrayList<>();
+        Runnable look = () -> rows.add(
+            editor.get().getVocabElements().stream().map(VocabElementV::getVariable).toList());
+        SwingUtilities.invokeAndWait(() -> {
+            editor.set(new VocabEditorV(null, false, spreadsheet));
+            VocabElementV column = editor.get().getVocabElements().get(0);
+            // A refused name in its field once kept a deleted column's row.
+            type(column, column.getNameComponent(), "1st");
+            spreadsheet.columns().delete(List.of(gaze));
+            look.run();
+            spreadsheet.undo();
+            look.run();
+            spreadsheet.columns().move(gaze, speech);
+            look.run();
+        });
+        try {
+            assertEquals(rows, List.of(List.of(speech), List.of(gaze, speech), List.of(speech, gaze)));
         } finally {
             SwingUtilities.invokeAndWait(() -> editor.get().dispose());
         }

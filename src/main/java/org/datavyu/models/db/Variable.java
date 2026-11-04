@@ -177,11 +177,11 @@ public interface Variable {
     void removeArgument(int index);
 
     /**
-     * Renames a code, unless the column is locked.
+     * Renames a code, unless the column is locked. Any name is taken, as undo puts back the names a code has had, which
+     * a Datavyu import may have given it; {@code CodeCommands} keeps the names typed to those a project file allows.
      *
      * @param index the code's place
      * @param name  its new name
-     * @throws IllegalArgumentException if the name is empty or another code's, which a project file refuses
      */
     void renameArgument(int index, String name);
 

@@ -214,14 +214,15 @@ public class CodeCommandsTest {
         assertFalse(spreadsheet.getUndoManager().canUndo());
     }
 
-    /** The column itself refuses such names, whatever path renames a code. */
+    /** A name a project file refuses, which a Datavyu import can bring, comes back on undo. */
     @Test
-    public void aColumnRefusesAnEmptyOrRepeatedCodeName() {
-        assertThrows(IllegalArgumentException.class, () -> gaze.renameArgument(0, ""));
-        assertThrows(IllegalArgumentException.class, () -> gaze.renameArgument(0, "code03"));
-        gaze.renameArgument(0, "code01");
+    public void undoPutsBackANameKeptFromAnImport() {
+        gaze.getRootNode().childArguments.get(1).name = "code01";
 
-        assertEquals(names(), List.of("code01", "code02", "code03"));
+        codes.rename(gaze, 1, "side", false);
+        spreadsheet.undo();
+
+        assertEquals(names(), List.of("code01", "code01", "code03"));
     }
 
     /** Typing a name back to what it was leaves nothing to undo, rather than a step that changes nothing. */

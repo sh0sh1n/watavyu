@@ -177,6 +177,8 @@ public class VocabElementV extends JPanel {
     public void addNotify() {
         super.addNotify();
         varModel.addListener(columnListener);
+        // The column may have changed while this view was not showing.
+        showModel();
     }
 
     @Override

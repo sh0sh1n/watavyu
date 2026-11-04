@@ -25,7 +25,7 @@ public final class RenameColumnEdit extends TypedRenameEdit implements GuardedEd
 
     @Override
     boolean sameTarget(final TypedRenameEdit other) {
-        return other instanceof RenameColumnEdit rename && rename.column.equals(column);
+        return ((RenameColumnEdit) other).column.equals(column);
     }
 
     @Override
