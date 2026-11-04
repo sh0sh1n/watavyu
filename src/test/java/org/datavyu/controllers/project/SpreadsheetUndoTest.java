@@ -8,7 +8,6 @@ import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.DataStoreFactory;
 import org.datavyu.models.project.Project;
 import org.datavyu.undoableedits.ChangeOnsetCellEdit;
-import org.datavyu.undoableedits.ChangeCellEdit.Granularity;
 import org.testng.annotations.Test;
 
 /**
@@ -33,7 +32,7 @@ public class SpreadsheetUndoTest {
         Cell cell = cell(spreadsheet);
         long old = cell.getOnset();
         cell.setOnset(onset);
-        spreadsheet.postEdit(new ChangeOnsetCellEdit(spreadsheet, cell, old, onset, Granularity.COARSEGRAINED));
+        spreadsheet.postEdit(new ChangeOnsetCellEdit(spreadsheet, cell, old, onset));
     }
 
     @Test
@@ -56,28 +55,6 @@ public class SpreadsheetUndoTest {
         assertEquals(cell(second).getOnset(), 3_000);
     }
 
-    /** A coarse edit of one cell replaces that cell's fine edits before it, not another cell's. */
-    @Test
-    public void aCoarseEditKeepsAnotherCellsFineEdits() throws Exception {
-        ProjectController spreadsheet = spreadsheet();
-        Cell first = cell(spreadsheet);
-        Cell second = spreadsheet.getDataStore().getVariable("notes").createPointCell(4_000);
-        first.setOnset(2_000);
-        spreadsheet.postEdit(new ChangeOnsetCellEdit(spreadsheet, first, 1_000, 2_000, Granularity.FINEGRAINED));
-        second.setOnset(5_000);
-        spreadsheet.postEdit(new ChangeOnsetCellEdit(spreadsheet, second, 4_000, 5_000, Granularity.COARSEGRAINED));
-
-        spreadsheet.undo();
-        spreadsheet.undo();
-
-        assertEquals(first.getOnset(), 1_000);
-        assertEquals(second.getOnset(), 4_000);
-    }
-
-    /**
-     * An edit made after an undo is compared with the last edit done, not the one waiting to be redone. It used to be
-     * dropped as that one's duplicate, so it could not be undone.
-     */
     @Test
     public void anEditAfterAnUndoIsRecorded() throws Exception {
         ProjectController spreadsheet = spreadsheet();
@@ -108,27 +85,6 @@ public class SpreadsheetUndoTest {
         spreadsheet.undo();
 
         assertEquals(cell.getOnset(), 2_000);
-    }
-
-    /** A coarse edit replaces its cell's fine edits before it, even after one of them was undone. */
-    @Test
-    public void aCoarseEditAfterAnUndoReplacesTheFineEditsBeforeIt() throws Exception {
-        ProjectController spreadsheet = spreadsheet();
-        Cell cell = cell(spreadsheet);
-        cell.setOnset(2_000);
-        spreadsheet.postEdit(new ChangeOnsetCellEdit(spreadsheet, cell, 1_000, 2_000, Granularity.FINEGRAINED));
-        cell.setOnset(3_000);
-        spreadsheet.postEdit(new ChangeOnsetCellEdit(spreadsheet, cell, 2_000, 3_000, Granularity.FINEGRAINED));
-        spreadsheet.undo();
-        cell.setOnset(4_000);
-        spreadsheet.postEdit(new ChangeOnsetCellEdit(spreadsheet, cell, 1_000, 4_000, Granularity.COARSEGRAINED));
-
-        spreadsheet.undo();
-
-        assertEquals(cell.getOnset(), 1_000);
-        assertFalse(spreadsheet.getUndoManager().canUndo());
-        spreadsheet.redo();
-        assertEquals(cell.getOnset(), 4_000);
     }
 
     @Test

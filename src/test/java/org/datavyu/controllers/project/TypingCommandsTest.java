@@ -1,0 +1,251 @@
+package org.datavyu.controllers.project;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
+
+import org.datavyu.models.db.Cell;
+import org.datavyu.models.db.CellListener;
+import org.datavyu.models.db.CellValue;
+import org.datavyu.models.db.DataStore;
+import org.datavyu.models.db.DataStoreFactory;
+import org.datavyu.models.db.MediaClip;
+import org.datavyu.models.db.Variable;
+import org.datavyu.models.db.VariableListener;
+import org.datavyu.models.project.Project;
+import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Test;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Typing into a cell is a command: it leaves locked columns and clips alone, changes the cell and records what it did,
+ * a value's typing as one edit while it continues and a time's each change as one, so undo puts it back.
+ */
+public class TypingCommandsTest {
+
+    private static final MediaClip CAM = new MediaClip("/study/cam.mp4", 10_000, 30, 1280, 720, 1);
+
+    private DataStore dataStore;
+    private ProjectController spreadsheet;
+    private TypingCommands typing;
+    private Variable gaze;
+    private Variable speech;
+
+    @BeforeMethod
+    public void setUp() throws Exception {
+        dataStore = DataStoreFactory.newDataStore();
+        spreadsheet = new ProjectController(new Project(), dataStore);
+        typing = spreadsheet.typing();
+        gaze = dataStore.createVariable("gaze");
+        speech = dataStore.createVariable("speech");
+        dataStore.deselectAll();
+    }
+
+    private void undo() {
+        spreadsheet.undo();
+    }
+
+    private List<String> values(final Cell cell) {
+        List<String> values = new ArrayList<>();
+        for (int i = 0; i < cell.getVariable().getRootNode().childArguments.size(); i++) {
+            values.add(cell.getMatrixValue(i).toString());
+        }
+        return values;
+    }
+
+    /** Typing a key at a time while the cell keeps the focus is one edit: undo puts back the value before it. */
+    @Test
+    public void typingIntoACellIsOneEditUntilItLosesTheFocus() {
+        Cell cell = gaze.createPointCell(1_000);
+
+        assertTrue(typing.typeValue(cell, 0, "s", false));
+        assertTrue(typing.typeValue(cell, 0, "sm", true));
+        assertTrue(typing.typeValue(cell, 0, "smile", true));
+        assertEquals(spreadsheet.getUndoManager().getUndoPresentationName(), "Undo Change Value in gaze");
+
+        undo();
+        assertEquals(cell.getMatrixValue(0).toString(), "");
+        assertFalse(spreadsheet.getUndoManager().canUndo());
+        spreadsheet.redo();
+        assertEquals(cell.getMatrixValue(0).toString(), "smile");
+    }
+
+    @Test
+    public void typingThatStartsAgainIsAnEditOfItsOwn() {
+        Cell cell = gaze.createPointCell(1_000);
+        typing.typeValue(cell, 0, "smile", false);
+
+        typing.typeValue(cell, 0, "frown", false);
+
+        undo();
+        assertEquals(cell.getMatrixValue(0).toString(), "smile");
+    }
+
+    /** Another edit between keys ends the typing, so undo takes back the keys after it first. */
+    @Test
+    public void anotherEditEndsTheTyping() {
+        Cell cell = gaze.createPointCell(1_000);
+        typing.typeValue(cell, 0, "sm", false);
+        cell.setSelected(true);
+        spreadsheet.cells().setOnsets(2_000);
+
+        typing.typeValue(cell, 0, "smile", true);
+
+        undo();
+        assertEquals(cell.getMatrixValue(0).toString(), "sm");
+        assertEquals(cell.getOnset(), 2_000);
+    }
+
+    /** An edit undone while typing still ends it, so the keys after it are an edit of their own. */
+    @Test
+    public void anEditUndoneWhileTypingStillEndsIt() {
+        Cell cell = gaze.createPointCell(1_000);
+        typing.typeValue(cell, 0, "sm", false);
+        cell.setSelected(true);
+        spreadsheet.cells().setOnsets(2_000);
+        undo();
+
+        typing.typeValue(cell, 0, "smile", true);
+
+        undo();
+        assertEquals(cell.getMatrixValue(0).toString(), "sm");
+    }
+
+    @Test
+    public void typingIntoAnotherCellIsAnEditOfItsOwn() {
+        Cell cell = gaze.createPointCell(1_000);
+        Cell other = gaze.createPointCell(2_000);
+        other.setMatrixValue(0, "smile");
+        typing.typeValue(cell, 0, "smile", false);
+
+        typing.typeValue(other, 0, "frown", true);
+
+        undo();
+        assertEquals(other.getMatrixValue(0).toString(), "smile");
+        assertEquals(cell.getMatrixValue(0).toString(), "smile");
+    }
+
+    /** Typing joins only typing that ended where it starts, not a value changed in between by something else. */
+    @Test
+    public void typingJoinsOnlyFromWhereItLeftOff() {
+        Cell cell = gaze.createPointCell(1_000);
+        typing.typeValue(cell, 0, "sm", false);
+        cell.setMatrixValue(0, "grin");
+
+        typing.typeValue(cell, 0, "grins", true);
+
+        undo();
+        assertEquals(cell.getMatrixValue(0).toString(), "grin");
+        undo();
+        assertEquals(cell.getMatrixValue(0).toString(), "");
+    }
+
+    /** Typing into each code of a cell is one edit, which puts back every code's value, commas and all. */
+    @Test
+    public void undoPutsBackEveryCodeTypedIntoWithItsCommas() {
+        gaze.addArgument();
+        Cell cell = gaze.createPointCell(1_000);
+        cell.setMatrixValue(0, "a, b");
+
+        typing.typeValue(cell, 0, "c", false);
+        typing.typeValue(cell, 1, "d, e", true);
+        assertEquals(values(cell), List.of("c", "d, e"));
+
+        undo();
+        assertEquals(values(cell), List.of("a, b", ""));
+        spreadsheet.redo();
+        assertEquals(values(cell), List.of("c", "d, e"));
+    }
+
+    /** Undo and redo set the values through the cell, so its view hears of them. */
+    @Test
+    public void undoTellsTheCellsViewButTypingDoesNot() {
+        Cell cell = gaze.createPointCell(1_000);
+        List<String> heard = new ArrayList<>();
+        cell.addListener(new CellListener() {
+            @Override
+            public void offsetChanged(final long newOffset) { }
+
+            @Override
+            public void onsetChanged(final long newOnset) { }
+
+            @Override
+            public void highlightingChange(final boolean isHighlighted) { }
+
+            @Override
+            public void selectionChange(final boolean isSelected) { }
+
+            @Override
+            public void valueChange(final CellValue newCellValue) {
+                heard.add(newCellValue.toString());
+            }
+        });
+
+        typing.typeValue(cell, 0, "smile", false);
+        assertTrue(heard.isEmpty(), "the view shows the typing already");
+
+        undo();
+        assertEquals(heard.size(), 1);
+    }
+
+    @Test
+    public void typingBackToTheValueBeforeLeavesNothingToUndo() {
+        Cell cell = gaze.createPointCell(1_000);
+        typing.typeValue(cell, 0, "s", false);
+        typing.typeValue(cell, 0, "", true);
+
+        assertFalse(spreadsheet.getUndoManager().canUndo());
+    }
+
+    @Test
+    public void typingThatChangesNothingOrIsRefusedIsNoEdit() throws Exception {
+        Cell cell = gaze.createPointCell(1_000);
+        cell.setMatrixValue(0, "smile");
+        Cell clip = dataStore.createMediaVariable("media_1").createClip(0, CAM);
+        VariableListener lock = mock(VariableListener.class);
+        speech.addListener(lock);
+        Cell locked = speech.createPointCell(1_000);
+        speech.setLocked(true);
+
+        assertFalse(typing.typeValue(cell, 0, "smile", false));
+        assertFalse(typing.typeValue(cell, 1, "x", false), "no such code");
+        assertFalse(typing.typeValue(cell, -1, "x", false), "no such code");
+        assertFalse(typing.typeValue(clip, 0, "x", false));
+        assertFalse(typing.typeValue(locked, 0, "x", false));
+        verify(lock).editRefused();
+        assertEquals(locked.getMatrixValue(0).toString(), "");
+        assertFalse(spreadsheet.getUndoManager().canUndo());
+    }
+
+    /** Each change of a typed time is an edit of its own, and a time already the cell's is none. */
+    @Test
+    public void eachTypedTimeIsAnEditAndTheSameTimeIsNone() {
+        Cell cell = gaze.createPointCell(1_000);
+
+        assertTrue(typing.typeOnset(cell, 2_000));
+        assertTrue(typing.typeOffset(cell, 3_000));
+        assertFalse(typing.typeOffset(cell, 3_000));
+
+        undo();
+        assertEquals(cell.getOffset(), 1_000);
+        undo();
+        assertEquals(cell.getOnset(), 1_000);
+        assertFalse(spreadsheet.getUndoManager().canUndo());
+    }
+
+    @Test
+    public void aTypedTimeIsRefusedInALockedColumnAndAsAClipsOffset() throws Exception {
+        Cell clip = dataStore.createMediaVariable("media_1").createClip(0, CAM);
+        Cell cell = gaze.createPointCell(1_000);
+        gaze.setLocked(true);
+
+        assertFalse(typing.typeOnset(cell, 2_000));
+        assertFalse(typing.typeOffset(clip, 2_000));
+        assertTrue(typing.typeOnset(clip, 2_000), "a clip's onset moves it");
+        assertEquals(clip.getOffset(), 12_000);
+    }
+}

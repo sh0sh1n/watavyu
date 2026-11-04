@@ -25,6 +25,7 @@ import java.awt.*;
 import java.awt.event.FocusEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
+import java.util.function.Consumer;
 
 /**
  * DataValueEditor - abstract class extending EditorComponent. Adds
@@ -45,15 +46,21 @@ public abstract class DataValueEditor extends EditorComponent {
      */
     private Class modelType = null;
 
+    /** Where what is typed goes, to change the value */
+    private final Consumer<String> typing;
+
     /**
      * Constructor.
      *
-     * @param tc    JTextComponent this editor works with.
-     * @param Value The cellValue this data cellValue editor manipulates
+     * @param tc        JTextComponent this editor works with.
+     * @param cellValue The cellValue this data cellValue editor manipulates
+     * @param typing    where what is typed goes, to change the value
      */
     public DataValueEditor(final JTextComponent tc,
-                           final CellValue cellValue) {
+                           final CellValue cellValue,
+                           final Consumer<String> typing) {
         super(tc);
+        this.typing = typing;
 
         // So far all DataValueEditors are editable
         setEditable(true);
@@ -74,12 +81,17 @@ public abstract class DataValueEditor extends EditorComponent {
 
     private void updateModelText() {
         if (!modelType.equals(MatrixCellValue.class)) {
-            if (getText() == null || getText().equals("")) {
-                model.clear();
-            } else {
-                model.set(getText());
-            }
+            typed(getText() == null ? "" : getText());
         }
+    }
+
+    /**
+     * Sends a value typed to be set and recorded.
+     *
+     * @param value the value, {@code ""} to empty it
+     */
+    protected final void typed(final String value) {
+        typing.accept(value);
     }
 
     // *************************************************************************

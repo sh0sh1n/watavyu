@@ -20,6 +20,7 @@ import javax.swing.text.JTextComponent;
 import java.awt.event.FocusEvent;
 import java.awt.event.KeyEvent;
 import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
 
 /**
  * This class is the character editor of a NominalDataValue.
@@ -48,11 +49,13 @@ public final class NominalDataValueEditor extends DataValueEditor {
      * @param ta           The parent JTextComponent the editor resides within.
      * @param nv           The value this editor manipulates.
      * @param quickKeyMode tells whether quick-key mode is on, in which typing does not change the value
+     * @param typing       where what is typed goes, to change the value
      */
     public NominalDataValueEditor(final JTextComponent ta,
                                   final NominalCellValue nv,
-                                  final BooleanSupplier quickKeyMode) {
-        super(ta, nv);
+                                  final BooleanSupplier quickKeyMode,
+                                  final Consumer<String> typing) {
+        super(ta, nv, typing);
         this.quickKeyMode = quickKeyMode;
         setAcceptReturnKey(true);
         model = nv;
@@ -117,16 +120,8 @@ public final class NominalDataValueEditor extends DataValueEditor {
         }
 
         // Push the character changes into the database.
-        if (model.isValid(this.getText())) {
-            model.set(this.getText());
-            //ndv.setItsValue(this.getText());
-            //updateDatabase();
-
-            // The user is reverting back to a 'placeholder' state.
-        } else if (this.getText().equals("")) {
-            model.clear();
-            //ndv.clearValue();
-            //updateDatabase();
+        if (model.isValid(this.getText()) || this.getText().isEmpty()) {
+            typed(this.getText());
         }
     }
 }

@@ -19,15 +19,6 @@ package org.datavyu.util;
  */
 public final class Constants {
 
-    /** The default number of ticks per second to use. */
-    public static final int TICKS_PER_SECOND = 1000;
-
-    /** Seed value for generating hash codes. */
-    public static final int SEED1 = 3;
-
-    /** Seed value for generating hash codes. */
-    public static final int SEED2 = 7;
-
     /** The margin size to use down the sides of the columns. */
     public static final int BORDER_SIZE = 1;
 

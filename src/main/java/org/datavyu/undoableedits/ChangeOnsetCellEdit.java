@@ -16,19 +16,18 @@ package org.datavyu.undoableedits;
 
 import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.Cell;
-import org.datavyu.util.Constants;
 
 /**
  * An undoable edit for changing the onset of a cell.
  */
-public class ChangeOnsetCellEdit extends ChangeCellEdit { 
-    /** onset of cell */
-    private long oldOnset = -1;
-    private long newOnset = -1;
+public class ChangeOnsetCellEdit extends ChangeCellEdit {
+    /** The onset to put back, swapped with the cell's on each undo and redo. */
+    private long oldOnset;
+    private final long newOnset;
 
-    public ChangeOnsetCellEdit(final ProjectController controller, Cell c, long oldOnset, long newOnset,
-                               Granularity granularity) {
-        super(controller, c, granularity);
+    public ChangeOnsetCellEdit(final ProjectController controller, final Cell c, final long oldOnset,
+                               final long newOnset) {
+        super(controller, c);
         this.oldOnset = oldOnset;
         this.newOnset = newOnset;
     }
@@ -39,35 +38,9 @@ public class ChangeOnsetCellEdit extends ChangeCellEdit {
     }
 
     @Override
-    protected void updateCell(Cell cell) {
-        long currentOnset = cell.getOnset();
-
-        cell.setOnset(this.oldOnset);
-        this.oldOnset = currentOnset;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
-        }
-        if ((obj == null) || (obj.getClass() != this.getClass())) {
-            return false;
-        }
-
-        // Must be this class to be here
-        ChangeOnsetCellEdit t = (ChangeOnsetCellEdit) obj; 
-
-        return sameCell(t) && this.oldOnset == t.oldOnset && this.newOnset == t.newOnset;
-    }
-
-    @Override
-    public int hashCode() {
-        double hash = super.hashCode();
-        hash += this.oldOnset * Constants.SEED1;
-        hash += this.newOnset * Constants.SEED2;
-        long val = Double.doubleToLongBits(hash);
-
-        return (int) (val ^ (val >>> 32));
+    protected void updateCell(final Cell cell) {
+        long current = cell.getOnset();
+        cell.setOnset(oldOnset);
+        oldOnset = current;
     }
 }

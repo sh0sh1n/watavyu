@@ -6,9 +6,6 @@ import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.Variable;
 import org.datavyu.undoableedits.AddCellEdit;
-import org.datavyu.undoableedits.ChangeCellEdit.Granularity;
-import org.datavyu.undoableedits.ChangeOffsetCellEdit;
-import org.datavyu.undoableedits.ChangeOnsetCellEdit;
 import org.datavyu.undoableedits.RemoveCellEdit;
 import org.datavyu.util.ArrayDirection;
 
@@ -18,10 +15,10 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * The commands that make, delete and time one spreadsheet's cells. Each is the one path for its user action, whether it
- * comes from a menu, a key, the controls drawer or quick keys: it leaves locked columns and media clips alone, changes
- * the data model, and records what it did in the spreadsheet's undo history. Times are given by the caller, as the
- * playback's current time.
+ * The commands that make, delete and time one spreadsheet's cells; typing into them is {@link TypingCommands}. Each is
+ * the one path for its user action, whether it comes from a menu, a key, the controls drawer or quick keys: it leaves
+ * locked columns and media clips alone, changes the data model, and records what it did in the spreadsheet's undo
+ * history. Times are given by the caller, as the playback's current time.
  */
 public final class CellCommands {
 
@@ -126,11 +123,8 @@ public final class CellCommands {
                 return null;
             }
             Cell previous = cellToClose(closing, time);
-            if (previous != null && previous.getClip() == null) {
-                long offset = Math.max(0, time - 1);
-                record(new ChangeOffsetCellEdit(spreadsheet, previous, previous.getOffset(), offset,
-                    Granularity.FINEGRAINED));
-                previous.setOffset(offset);
+            if (previous != null) {
+                CellTimes.set(spreadsheet, previous, false, Math.max(0, time - 1));
             }
         }
         return newCellIn(columnForNewCellAt(), time);
@@ -266,11 +260,7 @@ public final class CellCommands {
      */
     public void setOnsets(final long time) {
         for (Cell cell : cellsToTime()) {
-            if (cell.getVariable().refusesEdits()) {
-                continue;
-            }
-            record(new ChangeOnsetCellEdit(spreadsheet, cell, cell.getOnset(), time, Granularity.FINEGRAINED));
-            cell.setOnset(time);
+            CellTimes.set(spreadsheet, cell, true, time);
         }
     }
 
@@ -282,11 +272,7 @@ public final class CellCommands {
      */
     public void setOffsets(final long time) {
         for (Cell cell : cellsToTime()) {
-            if (cell.getVariable().refusesEdits() || cell.getClip() != null) {
-                continue;
-            }
-            record(new ChangeOffsetCellEdit(spreadsheet, cell, cell.getOffset(), time, Granularity.FINEGRAINED));
-            cell.setOffset(time);
+            CellTimes.set(spreadsheet, cell, false, time);
         }
     }
 
