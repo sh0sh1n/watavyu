@@ -34,8 +34,7 @@ public final class CodeCommands {
         if (column.refusesEdits()) {
             return -1;
         }
-        column.addCode();
-        int index = column.getCodes().size() - 1;
+        int index = column.addCode();
         spreadsheet.postEdit(new AddCodeEdit(column, index));
         return index;
     }

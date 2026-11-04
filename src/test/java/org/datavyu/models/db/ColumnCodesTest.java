@@ -1,5 +1,7 @@
 package org.datavyu.models.db;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertThrows;
@@ -47,6 +49,28 @@ public class ColumnCodesTest {
 
         assertEquals(column.getCodes(), List.of("direction", "distance"));
         assertEquals(column.createCell().getValues(), List.of("", ""));
+    }
+
+    /** The code01 a new column starts with is replaced, so it was never one the column had. */
+    @Test
+    public void aColumnGivenCodesNumbersItsNextCodeFromCode01() {
+        column.setCodes(List.of("direction", "code02"));
+
+        column.addCode();
+        column.addCode();
+
+        assertEquals(column.getCodes(), List.of("direction", "code02", "code01", "code03"));
+    }
+
+    /** The Code Editor, open as a file is imported, shows the codes the column is given. */
+    @Test
+    public void listenersHearOfTheCodesGiven() {
+        VariableListener listener = mock(VariableListener.class);
+        column.addListener(listener);
+
+        column.setCodes(List.of("direction"));
+
+        verify(listener).codesChanged();
     }
 
     /** A cell has a value for each code, so codes given at once would leave its values out of step. */

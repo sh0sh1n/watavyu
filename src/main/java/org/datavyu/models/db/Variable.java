@@ -81,7 +81,8 @@ public interface Variable {
     List<String> getCodes();
 
     /**
-     * Gives a column without cells its codes, as reading a project file does. It is not an edit.
+     * Gives a column without cells its codes, as reading a project file does, and numbers its next new code from
+     * {@code code01} again. It is not an edit.
      *
      * @param codes the codes' names, in order
      * @throws IllegalStateException if the column has cells, or is a media column or locked
@@ -149,10 +150,10 @@ public interface Variable {
      * Adds a code after the others, named {@code codeNN} after the codes added before it, with an empty value in each
      * cell.
      *
-     * @return the new code's name
+     * @return the new code's place among the column's codes, the last
      * @throws IllegalStateException if the column is locked
      */
-    String addCode();
+    int addCode();
 
     /**
      * Puts a code back at a place among the others, with an empty value in each cell, as undoing its deletion does.
@@ -160,6 +161,7 @@ public interface Variable {
      * @param index its place, from 0 to the number of codes
      * @param name  the code's name
      * @throws IllegalStateException if the column is locked
+     * @throws IndexOutOfBoundsException if the place is out of range
      */
     void insertCode(int index, String name);
 

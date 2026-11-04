@@ -224,6 +224,9 @@ public final class DatavyuVariable implements Variable {
         requireUnlocked();
         codes.clear();
         codes.addAll(newCodes);
+        // A new code is numbered from code01 again, skipping the names given.
+        lastCodeNumber = 0;
+        codesChanged();
     }
 
     @Override
@@ -318,14 +321,13 @@ public final class DatavyuVariable implements Variable {
     }
 
     @Override
-    public String addCode() {
+    public int addCode() {
         requireUnlocked();
-        String code = nextCodeName();
-        codes.add(code);
+        codes.add(nextCodeName());
         int index = codes.size() - 1;
         ownCells().forEach(cell -> cell.insertValue(index));
         codesChanged();
-        return code;
+        return index;
     }
 
     /** Names a new code {@code codeNN}, numbered after the last added, skipping names taken, as one read from a file. */
