@@ -219,7 +219,7 @@ public class VocabElementV extends JPanel {
         } finally {
             typing--;
         }
-        refreshRefused();
+        refreshRefused(true);
     }
 
     /**
@@ -232,7 +232,7 @@ public class VocabElementV extends JPanel {
         }
         rebuildContents();
         parentEditor.columnRebuilt(this);
-        refreshRefused();
+        refreshRefused(false);
     }
 
     /** Returns the names shown that the column does not have: typed ones it refused, or ones it has since changed. */
@@ -260,10 +260,10 @@ public class VocabElementV extends JPanel {
         return varModel.getRootNode().childArguments.stream().map(code -> code.name).toList();
     }
 
-    private void refreshRefused() {
+    private void refreshRefused(final boolean typed) {
         invalidState = !refusedNames().isEmpty();
         updateMark();
-        parentEditor.refreshNameWarnings();
+        parentEditor.refreshNameWarnings(typed);
     }
 
     /** Shows the warning beside a name that cannot be applied, or else the lock beside a locked column's name. */

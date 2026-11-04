@@ -16,6 +16,8 @@ import org.datavyu.views.discrete.datavalues.vocabelements.FormalArgEditor;
 import org.datavyu.views.discrete.datavalues.vocabelements.VocabElementV;
 import org.testng.annotations.Test;
 
+import java.awt.Component;
+import java.awt.Container;
 import java.awt.KeyEventDispatcher;
 import java.awt.KeyboardFocusManager;
 import java.awt.event.InputEvent;
@@ -24,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import javax.swing.JLabel;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 
@@ -272,30 +275,74 @@ public class VocabEditorVTest {
         ProjectController second = spreadsheet();
         Variable gaze = second.getDataStore().createVariable("gaze");
         AtomicReference<VocabEditorV> editor = new AtomicReference<>();
+        AtomicReference<Variable> early = new AtomicReference<>();
+        AtomicReference<Variable> speech = new AtomicReference<>();
         List<List<Variable>> seen = new ArrayList<>();
-        List<List<String>> codes = new ArrayList<>();
+        AtomicReference<List<String>> codes = new AtomicReference<>();
         SwingUtilities.invokeAndWait(() -> {
             editor.set(new VocabEditorV(null, false, first));
             editor.get().setProjectController(second);
             column(first, "other");
-            Variable early = column(second, "early");
+            early.set(column(second, "early"));
             seen.add(rows(editor.get()));
-            assertSame(seen.get(0).get(1), early);
 
+            // Closed, the editor misses a code added, a column added, one moved and one deleted.
             editor.get().dispose();
             second.codes().add(gaze);
-            Variable speech = column(second, "speech");
-            second.columns().move(speech, gaze);
-            second.columns().delete(List.of(early));
+            speech.set(column(second, "speech"));
+            second.columns().move(speech.get(), gaze);
+            second.columns().delete(List.of(early.get()));
             editor.get().pack();
             seen.add(rows(editor.get()));
-            codes.add(shownCodes(editor.get().getVocabElements().get(1)));
-            assertEquals(seen.get(1), List.of(speech, gaze));
+            codes.set(shownCodes(editor.get().getVocabElements().get(1)));
         });
         try {
-            assertEquals(seen.get(0).size(), 2);
-            assertSame(seen.get(0).get(0), gaze);
-            assertEquals(codes.get(0), List.of("code01", "code02"));
+            assertEquals(seen, List.of(List.of(gaze, early.get()), List.of(speech.get(), gaze)));
+            assertEquals(codes.get(), List.of("code01", "code02"));
+        } finally {
+            SwingUtilities.invokeAndWait(() -> editor.get().dispose());
+        }
+    }
+
+    private static String warnings(final VocabEditorV editor) {
+        return findLabel(editor, "nameWarningLabel").getText();
+    }
+
+    private static JLabel findLabel(final Container parent, final String name) {
+        for (Component child : parent.getComponents()) {
+            if (child instanceof JLabel label && name.equals(label.getName())) {
+                return label;
+            }
+            if (child instanceof Container container) {
+                JLabel found = findLabel(container, name);
+                if (found != null) {
+                    return found;
+                }
+            }
+        }
+        return null;
+    }
+
+    /** The editor says what was typed was applied, and says nothing for a change made elsewhere. */
+    @Test
+    public void theWarningsSayWhatWasTypedWasApplied() throws Exception {
+        ProjectController spreadsheet = spreadsheet();
+        spreadsheet.getDataStore().createVariable("gaze");
+        AtomicReference<VocabEditorV> editor = new AtomicReference<>();
+        List<String> said = new ArrayList<>();
+        SwingUtilities.invokeAndWait(() -> {
+            editor.set(new VocabEditorV(null, false, spreadsheet));
+            VocabElementV column = editor.get().getVocabElements().get(0);
+            said.add(warnings(editor.get()));
+            type(column, column.getNameComponent(), "look");
+            said.add(warnings(editor.get()));
+            spreadsheet.undo();
+            said.add(warnings(editor.get()));
+            column(spreadsheet, "speech");
+            said.add(warnings(editor.get()));
+        });
+        try {
+            assertEquals(said, List.of("", "All changes applied.", "", ""));
         } finally {
             SwingUtilities.invokeAndWait(() -> editor.get().dispose());
         }

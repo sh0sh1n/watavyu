@@ -179,9 +179,6 @@ public final class VocabEditorV extends DatavyuDialog {
                 controller.getDataStore().addListener(columnsListener);
             }
             this.controller = controller;
-            selectedVocabElement = null;
-            selectedArgument = null;
-            selectedArgumentI = -1;
             makeElements();
         }
     }
@@ -234,13 +231,11 @@ public final class VocabEditorV extends DatavyuDialog {
         veViews.forEach(row -> kept.put(row.getVariable(), row));
         List<VocabElementV> rows = new ArrayList<>();
         for (Variable column : annotationColumns()) {
-            rows.add(kept.computeIfAbsent(column, made -> new VocabElementV(made.getRootNode(), made, this)));
+            VocabElementV row = kept.remove(column);
+            rows.add(row != null ? row : new VocabElementV(column.getRootNode(), column, this));
         }
-        for (VocabElementV row : veViews) {
-            if (!rows.contains(row)) {
-                verticalFrame.remove(row);
-            }
-        }
+        // What is left was the rows of columns deleted.
+        kept.values().forEach(verticalFrame::remove);
         if (!rows.contains(selectedVocabElement)) {
             selectedVocabElement = null;
             selectedArgument = null;
@@ -257,7 +252,7 @@ public final class VocabEditorV extends DatavyuDialog {
         veViews = rows;
         verticalFrame.revalidate();
         verticalFrame.repaint();
-        refreshNameWarnings(true);
+        refreshNameWarnings(false);
         updateDialogState();
     }
 
@@ -273,10 +268,6 @@ public final class VocabEditorV extends DatavyuDialog {
     }
 
     private void makeElements() {
-        // The views are made anew, so what was selected in the old ones is gone.
-        selectedVocabElement = null;
-        selectedArgument = null;
-        selectedArgumentI = -1;
         veViews = new ArrayList<>();
         verticalFrame = new JPanel();
         verticalFrame.setName("verticalFrame");
@@ -813,11 +804,12 @@ public final class VocabEditorV extends DatavyuDialog {
         return veViews.size() + 1;
     }
 
-    public void refreshNameWarnings() {
-        refreshNameWarnings(false);
-    }
-
-    public void refreshNameWarnings(boolean first) {
+    /**
+     * Lists the names the columns refused, or says that what was typed was applied.
+     *
+     * @param typed whether a name was just typed; if not, and none is refused, the list says nothing
+     */
+    public void refreshNameWarnings(final boolean typed) {
         String s = "";
         for (VocabElementV i : veViews) {
             for (String refused : i.refusedNames()) {
@@ -826,15 +818,12 @@ public final class VocabEditorV extends DatavyuDialog {
             }
         }
 
-        if (s.isEmpty() && first != true) {
-            nameWarningsLabel.setText("All changes applied.");
-            nameWarningsLabel.setForeground(SpreadsheetTheme.PALETTE.text());
-        } else if (s.isEmpty() && first == true) {
-            nameWarningsLabel.setText("");
-            nameWarningsLabel.setForeground(SpreadsheetTheme.PALETTE.text());
-        } else {
+        if (!s.isEmpty()) {
             nameWarningsLabel.setText("<html><b><u>Invalid names:</u></b> " + s + "<br />Names must not be empty or repeated. Column names must begin with a letter, and underscore is the only special character they allow.</html>");
             nameWarningsLabel.setForeground(SpreadsheetTheme.PALETTE.warning());
+        } else {
+            nameWarningsLabel.setText(typed ? "All changes applied." : "");
+            nameWarningsLabel.setForeground(SpreadsheetTheme.PALETTE.text());
         }
     }
 }
