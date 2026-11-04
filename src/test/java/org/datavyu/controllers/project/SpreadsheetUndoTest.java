@@ -60,7 +60,9 @@ public class SpreadsheetUndoTest {
     public void anEditAfterAnUndoIsRecorded() throws Exception {
         ProjectController spreadsheet = spreadsheet();
         Cell cell = cell(spreadsheet);
+        // A new cell is selected.
         spreadsheet.cells().setOnsets(2_000);
+        assertEquals(cell.getOnset(), 2_000);
         spreadsheet.undo();
         assertEquals(cell.getOnset(), 1_000);
 

@@ -300,18 +300,12 @@ public class DatavyuCell implements Cell {
 
     @Override
     public int hashCode() {
-        return this.getID().hashCode();
+        return id.hashCode();
     }
 
     @Override
     public boolean equals(Object other) {
-        if (this == other) {
-            return true;
-        }
-        if (!(other instanceof DatavyuCell)) {
-            return false;
-        }
-        return id.equals(((DatavyuCell) other).id);
+        return other instanceof DatavyuCell cell && id.equals(cell.id);
     }
 
     @Override
