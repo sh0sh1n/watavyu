@@ -15,15 +15,17 @@ Updated 2026-11-04. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
-| Java source (main) | 242 files, 42.5k lines | 149 files, 25.8k lines |
-| Tests / line coverage | 113 / 9.9% | 654 / 65.8%; views 60%, undo edits 78% |
+| Java source (main) | 242 files, 42.5k lines | 153 files, 25.8k lines |
+| Tests / line coverage | 113 / 9.9% | 672 / 67.2%; views 60%, undo edits 91% |
 | Runtime dependencies / with known vulnerabilities | 28 / 8 | 13 / 0 |
-| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 473 |
-| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 325 / 58 (none on thread safety, now gated); 15 |
+| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 464 |
+| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 316 / 58 (none on thread safety, now gated); 15 |
 | Never-invoked methods (`dead-code.py`) | 109+ | 21: test-only accessors, unused settings setters, and Swing overrides the script cannot see |
 | Static global access (`grep -rohP 'Datavyu\.(get\|set)\w*\(' src/main/java \| wc -l`) | about 330 call sites | 0: each tab's `ProjectController` is passed to what it owns |
 
 ## Bugs
+
+**B24. A playback integration test fails now and then.** ready, *verified* once. On 2026-11-04 `PlaybackIntegrationTest.playsForwardFromAnOnset` failed "the paused position follows playback": after a second of play, pausing reported a frame (`currentFrame`) more than 2 frames behind the last one the probe saw shown. Two reruns passed. It ran straight after a full build, so load may be the trigger; whether the pause lands behind the picture or the test's bound is too tight is not known.
 
 **B23. A Datavyu JSON import can bring code names a project file refuses.** ready, *from reading*. The importer adds a matrix column's codes from the JSON keys as they come (`OpenDataStoreFileController`, around `variableArg.childArguments.add`), so repeated or empty keys become repeated or empty code names, and saving the project then fails its own check (`ProjectRules`: "is named twice", "must not be empty"). The import should refuse such a file, saying which column and key, as it does a negative time.
 
@@ -67,11 +69,9 @@ None open.
 
 ## Refactors
 
-Tech debt is paid down in the Java app rather than left for the C++ rewrite (AGENTS.md › North Star, 2026-11-03). The items run in this order, each behaviour-preserving unless it says otherwise, and each pins the behaviour it touches with tests, since most views and undo have none. R10 comes first because the later items, and the new interaction model, build on its commands.
+Tech debt is paid down in the Java app rather than left for the C++ rewrite (AGENTS.md › North Star, 2026-11-03). The items run in this order, each behaviour-preserving unless it says otherwise, and each pins the behaviour it touches with tests, since most views and undo have none.
 
-**R10. One path for each user action.** ready. Cell, column, media and code actions are commands (`CellCommands`, `ColumnCommands`, `MediaCommands`, `CodeCommands`), and the menu bar and shortcuts, the keypad's included, run them by name (`Command`), with state that follows the selected tab (`CommandTable`). Left: the value editors (`MatrixRootView`, `TimeStampDataValueEditor`) still change the model and post their own undo edits from views, so a typed value or time, its lock check and its undo can drift apart. Each becomes a command on the document that checks locks, changes the model and records its edit. With it, the views redraw from the model's listeners rather than from each caller, which now checks for a view first (`getSpreadSheetPanel() != null`).
-
-**R4. Per-editor key handling.** ready, with or after R10. `EditorTracker` and the value editors handle keys per editor, with 21 uses of the deprecated modifier API (`getModifiers`, `*_MASK`, `getMenuShortcutKeyMask`). Keys that are commands go through `Shortcuts` to R10's commands; editors keep only text editing. Do before F7.
+**R4. Per-editor key handling.** ready. `EditorTracker` and the value editors handle keys per editor, with 21 uses of the deprecated modifier API (`getModifiers`, `*_MASK`, `getMenuShortcutKeyMask`). Keys that are commands go through `Shortcuts` to the commands (`Command`); editors keep only text editing. Do before F7.
 
 **R11. One cell value model.** ready. The data model still carries Datavyu's layers: a cell holds a `MatrixCellValue` of `NominalCellValue` arguments described by `Argument`s, with interface and `Datavyu*` implementation pairs for each, and the value editors mirror them (`MatrixRootView`, `NominalDataValueEditor`, `views/discrete/datavalues`). Since 2026-10-14 the app has one kind of column, a list of codes, so a cell is an onset, an offset and one value per code. Collapse the model and its editors to that, with the project file format unchanged.
 
@@ -83,4 +83,4 @@ Tech debt is paid down in the Java app rather than left for the C++ rewrite (AGE
 
 **R13. Watavyu names.** ready, last. Packages are `org.datavyu` and many classes are `Datavyu*` (`DatavyuView`, `DatavyuVariable`, `DatavyuCell`). Rename to `org.watavyu` and names that say what a class is. It touches every file, so it goes after the structural items. The GPL notices stay.
 
-**R14. A drawn spreadsheet.** after R10 and R11. Each cell is a tree of Swing components (`SpreadsheetCell`, its time fields and value editors), which is what limits how large a sheet stays smooth. A sheet that paints its visible cells and puts one editor over the cell being edited, as `JTable` does, would lift that limit and move the cursor and selection into the model, which the planned interaction model wants. The largest item; it changes how much the C++ rewrite's one objective, performance, is still needed.
+**R14. A drawn spreadsheet.** after R11. Each cell is a tree of Swing components (`SpreadsheetCell`, its time fields and value editors), which is what limits how large a sheet stays smooth. A sheet that paints its visible cells and puts one editor over the cell being edited, as `JTable` does, would lift that limit and move the cursor and selection into the model, which the planned interaction model wants. The largest item; it changes how much the C++ rewrite's one objective, performance, is still needed.

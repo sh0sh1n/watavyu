@@ -23,13 +23,13 @@ public final class RenameCodeEdit extends TypedRenameEdit {
     }
 
     @Override
-    boolean sameTarget(final TypedRenameEdit other) {
+    boolean sameTarget(final TypedEdit<String> other) {
         RenameCodeEdit code = (RenameCodeEdit) other;
         return code.column.equals(column) && code.index == index;
     }
 
     @Override
-    void rename(final String name) {
+    void apply(final String name) {
         column.renameArgument(index, name);
     }
 

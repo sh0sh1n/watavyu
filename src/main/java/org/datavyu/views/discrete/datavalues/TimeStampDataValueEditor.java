@@ -18,14 +18,11 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.Cell;
-import org.datavyu.undoableedits.ChangeCellEdit.Granularity;
-import org.datavyu.undoableedits.ChangeOffsetCellEdit;
-import org.datavyu.undoableedits.ChangeOnsetCellEdit;
+import org.datavyu.util.Timestamp;
 import org.datavyu.views.discrete.EditorComponent;
 import org.datavyu.views.discrete.EditorTracker;
 
 import javax.swing.text.JTextComponent;
-import javax.swing.undo.UndoableEdit;
 import java.awt.event.FocusEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
@@ -91,24 +88,15 @@ public final class TimeStampDataValueEditor extends EditorComponent {
         }
     }
 
+    /** Sends the time typed to the command that sets and records it, then shows the cell's time. */
     private void setTimeStamp(final String value) {
-        UndoableEdit edit = null;
-
-        switch (dataSourceType) {
-            case Onset:
-                long oldOnset = parentCell.getOnset();
-                parentCell.setOnset(value);
-                edit = new ChangeOnsetCellEdit(controller, parentCell, oldOnset, parentCell.getOnset(), Granularity.FINEGRAINED);
-                break;
-            default:
-                long oldOffset = parentCell.getOffset();
-                parentCell.setOffset(value);
-                edit = new ChangeOffsetCellEdit(controller, parentCell, oldOffset, parentCell.getOffset(), Granularity.FINEGRAINED);
-                break;
+        long time = Timestamp.parse(value);
+        if (dataSourceType == TimeStampSource.Onset) {
+            controller.typing().typeOnset(parentCell, time);
+        } else {
+            controller.typing().typeOffset(parentCell, time);
         }
-
         resetValue();
-        controller.postEdit(edit);
     }
 
     /**

@@ -16,13 +16,12 @@ package org.datavyu.undoableedits;
 
 import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.Cell;
-import org.datavyu.util.Constants;
 
 import javax.swing.undo.CannotRedoException;
 import javax.swing.undo.CannotUndoException;
 
 /**
- * An undoable edit for altering the contents of a cell.
+ * An undoable edit of one cell's time, which undo and redo swap with the cell's time then.
  */
 abstract public class ChangeCellEdit extends SpreadSheetEdit {
     /**
@@ -31,77 +30,30 @@ abstract public class ChangeCellEdit extends SpreadSheetEdit {
      */
     private final Cell cell;
 
-    protected String columnName;
+    protected final String columnName;
 
-    /**
-     * The granularity of the edit - fine or coarse.
-     */
-    protected Granularity granularity;
-
-    protected ChangeCellEdit(final ProjectController controller, Cell c, Granularity granularity) {
+    protected ChangeCellEdit(final ProjectController controller, final Cell c) {
         super(controller);
-        this.granularity = granularity;
-
         cell = c;
         columnName = c.getVariable().getName();
-    }
-
-    protected ChangeCellEdit(final ProjectController controller, Cell c) {
-        this(controller, c, Granularity.COARSEGRAINED);
-    }
-
-    public Granularity getGranularity() {
-        return granularity;
-    }
-
-    @Override
-    public String getPresentationName() {
-        return "Change " + " ";
     }
 
     @Override
     public void redo() throws CannotRedoException {
         super.redo();
-        updateCell();
+        updateCell(cell);
     }
 
     @Override
     public void undo() throws CannotUndoException {
         super.undo();
-        updateCell();
-    }
-
-    protected void updateCell() {
         updateCell(cell);
     }
 
     /**
-     * Tells whether another edit changed the same cell; edits of different cells are never duplicates of each other.
+     * Swaps the time held with the cell's.
      *
-     * @param other another edit of a cell
-     * @return whether it changed the same cell
+     * @param cell the cell
      */
-    protected boolean sameCell(final ChangeCellEdit other) {
-        return other.cell.equals(cell);
-    }
-
     abstract protected void updateCell(Cell cell);
-
-    @Override
-    public boolean equals(Object obj) {
-        return (obj instanceof ChangeCellEdit other) && other.granularity == this.granularity && sameCell(other);
-    }
-
-    @Override
-    public int hashCode() {
-        double hash = super.hashCode();
-        hash += granularity.hashCode() * Constants.SEED1;
-        long val = Double.doubleToLongBits(hash);
-        return (int) (val ^ (val >>> 32));
-    }
-
-    public enum Granularity {
-        FINEGRAINED,
-        COARSEGRAINED
-    }
 }

@@ -20,13 +20,10 @@ import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.CellValue;
 import org.datavyu.models.db.Variable;
-import org.datavyu.undoableedits.ChangeCellEdit;
-import org.datavyu.undoableedits.ChangeValCellEdit;
 import org.datavyu.views.discrete.EditorComponent;
 import org.datavyu.views.discrete.EditorTracker;
 
 import javax.swing.*;
-import javax.swing.undo.UndoableEdit;
 import java.awt.*;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
@@ -48,7 +45,11 @@ public final class MatrixRootView extends JTextArea implements FocusListener {
      */
     private Cell parentCell = null;
 
-    private String oldValue = "";
+    /**
+     * Whether a value has been typed since the cell took the focus, so what is typed next continues it, as one edit in
+     * the undo history.
+     */
+    private boolean typing;
 
     /**
      * All the editors that make up the representation of the data.
@@ -90,13 +91,6 @@ public final class MatrixRootView extends JTextArea implements FocusListener {
         addKeyListener(new KeyListener() {
                    @Override
                    public void keyPressed(KeyEvent e) {
-                       if ((Character.isLetter(e.getKeyChar()) || Character.isDigit(e.getKeyChar())
-                               || Character.isSpaceChar(e.getKeyChar())) && !e.isAltDown() && !e.isControlDown() && !e.isMetaDown()
-                               && edTracker.getCurrentEditor().isEditable() && !parentCell.getVariable().isLocked()) {
-                           UndoableEdit edit = new ChangeValCellEdit(controller, parentCell, oldValue,
-                               ChangeCellEdit.Granularity.FINEGRAINED);
-                           controller.postEdit(edit);
-                       }
                        if (e.getKeyCode() == KeyEvent.VK_ENTER) { //&& getSelectedText() != null) {
                            e.consume();
                        }
@@ -147,13 +141,21 @@ public final class MatrixRootView extends JTextArea implements FocusListener {
         if (v != null) {
             // No editors exist yet - build some to begin with.
             allEditors.clear();
-            allEditors.addAll(DataValueEditorFactory.buildMatrix(this, parentCell, controller::isQuickKeyMode));
+            allEditors.addAll(DataValueEditorFactory.buildMatrix(this, parentCell, controller::isQuickKeyMode,
+                this::typed));
         }
 
         rebuildText();
 
         // restore caret position inside current editor.
         comp.setCaretPosition(edPos);
+    }
+
+    /** Sends a code's value typed to the command that sets and records it. */
+    private void typed(final int code, final String value) {
+        if (controller.typing().typeValue(parentCell, code, value, typing)) {
+            typing = true;
+        }
     }
 
     /**
@@ -189,7 +191,8 @@ public final class MatrixRootView extends JTextArea implements FocusListener {
         // We need to remember which cell should be duplicated if the user
         // presses the enter key or selects New Cell from the menu.
         if (parentCell != null) {
-            oldValue = parentCell.getValueAsString();
+            // Typing after the cell takes the focus again is an edit of its own.
+            typing = false;
             // method names don't reflect usage - we didn't really create
             // this column just now.
             Variable v = controller.getDataStore().getVariable(parentCell);
@@ -201,13 +204,7 @@ public final class MatrixRootView extends JTextArea implements FocusListener {
 
     @Override
     public void focusLost(final FocusEvent fe) {
-        // do nothing
         parentCell.setSelected(false);
-        if(!parentCell.getValueAsString().equals(oldValue)) {
-            UndoableEdit edit = new ChangeValCellEdit(controller, parentCell, oldValue,
-                ChangeCellEdit.Granularity.COARSEGRAINED);
-            controller.postEdit(edit);
-        }
     }
 
     // *************************************************************************

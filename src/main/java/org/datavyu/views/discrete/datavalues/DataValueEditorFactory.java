@@ -25,6 +25,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
 
 
 /**
@@ -45,11 +46,13 @@ public class DataValueEditorFactory {
      * @param ta The parent JTextComponent the editor is in.
      * @param c  The parent cell the editors resides within.
      * @param quickKeyMode tells whether quick-key mode is on, in which typing does not change a value
+     * @param typing       where what is typed goes, to change a value
      * @return A vector of editor components to represent the matrix.
      */
     public static List<EditorComponent> buildMatrix(final JTextComponent ta,
                                                     final Cell c,
-                                                    final BooleanSupplier quickKeyMode) {
+                                                    final BooleanSupplier quickKeyMode,
+                                                    final ValueTyping typing) {
 
         List<EditorComponent> eds = new ArrayList<EditorComponent>();
 
@@ -64,7 +67,9 @@ public class DataValueEditorFactory {
             eds.add(new FixedText(ta, "("));
 
             for (int i = 0; i < mv.getArguments().size(); i++) {
-                eds.add(buildNominal(ta, (NominalCellValue) mv.getArguments().get(i), quickKeyMode));
+                int code = i;
+                eds.add(buildNominal(ta, (NominalCellValue) mv.getArguments().get(i), quickKeyMode,
+                    value -> typing.typed(code, value)));
 
                 if ((mv.getArguments().size() > 1) && (i < (mv.getArguments().size() - 1))) {
                     eds.add(new FixedText(ta, ", "));
@@ -104,11 +109,13 @@ public class DataValueEditorFactory {
      * @param ta The parent JTextComponent the editor is in.
      * @param v  The value this editor manipulates
      * @param quickKeyMode tells whether quick-key mode is on, in which typing does not change the value
+     * @param typing       where what is typed goes, to change the value
      * @return An editor component to represent the specified data value.
      */
     public static EditorComponent buildNominal(final JTextComponent ta,
                                                final NominalCellValue v,
-                                               final BooleanSupplier quickKeyMode) {
-        return new NominalDataValueEditor(ta, v, quickKeyMode);
+                                               final BooleanSupplier quickKeyMode,
+                                               final Consumer<String> typing) {
+        return new NominalDataValueEditor(ta, v, quickKeyMode, typing);
     }
 }

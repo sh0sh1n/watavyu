@@ -602,4 +602,16 @@ public class CellCommandsTest {
 
         assertFalse(spreadsheet.getUndoManager().canUndo());
     }
+
+    /** Set Onset at the time a cell already starts records nothing, so undo takes back a real change. */
+    @Test
+    public void settingATimeACellHasAlreadyIsNoEdit() {
+        Cell cell = gaze.createPointCell(1_000);
+        dataStore.deselectAll();
+        cell.setSelected(true);
+
+        cells.setOnsets(1_000);
+
+        assertFalse(spreadsheet.getUndoManager().canUndo());
+    }
 }

@@ -100,6 +100,9 @@ public final class ProjectController {
     /** The commands that make, delete and time cells */
     private final CellCommands cellCommands = new CellCommands(this);
 
+    /** The commands for typing into cells */
+    private final TypingCommands typingCommands = new TypingCommands(this);
+
     /** The commands that add, delete, rename, lock, hide and move columns */
     private final ColumnCommands columnCommands = new ColumnCommands(this);
 
@@ -252,6 +255,11 @@ public final class ProjectController {
     /** Returns the commands that make, delete and time this spreadsheet's cells. */
     public CellCommands cells() {
         return cellCommands;
+    }
+
+    /** Returns the commands for typing into this spreadsheet's cells, from their value and time editors. */
+    public TypingCommands typing() {
+        return typingCommands;
     }
 
     /** Returns the commands that add, delete, rename, lock, hide and move this spreadsheet's columns. */

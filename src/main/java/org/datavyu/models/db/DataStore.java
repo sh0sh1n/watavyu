@@ -56,6 +56,17 @@ public interface DataStore {
     }
 
     /**
+     * Tells whether a cell is in the spreadsheet: one remembered, or held by an editor, may have been deleted, or gone
+     * with its column. Only its own column is searched, so it is cheap enough for each key typed.
+     *
+     * @param cell a cell, or null
+     * @return whether it is in the spreadsheet
+     */
+    default boolean contains(final Cell cell) {
+        return cell != null && contains(cell.getVariable()) && cell.getVariable().contains(cell);
+    }
+
+    /**
      * @return All the variables held in the datastore that are visible and not hidden
      */
     List<Variable> getVisibleVariables();
@@ -96,11 +107,14 @@ public interface DataStore {
     Variable getVariable(String varName);
 
     /**
-     * @param cell The cell that we are looking for it's parent variable.
+     * Finds the column holding a cell, which is the cell's own: a column takes no other's cells.
      *
-     * @return The parent variable for the supplied cell.
+     * @param cell a cell, or null
+     * @return its column, or null if it is not in the spreadsheet ({@link #contains(Cell)})
      */
-    Variable getVariable(Cell cell);
+    default Variable getVariable(final Cell cell) {
+        return contains(cell) ? cell.getVariable() : null;
+    }
 
     /**
      * Creates and adds a variable to this datastore.

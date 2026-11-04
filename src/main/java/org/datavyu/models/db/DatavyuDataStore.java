@@ -145,14 +145,6 @@ public class DatavyuDataStore implements DataStore {
     }
 
     @Override
-    public Variable getVariable(Cell cell) {
-        for (Variable v : order) {
-            if (v.getCells().contains(cell)) return v;
-        }
-        return null;
-    }
-
-    @Override
     public Variable createVariable(final String name) throws UserWarningException {
         return createVariable(name, false);
     }

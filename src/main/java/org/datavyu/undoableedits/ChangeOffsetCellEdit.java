@@ -16,58 +16,31 @@ package org.datavyu.undoableedits;
 
 import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.Cell;
-import org.datavyu.util.Constants;
 
 /**
  * An undoable edit for changing the offset of a cell.
  */
 public class ChangeOffsetCellEdit extends ChangeCellEdit {
-    /** offset of cell */
-    private long oldOffset = -1;
-    private long newOffset = -1;
+    /** The offset to put back, swapped with the cell's on each undo and redo. */
+    private long oldOffset;
+    private final long newOffset;
 
-
-    public ChangeOffsetCellEdit(final ProjectController controller, Cell c, long oldOffset, long newOffset,
-                                Granularity granularity) {
-        super(controller, c, granularity);
+    public ChangeOffsetCellEdit(final ProjectController controller, final Cell c, final long oldOffset,
+                               final long newOffset) {
+        super(controller, c);
         this.oldOffset = oldOffset;
         this.newOffset = newOffset;
     }
 
     @Override
     public String getPresentationName() {
-        return "Changed the offset of a cell within '" + columnName + "' to " + this.newOffset;
+        return "Changed the offset of a cell within '" + columnName + "' to " + newOffset;
     }
 
     @Override
-    protected void updateCell(Cell cell) {
-        long currentOffset = cell.getOffset();
-
-        cell.setOffset(this.oldOffset);
-        this.oldOffset = currentOffset;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
-        }
-        if ((obj == null) || (obj.getClass() != this.getClass())) {
-            return false;
-        }
-        // Must be this class to be here
-        ChangeOffsetCellEdit t = (ChangeOffsetCellEdit) obj;
-
-        return sameCell(t) && this.newOffset == t.newOffset && this.oldOffset == t.oldOffset;
-    }
-
-    @Override
-    public int hashCode() {
-        double hash = super.hashCode();
-        hash += newOffset * Constants.SEED1;
-        hash += oldOffset * Constants.SEED2;
-        long val = Double.doubleToLongBits(hash);
-
-        return (int) (val ^ (val >>> 32));
+    protected void updateCell(final Cell cell) {
+        long current = cell.getOffset();
+        cell.setOffset(oldOffset);
+        oldOffset = current;
     }
 }
