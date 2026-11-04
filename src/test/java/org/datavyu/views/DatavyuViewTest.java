@@ -2,6 +2,7 @@ package org.datavyu.views;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertSame;
 import static org.testng.Assert.assertTrue;
@@ -298,20 +299,25 @@ public class DatavyuViewTest {
         assertFalse(delete.isEnabled(), "the untitled tab has no cells selected");
     }
 
-    /** New Cell and Export need a column to show: they are disabled in a tab whose columns are all hidden. */
+    /** New Cell needs a shown column last given a cell, and Export a shown column. */
     @Test
-    public void newCellAndExportNeedAVisibleColumn() throws Exception {
+    public void newCellAndExportNeedAShownColumn() throws Exception {
         ProjectController study = secondTab();
         Action newCell = view.action(Command.NEW_CELL);
         Action export = view.action(Command.EXPORT_JSON);
-        assertTrue(newCell.isEnabled());
+        assertFalse(newCell.isEnabled(), "no column has been given a cell");
         assertTrue(export.isEnabled());
+
+        onEdt(() -> {
+            study.getDataStore().getVariable("gaze").setSelected(true);
+            assertNotNull(study.cells().newCellInSelectedColumn(1_000));
+        });
+        assertTrue(newCell.isEnabled(), "the new cell's edit refreshed the commands");
 
         onEdt(() -> {
             study.columns().hide(study.getDataStore().getAllVariables());
             view.refreshCommands();
         });
-
         assertFalse(newCell.isEnabled());
         assertFalse(export.isEnabled());
     }

@@ -86,6 +86,47 @@ public class CellCommandsTest {
         assertFalse(spreadsheet.getUndoManager().canUndo());
     }
 
+    /** B22: a hidden column takes no new cell, though it was the one last given a cell. */
+    @Test
+    public void aHiddenColumnTakesNoNewCell() {
+        spreadsheet.setLastCreatedVariable(speech);
+        spreadsheet.columns().hide(List.of(speech));
+
+        assertNull(cells.newCell(2_500));
+        assertNull(cells.newCellInSelectedColumn(2_500));
+        assertNull(cells.newCellTyped(speech, 'a', 2_500));
+        assertTrue(speech.getCells().isEmpty());
+        assertFalse(spreadsheet.getUndoManager().canUndo());
+    }
+
+    /** The menu's New Cell can run when the column last given a cell is shown, in the spreadsheet and not media. */
+    @Test
+    public void newCellHasAColumnOnlyWhileTheLastGivenACellIsShown() throws Exception {
+        assertFalse(cells.hasColumnForNewCell());
+        spreadsheet.setLastCreatedVariable(speech);
+        assertTrue(cells.hasColumnForNewCell());
+        speech.setLocked(true);
+        assertTrue(cells.hasColumnForNewCell(), "a locked column shows its lock");
+
+        spreadsheet.columns().hide(List.of(speech));
+        assertFalse(cells.hasColumnForNewCell());
+        spreadsheet.columns().show(speech);
+        dataStore.removeVariable(speech);
+        assertFalse(cells.hasColumnForNewCell());
+        spreadsheet.setLastCreatedVariable(dataStore.createMediaVariable("media_1"));
+        assertFalse(cells.hasColumnForNewCell());
+    }
+
+    /** A hidden column is not selected, however it was hidden, as closing its media window hides it. */
+    @Test
+    public void aSelectedColumnHiddenSinceIsPassedOver() {
+        gaze.setSelected(true);
+        speech.setSelected(true);
+        gaze.setHidden(true);
+
+        assertSame(cells.newCellInSelectedColumn(1_000).getVariable(), speech);
+    }
+
     // New Cell, from the keypad and drawer
 
     @Test
@@ -258,6 +299,28 @@ public class CellCommandsTest {
         assertNull(cells.newCellClosingPrevious(5_000));
         assertEquals(previous.getOffset(), 3_000);
         assertEquals(gaze.getCells().size(), 1);
+        assertFalse(spreadsheet.getUndoManager().canUndo());
+    }
+
+    /** B22: a cell last selected in a column since hidden is not closed, and the new cell goes in a shown column. */
+    @Test
+    public void aHiddenColumnIsNotClosedAndTakesNoNewCell() {
+        Cell previous = gaze.createPointCell(3_000);
+        spreadsheet.setLastSelectedCell(previous);
+        spreadsheet.setLastCreatedVariable(gaze);
+        spreadsheet.columns().hide(List.of(gaze));
+
+        Cell cell = cells.newCellClosingPrevious(5_000);
+
+        assertEquals(previous.getOffset(), 3_000);
+        assertSame(cell.getVariable(), speech, "the first shown annotation column");
+    }
+
+    @Test
+    public void withEveryAnnotationColumnHiddenNewCellAndSetOffsetMakesNothing() {
+        spreadsheet.columns().hide(List.of(gaze, speech));
+
+        assertNull(cells.newCellClosingPrevious(5_000));
         assertFalse(spreadsheet.getUndoManager().canUndo());
     }
 
@@ -434,6 +497,51 @@ public class CellCommandsTest {
         cells.setOnsets(3_000);
 
         assertEquals(cell.getOnset(), 3_000);
+    }
+
+    /** B22: the cells last selected in a column hidden since are not timed, as they cannot be seen. */
+    @Test
+    public void cellsLastSelectedInAHiddenColumnAreNotTimed() {
+        Cell hidden = gaze.createPointCell(1_000);
+        Cell shown = speech.createPointCell(1_000);
+        spreadsheet.setLastSelectedCells(List.of(hidden, shown));
+        spreadsheet.columns().hide(List.of(gaze));
+        // A new cell starts selected; with nothing selected, the cells last selected are timed.
+        shown.setSelected(false);
+
+        cells.setOnsets(5_000);
+        cells.setOffsets(6_000);
+
+        assertEquals(hidden.getOnset(), 1_000);
+        assertEquals(hidden.getOffset(), 1_000);
+        assertEquals(shown.getOnset(), 5_000);
+        assertEquals(shown.getOffset(), 6_000);
+    }
+
+    /** Redoing a new column puts it back selected; hidden since, it is not where the keypad's New Cell goes. */
+    @Test
+    public void aColumnPutBackHiddenAndSelectedIsPassedOver() throws Exception {
+        Variable notes = spreadsheet.columns().newColumn("notes");
+        spreadsheet.columns().hide(List.of(notes));
+        undo();
+        spreadsheet.redo();
+        spreadsheet.setLastCreatedVariable(speech);
+
+        assertSame(cells.newCellInSelectedColumn(1_000).getVariable(), speech);
+        spreadsheet.columns().show(notes);
+        assertFalse(notes.isSelected(), "nor is it selected once shown");
+    }
+
+    @Test
+    public void selectedCellsInAColumnHiddenSinceAreNotDeleted() {
+        Cell cell = gaze.createPointCell(1_000);
+        cell.setSelected(true);
+        gaze.setHidden(true);
+
+        cells.deleteSelected();
+
+        assertEquals(gaze.getCells(), List.of(cell));
+        assertFalse(spreadsheet.getUndoManager().canUndo());
     }
 
     @Test

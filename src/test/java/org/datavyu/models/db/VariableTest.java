@@ -89,6 +89,73 @@ public class VariableTest {
         verify(modelListener, times(0)).cellRemoved(null);
     }
 
+    /** However a column is hidden, it and its cells are deselected and unhighlighted, and stay so when shown. */
+    @Test
+    public void hidingDeselectsTheColumnAndItsCells() {
+        Cell cell = model.createPointCell(1_000);
+        cell.setSelected(true);
+        cell.setHighlighted(true);
+        model.setSelected(true);
+
+        model.setHidden(true);
+
+        assertFalse(model.isSelected());
+        assertFalse(cell.isSelected());
+        assertFalse(cell.isHighlighted());
+        model.setHidden(false);
+        assertFalse(cell.isSelected());
+    }
+
+    /** Whatever selects a hidden column or its cells, as undo and redo put back what was selected, none reads so. */
+    @Test
+    public void nothingInAHiddenColumnIsSelected() {
+        model.setHidden(true);
+        Cell cell = model.createPointCell(1_000);
+        cell.setSelected(true);
+        model.setSelected(true);
+
+        assertFalse(model.isSelected());
+        assertFalse(cell.isSelected());
+        assertTrue(ds.getSelectedCells().isEmpty());
+        assertTrue(ds.getSelectedVariables().isEmpty());
+
+        // Nor is it once shown again: nothing was selected while it was hidden.
+        model.setHidden(false);
+        assertFalse(model.isSelected());
+        assertFalse(cell.isSelected());
+    }
+
+    /** A new cell is selected and highlighted, unless it is made in a hidden column; nor can it be highlighted then. */
+    @Test
+    public void aCellMadeInAHiddenColumnIsNeitherSelectedNorHighlighted() {
+        assertTrue(model.createPointCell(1_000).isSelected());
+        model.setHidden(true);
+
+        Cell cell = model.createPointCell(2_000);
+        assertFalse(cell.isSelected());
+        assertFalse(cell.isHighlighted());
+
+        CellListener listener = mock(CellListener.class);
+        cell.addListener(listener);
+        cell.setHighlighted(true);
+        assertFalse(cell.isHighlighted());
+        verify(listener, never()).highlightingChange(true);
+    }
+
+    /** A cell put back into a hidden column, as undoing its deletion does, comes back unselected. */
+    @Test
+    public void aCellPutBackIntoAHiddenColumnIsNotSelected() {
+        Cell cell = model.createPointCell(1_000);
+        cell.setSelected(true);
+        model.removeCell(cell);
+        model.setHidden(true);
+
+        model.addCell(cell);
+        model.setHidden(false);
+
+        assertFalse(cell.isSelected());
+    }
+
     @Test
     public void testIsSelected() {
         List<Variable> vars = new ArrayList<Variable>();

@@ -33,6 +33,8 @@ The aim is a smaller app whose every feature was chosen on purpose, with a moder
 
 Newest first. (owner) marks product decisions; the rest are engineering choices that can be revisited with reason.
 
+- **2026-11-04 (owner): hidden columns take no new cells** (B22). The cell commands act only on shown columns, however a column was hidden (its header, the Column List, closing its media window): hiding deselects a column and its cells, a hidden column takes no new cell though it was the one last given a cell, and the cells last selected in it are not closed or timed. New Cell from the menu, like a deleted column, then has nowhere to go and is greyed; New Cell and Set Offset goes on to the first shown annotation column.
+- **2026-11-04 (owner): the Code Editor has no Apply.** Its changes apply as they are typed, so ⌃S "Apply changes" is gone.
 - **2026-10-30 (owner): a tail in temporal layout grows with its duration** (F15). Temporal layout spaces times by the cells that start at them, not by duration, so the stretch after the last onset (a clip running on past every annotation) was a 15-pixel sliver. That tail now gets a pixel for each 10 seconds, at least 60 and at most 600 pixels, so it can be seen and scrubbed through. Gaps between annotations keep the fixed spacing.
 - **2026-10-30 (owner): ⌃H, ⌃D, ⌃W, ⌥⌫ and ⌥⌦ do nothing.** macOS text fields delete with them, and in a cell they got past the column lock. They are kept free for the key mapping (F7), so until a shortcut takes one, it is dropped in every window.
 - **2026-10-30 (owner): any column can be locked** (Lock Column, in its header's right-click menu; it was Lock Clips, for media columns only). A locked column refuses every change to its cells, codes and name, so a finished pass cannot be changed by accident: no new or deleted cells or clips, no onset, offset or value changes, and its Code Editor entry is read-only. Hiding, selecting, reordering and unlocking it still work, and so does a clip's volume. Deleting a locked column waits until it is unlocked. Adding media while the selected media column is locked asks whether to put it in a new media column instead. A refused change makes no sound: the padlock on the header (and beside the name in the Code Editor) shakes. Locking is an edit in the undo history, so undoing past it unlocks the column.
@@ -91,6 +93,7 @@ Ask the owner before acting on these.
 - Which controls the drawer keeps, found by trial (F6, F7, F16), and whether the Code Editor and Column List windows join the main window as the video controller did.
 - The defaults for the values font (sans or mono) and for dimming past cells, once both have been tried (U5).
 - Whether quick-key mode stays.
+- Whether one user action is one undo step, such as Add Media with several files or Set Onset on several cells (deferred by the owner, 2026-11-04). Until then each file and each cell is a step of its own.
 - Whether a scripting shell returns, and in what form. It would start from a clean slate.
 
 ## Keeping TODO.md and AGENTS.md

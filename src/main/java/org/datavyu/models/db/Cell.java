@@ -115,7 +115,8 @@ public interface Cell {
     boolean isSelected();
 
     /**
-     * Select this cell
+     * Selects this cell. A cell in a hidden column is never selected, whatever asks, and one put back into a hidden
+     * column, as by an undo, is deselected: the selection is always of what can be seen.
      *
      * @param selected True if this cell is selected, false if unselected
      */

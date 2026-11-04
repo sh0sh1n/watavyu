@@ -1096,7 +1096,10 @@ public final class DatavyuView implements FileDropEventListener {
         commands.define(Command.ADD_MEDIA, this::addMedia);
         commands.define(Command.COLUMN_LIST, this::showVariableList);
         commands.define(Command.CODE_EDITOR, this::showVocabEditor);
-        commands.define(Command.NEW_CELL, this::newCell).enabledWhen(() -> selection.visibleColumns());
+        commands.define(Command.NEW_CELL, this::newCell).enabledWhen(() -> {
+            ProjectController selected = selectedController();
+            return selected != null && selected.cells().hasColumnForNewCell();
+        });
         commands.define(Command.NEW_CELL_LEFT, this::newCellLeft)
                 .labelled(() -> countedLabel("newCellLeftMenuItem", selection.besideLeft()))
                 .enabledWhen(() -> selection.besideLeft() > 0);
@@ -1159,7 +1162,7 @@ public final class DatavyuView implements FileDropEventListener {
      * before every key.
      *
      * @param visibleColumns whether the selected tab shows any column
-     * @param cells          how many cells are selected
+     * @param cells          how many cells are selected, all in shown columns, as hiding deselects
      * @param besideLeft     how many selected cells have a shown column to their left
      * @param besideRight    how many have a shown column to their right
      */
@@ -1241,7 +1244,6 @@ public final class DatavyuView implements FileDropEventListener {
                 .keypad(Command.NEW_CELL_IN_SELECTED_COLUMN, KeyEvent.VK_ENTER, 0)
                 .reference("Code editor", "Add column", "⌃M")
                 .reference("Code editor", "Add code to the selected column", "⌃A")
-                .reference("Code editor", "Apply changes", "⌃S")
                 .reference("Code editor", "Delete", "⌃⌦")
                 .reference("Code editor", "Close", "Esc")
                 .build(() -> frame.isFocused(), held -> {

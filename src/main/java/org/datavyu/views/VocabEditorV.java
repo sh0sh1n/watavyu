@@ -145,9 +145,6 @@ public final class VocabEditorV extends DatavyuDialog {
                                         addCode();
                                     }
                                     break;
-                                case KeyEvent.VK_S:
-                                    applyChanges();
-                                    break;
                                 case KeyEvent.VK_DELETE:
                                     delete();
                                     break;
@@ -413,39 +410,6 @@ public final class VocabEditorV extends DatavyuDialog {
     }
 
     /**
-     * The action to invoke when the user presses the apply button.
-     */
-    public int applyChanges() {
-        LOGGER.info("vocEd - apply");
-
-        int errors = 0;
-        updateDialogState();
-        if (controller.getSpreadSheetPanel() != null) {
-            controller.getSpreadSheetPanel().redrawCells();
-        }
-
-        for (int i = veViews.size() - 1; i >= 0; i--) {
-            VocabElementV vev = veViews.get(i);
-            if (vev.isDeletable()) {
-                //getLegacyDB().removeVocabElement(vev.getModel().getID());
-            }
-        }
-
-        if (errors != 0) {
-            switch (errors) {
-                case 1:
-                    JOptionPane.showMessageDialog(this, "Column name in use.", "Duplicate column name", 2);
-                    break;
-                case 2:
-                    JOptionPane.showMessageDialog(this, "Code name in use.", "Duplicate code name", 2);
-                    break;
-            }
-
-        }
-        return errors;
-    }
-
-    /**
      * The action to invoke when the user presses the cancel button.
      */
     public void closeWindow() {
@@ -455,7 +419,6 @@ public final class VocabEditorV extends DatavyuDialog {
         } catch (Throwable e) {
             LOGGER.error("Unable to destroy vocab editor view.", e);
         }
-        applyChanges();
         updateDialogState();
     }
 
@@ -497,12 +460,6 @@ public final class VocabEditorV extends DatavyuDialog {
                 else
                     selectedArgumentI = -1;
             }
-
-            // A vocab element contains a change - enable certain things.
-            //jc 2-26: not sure what this was intended for. if re-enabling, beware that .hasChanged() is gone.
-            //if (vev.hasChanged() || vev.isDeletable()) {
-            //    containsC = true;
-            //}
         }
 
         if(selectedVocabElement != null) {

@@ -104,7 +104,8 @@ public interface Variable {
     boolean isSelected();
 
     /**
-     * Selects the variable in the datastore.
+     * Selects the variable in the datastore. A hidden column is never selected, whatever asks: the selection is always
+     * of what can be seen.
      *
      * @param selected True if the variable is selected, false otherwise.
      */
@@ -116,7 +117,8 @@ public interface Variable {
     boolean isHidden();
 
     /**
-     * Hides the variable in the datastore.
+     * Hides or shows the column. Hiding deselects it and its cells and unhighlights them, however it is hidden (its
+     * header, the Column List, closing its media window), so commands on the selection leave what cannot be seen alone.
      *
      * @param hidden True if the variable is hidden, false otherwise.
      */
