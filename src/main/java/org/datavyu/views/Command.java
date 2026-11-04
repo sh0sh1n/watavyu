@@ -59,8 +59,8 @@ public enum Command {
 
     private final String text;
 
-    Command(final String label) {
-        this.text = label;
+    Command(final String text) {
+        this.text = text;
     }
 
     private static String menu(final String key) {

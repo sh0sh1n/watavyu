@@ -116,16 +116,19 @@ public class VideoControllerCommandsTest {
         List<String> ran = new ArrayList<>();
         SwingUtilities.invokeAndWait(() -> stop.addActionListener(e -> ran.add("stop")));
 
-        long start = System.nanoTime();
-        SwingUtilities.invokeAndWait(() -> controller.run(Command.STOP));
-        long took = (System.nanoTime() - start) / 1_000_000;
-        assertTrue(stop.getModel().isPressed());
+        // Still shown pressed once the command has run: the press is not held on the event thread.
+        boolean[] pressed = new boolean[1];
+        SwingUtilities.invokeAndWait(() -> {
+            controller.run(Command.STOP);
+            pressed[0] = stop.getModel().isPressed();
+        });
+        assertTrue(pressed[0]);
+        assertEquals(ran, List.of("stop"));
 
         Thread.sleep(300);
-        SwingUtilities.invokeAndWait(() -> { });
-        assertFalse(stop.getModel().isPressed());
-        assertEquals(ran, List.of("stop"));
-        assertTrue(took < 60, took + " ms");
+        SwingUtilities.invokeAndWait(() -> pressed[0] = stop.getModel().isPressed());
+        assertFalse(pressed[0]);
+        assertEquals(ran, List.of("stop"), "letting go does not run it again");
     }
 
     @Test

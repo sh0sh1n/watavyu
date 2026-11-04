@@ -315,4 +315,25 @@ public class DatavyuViewTest {
         assertFalse(newCell.isEnabled());
         assertFalse(export.isEnabled());
     }
+
+    /** A hidden column is not beside anything: a cell between two hidden columns has none beside it. */
+    @Test
+    public void aHiddenColumnIsNotBesideTheSelection() throws Exception {
+        ProjectController study = secondTab();
+        Action left = view.action(Command.NEW_CELL_LEFT);
+        Action right = view.action(Command.NEW_CELL_RIGHT);
+        onEdt(() -> {
+            Variable speech = study.getDataStore().createVariable("speech");
+            Variable notes = study.getDataStore().createVariable("notes");
+            Cell cell = speech.createPointCell(1_000);
+            study.columns().hide(List.of(study.getDataStore().getVariable("gaze"), notes));
+            study.getDataStore().getSelectedCells().forEach(selected -> selected.setSelected(false));
+            cell.setSelected(true);
+            view.refreshCommands();
+        });
+
+        assertFalse(left.isEnabled(), "gaze, to speech's left, is hidden");
+        assertFalse(right.isEnabled(), "notes, to its right, is hidden");
+        assertTrue(view.action(Command.DELETE_CELLS).isEnabled());
+    }
 }

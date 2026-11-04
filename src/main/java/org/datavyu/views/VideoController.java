@@ -733,22 +733,27 @@ public final class VideoController implements ClockListener {
     /** How long a key run from the keypad shows as pressed, as long as a click shows it. */
     private static final int PRESS_SHOWN_MS = 68;
 
+    /** Each drawer key's timer that ends its shown press, restarted by each press so a repeat shows in full. */
+    private final Map<JButton, javax.swing.Timer> releases = new HashMap<>();
+
     /**
      * Runs a drawer key's command and shows the key pressed for a moment. {@link JButton#doClick()} would show it
      * by holding the event thread for the whole press, which every keypad key would pay.
      */
-    private static void press(final JButton key) {
+    private void press(final JButton key) {
         key.doClick(0);
         ButtonModel model = key.getModel();
         model.setArmed(true);
         model.setPressed(true);
-        javax.swing.Timer release = new javax.swing.Timer(PRESS_SHOWN_MS, e -> {
-            // Disarmed first, so letting go does not run the command again.
-            model.setArmed(false);
-            model.setPressed(false);
-        });
-        release.setRepeats(false);
-        release.start();
+        releases.computeIfAbsent(key, k -> {
+            javax.swing.Timer release = new javax.swing.Timer(PRESS_SHOWN_MS, e -> {
+                // Disarmed first, so letting go does not run the command again.
+                model.setArmed(false);
+                model.setPressed(false);
+            });
+            release.setRepeats(false);
+            return release;
+        }).restart();
     }
 
     /**
