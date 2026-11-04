@@ -298,20 +298,25 @@ public class DatavyuViewTest {
         assertFalse(delete.isEnabled(), "the untitled tab has no cells selected");
     }
 
-    /** New Cell and Export need a column to show: they are disabled in a tab whose columns are all hidden. */
+    /** New Cell needs a shown column last given a cell, and Export a shown column. */
     @Test
-    public void newCellAndExportNeedAVisibleColumn() throws Exception {
+    public void newCellAndExportNeedAShownColumn() throws Exception {
         ProjectController study = secondTab();
         Action newCell = view.action(Command.NEW_CELL);
         Action export = view.action(Command.EXPORT_JSON);
-        assertTrue(newCell.isEnabled());
+        assertFalse(newCell.isEnabled(), "no column has been given a cell");
         assertTrue(export.isEnabled());
+
+        onEdt(() -> {
+            study.getDataStore().getVariable("gaze").setSelected(true);
+            assertTrue(study.cells().newCellInSelectedColumn(1_000) != null);
+        });
+        assertTrue(newCell.isEnabled());
 
         onEdt(() -> {
             study.columns().hide(study.getDataStore().getAllVariables());
             view.refreshCommands();
         });
-
         assertFalse(newCell.isEnabled());
         assertFalse(export.isEnabled());
     }
