@@ -139,4 +139,43 @@ public class CellValuesTest {
         column.addCell(cell);
         assertEquals(column.getCells(), List.of(cell));
     }
+
+    @Test
+    public void aNullValueIsRefused() {
+        assertThrows(NullPointerException.class, () -> cell.setValue(0, null));
+    }
+
+    /** Setting every value at once, as undo does, is heard once. */
+    @Test
+    public void allTheValuesAreSetAtOnceAndHeardOnce() {
+        column.addArgument();
+        CellListener listener = mock(CellListener.class);
+        cell.addListener(listener);
+        dataStore.markAsUnchanged();
+
+        cell.setValues(List.of("left", "up"));
+
+        assertEquals(cell.getValues(), List.of("left", "up"));
+        verify(listener, times(1)).contentChanged();
+        assertTrue(dataStore.isChanged());
+
+        cell.setValues(List.of("left", "up"));
+        verify(listener, times(1)).contentChanged();
+    }
+
+    @Test
+    public void settingAllTheValuesNeedsOneForEachCode() {
+        assertThrows(IllegalArgumentException.class, () -> cell.setValues(List.of("left", "up")));
+        assertThrows(NullPointerException.class, () -> cell.setValues(java.util.Arrays.asList((String) null)));
+        assertEquals(cell.getValues(), List.of(""));
+    }
+
+    @Test
+    public void aLockedColumnRefusesAllTheValues() {
+        column.setLocked(true);
+
+        cell.setValues(List.of("left"));
+
+        assertEquals(cell.getValues(), List.of(""));
+    }
 }

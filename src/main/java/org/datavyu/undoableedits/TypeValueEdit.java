@@ -41,9 +41,7 @@ public final class TypeValueEdit extends TypedEdit<List<String>> {
     @Override
     void apply(final List<String> values) {
         // The codes are as they were when the typing was recorded: any change to them is an edit undone first.
-        for (int i = 0; i < values.size(); i++) {
-            cell.setValue(i, values.get(i));
-        }
+        cell.setValues(values);
     }
 
     @Override

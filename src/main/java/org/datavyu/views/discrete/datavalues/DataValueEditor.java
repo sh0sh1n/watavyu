@@ -39,8 +39,8 @@ public abstract class DataValueEditor extends EditorComponent {
     /** The cell's value for the code, as it is now; {@code ""} is empty */
     private final Supplier<String> value;
 
-    /** What an empty value shows: the code's name, as {@code <code01>} */
-    private final String placeholder;
+    /** What an empty value shows: the code's name as it is now, as {@code <code01>} */
+    private final Supplier<String> placeholder;
 
     /** Where what is typed goes, to change the value */
     private final Consumer<String> typing;
@@ -55,7 +55,7 @@ public abstract class DataValueEditor extends EditorComponent {
      */
     public DataValueEditor(final JTextComponent tc,
                            final Supplier<String> value,
-                           final String placeholder,
+                           final Supplier<String> placeholder,
                            final Consumer<String> typing) {
         super(tc);
         this.value = value;
@@ -64,7 +64,7 @@ public abstract class DataValueEditor extends EditorComponent {
 
         // So far all DataValueEditors are editable
         setEditable(true);
-        resetText(isEmpty() ? placeholder : value.get());
+        resetText(isEmpty() ? placeholder.get() : value.get());
     }
 
     /** Returns whether the cell's value for the code is empty. */
@@ -202,7 +202,7 @@ public abstract class DataValueEditor extends EditorComponent {
     @Override
     public void keyReleased(final KeyEvent e) {
         if (getText().length() == 0) {
-            setText(placeholder);
+            setText(placeholder.get());
             selectAll();
         }
         /*

@@ -47,7 +47,7 @@ public final class NominalDataValueEditor extends DataValueEditor {
      */
     public NominalDataValueEditor(final JTextComponent ta,
                                   final Supplier<String> value,
-                                  final String placeholder,
+                                  final Supplier<String> placeholder,
                                   final BooleanSupplier quickKeyMode,
                                   final Consumer<String> typing) {
         super(ta, value, placeholder, typing);

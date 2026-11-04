@@ -92,6 +92,21 @@ public class CellTypingTest {
         });
     }
 
+    /** An emptied value shows its code's name as it is now, though the code was renamed since the editor was made. */
+    @Test
+    public void anEmptiedValueShowsItsCodesNameNow() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            type("smile");
+            cell.getVariable().renameArgument(0, "face");
+            EditorComponent editor = view.getEdTracker().firstEditor();
+
+            editor.setText("");
+            editor.keyReleased(new KeyEvent(view, KeyEvent.KEY_RELEASED, 0, 0, KeyEvent.VK_BACK_SPACE, '\b'));
+
+            assertEquals(editor.getText(), "<face>");
+        });
+    }
+
     @Test
     public void typingAfterTheCellTakesTheFocusAgainIsAnotherEdit() throws Exception {
         SwingUtilities.invokeAndWait(() -> {

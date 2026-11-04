@@ -320,9 +320,8 @@ public final class DatavyuVariable implements Variable {
     public Argument addArgument() {
         requireUnlocked();
         Argument child = getRootNode().addChildArgument();
-        for (Cell cell : getCells()) {
-            ((DatavyuCell) cell).insertValue(getRootNode().childArguments.size() - 1);
-        }
+        int index = getRootNode().childArguments.size() - 1;
+        ownCells().forEach(cell -> cell.insertValue(index));
         codesChanged();
         return child;
     }
@@ -335,9 +334,7 @@ public final class DatavyuVariable implements Variable {
             throw new IndexOutOfBoundsException("Column " + name + " has no place " + index + " for a code");
         }
         codes.add(index, code);
-        for (Cell cell : getCells()) {
-            ((DatavyuCell) cell).insertValue(index);
-        }
+        ownCells().forEach(cell -> cell.insertValue(index));
         codesChanged();
     }
 
@@ -348,9 +345,7 @@ public final class DatavyuVariable implements Variable {
             return;
         }
         codes.add(newIndex, codes.remove(oldIndex));
-        for (Cell cell : getCells()) {
-            ((DatavyuCell) cell).moveValue(oldIndex, newIndex);
-        }
+        ownCells().forEach(cell -> cell.moveValue(oldIndex, newIndex));
         codesChanged();
     }
 
@@ -360,9 +355,7 @@ public final class DatavyuVariable implements Variable {
             return;
         }
         getRootNode().childArguments.remove(index);
-        for (Cell cell : getCells()) {
-            ((DatavyuCell) cell).removeValue(index);
-        }
+        ownCells().forEach(cell -> cell.removeValue(index));
         codesChanged();
     }
 
@@ -376,6 +369,11 @@ public final class DatavyuVariable implements Variable {
         for (VariableListener vl : listeners) {
             vl.codeRenamed(index);
         }
+    }
+
+    /** Returns the column's cells, each made by it ({@link #addCell} takes back only its own). */
+    private List<DatavyuCell> ownCells() {
+        return cells.stream().map(DatavyuCell.class::cast).toList();
     }
 
     /** Marks the project changed and tells the views that the codes have, so they redraw names and values. */

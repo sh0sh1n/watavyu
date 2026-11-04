@@ -112,8 +112,17 @@ public interface Cell {
      * @param code  a code's place among the column's codes
      * @param value the value, {@code ""} to empty it
      * @throws IndexOutOfBoundsException if the column has no such code
+     * @throws NullPointerException      if the value is null
      */
     void setValue(int code, String value);
+
+    /**
+     * Sets all the cell's values, and tells the cell's listeners once if any changed. A locked column refuses it.
+     *
+     * @param values a value for each code, in their order
+     * @throws IllegalArgumentException if there is not one value for each code
+     */
+    void setValues(List<String> values);
 
     /**
      *

@@ -67,7 +67,7 @@ public class DataValueEditorFactory {
         eds.add(new FixedText(ta, "("));
         for (int i = 0; i < codes.size(); i++) {
             int code = i;
-            eds.add(buildNominal(ta, () -> c.getValue(code), "<" + codes.get(i).name + ">", quickKeyMode,
+            eds.add(buildNominal(ta, () -> c.getValue(code), () -> "<" + codes.get(code).name + ">", quickKeyMode,
                 value -> typing.typed(code, value)));
             if (i < codes.size() - 1) {
                 eds.add(new FixedText(ta, ", "));
@@ -111,7 +111,7 @@ public class DataValueEditorFactory {
      */
     public static EditorComponent buildNominal(final JTextComponent ta,
                                                final Supplier<String> value,
-                                               final String placeholder,
+                                               final Supplier<String> placeholder,
                                                final BooleanSupplier quickKeyMode,
                                                final Consumer<String> typing) {
         return new NominalDataValueEditor(ta, value, placeholder, quickKeyMode, typing);

@@ -196,6 +196,7 @@ public class DatavyuCell implements Cell {
 
     @Override
     public void setValue(final int code, final String value) {
+        Objects.requireNonNull(value, "an empty value is \"\"");
         // Read first, so a code the column does not have is refused even when it is locked.
         String before = values.get(code);
         if (parent.refusesEdits() || before.equals(value)) {
@@ -251,6 +252,23 @@ public class DatavyuCell implements Cell {
 
         for (CellListener cl : listeners) {
             cl.highlightingChange(now);
+        }
+    }
+
+    @Override
+    public void setValues(final List<String> newValues) {
+        if (newValues.size() != values.size()) {
+            throw new IllegalArgumentException("Cell has " + values.size() + " values, not " + newValues.size());
+        }
+        List<String> copy = List.copyOf(newValues);
+        if (parent.refusesEdits() || copy.equals(values)) {
+            return;
+        }
+        values.clear();
+        values.addAll(copy);
+        parent.getOwningDatastore().markAsChanged();
+        for (CellListener cl : listeners) {
+            cl.contentChanged();
         }
     }
 

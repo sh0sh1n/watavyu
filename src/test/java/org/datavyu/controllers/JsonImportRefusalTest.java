@@ -21,19 +21,23 @@ import java.util.List;
 
 /**
  * Importing Datavyu's JSON refuses a file with a time Watavyu cannot read, such as a negative one Datavyu could
- * write: nothing is added, and the message says which time is wrong.
+ * write, or a value that is not text or has no code: nothing is added, and the message says which cell is wrong.
  */
-public class JsonImportTimesTest {
+public class JsonImportRefusalTest {
 
     private static final String READABLE_PASS = """
         {"name": "kind", "type": "NOMINAL", "arguments": {"var": "NOMINAL"},
          "cells": [{"id": 1, "onset": "00:00:03:000", "offset": "00:00:03:000", "values": ["happy"]}]}""";
 
     private static String passes(final String onset, final String offset) {
+        return passes(onset, offset, "\"cross\"");
+    }
+
+    private static String passes(final String onset, final String offset, final String values) {
         return "{\"passes\": [\n" + READABLE_PASS + ",\n"
             + "{\"name\": \"mother\", \"type\": \"MATRIX\", \"arguments\": {\"mood\": \"NOMINAL\"},\n"
             + " \"cells\": [{\"id\": 1, \"onset\": \"00:00:01:000\", \"offset\": \"00:00:02:000\", \"values\": [\"calm\"]},\n"
-            + "  {\"id\": 2, \"onset\": " + onset + ", \"offset\": " + offset + ", \"values\": [\"cross\"]}]}\n"
+            + "  {\"id\": 2, \"onset\": " + onset + ", \"offset\": " + offset + ", \"values\": [" + values + "]}]}\n"
             + "]}";
     }
 
@@ -70,6 +74,30 @@ public class JsonImportTimesTest {
 
         assertTrue(dataStore.getAllVariables().isEmpty());
         assertTrue(e.getMessage().contains("has the onset null"), e.getMessage());
+    }
+
+    @Test
+    public void aValueThatIsNotTextImportsNothing() throws Exception {
+        DataStore dataStore = DataStoreFactory.newDataStore();
+
+        UserWarningException e = expectThrows(UserWarningException.class,
+            () -> importJson(passes("\"00:00:03:000\"", "\"00:00:04:000\"", "null"), dataStore));
+
+        assertTrue(dataStore.getAllVariables().isEmpty());
+        assertTrue(e.getMessage().endsWith("cell 2 of column \"mother\" has a value that is not text (line 6). "
+            + "Nothing was imported."), e.getMessage());
+    }
+
+    @Test
+    public void moreValuesThanCodesImportsNothing() throws Exception {
+        DataStore dataStore = DataStoreFactory.newDataStore();
+
+        UserWarningException e = expectThrows(UserWarningException.class,
+            () -> importJson(passes("\"00:00:03:000\"", "\"00:00:04:000\"", "\"cross\", \"loud\""), dataStore));
+
+        assertTrue(dataStore.getAllVariables().isEmpty());
+        assertTrue(e.getMessage().contains("cell 2 of column \"mother\" has more values than its column has codes"),
+            e.getMessage());
     }
 
     @Test
