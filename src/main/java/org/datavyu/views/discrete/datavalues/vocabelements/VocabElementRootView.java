@@ -112,7 +112,7 @@ public final class VocabElementRootView extends JTextArea {
     }
 
     /**
-     * @return The editor tracker for this MatrixRootView.
+     * @return The editor tracker for this VocabElementRootView.
      */
     public EditorTracker getEdTracker() {
         return edTracker;

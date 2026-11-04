@@ -12,7 +12,7 @@ import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.DataStoreFactory;
 import org.datavyu.models.db.Variable;
-import org.datavyu.views.discrete.datavalues.MatrixRootView;
+import org.datavyu.views.discrete.datavalues.CellValuesView;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -82,7 +82,7 @@ public class LockedColumnViewTest {
     @Test
     public void typingInALockedCellChangesNothingAndShakesThePadlock() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
-            MatrixRootView view = new MatrixRootView(spreadsheet, cell);
+            CellValuesView view = new CellValuesView(spreadsheet, cell);
             view.getEdTracker().setEditor(view.getEdTracker().firstEditor());
             notes.setLocked(true);
 

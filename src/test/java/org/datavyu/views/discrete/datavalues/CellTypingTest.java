@@ -21,6 +21,7 @@ import org.testng.annotations.Test;
 
 import java.awt.event.FocusEvent;
 import java.awt.event.KeyEvent;
+import java.util.List;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 
@@ -33,7 +34,7 @@ public class CellTypingTest {
 
     private ProjectController spreadsheet;
     private Cell cell;
-    private MatrixRootView view;
+    private CellValuesView view;
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -41,7 +42,7 @@ public class CellTypingTest {
         cell = dataStore.createVariable("notes").createPointCell(1_000);
         SwingUtilities.invokeAndWait(() -> {
             spreadsheet = TestSpreadsheets.withPlayback(dataStore);
-            view = new MatrixRootView(spreadsheet, cell);
+            view = new CellValuesView(spreadsheet, cell);
             // As the cell's SpreadsheetCell does.
             CellListener follower = mock(CellListener.class);
             doAnswer(call -> {
@@ -117,6 +118,22 @@ public class CellTypingTest {
 
             spreadsheet.undo();
             assertEquals(cell.getValue(0), "smile");
+        });
+    }
+
+    /** Each code has an editor of its own, and what is typed into one changes that code's value alone. */
+    @Test
+    public void typingIntoACodesEditorChangesThatCode() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            spreadsheet.codes().add(cell.getVariable());
+            // As the cell's SpreadsheetColumn does when its codes change.
+            view.showValues();
+            view.getEdTracker().setEditor(view.getEdTracker().getEditorAtArgIndex(1));
+
+            type("near");
+
+            assertEquals(cell.getValues(), List.of("", "near"));
+            assertEquals(view.getText(), "(<code01>, near)");
         });
     }
 

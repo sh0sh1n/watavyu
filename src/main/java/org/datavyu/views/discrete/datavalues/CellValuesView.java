@@ -18,6 +18,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.Cell;
+import org.datavyu.models.db.MediaClip;
 import org.datavyu.models.db.Variable;
 import org.datavyu.views.discrete.EditorComponent;
 import org.datavyu.views.discrete.EditorTracker;
@@ -28,16 +29,21 @@ import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * JTextArea view of the Matrix (database cell) data.
+ * A cell's values, as {@code (left, <code02>)}: an editor for each code's value, with the text between them fixed.
+ * A media column's cell shows its clip instead.
  */
-public final class MatrixRootView extends JTextArea implements FocusListener {
+public final class CellValuesView extends JTextArea implements FocusListener {
 
     /** Logger for this class */
-    private static Logger logger = LogManager.getLogger(MatrixRootView.class);
+    private static Logger logger = LogManager.getLogger(CellValuesView.class);
 
     /**
      * The parent cell for this JPanel.
@@ -70,12 +76,10 @@ public final class MatrixRootView extends JTextArea implements FocusListener {
     private final ProjectController controller;
 
     /**
-     * Creates a new instance of MatrixV.
-     *
      * @param controller the spreadsheet the cell is in
-     * @param cell  The parent cell for this spread sheet cell.
+     * @param cell       the cell
      */
-    public MatrixRootView(final ProjectController controller, final Cell cell) {
+    public CellValuesView(final ProjectController controller, final Cell cell) {
         super();
         this.controller = controller;
 
@@ -108,7 +112,7 @@ public final class MatrixRootView extends JTextArea implements FocusListener {
                         {
                             // Verbose debug output
                             if (!generateText().equals(getText())) {
-                                logger.info("MatrixRootview rebuilt due to funny return key");
+                                logger.info("Cell values rebuilt after the return key");
                                 logger.info("\tGenerated contents" + generateText().length() + ": " + generateText()
                                         + "\n\tTextbox contents " + getText().length() + " : " + getText());
                                 rebuildText();
@@ -142,13 +146,55 @@ public final class MatrixRootView extends JTextArea implements FocusListener {
         int edPos = comp.getCaretPosition();
 
         allEditors.clear();
-        allEditors.addAll(DataValueEditorFactory.buildMatrix(this, parentCell, controller::isQuickKeyMode,
-            this::typed));
+        allEditors.addAll(buildEditors());
 
         rebuildText();
 
         // restore caret position inside current editor.
         comp.setCaretPosition(edPos);
+    }
+
+    /** Builds the editors of the cell's values as they are now, or the fixed text of its clip. */
+    private List<EditorComponent> buildEditors() {
+        List<EditorComponent> editors = new ArrayList<>();
+        MediaClip clip = parentCell.getClip();
+        if (clip != null) {
+            editors.add(new FixedText(this, clipLabel(clip, parentCell.isClipFailed())));
+            return editors;
+        }
+        int codes = parentCell.getVariable().getCodes().size();
+        editors.add(new FixedText(this, "("));
+        for (int i = 0; i < codes; i++) {
+            int code = i;
+            editors.add(new CodeValueEditor(this, parentCell, code, controller::isQuickKeyMode,
+                value -> typed(code, value)));
+            if (i < codes - 1) {
+                editors.add(new FixedText(this, ", "));
+            }
+        }
+        editors.add(new FixedText(this, ")"));
+        return editors;
+    }
+
+    /**
+     * Names what a media cell plays: its file's name, its frame rate when the file has video and has said it, and
+     * whether the file is missing, as {@code cam.mp4 · 29.97 fps (missing)}, or there but could not be opened, as
+     * {@code cam.mp4 (could not open)}.
+     *
+     * @param clip   a media cell's clip
+     * @param failed whether the file could not be opened
+     * @return the cell's text
+     */
+    public static String clipLabel(final MediaClip clip, final boolean failed) {
+        String label = clip.fileName();
+        if (clip.frameRate() > 0) {
+            label += " \u00b7 " + new BigDecimal(clip.frameRate()).setScale(3, RoundingMode.HALF_UP)
+                .stripTrailingZeros().toPlainString() + " fps";
+        }
+        if (!Files.exists(Path.of(clip.file()))) {
+            return label + " (missing)";
+        }
+        return failed ? label + " (could not open)" : label;
     }
 
     /** Sends a code's value typed to the command that sets and records it. */
@@ -182,7 +228,7 @@ public final class MatrixRootView extends JTextArea implements FocusListener {
     /**
      * Used in the UISpec4j tests.
      *
-     * @return The editor tracker for this MatrixRootView.
+     * @return The editor tracker for this CellValuesView.
      */
     public EditorTracker getEdTracker() {
         return edTracker;

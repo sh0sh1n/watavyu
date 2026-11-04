@@ -110,16 +110,16 @@ public class ClipTimesTest {
         String present = System.getProperty("java.home");
         String name = Path.of(present).getFileName().toString();
 
-        assertEquals(DataValueEditorFactory.clipLabel(CAM, false), "cam.mp4 \u00b7 30 fps (missing)");
-        assertEquals(DataValueEditorFactory.clipLabel(MediaClip.of(present), false), name);
-        assertEquals(DataValueEditorFactory.clipLabel(MediaClip.of(present).withDetails(60_000, 29.97, 1920, 1080), false),
+        assertEquals(CellValuesView.clipLabel(CAM, false), "cam.mp4 \u00b7 30 fps (missing)");
+        assertEquals(CellValuesView.clipLabel(MediaClip.of(present), false), name);
+        assertEquals(CellValuesView.clipLabel(MediaClip.of(present).withDetails(60_000, 29.97, 1920, 1080), false),
             name + " \u00b7 29.97 fps");
-        assertEquals(DataValueEditorFactory.clipLabel(MediaClip.of(present).withDetails(60_000, 23.976023976, 1920,
+        assertEquals(CellValuesView.clipLabel(MediaClip.of(present).withDetails(60_000, 23.976023976, 1920,
             1080), false), name + " \u00b7 23.976 fps");
         // A file there that could not be opened says so; a missing one says only that.
-        assertEquals(DataValueEditorFactory.clipLabel(MediaClip.of(present), true), name + " (could not open)");
-        assertEquals(DataValueEditorFactory.clipLabel(CAM, true), "cam.mp4 \u00b7 30 fps (missing)");
+        assertEquals(CellValuesView.clipLabel(MediaClip.of(present), true), name + " (could not open)");
+        assertEquals(CellValuesView.clipLabel(CAM, true), "cam.mp4 \u00b7 30 fps (missing)");
         // Audio has no frame rate.
-        assertEquals(DataValueEditorFactory.clipLabel(MediaClip.of(present).withDetails(60_000, 0, 0, 0), false), name);
+        assertEquals(CellValuesView.clipLabel(MediaClip.of(present).withDetails(60_000, 0, 0, 0), false), name);
     }
 }
