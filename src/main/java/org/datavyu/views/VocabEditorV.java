@@ -259,7 +259,6 @@ public final class VocabEditorV extends DatavyuDialog {
             matrixV.rebuildContents();
             matrixV.requestFocus();
 
-            applyChanges();
             updateDialogState();
 
             // Whoops, user has done something strange - show warning dialog.
@@ -285,7 +284,6 @@ public final class VocabEditorV extends DatavyuDialog {
 
         selectedVocabElement.requestArgFocus(selectedVocabElement.getArgumentView(va));
 
-        applyChanges();
         updateDialogState();
     }
 
@@ -306,7 +304,6 @@ public final class VocabEditorV extends DatavyuDialog {
 
         selectedVocabElement.requestArgFocus(selectedVocabElement.getArgumentView(va));
 
-        applyChanges();
         updateDialogState();
     }
 
@@ -365,7 +362,6 @@ public final class VocabEditorV extends DatavyuDialog {
         FormalArgEditor faV = selectedVocabElement.getArgumentView(fa);
         selectedVocabElement.requestArgFocus(faV);
 
-        applyChanges();
         updateDialogState();
     }
 
@@ -385,7 +381,6 @@ public final class VocabEditorV extends DatavyuDialog {
                 LOGGER.info("vocEd - delete element");
                 if (controller.columns().delete(List.of(selectedVocabElement.getVariable()))) {
                     deleteElementVFromView(selectedVocabElement.getVariable().getName());
-                    applyChanges();
                 }
             }
 
@@ -394,7 +389,6 @@ public final class VocabEditorV extends DatavyuDialog {
             LOGGER.info("vocEd - delete code");
             controller.codes().delete(selectedVocabElement.getVariable(), selectedArgument.getArgPos());
             selectedVocabElement.rebuildContents();
-            applyChanges();
         }
 
         updateDialogState();
@@ -456,6 +450,19 @@ public final class VocabEditorV extends DatavyuDialog {
         }
         applyChanges();
         updateDialogState();
+    }
+
+    /**
+     * Forgets a selected code whose editor a column's view has replaced, as it does when an undo changes the column.
+     *
+     * @param column the column's view
+     */
+    public void columnRebuilt(final VocabElementV column) {
+        if (column.equals(selectedVocabElement)) {
+            selectedArgument = null;
+            selectedArgumentI = -1;
+            updateDialogState();
+        }
     }
 
     /**
@@ -529,7 +536,6 @@ public final class VocabEditorV extends DatavyuDialog {
             moveCodeRightButton.setEnabled(false);
         }
 
-        toFront(); //to fix Bug 120 - code editor losing focus on Windows
     }
 
     /**
@@ -798,14 +804,10 @@ public final class VocabEditorV extends DatavyuDialog {
     public void refreshNameWarnings(boolean first) {
         String s = "";
         for (VocabElementV i : veViews) {
-            if (i.getInvalid()) {
-                String curString = i.getCurrentNameDisplay();
+            for (String refused : i.refusedNames()) {
                 if (!s.isEmpty()) s += ", ";
-                if (curString.isEmpty()) s += "<i>(empty string)</i>";
-                s += "<i>" + StringUtils.escapeHtml(i.getCurrentNameDisplay()) + "</i>  ";
-                //s += "remains '"+i.getLastValid()+"'. "; //this would include a reminder of what the last valid name was
+                s += refused.isEmpty() ? "<i>(empty string)</i>" : "<i>" + StringUtils.escapeHtml(refused) + "</i>";
             }
-
         }
 
         if (s.isEmpty() && first != true) {
@@ -815,7 +817,7 @@ public final class VocabEditorV extends DatavyuDialog {
             nameWarningsLabel.setText("");
             nameWarningsLabel.setForeground(SpreadsheetTheme.PALETTE.text());
         } else {
-            nameWarningsLabel.setText("<html><b><u>Invalid names:</u></b> " + s + "<br />Names must begin with a letter, be non-empty, and underscore is the ONLY permitted special character. Repeated names are not allowed.</html>");
+            nameWarningsLabel.setText("<html><b><u>Invalid names:</u></b> " + s + "<br />Names must not be empty or repeated. Column names must begin with a letter, and underscore is the only special character they allow.</html>");
             nameWarningsLabel.setForeground(SpreadsheetTheme.PALETTE.warning());
         }
     }

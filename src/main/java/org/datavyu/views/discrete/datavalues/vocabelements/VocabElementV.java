@@ -32,6 +32,7 @@ import javax.swing.border.Border;
 import java.awt.*;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -86,6 +87,9 @@ public class VocabElementV extends JPanel {
      * Is the name currently displayed for this column invalid
      */
     private boolean invalidState;
+
+    /** The change typed into one of this view's editors that is being applied, if any. */
+    private Runnable typed;
     /**
      * Is this vocab element view marked for removal?
      */
@@ -201,21 +205,61 @@ public class VocabElementV extends JPanel {
     }
 
     /**
-     * Rebuilds the view when the column's name or codes differ from those it shows. What is being typed is left alone:
-     * the editors show it before the column takes it.
+     * Applies a change typed into one of this view's editors. They already show it, so the change does not rebuild them
+     * under the cursor; then the warning mark shows whether the column refused a name.
+     *
+     * @param change the change, through a command
      */
-    private void showModel() {
-        List<String> shown = veRootView.getEditors().stream()
-            .filter(FormalArgEditor.class::isInstance).map(EditorComponent::getText).toList();
-        List<String> codes = varModel.getRootNode().childArguments.stream().map(code -> code.name).toList();
-        if (!shown.equals(codes) || !varModel.getName().equals(getCurrentNameDisplay())) {
-            rebuildContents();
-            setInvalid(false, varModel.getName());
+    final void applyTyped(final Runnable change) {
+        typed = change;
+        try {
+            typed.run();
+        } finally {
+            typed = null;
         }
+        refreshRefused();
     }
 
-    public final void setInvalid(final boolean invalid, final String lastValidName) {
-        invalidState = invalid;
+    /**
+     * Rebuilds the view when the column's name or codes have changed from elsewhere, as undo changes them, and forgets
+     * a selected code, whose editor is gone.
+     */
+    private void showModel() {
+        if (typed != null || (varModel.getName().equals(getCurrentNameDisplay()) && shownCodes().equals(codeNames()))) {
+            return;
+        }
+        rebuildContents();
+        parentEditor.columnRebuilt(this);
+        refreshRefused();
+    }
+
+    /** Returns the names shown that the column does not have: typed ones it refused, or ones it has since changed. */
+    public final List<String> refusedNames() {
+        List<String> refused = new ArrayList<>();
+        if (!varModel.getName().equals(getCurrentNameDisplay())) {
+            refused.add(getCurrentNameDisplay());
+        }
+        List<String> codes = codeNames();
+        List<String> shown = shownCodes();
+        for (int i = 0; i < shown.size(); i++) {
+            if (i >= codes.size() || !codes.get(i).equals(shown.get(i))) {
+                refused.add(shown.get(i));
+            }
+        }
+        return refused;
+    }
+
+    private List<String> shownCodes() {
+        return veRootView.getEditors().stream()
+            .filter(FormalArgEditor.class::isInstance).map(EditorComponent::getText).toList();
+    }
+
+    private List<String> codeNames() {
+        return varModel.getRootNode().childArguments.stream().map(code -> code.name).toList();
+    }
+
+    private void refreshRefused() {
+        invalidState = !refusedNames().isEmpty();
         updateMark();
         parentEditor.refreshNameWarnings();
     }
@@ -232,10 +276,6 @@ public class VocabElementV extends JPanel {
             invalidBangIcon.setIcon(null);
             invalidBangIcon.setToolTipText(null);
         }
-    }
-
-    public boolean getInvalid() {
-        return invalidState;
     }
 
     public String getCurrentNameDisplay() {

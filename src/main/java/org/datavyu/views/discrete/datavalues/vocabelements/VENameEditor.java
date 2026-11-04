@@ -100,15 +100,16 @@ public final class VENameEditor extends EditorComponent {
     }
     
     private void attemptRename(StringBuilder currentValue) {
-        try {
-            if (parentView.getParentDialog().getProjectController().columns()
-                    .rename(varModel, currentValue.toString(), renaming)) {
-                renaming = true;
+        parentView.applyTyped(() -> {
+            try {
+                if (parentView.getParentDialog().getProjectController().columns()
+                        .rename(varModel, currentValue.toString(), renaming)) {
+                    renaming = true;
+                }
+            } catch (UserWarningException ex) {
+                logger.info("Invalid edit. Last good name: " + varModel.getName() + " Error: " + ex.getMessage());
             }
-        } catch (UserWarningException ex) {
-            logger.info("Invalid edit. Last good name: " + varModel.getName() + " Error: " + ex.getMessage());
-        }
-        parentView.setInvalid(isCurrentNameInvalid(), varModel.getName());
+        });
     }
 
 
@@ -159,10 +160,5 @@ public final class VENameEditor extends EditorComponent {
      */
     @Override
     public void keyReleased(final KeyEvent e) {
-    }
-    
-    public boolean isCurrentNameInvalid()
-    {
-        return !varModel.getName().equals(getText());
     }
 }

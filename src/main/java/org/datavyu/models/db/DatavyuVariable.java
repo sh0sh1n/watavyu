@@ -360,7 +360,10 @@ public final class DatavyuVariable implements Variable {
             return;
         }
         getRootNode().childArguments.get(index).name = newName;
-        codesChanged();
+        owningDatastore.markAsChanged();
+        for (VariableListener vl : listeners) {
+            vl.codeRenamed(index);
+        }
     }
 
     /** Marks the project changed and tells the views that the codes have, so they redraw names and values. */

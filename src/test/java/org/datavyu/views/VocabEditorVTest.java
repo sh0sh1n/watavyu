@@ -145,4 +145,28 @@ public class VocabEditorVTest {
             SwingUtilities.invokeAndWait(() -> editor.get().dispose());
         }
     }
+
+    /** A name the column refuses stays in its field, marked, and the column keeps the last good one. */
+    @Test
+    public void aRefusedNameIsShownAsRefused() throws Exception {
+        ProjectController spreadsheet = spreadsheet();
+        Variable gaze = spreadsheet.getDataStore().createVariable("gaze");
+        gaze.addArgument();
+        AtomicReference<VocabEditorV> editor = new AtomicReference<>();
+        AtomicReference<List<String>> refused = new AtomicReference<>();
+        SwingUtilities.invokeAndWait(() -> {
+            editor.set(new VocabEditorV(null, false, spreadsheet));
+            VocabElementV column = editor.get().getVocabElements().get(0);
+            type(column, column.getNameComponent(), "1st");
+            type(column, column.getArgumentView(gaze.getRootNode().childArguments.get(0)), "code02");
+            refused.set(column.refusedNames());
+        });
+        try {
+            assertEquals(refused.get(), List.of("1st", "code02"));
+            assertEquals(gaze.getName(), "gaze");
+            assertEquals(gaze.getRootNode().childArguments.get(0).name, "code0");
+        } finally {
+            SwingUtilities.invokeAndWait(() -> editor.get().dispose());
+        }
+    }
 }

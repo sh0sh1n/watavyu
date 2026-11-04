@@ -7,6 +7,8 @@ import org.datavyu.undoableedits.DeleteCodeEdit;
 import org.datavyu.undoableedits.MoveCodeEdit;
 import org.datavyu.undoableedits.RenameCodeEdit;
 
+import java.util.List;
+
 /**
  * The commands that add, delete, move and rename the codes of one spreadsheet's columns, from the Code Editor. Each
  * changes the column and each cell's values with it, and records an edit in the spreadsheet's undo history. A locked
@@ -43,10 +45,10 @@ public final class CodeCommands {
      *
      * @param column the column
      * @param index  the code's place among the column's codes
-     * @return whether it was deleted, which a locked column refuses
+     * @return whether it was deleted: a place out of range or a locked column leaves it
      */
     public boolean delete(final Variable column, final int index) {
-        if (column.refusesEdits()) {
+        if (!inRange(column, index) || column.refusesEdits()) {
             return false;
         }
         DeleteCodeEdit edit = new DeleteCodeEdit(column, index);
@@ -64,8 +66,7 @@ public final class CodeCommands {
      * @return whether it moved: a place out of range or a locked column leaves it
      */
     public boolean move(final Variable column, final int from, final int to) {
-        int count = column.getRootNode().childArguments.size();
-        if (from == to || from < 0 || from >= count || to < 0 || to >= count || column.refusesEdits()) {
+        if (from == to || !inRange(column, from) || !inRange(column, to) || column.refusesEdits()) {
             return false;
         }
         column.moveArgument(from, to);
@@ -75,21 +76,32 @@ public final class CodeCommands {
 
     /**
      * Renames a code, where a name is typed a key at a time: a rename continuing the last one joins its edit, so undo
-     * puts back the name from before the typing began.
+     * puts back the name from before the typing began. A code's name is not empty and no other code of its column has
+     * it, as a project file requires.
      *
      * @param column     the column
      * @param index      the code's place among the column's codes
      * @param name       its new name
      * @param continuing whether this continues the last rename, as each key typed into one name after the first does
-     * @return whether it was renamed: a locked column refuses, and the same name is no change
+     * @return whether it was renamed: the same name is no change, and a place out of range, an empty name, another
+     *     code's name and a locked column are refused
      */
     public boolean rename(final Variable column, final int index, final String name, final boolean continuing) {
-        String from = column.getRootNode().childArguments.get(index).name;
-        if (from.equals(name) || column.refusesEdits()) {
+        if (!inRange(column, index)) {
+            return false;
+        }
+        List<Argument> codes = column.getRootNode().childArguments;
+        String from = codes.get(index).name;
+        if (from.equals(name) || name.isEmpty() || codes.stream().anyMatch(code -> code.name.equals(name))
+                || column.refusesEdits()) {
             return false;
         }
         column.renameArgument(index, name);
         spreadsheet.postEdit(new RenameCodeEdit(column, index, from, continuing));
         return true;
+    }
+
+    private static boolean inRange(final Variable column, final int index) {
+        return index >= 0 && index < column.getRootNode().childArguments.size();
     }
 }

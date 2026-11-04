@@ -66,10 +66,19 @@ public final class Argument implements Serializable {
     }
 
     protected Argument addChildArgument() {
-        Argument child = new Argument(String.format("code%02d", lastCodeNumber + 1));
-        lastCodeNumber++;
+        // A column read from a file holds its codes without having numbered them, so taken names are skipped.
+        String name;
+        do {
+            lastCodeNumber++;
+            name = String.format("code%02d", lastCodeNumber);
+        } while (hasChild(name));
+        Argument child = new Argument(name);
         childArguments.add(child);
         return child;
+    }
+
+    private boolean hasChild(final String name) {
+        return childArguments.stream().anyMatch(child -> child.name.equals(name));
     }
 
     public void clearChildArguments() {

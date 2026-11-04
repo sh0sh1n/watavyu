@@ -102,15 +102,18 @@ public final class FormalArgEditor extends EditorComponent {
     }
 
     /**
-     * Renames the code to the text typed, as an edit that joins those of the keys typed before it.
+     * Renames the code to the text typed, as an edit that joins those of the keys typed before it, unless the name is
+     * refused (empty, or another code's), when the warning mark shows it.
      *
      * @param newValue the code's new name
      */
     public void updateArgName(String newValue) {
-        if (parentView.getParentDialog().getProjectController().codes()
-                .rename(parentVariable, argIndex, newValue, renaming)) {
-            renaming = true;
-        }
+        parentView.applyTyped(() -> {
+            if (parentView.getParentDialog().getProjectController().codes()
+                    .rename(parentVariable, argIndex, newValue, renaming)) {
+                renaming = true;
+            }
+        });
         defaultVal = false;
     }
 

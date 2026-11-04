@@ -204,6 +204,43 @@ public class CodeCommandsTest {
         assertEquals(names().get(0), "look");
     }
 
+    /** A project file holds no empty or repeated code name, so the column keeps the last good one. */
+    @Test
+    public void anEmptyNameOrAnotherCodesIsRefused() {
+        assertFalse(codes.rename(gaze, 0, "", false));
+        assertFalse(codes.rename(gaze, 0, "code02", false));
+
+        assertEquals(names(), List.of("code01", "code02", "code03"));
+        assertFalse(spreadsheet.getUndoManager().canUndo());
+    }
+
+    /** Typing a name back to what it was leaves nothing to undo, rather than a step that changes nothing. */
+    @Test
+    public void typingBackToTheOldNameLeavesNothingToUndo() throws Exception {
+        codes.rename(gaze, 0, "code01x", false);
+        codes.rename(gaze, 0, "code01", true);
+        assertFalse(spreadsheet.getUndoManager().canUndo());
+
+        codes.add(gaze);
+        spreadsheet.columns().rename(gaze, "gazes", false);
+        spreadsheet.columns().rename(gaze, "gaze", true);
+        assertEquals(undoName(), "Undo New Code code04");
+        spreadsheet.undo();
+        assertEquals(names(), List.of("code01", "code02", "code03"));
+        assertEquals(gaze.getName(), "gaze");
+    }
+
+    /** A place no code has, as a stale selection in the Code Editor can give, is no edit. */
+    @Test
+    public void aPlaceOutOfRangeIsNoEdit() {
+        assertFalse(codes.delete(gaze, 3));
+        assertFalse(codes.delete(gaze, -1));
+        assertFalse(codes.rename(gaze, 3, "look", false));
+
+        assertEquals(names(), List.of("code01", "code02", "code03"));
+        assertFalse(spreadsheet.getUndoManager().canUndo());
+    }
+
     @Test
     public void theSameNameIsNoEdit() {
         assertFalse(codes.rename(gaze, 0, "code01", false));
@@ -242,7 +279,17 @@ public class CodeCommandsTest {
         codes.rename(gaze, 0, "look", false);
         spreadsheet.undo();
 
-        verify(listener, times(5)).codesChanged();
+        verify(listener, times(3)).codesChanged();
+        verify(listener, times(2)).codeRenamed(0);
+    }
+
+    /** A column read from a file holds codes it did not number, and its next code takes a free name. */
+    @Test
+    public void aNewCodeTakesANameNoCodeHas() {
+        gaze.renameArgument(2, "code05");
+        gaze.getRootNode().childArguments.add(new Argument("code04"));
+
+        assertEquals(codes.add(gaze).name, "code06");
     }
 
     // Rename a column

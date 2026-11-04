@@ -532,10 +532,20 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
         redrawValues();
     }
 
-    /** Redraws each cell's values, which follow a code added, deleted, moved or renamed. */
+    /** Redraws each cell's values, which follow a code added, deleted or moved. */
     @Override
     public void codesChanged() {
         redrawValues();
+    }
+
+    /** Redraws the cells that show a renamed code's name, those without a value, as each key typed renames it. */
+    @Override
+    public void codeRenamed(final int index) {
+        for (SpreadsheetCell cell : getCells()) {
+            if (cell.getCell().getMatrixValue(index).isEmpty()) {
+                cell.valueChange(cell.getCell().getCellValue());
+            }
+        }
     }
 
     private void redrawValues() {

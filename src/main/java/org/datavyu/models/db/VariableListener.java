@@ -63,6 +63,15 @@ public interface VariableListener {
     }
 
     /**
+     * Called when a code is renamed, which changes no cell's value; by default as {@link #codesChanged}.
+     *
+     * @param index the code's place among the column's codes
+     */
+    default void codeRenamed(final int index) {
+        codesChanged();
+    }
+
+    /**
      * The column has been locked or unlocked.
      *
      * @param locked whether the column is now locked
