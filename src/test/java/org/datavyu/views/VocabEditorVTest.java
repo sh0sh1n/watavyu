@@ -209,8 +209,7 @@ public class VocabEditorVTest {
         Variable speech = spreadsheet.getDataStore().createVariable("speech");
         AtomicReference<VocabEditorV> editor = new AtomicReference<>();
         List<List<Variable>> rows = new ArrayList<>();
-        Runnable look = () -> rows.add(
-            editor.get().getVocabElements().stream().map(VocabElementV::getVariable).toList());
+        Runnable look = () -> rows.add(rows(editor.get()));
         SwingUtilities.invokeAndWait(() -> {
             editor.set(new VocabEditorV(null, false, spreadsheet));
             VocabElementV column = editor.get().getVocabElements().get(0);
@@ -286,15 +285,16 @@ public class VocabEditorVTest {
             editor.get().dispose();
             second.codes().add(gaze);
             Variable speech = column(second, "speech");
+            second.columns().move(speech, gaze);
+            second.columns().delete(List.of(early));
             editor.get().pack();
             seen.add(rows(editor.get()));
-            codes.add(shownCodes(editor.get().getVocabElements().get(0)));
-            assertSame(seen.get(1).get(2), speech);
+            codes.add(shownCodes(editor.get().getVocabElements().get(1)));
+            assertEquals(seen.get(1), List.of(speech, gaze));
         });
         try {
             assertEquals(seen.get(0).size(), 2);
             assertSame(seen.get(0).get(0), gaze);
-            assertEquals(seen.get(1).size(), 3);
             assertEquals(codes.get(0), List.of("code01", "code02"));
         } finally {
             SwingUtilities.invokeAndWait(() -> editor.get().dispose());

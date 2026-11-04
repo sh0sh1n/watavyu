@@ -34,7 +34,9 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -228,10 +230,11 @@ public final class VocabEditorV extends DatavyuDialog {
      * typed in it and the focus, so only new columns get rows.
      */
     private void followColumns() {
+        Map<Variable, VocabElementV> kept = new HashMap<>();
+        veViews.forEach(row -> kept.put(row.getVariable(), row));
         List<VocabElementV> rows = new ArrayList<>();
         for (Variable column : annotationColumns()) {
-            rows.add(veViews.stream().filter(row -> row.getVariable().equals(column)).findFirst()
-                .orElseGet(() -> new VocabElementV(column.getRootNode(), column, this)));
+            rows.add(kept.computeIfAbsent(column, made -> new VocabElementV(made.getRootNode(), made, this)));
         }
         for (VocabElementV row : veViews) {
             if (!rows.contains(row)) {
@@ -254,7 +257,7 @@ public final class VocabEditorV extends DatavyuDialog {
         veViews = rows;
         verticalFrame.revalidate();
         verticalFrame.repaint();
-        refreshNameWarnings();
+        refreshNameWarnings(true);
         updateDialogState();
     }
 
@@ -274,17 +277,10 @@ public final class VocabEditorV extends DatavyuDialog {
         selectedVocabElement = null;
         selectedArgument = null;
         selectedArgumentI = -1;
-        // Populate current vocab list with vocab data from the database.
-        veViews = new ArrayList<VocabElementV>();
+        veViews = new ArrayList<>();
         verticalFrame = new JPanel();
         verticalFrame.setName("verticalFrame");
         verticalFrame.setLayout(new BoxLayout(verticalFrame, BoxLayout.Y_AXIS));
-
-        for (Variable var : annotationColumns()) {
-            VocabElementV matrixV = new VocabElementV(var.getRootNode(), var, this);
-            verticalFrame.add(matrixV);
-            veViews.add(matrixV);
-        }
 
         // Add a pad cell to fill out the bottom of the vertical frame.
         JPanel holdPanel = new JPanel();
@@ -292,8 +288,7 @@ public final class VocabEditorV extends DatavyuDialog {
         holdPanel.setLayout(new BorderLayout());
         holdPanel.add(verticalFrame, BorderLayout.NORTH);
         currentVocabList.setViewportView(holdPanel);
-        refreshNameWarnings(true);
-        updateDialogState();
+        followColumns();
 
         String titleName = controller.getProjectNamePretty();
         setTitle(bundle.getString("window.title") + " - " + titleName);
