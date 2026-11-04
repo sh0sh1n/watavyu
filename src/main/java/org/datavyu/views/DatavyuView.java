@@ -951,6 +951,11 @@ public final class DatavyuView implements FileDropEventListener {
      * Undo Action.
      */
     public void undo() {
+        String refusal = selectedController().getUndoManager().undoRefusal();
+        if (refusal != null) {
+            warn(refusal);
+            return;
+        }
         selectedController().undo();
         refreshUndoRedo();
     }
@@ -959,6 +964,11 @@ public final class DatavyuView implements FileDropEventListener {
      * Redo Action.
      */
     public void redo() {
+        String refusal = selectedController().getUndoManager().redoRefusal();
+        if (refusal != null) {
+            warn(refusal);
+            return;
+        }
         selectedController().redo();
         refreshUndoRedo();
     }

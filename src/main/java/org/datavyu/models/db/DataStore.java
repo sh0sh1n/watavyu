@@ -31,15 +31,29 @@ import java.util.List;
 public interface DataStore {
 
     /**
-     * @return the columns, in spreadsheet order
+     * Returns the columns in spreadsheet order.
+     *
+     * @return a copy of the columns, in order
      */
     List<Variable> getAllVariables();
 
     /**
+     * Finds a column's place in the spreadsheet order.
+     *
      * @param column a column
-     * @return its place in the spreadsheet order, or -1 if it is not in the spreadsheet
+     * @return its place, or -1 if it is not in the spreadsheet
      */
     int indexOf(Variable column);
+
+    /**
+     * Tells whether a column is in the spreadsheet: one remembered, or held by an undo edit, may have been taken out.
+     *
+     * @param column a column, or null
+     * @return whether it is in the spreadsheet
+     */
+    default boolean contains(final Variable column) {
+        return column != null && indexOf(column) >= 0;
+    }
 
     /**
      * @return All the variables held in the datastore that are visible and not hidden

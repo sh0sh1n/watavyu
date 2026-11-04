@@ -73,7 +73,7 @@ public final class ColumnCommands {
      * @return whether they were deleted
      */
     public boolean delete(final List<Variable> columns) {
-        List<Variable> deleted = columns.stream().filter(this::inSpreadsheet).distinct().toList();
+        List<Variable> deleted = columns.stream().filter(dataStore()::contains).distinct().toList();
         // Every locked column shakes its padlock, not just the first.
         if (deleted.isEmpty() || deleted.stream().filter(Variable::refusesEdits).count() > 0) {
             return false;
@@ -93,11 +93,11 @@ public final class ColumnCommands {
      * @param locked whether it is to be locked
      */
     public void setLocked(final Variable column, final boolean locked) {
-        if (column.isLocked() == locked || !inSpreadsheet(column)) {
+        if (column.isLocked() == locked || !dataStore().contains(column)) {
             return;
         }
         column.setLocked(locked);
-        spreadsheet.postEdit(new LockColumnEdit(dataStore(), column.getName(), locked));
+        spreadsheet.postEdit(new LockColumnEdit(dataStore(), column, locked));
     }
 
     /**
@@ -140,12 +140,9 @@ public final class ColumnCommands {
      * @param to     the column whose place it takes
      */
     public void move(final Variable column, final Variable to) {
-        if (inSpreadsheet(column) && inSpreadsheet(to)) {
-            dataStore().moveVariable(column, dataStore().indexOf(to));
+        int index = dataStore().indexOf(to);
+        if (index >= 0 && dataStore().contains(column)) {
+            dataStore().moveVariable(column, index);
         }
-    }
-
-    private boolean inSpreadsheet(final Variable column) {
-        return dataStore().indexOf(column) >= 0;
     }
 }

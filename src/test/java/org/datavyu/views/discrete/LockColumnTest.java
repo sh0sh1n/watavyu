@@ -112,25 +112,48 @@ public class LockColumnTest {
         }
     }
 
-    /** A lock whose column has gone is refused, and the edit stays as it was rather than half undone. */
+    /**
+     * A lock whose column is out of the spreadsheet is refused, and the edit stays as it was rather than half undone.
+     * Another column taking its name is not the same column.
+     */
     @Test
     public void aLockWhoseColumnHasGoneIsRefusedAndStaysAsItWas() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
         Variable media = dataStore.createMediaVariable("media_1");
         media.setLocked(true);
-        UndoableEdit lock = new LockColumnEdit(dataStore, "media_1", true);
+        UndoableEdit lock = new LockColumnEdit(dataStore, media, true);
         dataStore.removeVariable(media);
 
         assertThrows(CannotUndoException.class, lock::undo);
         assertTrue(lock.canUndo(), "still undoable once the column is back");
+        Variable other = dataStore.createMediaVariable("media_1");
+        other.setLocked(true);
+        assertThrows(CannotUndoException.class, lock::undo);
+        assertTrue(other.isLocked());
 
-        Variable restored = dataStore.createMediaVariable("media_1");
-        restored.setLocked(true);
+        dataStore.removeVariable(other);
+        dataStore.addVariable(media, 0);
         lock.undo();
-        assertFalse(restored.isLocked());
+        assertFalse(media.isLocked());
 
-        dataStore.removeVariable(restored);
+        dataStore.removeVariable(media);
         assertThrows(CannotRedoException.class, lock::redo);
         assertTrue(lock.canRedo());
+    }
+
+    /** Renaming a column, which is not an edit, does not stop its lock being undone. */
+    @Test
+    public void aRenamedColumnsLockCanBeUndone() throws Exception {
+        DataStore dataStore = DataStoreFactory.newDataStore();
+        Variable notes = dataStore.createVariable("notes");
+        ProjectController spreadsheet = new ProjectController(new Project(), dataStore);
+        spreadsheet.columns().setLocked(notes, true);
+        notes.setLocked(false);
+        notes.setName("looks");
+        notes.setLocked(true);
+
+        spreadsheet.undo();
+
+        assertFalse(notes.isLocked());
     }
 }

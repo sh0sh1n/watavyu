@@ -93,6 +93,23 @@ public class SpreadsheetUndoTest {
         assertEquals(cell.getOnset(), 1_000);
     }
 
+    /** Edits equal by value are still told apart, so a new edit drops only what could be redone. */
+    @Test
+    public void aNewEditKeepsEarlierEditsEqualToTheLast() throws Exception {
+        ProjectController spreadsheet = spreadsheet();
+        Cell cell = cell(spreadsheet);
+        moveOnset(spreadsheet, 2_000);
+        moveOnset(spreadsheet, 1_000);
+        moveOnset(spreadsheet, 2_000);
+        moveOnset(spreadsheet, 3_000);
+
+        spreadsheet.undo();
+        spreadsheet.undo();
+        spreadsheet.undo();
+
+        assertEquals(cell.getOnset(), 2_000);
+    }
+
     @Test
     public void editsJoinOnlyTheirOwnSpreadsheetsHistory() throws Exception {
         ProjectController first = spreadsheet();

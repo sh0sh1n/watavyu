@@ -53,22 +53,21 @@ public final class AddColumnEdit extends AbstractUndoableEdit implements Guarded
         return column.isMedia() ? "New Media Column " + column.getName() : "New Column \"" + column.getName() + "\"";
     }
 
-    /** @return whether the column is out of the spreadsheet, so there is nothing to take out */
     @Override
-    public boolean refusesUndo() {
-        return dataStore.indexOf(column) < 0;
+    public String undoRefusal() {
+        return dataStore.contains(column) ? null : "Column " + column.getName() + " is no longer in the spreadsheet.";
     }
 
-    /** @return whether the spreadsheet has a column of its name, so it cannot be put back */
     @Override
-    public boolean refusesRedo() {
-        return dataStore.getVariable(column.getName()) != null;
+    public String redoRefusal() {
+        return dataStore.getVariable(column.getName()) == null ? null
+            : "Another column is named " + column.getName() + ". Rename or delete it to redo this.";
     }
 
     /** Takes the column out; refused, leaving the edit as it was, if the column is not in the spreadsheet. */
     @Override
     public void undo() throws CannotUndoException {
-        if (refusesUndo() || !canUndo()) {
+        if (undoRefusal() != null || !canUndo()) {
             throw new CannotUndoException();
         }
         super.undo();
@@ -82,7 +81,7 @@ public final class AddColumnEdit extends AbstractUndoableEdit implements Guarded
      */
     @Override
     public void redo() throws CannotRedoException {
-        if (refusesRedo() || !canRedo()) {
+        if (redoRefusal() != null || !canRedo()) {
             throw new CannotRedoException();
         }
         super.redo();

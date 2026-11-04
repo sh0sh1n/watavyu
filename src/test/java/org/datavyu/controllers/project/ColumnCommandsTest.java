@@ -177,6 +177,8 @@ public class ColumnCommandsTest {
         columns.delete(List.of(gaze, media));
         Variable taken = dataStore.createMediaVariable("media_1");
 
+        assertEquals(spreadsheet.getUndoManager().undoRefusal(),
+            "Another column is named media_1. Rename or delete it to undo this.");
         assertThrows(CannotUndoException.class, spreadsheet::undo);
         assertEquals(order(), List.of("speech", "gesture", "media_1"));
         assertSame(dataStore.getVariable("media_1"), taken);
@@ -193,8 +195,11 @@ public class ColumnCommandsTest {
         spreadsheet.undo();
         Variable taken = dataStore.createMediaVariable("media_1");
 
+        assertEquals(spreadsheet.getUndoManager().redoRefusal(),
+            "Another column is named media_1. Rename or delete it to redo this.");
         assertThrows(CannotRedoException.class, spreadsheet::redo);
         dataStore.removeVariable(taken);
+        assertNull(spreadsheet.getUndoManager().redoRefusal());
         spreadsheet.redo();
 
         assertSame(dataStore.getVariable("media_1"), media);

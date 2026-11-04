@@ -27,44 +27,55 @@ import javax.swing.undo.UndoableEdit;
 public class SpreadsheetUndoManager extends UndoManager {
 
     @Override
-    public synchronized boolean addEdit(UndoableEdit ue) {
-        boolean addEdit = true;
-        boolean result;
-        boolean cond;
-        // A new edit ends what could be redone. Dropping it first compares the new edit with the last edit done, not
-        // one waiting to be redone. Every edit here is significant, so the last done is the one to be undone.
-        trimEdits(edits.indexOf(editToBeUndone()) + 1, edits.size() - 1);
-        if ((edits != null) && (edits.size() > 0)) {
-            UndoableEdit prevEdit = edits.lastElement();
-            // Do not insert duplicated edits
-            if ((ue instanceof ChangeCellEdit)
-                    && (ue.getClass() == prevEdit.getClass())) {
-                ChangeCellEdit cce = (ChangeCellEdit) ue;
-                // Remove previous finegrained ChangeCellEdit of the same type
-                if (cce.getGranularity() == Granularity.COARSEGRAINED) {
-                    // Take the last element
-                    do {
-                        Object o = edits.lastElement();
-                        // Only the same cell's fine edits give way to its coarse one.
-                        cond = (ue.getClass() == o.getClass())
-                                && (((ChangeCellEdit) o).granularity == Granularity.FINEGRAINED)
-                                && ((ChangeCellEdit) o).sameCell(cce);
-                        if (cond) {
-                            edits.removeElementAt(edits.size() - 1);
-                        }
-                    } while (cond && edits.size() > 0);
-                } else if (prevEdit.equals(cce)) { // FINEGRAINED
-                    addEdit = false;
+    public synchronized boolean addEdit(final UndoableEdit ue) {
+        if (ue == null) {
+            return false;
+        }
+        // Compared with the last edit done: Swing's manager drops any waiting to be redone as the new edit is added.
+        UndoableEdit lastDone = editToBeUndone();
+        if (ue instanceof ChangeCellEdit change && lastDone != null && ue.getClass() == lastDone.getClass()) {
+            if (change.getGranularity() == Granularity.COARSEGRAINED) {
+                // The end of the history is the last edit done only while nothing waits to be redone.
+                if (!canRedo()) {
+                    dropFineEditsBefore(change);
                 }
+            } else if (lastDone.equals(change)) {
+                // A fine edit repeating the last one done is a duplicate.
+                return false;
             }
         }
-        if (addEdit && ue != null) {
-            result = super.addEdit(ue);
-        } else {
-            result = false;
-        }
+        return super.addEdit(ue);
+    }
 
-        return result;
+    /** Drops the fine edits of the same cell, and of the same kind, that end the history: the coarse edit replaces them. */
+    private void dropFineEditsBefore(final ChangeCellEdit coarse) {
+        while (!edits.isEmpty() && edits.lastElement() instanceof ChangeCellEdit last
+                && last.getClass() == coarse.getClass() && last.getGranularity() == Granularity.FINEGRAINED
+                && last.sameCell(coarse)) {
+            edits.removeElementAt(edits.size() - 1);
+        }
+    }
+
+    /**
+     * Tells why the last edit cannot be undone now.
+     *
+     * @return the reason, for the user, or null if it can be undone or there is none
+     */
+    public String undoRefusal() {
+        synchronized (this) {
+            return editToBeUndone() instanceof GuardedEdit guarded ? guarded.undoRefusal() : null;
+        }
+    }
+
+    /**
+     * Tells why the last undone edit cannot be redone now.
+     *
+     * @return the reason, for the user, or null if it can be redone or there is none
+     */
+    public String redoRefusal() {
+        synchronized (this) {
+            return editToBeRedone() instanceof GuardedEdit guarded ? guarded.redoRefusal() : null;
+        }
     }
 
     /** Undoes the last edit, unless it would refuse, which then leaves the history as it was. */
@@ -73,7 +84,7 @@ public class SpreadsheetUndoManager extends UndoManager {
         // Locked as Swing's manager locks its own undo.
         synchronized (this) {
             // Swing's manager steps back before the edit undoes, so an edit that refused part way would be skipped.
-            if (editToBeUndone() instanceof GuardedEdit guarded && guarded.refusesUndo()) {
+            if (undoRefusal() != null) {
                 throw new CannotUndoException();
             }
             super.undo();
@@ -84,7 +95,7 @@ public class SpreadsheetUndoManager extends UndoManager {
     @Override
     public void redo() throws CannotRedoException {
         synchronized (this) {
-            if (editToBeRedone() instanceof GuardedEdit guarded && guarded.refusesRedo()) {
+            if (redoRefusal() != null) {
                 throw new CannotRedoException();
             }
             super.redo();
