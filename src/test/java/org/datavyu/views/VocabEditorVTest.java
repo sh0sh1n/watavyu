@@ -5,14 +5,20 @@ import static org.testng.Assert.assertSame;
 import static org.testng.Assert.assertTrue;
 
 import org.datavyu.controllers.project.ProjectController;
+import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.DataStoreFactory;
+import org.datavyu.models.db.Variable;
 import org.datavyu.models.project.Project;
+import org.datavyu.views.discrete.EditorComponent;
+import org.datavyu.views.discrete.datavalues.vocabelements.FormalArgEditor;
+import org.datavyu.views.discrete.datavalues.vocabelements.VocabElementV;
 import org.testng.annotations.Test;
 
 import java.awt.KeyEventDispatcher;
 import java.awt.KeyboardFocusManager;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.swing.JTextField;
@@ -73,6 +79,70 @@ public class VocabEditorVTest {
                 focus.removeKeyEventDispatcher(probe);
                 editor.get().dispose();
             });
+        }
+    }
+
+    /** Types a name into an editor of the Code Editor, replacing what it shows, as a user does a key at a time. */
+    private static void type(final VocabElementV column, final EditorComponent field, final String text) {
+        column.getDataView().requestFocus();
+        column.getDataView().getEdTracker().setEditor(field);
+        for (char key : text.toCharArray()) {
+            field.keyTyped(new KeyEvent(column.getDataView(), KeyEvent.KEY_TYPED, 0, 0, KeyEvent.VK_UNDEFINED, key));
+        }
+    }
+
+    private static List<String> shownCodes(final VocabElementV column) {
+        return column.getDataView().getEditors().stream()
+            .filter(FormalArgEditor.class::isInstance).map(EditorComponent::getText).toList();
+    }
+
+    /** A column's name typed in the editor is one edit, and undoing it shows the old name again. */
+    @Test
+    public void aColumnNameTypedIsOneEditThatTheEditorFollowsBack() throws Exception {
+        ProjectController spreadsheet = spreadsheet();
+        Variable gaze = spreadsheet.getDataStore().createVariable("gaze");
+        AtomicReference<VocabEditorV> editor = new AtomicReference<>();
+        SwingUtilities.invokeAndWait(() -> {
+            editor.set(new VocabEditorV(null, false, spreadsheet));
+            VocabElementV column = editor.get().getVocabElements().get(0);
+            type(column, column.getNameComponent(), "look");
+        });
+        try {
+            assertEquals(gaze.getName(), "look");
+            SwingUtilities.invokeAndWait(spreadsheet::undo);
+            assertEquals(gaze.getName(), "gaze");
+            assertEquals(editor.get().getVocabElements().get(0).getCurrentNameDisplay(), "gaze");
+            assertTrue(!spreadsheet.getUndoManager().canUndo(), "the keys typed undo together");
+        } finally {
+            SwingUtilities.invokeAndWait(() -> editor.get().dispose());
+        }
+    }
+
+    /** A code's name typed is one edit; a deleted code comes back in the editor and the cells on undo. */
+    @Test
+    public void codeEditsAreUndoneInTheEditorAndTheCells() throws Exception {
+        ProjectController spreadsheet = spreadsheet();
+        Variable gaze = spreadsheet.getDataStore().createVariable("gaze");
+        Cell cell = gaze.createPointCell(0);
+        cell.setMatrixValue(0, "left");
+        AtomicReference<VocabEditorV> editor = new AtomicReference<>();
+        SwingUtilities.invokeAndWait(() -> {
+            editor.set(new VocabEditorV(null, false, spreadsheet));
+            VocabElementV column = editor.get().getVocabElements().get(0);
+            type(column, column.getArgumentView(gaze.getRootNode().childArguments.get(0)), "side");
+            spreadsheet.codes().delete(gaze, 0);
+        });
+        try {
+            VocabElementV column = editor.get().getVocabElements().get(0);
+            assertEquals(shownCodes(column), List.of());
+            SwingUtilities.invokeAndWait(spreadsheet::undo);
+            assertEquals(shownCodes(column), List.of("side"));
+            assertEquals(cell.getMatrixValue(0).toString(), "left");
+            SwingUtilities.invokeAndWait(spreadsheet::undo);
+            assertEquals(shownCodes(column), List.of("code01"));
+            assertTrue(!spreadsheet.getUndoManager().canUndo(), "the keys typed undo together");
+        } finally {
+            SwingUtilities.invokeAndWait(() -> editor.get().dispose());
         }
     }
 }

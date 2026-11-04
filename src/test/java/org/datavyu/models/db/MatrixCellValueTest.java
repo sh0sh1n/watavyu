@@ -95,7 +95,7 @@ public class MatrixCellValueTest {
         assertEquals(cell.getMatrixValue(2).toString(), "foo3");
         assertEquals(((MatrixCellValue) cell.getCellValue()).getArguments().size(), 3);
 
-        var.moveArgument("code01", 1);
+        var.moveArgument(0, 1);
 
         assertEquals(var.getRootNode().childArguments.size(), 3);
         assertEquals(var.getRootNode().childArguments.get(0).name, "code02");
@@ -106,7 +106,7 @@ public class MatrixCellValueTest {
         assertEquals(cell.getMatrixValue(2).toString(), "foo3");
         assertEquals(((MatrixCellValue) cell.getCellValue()).getArguments().size(), 3);
 
-        var.moveArgument("code03", 1);
+        var.moveArgument(2, 1);
 
         assertEquals(var.getRootNode().childArguments.size(), 3);
         assertEquals(var.getRootNode().childArguments.get(0).name, "code02");
@@ -138,7 +138,7 @@ public class MatrixCellValueTest {
         assertEquals(var.getRootNode().childArguments.get(1).name, "code02");
         assertEquals(((MatrixCellValue) cell.getCellValue()).getArguments().size(), 2);
 
-        var.removeArgument("code01");
+        var.removeArgument(0);
         assertEquals(var.getRootNode().childArguments.size(), 1);
         assertEquals(var.getRootNode().childArguments.get(0).name, "code02");
         assertEquals(((MatrixCellValue) cell.getCellValue()).getArguments().size(), 1);

@@ -306,65 +306,69 @@ public final class DatavyuVariable implements Variable {
     @Override
     public Argument addArgument() {
         requireUnlocked();
-        Argument arg = getRootNode();
-        Argument child = arg.addChildArgument();
-
+        Argument child = getRootNode().addChildArgument();
         for (Cell cell : getCells()) {
             cell.addMatrixValue(child);
         }
-
-        this.setRootNode(arg);
-        owningDatastore.markAsChanged();
-        return arg.childArguments.get(arg.childArguments.size() - 1);
+        codesChanged();
+        return child;
     }
 
     @Override
-    public void moveArgument(final int old_index, final int new_index) {
+    public void insertArgument(final Argument code, final int index) {
+        requireUnlocked();
+        List<Argument> codes = getRootNode().childArguments;
+        if (index < 0 || index > codes.size()) {
+            throw new IndexOutOfBoundsException("Column " + name + " has no place " + index + " for a code");
+        }
+        codes.add(index, code);
+        for (Cell cell : getCells()) {
+            cell.addMatrixValue(code);
+            cell.moveMatrixValue(codes.size() - 1, index);
+        }
+        codesChanged();
+    }
+
+    @Override
+    public void moveArgument(final int oldIndex, final int newIndex) {
+        List<Argument> codes = getRootNode().childArguments;
+        if (refusesEdits() || oldIndex < 0 || oldIndex >= codes.size() || newIndex < 0 || newIndex >= codes.size()) {
+            return;
+        }
+        codes.add(newIndex, codes.remove(oldIndex));
+        for (Cell cell : getCells()) {
+            cell.moveMatrixValue(oldIndex, newIndex);
+        }
+        codesChanged();
+    }
+
+    @Override
+    public void removeArgument(final int index) {
         if (refusesEdits()) {
             return;
         }
-        Argument arg = getRootNode();
-
-        // Test to see if this is out of bounds
-        if (new_index > arg.childArguments.size() - 1 || new_index < 0) {
-            return;
-        }
-
-        Argument moved_arg = arg.childArguments.get(old_index);
-        arg.childArguments.remove(moved_arg);
-        arg.childArguments.add(new_index, moved_arg);
-
-        // Move in all cells
+        getRootNode().childArguments.remove(index);
         for (Cell cell : getCells()) {
-            cell.moveMatrixValue(old_index, new_index);
+            cell.removeMatrixValue(index);
         }
-        owningDatastore.markAsChanged();
-        this.setRootNode(arg);
+        codesChanged();
     }
 
     @Override
-    public void moveArgument(final String name, final int new_index) {
-        int old_index = getArgumentIndex(name);
-        moveArgument(old_index, new_index);
-        owningDatastore.markAsChanged();
-    }
-
-    @Override
-    public void removeArgument(final String name) {
+    public void renameArgument(final int index, final String newName) {
         if (refusesEdits()) {
             return;
         }
-        Argument arg = getRootNode();
-        int arg_index = getArgumentIndex(name);
-        arg.childArguments.remove(arg_index);
+        getRootNode().childArguments.get(index).name = newName;
+        codesChanged();
+    }
 
-        // Now send this change to the cells
-        for (Cell cell : getCells()) {
-            cell.removeMatrixValue(arg_index);
-        }
-
+    /** Marks the project changed and tells the views that the codes have, so they redraw names and values. */
+    private void codesChanged() {
         owningDatastore.markAsChanged();
-        this.setRootNode(arg);
+        for (VariableListener vl : listeners) {
+            vl.codesChanged();
+        }
     }
 
     @Override

@@ -51,7 +51,7 @@ public class VocabElementEditorFactory {
         List<EditorComponent> eds = new ArrayList<EditorComponent>();
 
         if (ve != null) {
-            eds.add(new VENameEditor(ta, ve, var, pv));
+            eds.add(new VENameEditor(ta, var, pv));
             eds.add(new FixedText(ta, "("));
 
             int numArgs = ve.childArguments.size();

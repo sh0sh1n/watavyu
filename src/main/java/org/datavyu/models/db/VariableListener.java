@@ -57,6 +57,12 @@ public interface VariableListener {
     void cellRemoved(final Cell deletedCell);
 
     /**
+     * Called when a code is added, deleted, moved or renamed, and each cell's values have followed.
+     */
+    default void codesChanged() {
+    }
+
+    /**
      * The column has been locked or unlocked.
      *
      * @param locked whether the column is now locked

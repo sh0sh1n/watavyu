@@ -170,7 +170,7 @@ public class ColumnCommandsTest {
         assertEquals(order(), List.of("gaze", "speech", "gesture"));
     }
 
-    /** Media added is not yet an edit (B14), so a deleted media column's name can be taken before its undo. */
+    /** A column made outside the commands can take a deleted column's name before its undo. */
     @Test
     public void undoingADeletionWhoseNameIsTakenIsRefusedAndStaysAsItWas() throws Exception {
         Variable media = columns.newMediaColumn();

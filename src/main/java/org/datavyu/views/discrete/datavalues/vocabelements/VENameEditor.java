@@ -16,7 +16,6 @@ package org.datavyu.views.discrete.datavalues.vocabelements;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.datavyu.models.db.Argument;
 import org.datavyu.models.db.UserWarningException;
 import org.datavyu.models.db.Variable;
 import org.datavyu.views.discrete.EditorComponent;
@@ -36,30 +35,25 @@ public final class VENameEditor extends EditorComponent {
     /** The logger for this class */
     private static Logger logger = LogManager.getLogger(VENameEditor.class);
 
-    /** Parent Vocab Element */
-    private Argument model;
-
     /** Parent Variable */
     private Variable varModel;
 
     /** The parent editor window that this argument belongs too */
     private VocabElementV parentView;
 
-    /** Counter */
-    private static int sequentialNumber = 0;
+    /** Whether a key typed now continues a rename, so the keys typed since this editor gained focus undo together. */
+    private boolean renaming;
 
     /**
      * Constructor.
      *
      * @param ta The parent JTextComponent the editor is in.
-     * @param ve The parent Argument the editor is in.
      * @param pv The parent VocabElementV the editor is in.
      */
-    public VENameEditor(final JTextComponent ta, final Argument ve, final Variable var, final VocabElementV pv) {
+    public VENameEditor(final JTextComponent ta, final Variable var, final VocabElementV pv) {
         super(ta);
         setEditable(true);
         parentView = pv;
-        model = ve;
         varModel = var;
         setText(varModel.getName());
     }
@@ -71,6 +65,7 @@ public final class VENameEditor extends EditorComponent {
      */
     @Override
     public void focusGained(final FocusEvent e) {
+        renaming = false;
         this.parentView.getParentDialog().updateDialogState();
     }
 
@@ -105,14 +100,13 @@ public final class VENameEditor extends EditorComponent {
     }
     
     private void attemptRename(StringBuilder currentValue) {
-        if (varModel.getOwningDatastore().getVariable(currentValue.toString()) == null) {
-            try {
-                varModel.setName(currentValue.toString());
-            } catch (UserWarningException ex) {
-                logger.info("Invalid edit. Last good name: " + varModel.getName() + " Error: ", ex);
+        try {
+            if (parentView.getParentDialog().getProjectController().columns()
+                    .rename(varModel, currentValue.toString(), renaming)) {
+                renaming = true;
             }
-        } else {
-            logger.info("Duplicate");
+        } catch (UserWarningException ex) {
+            logger.info("Invalid edit. Last good name: " + varModel.getName() + " Error: " + ex.getMessage());
         }
         parentView.setInvalid(isCurrentNameInvalid(), varModel.getName());
     }
@@ -138,11 +132,6 @@ public final class VENameEditor extends EditorComponent {
         switch (e.getKeyCode()) {
             case KeyEvent.VK_BACK_SPACE:
                 removeBehindCaret();
-                if (!getText().equals("")) {
-                    model.name = getText();
-                } else {
-                    model.name = "unnamed" + Integer.toString(sequentialNumber++);
-                }
 
                 parentView.getParentDialog().updateDialogState();
 
@@ -152,11 +141,6 @@ public final class VENameEditor extends EditorComponent {
                 break;
             case KeyEvent.VK_DELETE:
                 removeAheadOfCaret();
-                if (!getText().equals("")) {
-                    model.name = getText();
-                } else {
-                    model.name = "unnamed" + Integer.toString(sequentialNumber++);
-                }
 
                 parentView.getParentDialog().updateDialogState();
                 e.consume();

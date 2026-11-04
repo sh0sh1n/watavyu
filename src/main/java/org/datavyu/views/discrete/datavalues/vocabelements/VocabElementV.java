@@ -32,6 +32,7 @@ import javax.swing.border.Border;
 import java.awt.*;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
+import java.util.List;
 
 /**
  * A view for a vocab element.
@@ -102,13 +103,15 @@ public class VocabElementV extends JPanel {
      */
     private final LockMark lockMark;
     /**
-     * Hears of the column being locked and of changes it refuses, while this view is showing.
+     * Hears of the column being renamed or locked or its codes changing, as undo does from the spreadsheet, and of
+     * changes it refuses, while this view is showing.
      */
-    private final VariableListener lockListener = new VariableListener() {
-        @Override public void nameChanged(final String newName) { }
+    private final VariableListener columnListener = new VariableListener() {
+        @Override public void nameChanged(final String newName) { showModel(); }
         @Override public void visibilityChanged(final boolean isHidden) { }
         @Override public void cellInserted(final Cell newCell) { }
         @Override public void cellRemoved(final Cell deletedCell) { }
+        @Override public void codesChanged() { showModel(); }
         @Override public void lockChanged(final boolean locked) { updateMark(); }
         @Override public void editRefused() { lockMark.shake(); }
     };
@@ -169,12 +172,12 @@ public class VocabElementV extends JPanel {
     @Override
     public void addNotify() {
         super.addNotify();
-        varModel.addListener(lockListener);
+        varModel.addListener(columnListener);
     }
 
     @Override
     public void removeNotify() {
-        varModel.removeListener(lockListener);
+        varModel.removeListener(columnListener);
         super.removeNotify();
     }
 
@@ -195,6 +198,20 @@ public class VocabElementV extends JPanel {
      */
     public final void rebuildContents() {
         veRootView.setVocabElement(varModel, this);
+    }
+
+    /**
+     * Rebuilds the view when the column's name or codes differ from those it shows. What is being typed is left alone:
+     * the editors show it before the column takes it.
+     */
+    private void showModel() {
+        List<String> shown = veRootView.getEditors().stream()
+            .filter(FormalArgEditor.class::isInstance).map(EditorComponent::getText).toList();
+        List<String> codes = varModel.getRootNode().childArguments.stream().map(code -> code.name).toList();
+        if (!shown.equals(codes) || !varModel.getName().equals(getCurrentNameDisplay())) {
+            rebuildContents();
+            setInvalid(false, varModel.getName());
+        }
     }
 
     public final void setInvalid(final boolean invalid, final String lastValidName) {

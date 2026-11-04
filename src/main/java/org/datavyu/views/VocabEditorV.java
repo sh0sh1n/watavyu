@@ -272,13 +272,12 @@ public final class VocabEditorV extends DatavyuDialog {
      * The action to invoke when the user clicks on the move arg left button.
      */
     public void moveArgumentLeft() {
-        LOGGER.error("vocEd - move code left");
+        LOGGER.info("vocEd - move code left");
         Argument va = selectedVocabElement.getModel().childArguments.get(selectedArgumentI);
         Variable var = selectedVocabElement.getVariable();
-        if (var.refusesEdits()) {
+        if (!controller.codes().move(var, selectedArgumentI, selectedArgumentI - 1)) {
             return;
         }
-        var.moveArgument(va.name, var.getArgumentIndex(va.name) - 1);
 
         selectedVocabElement.rebuildContents();
 
@@ -294,13 +293,12 @@ public final class VocabEditorV extends DatavyuDialog {
      * The action to invoke when the user clicks on the move arg right button.
      */
     public void moveArgumentRight() {
-        LOGGER.error("vocEd - move code right");
+        LOGGER.info("vocEd - move code right");
         Argument va = selectedVocabElement.getModel().childArguments.get(selectedArgumentI);
         Variable var = selectedVocabElement.getVariable();
-        if (var.refusesEdits()) {
+        if (!controller.codes().move(var, selectedArgumentI, selectedArgumentI + 1)) {
             return;
         }
-        var.moveArgument(va.name, var.getArgumentIndex(va.name) + 1);
 
         selectedVocabElement.rebuildContents();
 
@@ -354,15 +352,11 @@ public final class VocabEditorV extends DatavyuDialog {
      * The action to invoke when the user clicks on the add code button.
      */
     public void addCode() {
-        Variable var = selectedVocabElement.getVariable();
-        if (var.refusesEdits()) {
+        Argument fa = controller.codes().add(selectedVocabElement.getVariable());
+        if (fa == null) {
             return;
         }
-        Argument fa = var.addArgument();
-        selectedVocabElement.setModel(var.getRootNode());
-
-        String type = "Nominal"; //Hardcoded. Was previously (String) argTypeComboBox.getSelectedItem() but this form element is now removed
-        LOGGER.info("vocEd - add argument:" + type);
+        LOGGER.info("vocEd - add code");
 
         selectedVocabElement.rebuildContents();
 
@@ -397,9 +391,8 @@ public final class VocabEditorV extends DatavyuDialog {
 
             // User has argument selected - delete it from the vocab element.
         } else if (selectedArgument != null) {
-            LOGGER.info("vocEd - delete argument");
-            //TODO no edit created for this!!!
-            selectedVocabElement.getVariable().removeArgument(selectedArgument.getModel().name);
+            LOGGER.info("vocEd - delete code");
+            controller.codes().delete(selectedVocabElement.getVariable(), selectedArgument.getArgPos());
             selectedVocabElement.rebuildContents();
             applyChanges();
         }

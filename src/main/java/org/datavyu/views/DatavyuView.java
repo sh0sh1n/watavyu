@@ -1347,8 +1347,6 @@ public final class DatavyuView implements FileDropEventListener {
         spreadsheetMenu.addMenuListener(new MenuListener() {
             @Override
             public void menuSelected(final MenuEvent e) {
-                // An edit's name can name a column renamed since in the Code Editor, which is not yet an edit (B21).
-                refreshUndoRedo();
                 spreadsheetMenuSelected(e);
             }
 

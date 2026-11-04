@@ -77,7 +77,7 @@ public final class RemoveColumnEdit extends AbstractUndoableEdit implements Guar
 
     /**
      * Puts the columns back; refused, leaving the edit as it was, if the spreadsheet has a column of one of their
-     * names, as it can after a rename in the Code Editor (not yet an edit, B21). Each goes back at the place it had.
+     * names, which only a change made outside the commands can give it. Each goes back at the place it had.
      */
     @Override
     public void undo() throws CannotUndoException {

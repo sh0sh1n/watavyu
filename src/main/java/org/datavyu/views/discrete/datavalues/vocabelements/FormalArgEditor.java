@@ -52,6 +52,9 @@ public final class FormalArgEditor extends EditorComponent {
 
     private boolean defaultVal;
 
+    /** Whether a key typed now continues a rename, so the keys typed since this editor gained focus undo together. */
+    private boolean renaming;
+
     /**
      * @param ta    The JTextComponent that this virtual editor floats ontop.
      * @param var    The parent that this argument belongs too.
@@ -98,10 +101,16 @@ public final class FormalArgEditor extends EditorComponent {
         return argIndex;
     }
 
+    /**
+     * Renames the code to the text typed, as an edit that joins those of the keys typed before it.
+     *
+     * @param newValue the code's new name
+     */
     public void updateArgName(String newValue) {
-        Argument current_arg = parentVariable.getRootNode();
-        current_arg.childArguments.get(argIndex).name = newValue;
-        parentVariable.setRootNode(current_arg);
+        if (parentView.getParentDialog().getProjectController().codes()
+                .rename(parentVariable, argIndex, newValue, renaming)) {
+            renaming = true;
+        }
         defaultVal = false;
     }
 
@@ -112,6 +121,7 @@ public final class FormalArgEditor extends EditorComponent {
      */
     @Override
     public void focusGained(final FocusEvent e) {
+        renaming = false;
         this.parentView.getParentDialog().updateDialogState();
     }
 
@@ -128,12 +138,13 @@ public final class FormalArgEditor extends EditorComponent {
             StringBuilder currentValue = new StringBuilder(getText());
             currentValue.insert(getCaretPosition(), e.getKeyChar());
 
-            updateArgName(currentValue.toString());
-
-            // Advance caret over the top of the new char.
+            // Advance caret over the top of the new char. The text is set first, so the view already shows the name
+            // the code is given and need not be rebuilt.
             int pos = this.getCaretPosition() + 1;
             this.setText(currentValue.toString());
             this.setCaretPosition(pos);
+
+            updateArgName(currentValue.toString());
 
             parentView.getParentDialog().updateDialogState();
         }
@@ -161,7 +172,6 @@ public final class FormalArgEditor extends EditorComponent {
                 removeBehindCaret();
 
                 updateArgName(getText());
-                //vocabElement.replaceFormalArg(model, argIndex);
 
                 parentView.getParentDialog().updateDialogState();
 
@@ -171,7 +181,6 @@ public final class FormalArgEditor extends EditorComponent {
                 removeAheadOfCaret();
 
                 updateArgName(getText());
-                //vocabElement.replaceFormalArg(model, argIndex);
 
                 parentView.getParentDialog().updateDialogState();
                 e.consume();
