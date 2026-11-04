@@ -14,6 +14,7 @@
  */
 package org.datavyu.undoableedits;
 
+import org.datavyu.controllers.project.ProjectController;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -30,8 +31,8 @@ public abstract class VocabEditorEdit extends SpreadSheetEdit {
      */
     private static final Logger LOGGER = LogManager.getLogger(VocabEditorEdit.class);
 
-    public VocabEditorEdit() {
-        super();
+    protected VocabEditorEdit(final ProjectController controller) {
+        super(controller);
     }
 
     @Override

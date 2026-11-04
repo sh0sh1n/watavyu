@@ -14,6 +14,7 @@
  */
 package org.datavyu.undoableedits;
 
+import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.Variable;
 
@@ -30,8 +31,8 @@ public class AddCellEdit extends SpreadSheetEdit {
     private String varName;
     private Cell addedCell;
 
-    public AddCellEdit(String varName, Cell c) {
-        super();
+    public AddCellEdit(final ProjectController controller, String varName, Cell c) {
+        super(controller);
         this.varName = varName;
         this.addedCell = c;
     }

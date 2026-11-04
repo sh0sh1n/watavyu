@@ -6,19 +6,19 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 
-import org.datavyu.Datavyu;
+import org.datavyu.TestSpreadsheets;
+import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.DataStoreFactory;
 import org.datavyu.models.db.Variable;
-import org.datavyu.views.VideoController;
 import org.datavyu.views.discrete.datavalues.MatrixRootView;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import javax.swing.SwingUtilities;
 import java.awt.event.KeyEvent;
+import javax.swing.SwingUtilities;
 
 /**
  * A locked column's header shows a padlock, which shakes when the column refuses a change, and typing in its cells
@@ -26,10 +26,10 @@ import java.awt.event.KeyEvent;
  */
 public class LockedColumnViewTest {
 
-    private VideoController previousController;
     private Variable notes;
     private Cell cell;
     private SpreadsheetColumn header;
+    private ProjectController spreadsheet;
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -38,10 +38,9 @@ public class LockedColumnViewTest {
         cell = notes.createPointCell(1_000);
         cell.setMatrixValue(0, "smile");
         SwingUtilities.invokeAndWait(() -> {
-            previousController = Datavyu.getVideoController();
-            Datavyu.setVideoController(new VideoController());
+            spreadsheet = TestSpreadsheets.withPlayback(dataStore);
             try {
-                header = new SpreadsheetColumn(dataStore, notes, mock(CellSelectionListener.class),
+                header = new SpreadsheetColumn(spreadsheet, notes, mock(CellSelectionListener.class),
                     mock(ColumnSelectionListener.class), mock(ColumnVisibilityListener.class));
             } catch (Exception e) {
                 throw new IllegalStateException(e);
@@ -54,7 +53,6 @@ public class LockedColumnViewTest {
     public void tearDown() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
             header.deregisterListeners();
-            Datavyu.setVideoController(previousController);
         });
     }
 
@@ -84,7 +82,7 @@ public class LockedColumnViewTest {
     @Test
     public void typingInALockedCellChangesNothingAndShakesThePadlock() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
-            MatrixRootView view = new MatrixRootView(cell, cell.getCellValue());
+            MatrixRootView view = new MatrixRootView(spreadsheet, cell, cell.getCellValue());
             view.getEdTracker().setEditor(view.getEdTracker().firstEditor());
             notes.setLocked(true);
 

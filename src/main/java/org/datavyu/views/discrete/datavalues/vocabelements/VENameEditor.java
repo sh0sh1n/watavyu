@@ -16,7 +16,6 @@ package org.datavyu.views.discrete.datavalues.vocabelements;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.datavyu.Datavyu;
 import org.datavyu.models.db.Argument;
 import org.datavyu.models.db.UserWarningException;
 import org.datavyu.models.db.Variable;
@@ -106,7 +105,7 @@ public final class VENameEditor extends EditorComponent {
     }
     
     private void attemptRename(StringBuilder currentValue) {
-        if (Datavyu.getProjectController().getDataStore().getVariable(currentValue.toString()) == null) {
+        if (varModel.getOwningDatastore().getVariable(currentValue.toString()) == null) {
             try {
                 varModel.setName(currentValue.toString());
             } catch (UserWarningException ex) {

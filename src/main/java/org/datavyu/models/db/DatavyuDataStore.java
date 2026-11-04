@@ -37,8 +37,8 @@ public class DatavyuDataStore implements DataStore {
     /** Logger for the DataStore */
     private static Logger logger = LogManager.getLogger(DatavyuDataStore.class);
 
-    /** The notifier to ping when the application's title changes. */
-    private static TitleNotifier titleNotifier = null;
+    /** Told when this spreadsheet is changed or saved, so its title can show it. */
+    private TitleNotifier titleNotifier = null;
 
     /** Name of the DataStore - does not need to persist - is used for file names. */
     private String name = "untitled";
@@ -66,8 +66,8 @@ public class DatavyuDataStore implements DataStore {
     public void markAsChanged() {
         if (!changed) {
             changed = true;
-            if (DatavyuDataStore.titleNotifier != null) {
-                DatavyuDataStore.titleNotifier.updateTitle();
+            if (this.titleNotifier != null) {
+                this.titleNotifier.updateTitle();
             }
         }
     }
@@ -234,8 +234,8 @@ public class DatavyuDataStore implements DataStore {
     public void markAsUnchanged() {
         if (changed) {
             changed = false;
-            if (DatavyuDataStore.titleNotifier != null) {
-                DatavyuDataStore.titleNotifier.updateTitle();
+            if (this.titleNotifier != null) {
+                this.titleNotifier.updateTitle();
             }
         }
     }
@@ -266,7 +266,7 @@ public class DatavyuDataStore implements DataStore {
 
     @Override
     public void setTitleNotifier(final TitleNotifier titleNotifier) {
-        DatavyuDataStore.titleNotifier = titleNotifier;
+        this.titleNotifier = titleNotifier;
     }
 
     @Override

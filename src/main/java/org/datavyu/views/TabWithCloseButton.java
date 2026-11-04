@@ -32,12 +32,12 @@ package org.datavyu.views;
  */
 
 import org.datavyu.views.discrete.SpreadsheetTheme;
-import org.datavyu.Datavyu;
 
 import javax.swing.*;
 import javax.swing.plaf.basic.BasicButtonUI;
 import java.awt.*;
 import java.awt.event.*;
+import java.util.function.Consumer;
 
 /**
  * Component to be used as tabComponent;
@@ -47,13 +47,21 @@ import java.awt.event.*;
 public class TabWithCloseButton extends JPanel {
     private final JTabbedPane pane;
 
-    public TabWithCloseButton(final JTabbedPane pane) {
+    /** Closes a tab's spreadsheet, asking about unsaved work first */
+    private final Consumer<Component> close;
+
+    /**
+     * @param pane  the tabs
+     * @param close closes a tab's spreadsheet, asking about unsaved work first
+     */
+    public TabWithCloseButton(final JTabbedPane pane, final Consumer<Component> close) {
         //unset default FlowLayout' gaps
         super(new FlowLayout(FlowLayout.LEFT, 0, 0));
         if (pane == null) {
             throw new NullPointerException("TabbedPane is null");
         }
         this.pane = pane;
+        this.close = close;
         setOpaque(false);
 
         //make JLabel read titles from JTabbedPane
@@ -104,13 +112,7 @@ public class TabWithCloseButton extends JPanel {
         public void actionPerformed(ActionEvent e) {
             int i = pane.indexOfTabComponent(TabWithCloseButton.this);
             if (i != -1) {
-                if (Datavyu.getApplication().safeQuit(pane.getComponentAt(i))) {
-                    pane.remove(i);
-                }
-                if(pane.getTabCount() == 0) 
-                {
-                     Datavyu.getApplication().exit();
-                }
+                close.accept(pane.getComponentAt(i));
             }
         }
 

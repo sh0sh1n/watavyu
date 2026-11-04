@@ -18,9 +18,6 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
-import org.datavyu.Datavyu;
-import org.datavyu.controllers.project.ProjectController;
-import org.datavyu.models.project.Project;
 import static org.mockito.Mockito.*;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
@@ -55,7 +52,6 @@ public class CellTest {
     @BeforeMethod
     public void setUp() throws UserWarningException {
         ds = DataStoreFactory.newDataStore();
-        Datavyu.setProjectController(new ProjectController(new Project(), ds));
         var = ds.createVariable("test");
         model = var.createCell();
 

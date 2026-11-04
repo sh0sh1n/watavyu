@@ -2,6 +2,8 @@ package org.datavyu.views;
 
 import static org.testng.Assert.assertEquals;
 
+import org.datavyu.TestSpreadsheets;
+import org.datavyu.models.db.DataStoreFactory;
 import org.testng.annotations.Test;
 
 import java.util.ArrayList;
@@ -21,7 +23,7 @@ public class VideoControllerTimeTest {
     /** Moving the clock moves the playhead. */
     @Test
     public void movingTheClockMovesThePlayhead() {
-        VideoController controller = new VideoController();
+        VideoController controller = TestSpreadsheets.withPlayback(DataStoreFactory.newDataStore()).getVideoController();
         List<String> shown = new ArrayList<>();
         controller.setPlayhead((time, rate, playing) -> shown.add(time + " " + rate + (playing ? " playing" : "")));
         assertEquals(shown, List.of("0 paused 1×"), "a new clock is paused at the normal rate");
@@ -34,7 +36,7 @@ public class VideoControllerTimeTest {
     /** Shuttling forward at time zero plays faster, as it does anywhere else (B7). */
     @Test
     public void shuttlingAtTimeZeroPlays() {
-        VideoController controller = new VideoController();
+        VideoController controller = TestSpreadsheets.withPlayback(DataStoreFactory.newDataStore()).getVideoController();
         try {
             controller.shuttleForwardAction();
             assertEquals(controller.getClockTimer().getRate(), 1.25F);

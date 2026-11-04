@@ -24,6 +24,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BooleanSupplier;
 
 
 /**
@@ -43,10 +44,12 @@ public class DataValueEditorFactory {
      *
      * @param ta The parent JTextComponent the editor is in.
      * @param c  The parent cell the editors resides within.
+     * @param quickKeyMode tells whether quick-key mode is on, in which typing does not change a value
      * @return A vector of editor components to represent the matrix.
      */
     public static List<EditorComponent> buildMatrix(final JTextComponent ta,
-                                                    final Cell c) {
+                                                    final Cell c,
+                                                    final BooleanSupplier quickKeyMode) {
 
         List<EditorComponent> eds = new ArrayList<EditorComponent>();
 
@@ -61,7 +64,7 @@ public class DataValueEditorFactory {
             eds.add(new FixedText(ta, "("));
 
             for (int i = 0; i < mv.getArguments().size(); i++) {
-                eds.add(buildNominal(ta, (NominalCellValue) mv.getArguments().get(i)));
+                eds.add(buildNominal(ta, (NominalCellValue) mv.getArguments().get(i), quickKeyMode));
 
                 if ((mv.getArguments().size() > 1) && (i < (mv.getArguments().size() - 1))) {
                     eds.add(new FixedText(ta, ", "));
@@ -95,10 +98,12 @@ public class DataValueEditorFactory {
      *
      * @param ta The parent JTextComponent the editor is in.
      * @param v  The value this editor manipulates
+     * @param quickKeyMode tells whether quick-key mode is on, in which typing does not change the value
      * @return An editor component to represent the specified data value.
      */
     public static EditorComponent buildNominal(final JTextComponent ta,
-                                               final NominalCellValue v) {
-        return new NominalDataValueEditor(ta, v);
+                                               final NominalCellValue v,
+                                               final BooleanSupplier quickKeyMode) {
+        return new NominalDataValueEditor(ta, v, quickKeyMode);
     }
 }

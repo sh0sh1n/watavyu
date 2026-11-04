@@ -3,7 +3,10 @@ package org.datavyu.util;
 import java.awt.Component;
 import javax.swing.JOptionPane;
 
-/** Option dialogs whose answer is read by the label of the button chosen, never by its position. */
+/**
+ * Message and option dialogs. An option dialog's answer is read by the label of the button chosen, never by its
+ * position.
+ */
 public final class Dialogs {
 
     /** The label of the button that does nothing. */
@@ -39,5 +42,16 @@ public final class Dialogs {
         int selected = JOptionPane.showOptionDialog(parent, message, title, JOptionPane.OK_CANCEL_OPTION,
             JOptionPane.QUESTION_MESSAGE, null, options, CANCEL);
         return action.equals(chosen(selected, options));
+    }
+
+    /**
+     * Shows a warning, such as why something could not be done.
+     *
+     * @param parent  the window the dialog belongs to, or a component in it; null for none
+     * @param message the warning
+     */
+    public static void warn(final Component parent, final String message) {
+        JOptionPane.showMessageDialog(parent, message, Resources.of(Dialogs.class).getString("WarningDialog.title"),
+            JOptionPane.WARNING_MESSAGE);
     }
 }

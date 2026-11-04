@@ -16,16 +16,11 @@ package org.datavyu;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.datavyu.controllers.project.ProjectController;
-import org.datavyu.models.db.TitleNotifier;
-import org.datavyu.models.db.UserWarningException;
 import org.datavyu.util.MacOS;
 import org.datavyu.util.Resources;
 import org.datavyu.util.Settings;
 import org.datavyu.views.AboutV;
 import org.datavyu.views.DatavyuView;
-import org.datavyu.views.VariableListV;
-import org.datavyu.views.VideoController;
 import org.datavyu.views.WindowPlacement;
 import org.datavyu.views.discrete.SpreadSheetPanel;
 import org.datavyu.views.discrete.SpreadsheetTheme;
@@ -38,15 +33,16 @@ import java.util.List;
 import java.io.File;
 
 /**
- * The application: starts the main window and the video controller, and quits.
+ * The application: starts the main window, opens files given to it, and quits. One is made, by {@link #main}, and
+ * given to what needs it; nothing reaches it through a static field.
  */
-public final class Datavyu implements TitleNotifier {
+public final class Datavyu {
 
     /** System property that makes window title bars follow the Mac's appearance, as the palette does. */
     static final String TITLE_BAR_APPEARANCE = "apple.awt.application.appearance";
 
     static {
-        // AWT reads it when it starts, which loading this class does by making the main frame below.
+        // AWT reads it when it starts, which is after this class loads.
         System.setProperty(TITLE_BAR_APPEARANCE, "system");
     }
 
@@ -62,30 +58,20 @@ public final class Datavyu implements TitleNotifier {
     /** Settings key of the main window's bounds */
     private static final String MAIN_WINDOW = "main";
 
-    /** Settings key of the video controller's location */
-
-    private static final Datavyu application = new Datavyu();
-
-    // TODO: Move this to some OS specifics
-    private static boolean osxPressAndHoldEnabled;
-
-    /** The main window. It exists before its contents, which use it while they are built. */
-    private static final JFrame mainFrame = new JFrame();
-
-    /** The contents of the main window. */
-    private static DatavyuView datavyuView;
-
-    /** The video controller */
-    private static VideoController videoController;
-
-    /** The project controller */
-    private static ProjectController projectController;
-
     static {
         logger.info("Working directory is: " + System.getProperty("user.dir"));
         logger.debug("Class path is: " + System.getProperty("java.class.path"));
         logger.debug("The java library path is: " + System.getProperty("java.library.path"));
     }
+
+    // TODO: Move this to some OS specifics
+    private boolean osxPressAndHoldEnabled;
+
+    /** The main window. It exists before its contents, which use it while they are built. */
+    private JFrame mainFrame;
+
+    /** The contents of the main window. */
+    private DatavyuView datavyuView;
 
     /** This application is ready to open a file */
     public boolean readyToOpenFile = false;
@@ -93,34 +79,7 @@ public final class Datavyu implements TitleNotifier {
     /** File path from the command line */
     private String commandLineFile;
 
-    private Datavyu() {
-    }
-
-    /**
-     * Get the single instance of the video controller used in Datavyu
-     *
-     * @return Video controller
-     */
-    public static VideoController getVideoController() {
-        return videoController;
-    }
-
-    /**
-     * Sets the video controller
-     *
-     * @param videoController The video controller
-     */
-    public static void setVideoController(VideoController videoController) {
-        Datavyu.videoController = videoController;
-    }
-
-    /**
-     * Gets application instance
-     *
-     * @return Instance of the Datavyu application
-     */
-    public static Datavyu getApplication() {
-        return application;
+    Datavyu() {
     }
 
     /**
@@ -129,23 +88,11 @@ public final class Datavyu implements TitleNotifier {
      * @param args The command line arguments passed to Datavyu. The first, if any, is a file to open.
      */
     public static void main(final String[] args) {
-        SwingUtilities.invokeLater(() -> application.start(args));
+        SwingUtilities.invokeLater(() -> new Datavyu().start(args));
     }
 
-    // TODO: Why do we have these two project controllers?
-    public static ProjectController getProjectController() {
-        if (datavyuView != null && datavyuView.getSpreadsheetPanel() != null
-                && datavyuView.getSpreadsheetPanel().getProjectController() != null) {
-            return datavyuView.getSpreadsheetPanel().getProjectController();
-        }
-        return projectController;
-    }
-
-    public static void setProjectController(ProjectController p) {
-        projectController = p;
-    }
-
-    public static DatavyuView getView() {
+    /** @return the main window's contents */
+    public DatavyuView getView() {
         return datavyuView;
     }
 
@@ -162,52 +109,10 @@ public final class Datavyu implements TitleNotifier {
     }
 
     /**
-     * Shows a window, centred on its owner the first time; see {@link WindowPlacement#show}.
-     *
-     * @param window The window to show.
-     */
-    public void show(final Window window) {
-        WindowPlacement.show(window);
-    }
-
-    /**
-     * Action for showing the variable list.
-     */
-    public void showVariableList() {
-        JFrame mainFrame = Datavyu.getView().getFrame();
-        VariableListV listVarView = new VariableListV(mainFrame, false, projectController.getDataStore());
-        listVarView.registerListeners();
-        show(listVarView);
-    }
-
-    /**
      * Action for showing the about window.
      */
     public void showAboutWindow() {
-        JFrame mainFrame = Datavyu.getView().getFrame();
-        AboutV aboutWindow = new AboutV(mainFrame, false);
-        show(aboutWindow);
-    }
-
-    /**
-     * Show a warning dialog to the user.
-     *
-     * @param s The message to present to the user.
-     */
-    public void showWarningDialog(final String s) {
-        JFrame mainFrame = Datavyu.getView().getFrame();
-        Resources resourceMap = Resources.of(Datavyu.class);
-        JOptionPane.showMessageDialog(mainFrame, s, resourceMap.getString("WarningDialog.title"),
-                JOptionPane.WARNING_MESSAGE);
-    }
-
-    /**
-     * Show a warning dialog to the user.
-     *
-     * @param e The UserWarningException to present to the user.
-     */
-    public void showWarningDialog(final UserWarningException e) {
-        showWarningDialog(e.getMessage());
+        WindowPlacement.show(new AboutV(mainFrame, false));
     }
 
     /**
@@ -221,7 +126,7 @@ public final class Datavyu implements TitleNotifier {
      */
     public boolean safeQuit() {
         List<SpreadSheetPanel> spreadsheets = new ArrayList<>();
-        for (Component tab : getView().getTabbedPane().getComponents()) {
+        for (Component tab : datavyuView.getTabbedPane().getComponents()) {
             if (tab instanceof SpreadSheetPanel) {
                 spreadsheets.add((SpreadSheetPanel) tab);
             }
@@ -244,14 +149,13 @@ public final class Datavyu implements TitleNotifier {
      * @return whether they may close: false if the user cancelled or a save did not happen
      */
     private boolean mayClose(final List<SpreadSheetPanel> spreadsheets, final String message) {
-        JFrame mainFrame = Datavyu.getApplication().getMainFrame();
         Resources resourceMap = Resources.of(Datavyu.class);
         String saveOption = "Save";
         String discardOption = "Don't save";
         String[] options = MacOS.getOptions(saveOption, discardOption, Dialogs.CANCEL);
         return UnsavedWork.mayClose(spreadsheets, spreadsheet -> spreadsheet.getProjectController().isChanged(),
             spreadsheet -> {
-                getView().getTabbedPane().setSelectedComponent(spreadsheet);
+                datavyuView.getTabbedPane().setSelectedComponent(spreadsheet);
                 String projectName = spreadsheet.getProjectController().getProjectName();
                 if (projectName == null) {
                     projectName = spreadsheet.getDataStore().getName();
@@ -263,20 +167,7 @@ public final class Datavyu implements TitleNotifier {
                     null, options, saveOption);
                 return UnsavedWork.choice(selected, options, saveOption, discardOption);
             },
-            spreadsheet -> getView().save());
-    }
-
-    /**
-     * If the user is trying to save over an existing file, prompt them whether
-     * they they wish to continue.
-     *
-     * @return True for overwrite, false otherwise.
-     */
-    public boolean overwriteExisting() {
-        Resources resourceMap = Resources.of(Datavyu.class);
-        return Dialogs.confirm(Datavyu.getApplication().getMainFrame(),
-                resourceMap.getString("OverwriteDialog.message"),
-                resourceMap.getString("OverwriteDialog.title"), "Overwrite");
+            spreadsheet -> datavyuView.save());
     }
 
     /**
@@ -289,16 +180,15 @@ public final class Datavyu implements TitleNotifier {
             MacOS.setOSXPressAndHoldValue(false);
         }
         SpreadsheetTheme.installLookAndFeel();
-        // The main frame is made when this class loads, before the look and feel; give it the new one.
-        SwingUtilities.updateComponentTreeUI(mainFrame);
+        mainFrame = new JFrame();
         SpreadsheetTheme.setMonospacedValues(Settings.get().isMonospacedValues());
         logger.info("Palette: " + SpreadsheetTheme.PALETTE.name());
-        MacOS.loadCompileHandler();
+        MacOS.loadCompileHandler(this);
         if (args.length > 0) {
             commandLineFile = args[0];
         }
 
-        datavyuView = new DatavyuView(mainFrame);
+        datavyuView = new DatavyuView(this, mainFrame);
         if (!WindowPlacement.restoreAndTrack(mainFrame, MAIN_WINDOW, true)) {
             mainFrame.pack();
             mainFrame.setSize(Math.max(mainFrame.getWidth(), INIT_MIN_X), Math.max(mainFrame.getHeight(), INIT_MIN_Y));
@@ -306,20 +196,15 @@ public final class Datavyu implements TitleNotifier {
         }
         mainFrame.setVisible(true);
 
-        projectController = new ProjectController();
-        videoController = datavyuView.getSpreadsheetPanel().getVideoController();
         datavyuView.startFirstSpreadsheet();
         datavyuView.checkForAutosavedFile();
-
-        // The DB we create by default doesn't really have any unsaved changes.
-        projectController.getDataStore().markAsUnchanged();
         ready();
     }
 
     private void ready() {
         readyToOpenFile = true;
         if (commandLineFile != null) {
-            getView().openExternalFile(new File(commandLineFile));
+            datavyuView.openExternalFile(new File(commandLineFile));
             commandLineFile = null;
         }
     }
@@ -344,18 +229,5 @@ public final class Datavyu implements TitleNotifier {
 
         logger.info("Saving settings.");
         Settings.get().save();
-    }
-
-    @Override
-    public void updateTitle() {
-        // Update the main title
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                if (datavyuView != null) {
-                    datavyuView.updateTitle();
-                }
-            }
-        });
     }
 }

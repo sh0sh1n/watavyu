@@ -17,8 +17,8 @@ package org.datavyu.controllers.project;
 import org.datavyu.util.Resources;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.datavyu.Datavyu;
-import org.datavyu.controllers.VocabEditorController;
+import org.datavyu.controllers.AutoSaveController;
+import org.datavyu.controllers.DeleteCellController;
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.DataStoreFactory;
@@ -27,19 +27,27 @@ import org.datavyu.models.db.Variable;
 import org.datavyu.models.project.Project;
 import org.datavyu.projectfile.ProjectDocument;
 import org.datavyu.projectfile.SpreadsheetColumns;
+import org.datavyu.undoableedits.RemoveCellEdit;
+import org.datavyu.undoableedits.SpreadsheetUndoManager;
+import org.datavyu.views.VideoController;
 import org.datavyu.views.discrete.SpreadSheetPanel;
 
 import javax.swing.*;
+import javax.swing.event.UndoableEditListener;
 import javax.swing.filechooser.FileFilter;
+import javax.swing.undo.UndoableEdit;
+import javax.swing.undo.UndoableEditSupport;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.BooleanSupplier;
 
 
 /**
- * This class is responsible for managing a project.
+ * One open spreadsheet, the contents of one tab: its project, data, undo history and playback. Its views, controllers
+ * and undo edits are given it, rather than finding the selected tab's, so each acts on its own spreadsheet.
  */
 public final class ProjectController {
 
@@ -76,6 +84,24 @@ public final class ProjectController {
     /** Last option used for saving */
     private FileFilter lastSaveOption;
 
+    /** This spreadsheet's undo history, which every edit posted to {@link #postEdit} joins. */
+    private final SpreadsheetUndoManager undoManager = new SpreadsheetUndoManager();
+
+    /** Where this spreadsheet's edits are posted; the undo history listens first. */
+    private final UndoableEditSupport undoSupport = new UndoableEditSupport();
+
+    /** This spreadsheet's clock, players and playback commands; set before its view is made. */
+    private VideoController videoController;
+
+    /** Runs when the project's name or changed state may have changed, so its title can be shown again. */
+    private Runnable titleListener = () -> { };
+
+    /** Autosaves this spreadsheet while its tab is open; null until started. */
+    private AutoSaveController autoSave;
+
+    /** Whether quick-key mode is on, in which typing in a selected column makes a cell; an application setting. */
+    private BooleanSupplier quickKeyMode = () -> false;
+
     /**
      * Default constructor.
      */
@@ -93,7 +119,133 @@ public final class ProjectController {
         lastSelectedCell = null;
         lastCreatedVariable = null;
         lastSelectedCells = new ArrayList<>();
-        dataStore.setTitleNotifier(Datavyu.getApplication());
+        dataStore.setTitleNotifier(this::titleChanged);
+        undoSupport.addUndoableEditListener(event -> undoManager.addEdit(event.getEdit()));
+    }
+
+    /**
+     * Sets what runs when the project's name or changed state may have changed.
+     *
+     * @param titleListener shows the project's title again
+     */
+    public void setTitleListener(final Runnable titleListener) {
+        this.titleListener = titleListener;
+    }
+
+    private void titleChanged() {
+        titleListener.run();
+    }
+
+    /**
+     * Records an edit in this spreadsheet's undo history, and tells the edit's listeners.
+     *
+     * @param edit an edit already made to this spreadsheet
+     */
+    public void postEdit(final UndoableEdit edit) {
+        undoSupport.postEdit(edit);
+    }
+
+    /**
+     * @param listener told of each edit posted, after the undo history has it
+     */
+    public void addUndoableEditListener(final UndoableEditListener listener) {
+        undoSupport.addUndoableEditListener(listener);
+    }
+
+    /** @return this spreadsheet's undo history */
+    public SpreadsheetUndoManager getUndoManager() {
+        return undoManager;
+    }
+
+    /** Undoes this spreadsheet's last edit, and shows its cells again. */
+    public void undo() {
+        undoManager.undo();
+        redrawCells();
+    }
+
+    /** Redoes this spreadsheet's last undone edit, and shows its cells again. */
+    public void redo() {
+        undoManager.redo();
+        redrawCells();
+    }
+
+    private void redrawCells() {
+        if (spreadSheetPanel != null) {
+            spreadSheetPanel.redrawCells();
+        }
+    }
+
+    /**
+     * Starts autosaving this spreadsheet.
+     *
+     * @param minutes how often to save it
+     */
+    public void startAutoSave(final int minutes) {
+        autoSave = new AutoSaveController(this, minutes);
+        autoSave.start();
+    }
+
+    /** @return this spreadsheet's autosave, or null until it is started */
+    public AutoSaveController getAutoSave() {
+        return autoSave;
+    }
+
+    /** Records that the project was just saved: it has no unsaved changes, so its autosave is deleted. */
+    public void markSaved() {
+        markProjectAsUnchanged();
+        dataStore.markAsUnchanged();
+        if (autoSave != null) {
+            autoSave.clear();
+        }
+    }
+
+    /** Closes this spreadsheet, once its work is saved or knowingly discarded: its autosave stops and is deleted. */
+    public void close() {
+        if (autoSave != null) {
+            autoSave.discard();
+        }
+    }
+
+    /**
+     * @param quickKeyMode tells whether quick-key mode is on
+     */
+    public void setQuickKeyMode(final BooleanSupplier quickKeyMode) {
+        this.quickKeyMode = quickKeyMode;
+    }
+
+    /** @return whether quick-key mode is on, in which typing in a selected column makes a cell */
+    public boolean isQuickKeyMode() {
+        return quickKeyMode.getAsBoolean();
+    }
+
+    /** Deletes the selected cells, except those in locked columns, as one edit in the undo history. */
+    public void deleteSelectedCells() {
+        List<Cell> selectedCells = new ArrayList<>();
+        for (Cell cell : dataStore.getSelectedCells()) {
+            if (!cell.getVariable().refusesEdits()) {
+                selectedCells.add(cell);
+            }
+        }
+        if (selectedCells.isEmpty()) {
+            return;
+        }
+        UndoableEdit edit = new RemoveCellEdit(this, selectedCells);
+        new DeleteCellController(this, selectedCells);
+        postEdit(edit);
+    }
+
+    /** @return this spreadsheet's clock, players and playback commands; null until set */
+    public VideoController getVideoController() {
+        return videoController;
+    }
+
+    /**
+     * Sets this spreadsheet's video controller. Its view needs one, so this is set before the view is made.
+     *
+     * @param videoController the spreadsheet's clock, players and playback commands
+     */
+    public void setVideoController(final VideoController videoController) {
+        this.videoController = videoController;
     }
 
     /**
@@ -139,10 +291,7 @@ public final class ProjectController {
      */
     public void setDataStore(final DataStore newDataStore) {
         dataStore = newDataStore;
-        dataStore.setTitleNotifier(Datavyu.getApplication());
-        
-        //don't let code editor instance corresponding to an old DataStore hang around!
-        VocabEditorController.getController().killView();
+        dataStore.setTitleNotifier(this::titleChanged);
     }
 
     /**
@@ -300,8 +449,7 @@ public final class ProjectController {
         List<String> missingFilesList = spreadSheetPanel.getMediaPlayers().openAll();
 
         if (!missingFilesList.isEmpty()) {
-            JFrame mainFrame = Datavyu.getApplication().getMainFrame();
-            Resources rMap = Resources.of(Datavyu.class);
+            Resources rMap = Resources.of(ProjectController.class);
 
             StringBuilder sb = new StringBuilder("The following files are missing:\n\n");
             for (String filePath : missingFilesList) {
@@ -309,7 +457,7 @@ public final class ProjectController {
                 sb.append('\n');
             }
 
-            JOptionPane.showMessageDialog(mainFrame, sb.toString(),
+            JOptionPane.showMessageDialog(spreadSheetPanel, sb.toString(),
                     rMap.getString("ProjectLoadError.title"),
                     JOptionPane.WARNING_MESSAGE);
         }
@@ -332,7 +480,7 @@ public final class ProjectController {
     public void markProjectAsUnchanged() {
         changed = false;
         newProject = false;
-        Datavyu.getApplication().updateTitle();
+        titleChanged();
     }
 
     /**
@@ -341,8 +489,7 @@ public final class ProjectController {
      */
     public void projectChanged() {
         changed = true;
-
-        Datavyu.getApplication().updateTitle();
+        titleChanged();
     }
 
     /**

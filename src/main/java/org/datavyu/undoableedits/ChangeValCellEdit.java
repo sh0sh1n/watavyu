@@ -14,7 +14,7 @@
  */
 package org.datavyu.undoableedits;
 
-import org.datavyu.Datavyu;
+import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.Cell;
 import org.datavyu.util.Constants;
 
@@ -26,13 +26,13 @@ public class ChangeValCellEdit extends ChangeCellEdit {
     String cellValue = null;
     String oldValue = null;
 
-    public ChangeValCellEdit(Cell c, String oldValue, Granularity granularity) {
-        super(c, granularity);
+    public ChangeValCellEdit(final ProjectController controller, Cell c, String oldValue, Granularity granularity) {
+        super(controller, c, granularity);
         cellValue = oldValue;
     }
 
-    public ChangeValCellEdit(Cell c, String oldValue) {
-        this(c, oldValue, Granularity.COARSEGRAINED);
+    public ChangeValCellEdit(final ProjectController controller, Cell c, String oldValue) {
+        this(controller, c, oldValue, Granularity.COARSEGRAINED);
     }
 
     @Override
@@ -46,7 +46,9 @@ public class ChangeValCellEdit extends ChangeCellEdit {
 
         cell.getCellValue().set(cellValue);
         this.cellValue = currentCellValue;
-        Datavyu.getProjectController().getSpreadSheetPanel().redrawCells();
+        if (controller.getSpreadSheetPanel() != null) {
+            controller.getSpreadSheetPanel().redrawCells();
+        }
     }
 
     @Override

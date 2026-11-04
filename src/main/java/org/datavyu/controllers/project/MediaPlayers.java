@@ -1,6 +1,5 @@
 package org.datavyu.controllers.project;
 
-import org.datavyu.Datavyu;
 import org.datavyu.models.Identifier;
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.CellListener;
@@ -19,6 +18,7 @@ import org.datavyu.views.VideoController;
 import javax.swing.SwingUtilities;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.Frame;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -121,11 +121,10 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
      *
      * @param dataStore       the spreadsheet
      * @param videoController what plays the clips
+     * @param owner           the window that owns the media windows; null for none
      */
-    public MediaPlayers(final DataStore dataStore, final VideoController videoController) {
-        this(dataStore, videoController,
-            column -> new MediaWindow(Datavyu.getApplication().getMainFrame(), column.getName()),
-            MediaPlayers::runOnEdt);
+    public MediaPlayers(final DataStore dataStore, final VideoController videoController, final Frame owner) {
+        this(dataStore, videoController, column -> new MediaWindow(owner, column.getName()), MediaPlayers::runOnEdt);
     }
 
     /**

@@ -14,12 +14,12 @@
  */
 package org.datavyu.views.discrete.datavalues;
 
-import org.datavyu.Datavyu;
 import org.datavyu.models.db.NominalCellValue;
 
 import javax.swing.text.JTextComponent;
 import java.awt.event.FocusEvent;
 import java.awt.event.KeyEvent;
+import java.util.function.BooleanSupplier;
 
 /**
  * This class is the character editor of a NominalDataValue.
@@ -39,15 +39,21 @@ public final class NominalDataValueEditor extends DataValueEditor {
      */
     NominalCellValue model;
 
+    /** Tells whether quick-key mode is on, in which typing does not change the value */
+    private final BooleanSupplier quickKeyMode;
+
     /**
      * Constructor.
      *
      * @param ta           The parent JTextComponent the editor resides within.
-     * @param NominalValue The value this editor manipulates.
+     * @param nv           The value this editor manipulates.
+     * @param quickKeyMode tells whether quick-key mode is on, in which typing does not change the value
      */
     public NominalDataValueEditor(final JTextComponent ta,
-                                  final NominalCellValue nv) {
+                                  final NominalCellValue nv,
+                                  final BooleanSupplier quickKeyMode) {
         super(ta, nv);
+        this.quickKeyMode = quickKeyMode;
         setAcceptReturnKey(true);
         model = nv;
     }
@@ -80,7 +86,7 @@ public final class NominalDataValueEditor extends DataValueEditor {
         super.keyTyped(e);
 
         // Just a regular vanilla keystroke - insert it into nominal field.
-        if (!Datavyu.getView().isQuickKeyMode() && !e.isConsumed() && !e.isMetaDown() && !e.isControlDown()
+        if (!quickKeyMode.getAsBoolean() && !e.isConsumed() && !e.isMetaDown() && !e.isControlDown()
                 && !isReserved(e.getKeyChar())) {
             
             // Avoids a nasty bug that occurs if carraige return goes to editor. 'New cell' numpad enter still processed as always

@@ -18,7 +18,7 @@ import org.datavyu.util.Resources;
 import net.miginfocom.swing.MigLayout;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.datavyu.Datavyu;
+import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.DataStoreListener;
 import org.datavyu.models.db.Variable;
@@ -77,6 +77,9 @@ public final class VariableListV extends DatavyuDialog
     /** Runs after Show All Columns, to bring the spreadsheet up to date. */
     private final Runnable afterShowingAll;
 
+    /** Runs after a column is shown or hidden in the list, to bring the spreadsheet up to date. */
+    private final Runnable afterHiding;
+
     /**
      * Mapping between database column identifier - to the table model.
      */
@@ -90,17 +93,17 @@ public final class VariableListV extends DatavyuDialog
     /**
      * Creates new form ListVariablesView.
      *
-     * @param parent The parent frame for this dialog.
-     * @param modal  Is this dialog to be modal (true), or not.
-     * @param ds     The DataStore containing the variables you wish to list.
+     * @param parent     The parent frame for this dialog.
+     * @param modal      Is this dialog to be modal (true), or not.
+     * @param controller The spreadsheet whose columns it lists.
      */
     public VariableListV(final java.awt.Frame parent,
                          final boolean modal,
-                         final DataStore ds) {
-        this(parent, modal, ds, () -> {
-            Datavyu.getView().getSpreadsheetPanel().deselectAll();
-            Datavyu.getView().getComponent().revalidate();
-        });
+                         final ProjectController controller) {
+        this(parent, modal, controller.getDataStore(), () -> {
+            controller.getSpreadSheetPanel().deselectAll();
+            controller.getSpreadSheetPanel().revalidate();
+        }, () -> controller.getSpreadSheetPanel().revalidate());
     }
 
     /**
@@ -110,13 +113,16 @@ public final class VariableListV extends DatavyuDialog
      * @param modal           whether the list is modal
      * @param ds              the spreadsheet whose columns it lists
      * @param afterShowingAll runs after Show All Columns
+     * @param afterHiding     runs after a column is shown or hidden in the list
      */
     VariableListV(final java.awt.Frame parent,
                   final boolean modal,
                   final DataStore ds,
-                  final Runnable afterShowingAll) {
+                  final Runnable afterShowingAll,
+                  final Runnable afterHiding) {
         super(parent, modal);
         this.afterShowingAll = afterShowingAll;
+        this.afterHiding = afterHiding;
         tableModel = new VListTableModel();
         dbToTableMap = new HashMap<>();
         initComponents();
@@ -236,8 +242,8 @@ public final class VariableListV extends DatavyuDialog
 
             }
 
-            Datavyu.getProjectController().getDataStore().markAsChanged();
-            Datavyu.getView().getComponent().revalidate();
+            dataStore.markAsChanged();
+            afterHiding.run();
         }
     }
 

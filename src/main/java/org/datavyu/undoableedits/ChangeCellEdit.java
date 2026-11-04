@@ -14,7 +14,7 @@
  */
 package org.datavyu.undoableedits;
 
-import org.datavyu.Datavyu;
+import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.Variable;
 import org.datavyu.util.Constants;
@@ -44,12 +44,11 @@ abstract public class ChangeCellEdit extends SpreadSheetEdit {
      */
     protected Granularity granularity;
 
-    public ChangeCellEdit(Cell c, Granularity granularity) {
-        // New constructor.
-        super();
+    protected ChangeCellEdit(final ProjectController controller, Cell c, Granularity granularity) {
+        super(controller);
         this.granularity = granularity;
 
-        Variable var = Datavyu.getProjectController().getDataStore().getVariable(c);
+        Variable var = model.getVariable(c);
         if (var != null) {
             columnName = var.getName();
 
@@ -63,8 +62,8 @@ abstract public class ChangeCellEdit extends SpreadSheetEdit {
         }
     }
 
-    public ChangeCellEdit(Cell c) {
-        this(c, Granularity.COARSEGRAINED);
+    protected ChangeCellEdit(final ProjectController controller, Cell c) {
+        this(controller, c, Granularity.COARSEGRAINED);
     }
 
     public Granularity getGranularity() {
@@ -89,7 +88,7 @@ abstract public class ChangeCellEdit extends SpreadSheetEdit {
     }
 
     protected void updateCell() {
-        Variable var = Datavyu.getProjectController().getDataStore().getVariable(columnName);
+        Variable var = model.getVariable(columnName);
         Cell cell = var.getCells().get(ord);
         updateCell(cell);
     }

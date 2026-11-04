@@ -14,11 +14,8 @@
  */
 package org.datavyu.undoableedits;
 
-import org.datavyu.Datavyu;
 import org.datavyu.undoableedits.ChangeCellEdit.Granularity;
 
-import javax.swing.undo.CannotRedoException;
-import javax.swing.undo.CannotUndoException;
 import javax.swing.undo.UndoManager;
 import javax.swing.undo.UndoableEdit;
 
@@ -26,19 +23,6 @@ import javax.swing.undo.UndoableEdit;
  * Undo manager for spreadsheet edits that merges consecutive fine-grained cell edits.
  */
 public class SpreadsheetUndoManager extends UndoManager {
-
-
-
-    @Override
-    public synchronized void undo() throws CannotUndoException {
-        super.undo();
-        Datavyu.getView().getSpreadsheetPanel().redrawCells();
-    }
-
-    @Override
-    public synchronized void redo() throws CannotRedoException {
-        super.redo();
-    }
 
     @Override
     public synchronized boolean addEdit(UndoableEdit ue) {

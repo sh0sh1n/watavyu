@@ -16,11 +16,13 @@ package org.datavyu.models.db;
 
 import org.datavyu.util.Timestamp;
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 
 public class DatavyuCell implements Cell {
 
-    static Map<UUID, List<CellListener>> allListeners = new HashMap<UUID, List<CellListener>>();
+    /** Told of changes to this cell. */
+    private final List<CellListener> listeners = new CopyOnWriteArrayList<>();
     final private UUID id = UUID.randomUUID();
     private long onset = 0L;
     private long offset = 0L;
@@ -57,20 +59,6 @@ public class DatavyuCell implements Cell {
         this.offset = onset + clip.duration();
     }
 
-    /**
-     * @param cellId The Identifier of the variable we want the listeners for.
-     * @return The list of listeners for the specified cellId.
-     */
-    private static List<CellListener> getListeners(UUID cellId) {
-        List<CellListener> result = allListeners.get(cellId);
-
-        if (result == null) {
-            result = new ArrayList<CellListener>();
-            allListeners.put(cellId, result);
-        }
-
-        return result;
-    }
 
     @Override
 
@@ -97,7 +85,7 @@ public class DatavyuCell implements Cell {
         Timestamp.requireNotNegative(newOffset);
         if (newOffset != offset) parent.getOwningDatastore().markAsChanged();
         offset = newOffset;
-        for (CellListener cl : getListeners(getID())) {
+        for (CellListener cl : listeners) {
             cl.offsetChanged(offset);
         }
     }
@@ -130,7 +118,7 @@ public class DatavyuCell implements Cell {
         Timestamp.requireNotNegative(newOnset);
         if (newOnset != onset) parent.getOwningDatastore().markAsChanged();
         onset = newOnset;
-        for (CellListener cl : getListeners(getID())) {
+        for (CellListener cl : listeners) {
             cl.onsetChanged(onset);
         }
         if (clip != null) {
@@ -152,7 +140,7 @@ public class DatavyuCell implements Cell {
             parent.getOwningDatastore().markAsChanged();
         }
         clip = newClip;
-        for (CellListener cl : getListeners(getID())) {
+        for (CellListener cl : listeners) {
             cl.valueChange(cellValue);
         }
         clipOffsetChanged();
@@ -162,7 +150,7 @@ public class DatavyuCell implements Cell {
         long newOffset = onset + clip.duration();
         if (newOffset != offset) {
             offset = newOffset;
-            for (CellListener cl : getListeners(getID())) {
+            for (CellListener cl : listeners) {
                 cl.offsetChanged(offset);
             }
         }
@@ -196,7 +184,7 @@ public class DatavyuCell implements Cell {
             setHighlighted(false);
         }
 
-        for (CellListener cl : getListeners(getID())) {
+        for (CellListener cl : listeners) {
             cl.selectionChange(selected);
             if (!selected) {
                 cl.highlightingChange(false);
@@ -217,7 +205,7 @@ public class DatavyuCell implements Cell {
             setSelected(highlighted);
         }
 
-        for (CellListener cl : getListeners(getID())) {
+        for (CellListener cl : listeners) {
             cl.highlightingChange(highlighted);
         }
     }
@@ -261,12 +249,12 @@ public class DatavyuCell implements Cell {
 
     @Override
     public void addListener(final CellListener cellListener) {
-        getListeners(getID()).add(cellListener);
+        listeners.add(cellListener);
     }
 
     @Override
     public void removeListener(final CellListener cellListener) {
-        getListeners(getID()).remove(cellListener);
+        listeners.remove(cellListener);
     }
 
     public UUID getID() {

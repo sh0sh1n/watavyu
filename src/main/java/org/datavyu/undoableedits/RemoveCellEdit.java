@@ -14,6 +14,7 @@
  */
 package org.datavyu.undoableedits;
 
+import org.datavyu.controllers.project.ProjectController;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.controllers.DeleteCellController;
@@ -41,8 +42,8 @@ public class RemoveCellEdit extends SpreadSheetEdit {
      *
      * @param cells The cells that are being removed.
      */
-    public RemoveCellEdit(List<Cell> cells) {
-        super();
+    public RemoveCellEdit(final ProjectController controller, List<Cell> cells) {
+        super(controller);
         cellTOV = new ArrayList<CellTO>();
         for (Cell cell : cells) {
             cellTOV.add(new CellTO(cell, model.getVariable(cell)));
@@ -81,7 +82,7 @@ public class RemoveCellEdit extends SpreadSheetEdit {
                 }
             }
         }
-        new DeleteCellController(cellsToDelete);
+        new DeleteCellController(controller, cellsToDelete);
     }
 
     @Override

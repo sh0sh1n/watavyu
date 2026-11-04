@@ -14,6 +14,7 @@
  */
 package org.datavyu.undoableedits;
 
+import org.datavyu.controllers.project.ProjectController;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.controllers.DeleteColumnController;
@@ -35,8 +36,8 @@ public class AddVariableEdit extends VocabEditorEdit {
     private static final Logger LOGGER = LogManager.getLogger(AddVariableEdit.class);
     private String varName;
 
-    public AddVariableEdit(String variableName) {
-        super();
+    public AddVariableEdit(final ProjectController controller, String variableName) {
+        super(controller);
         this.varName = variableName;
     }
 
@@ -62,7 +63,7 @@ public class AddVariableEdit extends VocabEditorEdit {
         super.undo();
         List<Variable> cols = new ArrayList<Variable>();
         cols.add(model.getVariable(varName));
-        new DeleteColumnController(cols);
+        new DeleteColumnController(controller, cols);
     }
 
 }

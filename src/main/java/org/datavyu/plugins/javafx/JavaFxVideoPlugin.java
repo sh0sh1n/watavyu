@@ -17,6 +17,7 @@ package org.datavyu.plugins.javafx;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.models.Identifier;
+import org.datavyu.util.ClockTimer;
 import org.datavyu.plugins.StreamViewer;
 
 import javax.swing.filechooser.FileFilter;
@@ -68,10 +69,11 @@ public final class JavaFxVideoPlugin {
      * Opens the file and builds its window. Blocks until the media is ready, so callers
      * must use a background thread; the window itself is built on the Swing EDT.
      *
+     * @param clockTimer the clock the player follows
      * @throws MediaOpenException With a user-facing message if the file cannot be played.
      */
     public static StreamViewer open(final Identifier identifier, final File sourceFile, final Frame parent,
-                                    final boolean modal) {
+                                    final ClockTimer clockTimer, final boolean modal) {
         FxPlaybackEngine engine = FxPlaybackEngine.open(sourceFile, OPEN_TIMEOUT_SECONDS);
         try {
             // Audio has no frames: positions keep to an assumed rate, and frame stepping is off.
@@ -79,7 +81,7 @@ public final class JavaFxVideoPlugin {
                     ? readFrames(sourceFile, engine.durationMillis())
                     : FrameIndex.assumed(FALLBACK_FRAMES_PER_SECOND, engine.durationMillis());
             return JavaFxToolkit.onEdtAndWait(
-                    () -> new JavaFxVideoViewer(identifier, sourceFile, parent, modal, engine, frames));
+                    () -> new JavaFxVideoViewer(identifier, sourceFile, parent, clockTimer, modal, engine, frames));
         } catch (Exception e) {
             JavaFxToolkit.onFx(() -> {
                 engine.dispose();

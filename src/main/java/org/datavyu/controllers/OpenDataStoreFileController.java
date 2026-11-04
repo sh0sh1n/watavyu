@@ -20,7 +20,6 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.datavyu.Datavyu;
 import org.datavyu.models.db.*;
 import org.datavyu.util.Timestamp;
 import org.datavyu.views.discrete.SpreadSheetPanel;
@@ -28,6 +27,7 @@ import org.datavyu.views.discrete.SpreadSheetPanel;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * Imports Datavyu's JSON export into a spreadsheet: each pass becomes an annotation column.
@@ -36,6 +36,16 @@ public final class OpenDataStoreFileController {
 
     /** The logger instance for this class */
     private static Logger logger = LogManager.getLogger(OpenDataStoreFileController.class);
+
+    /** Shows the user what in a file could not be imported, after which importing stops. */
+    private final Consumer<String> warnings;
+
+    /**
+     * @param warnings shows the user what in a file could not be imported
+     */
+    public OpenDataStoreFileController(final Consumer<String> warnings) {
+        this.warnings = warnings;
+    }
 
     /**
      * The one code of an annotation column converted from a Datavyu text or nominal column, named as Datavyu named
@@ -255,7 +265,7 @@ public final class OpenDataStoreFileController {
                                                                                         () + " ): " + "was expecting " +
                                                                                 "" + "values field name";
                                                                         logger.warn(msg);
-                                                                        Datavyu.getApplication().showWarningDialog(msg);
+                                                                        warnings.accept(msg);
                                                                         break;
                                                                     }
                                                                 } else {
@@ -266,7 +276,7 @@ public final class OpenDataStoreFileController {
                                                                             "" + "was " + "expecting offset field " +
                                                                             "name";
                                                                     logger.warn(msg);
-                                                                    Datavyu.getApplication().showWarningDialog(msg);
+                                                                    warnings.accept(msg);
                                                                     break;
                                                                 }
                                                             } else {
@@ -276,7 +286,7 @@ public final class OpenDataStoreFileController {
                                                                         .currentLocation().getLineNr() + " ): was " +
                                                                         "" + "" + "expecting onset field name";
                                                                 logger.warn(msg);
-                                                                Datavyu.getApplication().showWarningDialog(msg);
+                                                                warnings.accept(msg);
                                                                 break;
                                                             }
                                                         } else {
@@ -286,7 +296,7 @@ public final class OpenDataStoreFileController {
                                                                     .currentLocation().getLineNr() + " ): was " +
                                                                     "expecting " + "id field name";
                                                             logger.warn(msg);
-                                                            Datavyu.getApplication().showWarningDialog(msg);
+                                                            warnings.accept(msg);
                                                             break;
                                                         }
                                                         token = parser.nextToken();
@@ -297,7 +307,7 @@ public final class OpenDataStoreFileController {
                                                             "' line " + parser.currentLocation().getLineNr() + " )" +
                                                             ": was expecting cells " + "field name";
                                                     logger.warn(msg);
-                                                    Datavyu.getApplication().showWarningDialog(msg);
+                                                    warnings.accept(msg);
                                                     break;
                                                     }
                                             } else {
@@ -305,7 +315,7 @@ public final class OpenDataStoreFileController {
                                                         + "line " + parser.currentLocation().getLineNr() +
                                                         " ):" + " was expecting arguments field name";
                                                 logger.warn(msg);
-                                                Datavyu.getApplication().showWarningDialog(msg);
+                                                warnings.accept(msg);
                                                 break;
                                             }
                                         } else {
@@ -313,7 +323,7 @@ public final class OpenDataStoreFileController {
                                                     parser.currentLocation().getLineNr() + " ): was expecting " +
                                                     "argument (NOMINAL, TEXT or MATRIX) field name";
                                             logger.warn(msg);
-                                            Datavyu.getApplication().showWarningDialog(msg);
+                                            warnings.accept(msg);
                                             break;
                                         }
                                     } else {
@@ -321,21 +331,21 @@ public final class OpenDataStoreFileController {
                                                 parser.currentLocation().getLineNr() + " ): was expecting type " +
                                                 "field name";
                                         logger.warn(msg);
-                                        Datavyu.getApplication().showWarningDialog(msg);
+                                        warnings.accept(msg);
                                         break;
                                     }
                                 } else {
                                     String msg = "The column " + columnName + " already exists in the current" + " " +
                                             "spreadsheet";
                                     logger.warn(msg);
-                                    Datavyu.getApplication().showWarningDialog(msg);
+                                    warnings.accept(msg);
                                     break;
                                 }
                             } else {
                                 String msg = "Unexpected character ('" + parser.currentName() + "' line " + parser
                                         .currentLocation().getLineNr() + " ): was expecting name field name";
                                 logger.warn(msg);
-                                Datavyu.getApplication().showWarningDialog(msg);
+                                warnings.accept(msg);
                                 break;
                             }
                             token = parser.nextToken();
@@ -345,14 +355,14 @@ public final class OpenDataStoreFileController {
                         String msg = "Unexpected character ('" + parser.currentName() + "' line " + parser
                                 .currentLocation().getLineNr() + " ): was expecting passes field name";
                         logger.error(msg);
-                        Datavyu.getApplication().showWarningDialog(msg);
+                        warnings.accept(msg);
                         break;
                     }
                 } else {
                     String msg ="Unexpected character ('" + parser.currentName() + "' line " + parser
                             .currentLocation().getLineNr() + " ): was expecting '{'";
                     logger.error(msg);
-                    Datavyu.getApplication().showWarningDialog(msg);
+                    warnings.accept(msg);
                     break;
                 }
             }
@@ -360,7 +370,7 @@ public final class OpenDataStoreFileController {
         } else {
             String msg = "The selected file is a not a JSON format";
             logger.error(msg);
-            Datavyu.getApplication().showWarningDialog(msg);
+            warnings.accept(msg);
         }
     }
 

@@ -21,9 +21,6 @@ import org.testng.annotations.Test;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.datavyu.Datavyu;
-import org.datavyu.controllers.project.ProjectController;
-import org.datavyu.models.project.Project;
 import static org.mockito.Mockito.*;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
@@ -51,7 +48,6 @@ public class VariableTest {
     @BeforeMethod
     public void setUp() throws UserWarningException {
         ds = DataStoreFactory.newDataStore();
-        Datavyu.setProjectController(new ProjectController(new Project(), ds));        
         model = (DatavyuVariable) ds.createVariable("test");
         modelListener = mock(VariableListener.class);
         model.addListener(modelListener);

@@ -16,7 +16,6 @@ package org.datavyu.controllers;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.datavyu.Datavyu;
 import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.UserWarningException;
 import org.datavyu.projectfile.ProjectDocument;
@@ -27,52 +26,84 @@ import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
 
-public class AutoSaveController implements ActionListener {
+/**
+ * Autosaves one spreadsheet: every interval, its project is saved to a project file in the temporary folder, replacing
+ * the one saved there before. Each spreadsheet has its own, so every open tab can be recovered after a crash. Only
+ * unsaved work is kept: a spreadsheet with no unsaved changes has no autosave, so recovery offers only work that would
+ * otherwise be lost.
+ */
+public final class AutoSaveController implements ActionListener {
 
     /** Logger for this class */
-    private static Logger logger = LogManager.getLogger(AutoSaveController.class);
+    private static final Logger logger = LogManager.getLogger(AutoSaveController.class);
 
-    /** Timer for this class */
-    private static Timer timer;
+    /** The spreadsheet saved */
+    private final ProjectController controller;
 
-    /** File to auto save */
-    private static File file;
+    /** Runs the autosaves, on the EDT */
+    private final Timer timer;
 
-    private AutoSaveController() {}
+    /** The last autosave written, or null before the first */
+    private File file;
 
-    public static void setInterval(int interval) {
-        if (interval == 0) {
-            if (timer != null) {
-                timer.stop();
-                timer = null;
-            }
+    /**
+     * Makes a stopped autosave.
+     *
+     * @param controller the spreadsheet to save
+     * @param minutes    how often to save it; at least 1
+     */
+    public AutoSaveController(final ProjectController controller, final int minutes) {
+        if (minutes < 1) {
+            throw new IllegalArgumentException("Autosave interval must be at least a minute: " + minutes);
+        }
+        this.controller = controller;
+        timer = new Timer(minutes * 60_000, this);
+    }
+
+    /** Starts saving, the first time after one interval. */
+    public void start() {
+        timer.start();
+    }
+
+    /** Stops saving and deletes the last autosave, as the spreadsheet's work was saved or knowingly discarded. */
+    public void discard() {
+        timer.stop();
+        clear();
+    }
+
+    /** Deletes the last autosave, as the spreadsheet's work was just saved; saving goes on while it changes. */
+    public void clear() {
+        if (file != null) {
+            file.delete();
+            file = null;
+        }
+    }
+
+    /** @return the last autosave written, or null if there is none */
+    File getFile() {
+        return file;
+    }
+
+    @Override
+    public void actionPerformed(final ActionEvent evt) {
+        save();
+    }
+
+    /**
+     * Saves the spreadsheet's project to a project file in the temporary folder, replacing the last one. Once the
+     * spreadsheet has no unsaved changes, as after saving it, its last autosave is deleted instead.
+     */
+    void save() {
+        if (!controller.isChanged()) {
+            clear();
             return;
         }
-        interval *= 60000;
-        if (timer == null) {
-            timer = new Timer(interval, new AutoSaveController());
-            timer.start();
-        } else {
-            timer.setDelay(interval);
-        }
-    }
-
-    public static void stop() {
-        if (timer != null) {
-            timer.stop();
-        }
-    }
-
-    /** Saves the current project to a project file in the temporary folder, replacing the last one saved there. */
-    @Override
-    public void actionPerformed(ActionEvent evt) {
         File next = null;
         try {
-            ProjectController projController = Datavyu.getProjectController();
-            String name = projController.getProjectName() == null ? "noname" : projController.getProjectName();
+            String name = controller.getProjectName() == null ? "noname" : controller.getProjectName();
             next = File.createTempFile("~" + name + "_", ProjectDocument.EXTENSION);
             next.deleteOnExit();
-            new SaveController().saveProject(next, projController.toDocument(next.getParentFile().toPath()), false);
+            new SaveController().saveProject(next, controller.toDocument(next.getParentFile().toPath()), false);
             // The previous autosave goes only once this one is written, so a failure or crash leaves one behind.
             if (file != null) {
                 file.delete();

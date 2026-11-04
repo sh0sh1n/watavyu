@@ -22,8 +22,8 @@ import javafx.scene.media.MediaView;
 import javafx.scene.paint.Color;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.datavyu.Datavyu;
 import org.datavyu.models.Identifier;
+import org.datavyu.util.ClockTimer;
 import org.datavyu.plugins.StreamViewerDialog;
 
 import javax.swing.JOptionPane;
@@ -54,9 +54,10 @@ public final class JavaFxVideoViewer extends StreamViewerDialog {
     private final JavaFxPlayback playback;
     private final JFXPanel panel = new JFXPanel();
 
-    JavaFxVideoViewer(final Identifier identifier, final File sourceFile, final Frame parent, final boolean modal,
-                      final FxPlaybackEngine engine, final FrameIndex frames) {
-        super(identifier, parent, modal);
+    JavaFxVideoViewer(final Identifier identifier, final File sourceFile, final Frame parent,
+                      final ClockTimer clockTimer, final boolean modal, final FxPlaybackEngine engine,
+                      final FrameIndex frames) {
+        super(identifier, parent, clockTimer, modal);
         this.engine = engine;
         this.playback = new JavaFxPlayback(engine, frames, Platform::runLater);
         playback.setErrorHandler(error -> SwingUtilities.invokeLater(() -> showPlaybackError(error)));
@@ -82,7 +83,7 @@ public final class JavaFxVideoViewer extends StreamViewerDialog {
                 + (frames.isMeasured() ? (frames.isConstantRate() ? "constant" : "variable") + " frame rate"
                 : "frame times unavailable") + ")");
         setSourceFile(sourceFile);
-        Datavyu.getVideoController().getClockTimer().registerListener(this);
+        clockTimer.registerListener(this);
     }
 
     private Dimension initialSize() {
@@ -190,7 +191,7 @@ public final class JavaFxVideoViewer extends StreamViewerDialog {
 
     @Override
     protected void cleanUp() {
-        Datavyu.getVideoController().getClockTimer().unRegisterListener(this);
+        clockTimer.unRegisterListener(this);
         playback.dispose();
         Platform.runLater(() -> panel.setScene(null));
     }

@@ -1,0 +1,69 @@
+package org.datavyu.controllers.project;
+
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
+
+import org.datavyu.models.db.Cell;
+import org.datavyu.models.db.DataStoreFactory;
+import org.datavyu.models.project.Project;
+import org.datavyu.undoableedits.ChangeOnsetCellEdit;
+import org.datavyu.undoableedits.ChangeCellEdit.Granularity;
+import org.testng.annotations.Test;
+
+/**
+ * Each spreadsheet has its own undo history, and an edit undoes in the spreadsheet it was made in, whichever tab is
+ * selected when it is undone (B17).
+ */
+public class SpreadsheetUndoTest {
+
+    /** Makes a spreadsheet with a column named notes holding one cell at 1 s, as two open projects might. */
+    private static ProjectController spreadsheet() throws Exception {
+        ProjectController spreadsheet = new ProjectController(new Project(), DataStoreFactory.newDataStore());
+        spreadsheet.getDataStore().createVariable("notes").createPointCell(1_000);
+        return spreadsheet;
+    }
+
+    private static Cell cell(final ProjectController spreadsheet) {
+        return spreadsheet.getDataStore().getVariable("notes").getCells().get(0);
+    }
+
+    /** Moves the cell's onset and records the change, as typing a time in it does. */
+    private static void moveOnset(final ProjectController spreadsheet, final long onset) {
+        Cell cell = cell(spreadsheet);
+        long old = cell.getOnset();
+        cell.setOnset(onset);
+        spreadsheet.postEdit(new ChangeOnsetCellEdit(spreadsheet, cell, old, onset, Granularity.COARSEGRAINED));
+    }
+
+    @Test
+    public void undoChangesOnlyTheSpreadsheetTheEditWasMadeIn() throws Exception {
+        ProjectController first = spreadsheet();
+        ProjectController second = spreadsheet();
+        moveOnset(first, 2_000);
+        moveOnset(second, 3_000);
+
+        first.undo();
+
+        assertEquals(cell(first).getOnset(), 1_000);
+        assertEquals(cell(second).getOnset(), 3_000);
+        assertFalse(first.getUndoManager().canUndo());
+        assertTrue(second.getUndoManager().canUndo());
+
+        first.redo();
+
+        assertEquals(cell(first).getOnset(), 2_000);
+        assertEquals(cell(second).getOnset(), 3_000);
+    }
+
+    @Test
+    public void editsJoinOnlyTheirOwnSpreadsheetsHistory() throws Exception {
+        ProjectController first = spreadsheet();
+        ProjectController second = spreadsheet();
+
+        moveOnset(first, 2_000);
+
+        assertTrue(first.getUndoManager().canUndo());
+        assertFalse(second.getUndoManager().canUndo());
+    }
+}

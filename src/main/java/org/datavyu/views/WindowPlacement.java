@@ -1,6 +1,5 @@
 package org.datavyu.views;
 
-import org.datavyu.Datavyu;
 import org.datavyu.util.Settings;
 
 import java.awt.GraphicsDevice;
@@ -38,7 +37,8 @@ public final class WindowPlacement {
         }
         if (!window.isLocationByPlatform() && window.getX() == 0 && window.getY() == 0) {
             Window owner = window.getOwner();
-            window.setLocationRelativeTo(owner != null ? owner : Datavyu.getApplication().getMainFrame());
+            // A window without an owner is centred on the screen.
+            window.setLocationRelativeTo(owner);
         }
         window.setVisible(true);
     }
