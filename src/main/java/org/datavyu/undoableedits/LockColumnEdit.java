@@ -1,6 +1,5 @@
 package org.datavyu.undoableedits;
 
-import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.Variable;
 
 import javax.swing.undo.AbstractUndoableEdit;
@@ -13,19 +12,16 @@ import javax.swing.undo.CannotUndoException;
  */
 public final class LockColumnEdit extends AbstractUndoableEdit {
 
-    private final DataStore dataStore;
     private final Variable column;
     private final boolean locked;
 
     /**
      * Records a lock change that has already been made.
      *
-     * @param dataStore the spreadsheet holding the column
-     * @param column    the column, which undo of its deletion puts back as the same object
-     * @param locked    whether the column was locked (true) or unlocked
+     * @param column the column, which undo of its deletion puts back as the same object
+     * @param locked whether the column was locked (true) or unlocked
      */
-    public LockColumnEdit(final DataStore dataStore, final Variable column, final boolean locked) {
-        this.dataStore = dataStore;
+    public LockColumnEdit(final Variable column, final boolean locked) {
         this.column = column;
         this.locked = locked;
     }
@@ -35,21 +31,15 @@ public final class LockColumnEdit extends AbstractUndoableEdit {
         return (locked ? "Lock Column " : "Unlock Column ") + column.getName();
     }
 
-    /** Undoes the lock change, unless the column has been taken out without an edit, leaving nothing to change. */
     @Override
     public void undo() throws CannotUndoException {
         super.undo();
-        if (dataStore.contains(column)) {
-            column.setLocked(!locked);
-        }
+        column.setLocked(!locked);
     }
 
-    /** Redoes the lock change, unless the column has been taken out without an edit, leaving nothing to change. */
     @Override
     public void redo() throws CannotRedoException {
         super.redo();
-        if (dataStore.contains(column)) {
-            column.setLocked(locked);
-        }
+        column.setLocked(locked);
     }
 }

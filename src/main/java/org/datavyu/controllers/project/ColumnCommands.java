@@ -97,7 +97,7 @@ public final class ColumnCommands {
             return;
         }
         column.setLocked(locked);
-        spreadsheet.postEdit(new LockColumnEdit(dataStore(), column, locked));
+        spreadsheet.postEdit(new LockColumnEdit(column, locked));
     }
 
     /**

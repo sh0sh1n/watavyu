@@ -39,6 +39,9 @@ public class AddCellEdit extends SpreadSheetEdit {
 
     @Override
     public String getPresentationName() {
+        if (addedCell.getClip() != null) {
+            return "Add Media " + addedCell.getClip().fileName();
+        }
         return "New Cell to " + varName;
     }
 

@@ -200,4 +200,20 @@ public interface Cell {
      * @throws IllegalStateException if this is an annotation column's cell
      */
     void setClip(MediaClip clip);
+
+    /**
+     * Tells whether this cell's media file is there but could not be opened, as its player last reported. This is
+     * the session's state, not saved: the file is tried again when the project opens.
+     *
+     * @return whether the file could not be opened
+     */
+    boolean isClipFailed();
+
+    /**
+     * Records whether this cell's media file could not be opened, and tells the cell's listeners, so its text says so.
+     *
+     * @param failed whether the file could not be opened
+     * @throws IllegalStateException if this is an annotation column's cell
+     */
+    void setClipFailed(boolean failed);
 }

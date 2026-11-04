@@ -171,4 +171,19 @@ public class CellTest {
 
         verify(modelListener, times(1)).valueChange(any());
     }
+
+    /** A clip marked as one whose file could not be opened tells its views, once, so its text says so. */
+    @Test
+    public void markingAClipFailedTellsTheCellsListeners() throws Exception {
+        Cell clip = ds.createMediaVariable("media_1").createClip(0, MediaClip.of("/study/cam.mp4"));
+        CellListener listener = mock(CellListener.class);
+        clip.addListener(listener);
+
+        clip.setClipFailed(true);
+        clip.setClipFailed(true);
+
+        assertTrue(clip.isClipFailed());
+        verify(listener, times(1)).valueChange(any());
+        assertThrows(IllegalStateException.class, () -> model.setClipFailed(true));
+    }
 }

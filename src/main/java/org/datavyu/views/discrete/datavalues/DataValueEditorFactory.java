@@ -55,7 +55,7 @@ public class DataValueEditorFactory {
 
         MediaClip clip = c.getClip();
         if (clip != null) {
-            eds.add(new FixedText(ta, clipLabel(clip)));
+            eds.add(new FixedText(ta, clipLabel(clip, c.isClipFailed())));
             return eds;
         }
 
@@ -79,18 +79,23 @@ public class DataValueEditorFactory {
 
     /**
      * Names what a media cell plays: its file's name, its frame rate when the file has video and has said it, and
-     * whether the file is missing, as {@code cam.mp4 · 29.97 fps (missing)}.
+     * whether the file is missing, as {@code cam.mp4 · 29.97 fps (missing)}, or there but could not be opened, as
+     * {@code cam.mp4 (could not open)}.
      *
-     * @param clip a media cell's clip
+     * @param clip   a media cell's clip
+     * @param failed whether the file could not be opened
      * @return the cell's text
      */
-    public static String clipLabel(final MediaClip clip) {
+    public static String clipLabel(final MediaClip clip, final boolean failed) {
         String label = clip.fileName();
         if (clip.frameRate() > 0) {
             label += " \u00b7 " + new BigDecimal(clip.frameRate()).setScale(3, RoundingMode.HALF_UP)
                 .stripTrailingZeros().toPlainString() + " fps";
         }
-        return Files.exists(Path.of(clip.file())) ? label : label + " (missing)";
+        if (!Files.exists(Path.of(clip.file()))) {
+            return label + " (missing)";
+        }
+        return failed ? label + " (could not open)" : label;
     }
 
     /**

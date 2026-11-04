@@ -202,26 +202,7 @@ public class ColumnCommandsTest {
         assertSame(dataStore.getVariable("media_1"), media);
     }
 
-    /**
-     * A media column whose file fails to open is taken out without an edit and never comes back. Its edits change
-     * nothing then, rather than refusing, so the edits before them can still be undone.
-     */
-    @Test
-    public void editsOfAColumnTakenOutWithoutAnEditDoNotStopTheHistory() throws Exception {
-        columns.setLocked(gaze, true);
-        Variable media = columns.newMediaColumn();
-        columns.setLocked(media, true);
-        dataStore.removeVariable(media);
-
-        assertNull(spreadsheet.undo());
-        assertNull(spreadsheet.undo());
-        assertNull(spreadsheet.undo());
-
-        assertFalse(gaze.isLocked());
-        assertEquals(order(), List.of("gaze", "speech", "gesture"));
-    }
-
-    /** A media column that fails to open is taken out without an edit, so a deleted column's place can be past the end. */
+    /** Should a column be taken out without an edit, a deleted column whose place is past the end comes back last. */
     @Test
     public void aDeletedColumnWhosePlaceHasGoneComesBackLast() {
         columns.delete(List.of(gesture));

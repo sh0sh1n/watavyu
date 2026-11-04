@@ -76,8 +76,10 @@ abstract public class ChangeCellEdit extends SpreadSheetEdit {
     }
 
     /**
+     * Tells whether another edit changed the same cell; edits of different cells are never duplicates of each other.
+     *
      * @param other another edit of a cell
-     * @return whether it changed the same cell; edits of different cells are never duplicates of each other
+     * @return whether it changed the same cell
      */
     protected boolean sameCell(final ChangeCellEdit other) {
         return other.cell.equals(cell);

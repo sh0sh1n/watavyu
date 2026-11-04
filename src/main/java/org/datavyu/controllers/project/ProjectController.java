@@ -98,10 +98,13 @@ public final class ProjectController {
     private AutoSaveController autoSave;
 
     /** The commands that make, delete and time cells */
-    private final CellCommands cells = new CellCommands(this);
+    private final CellCommands cellCommands = new CellCommands(this);
 
     /** The commands that add, delete, lock, hide and move columns */
-    private final ColumnCommands columns = new ColumnCommands(this);
+    private final ColumnCommands columnCommands = new ColumnCommands(this);
+
+    /** The commands that add media */
+    private final MediaCommands mediaCommands = new MediaCommands(this);
 
     /** Whether quick-key mode is on, in which typing in a selected column makes a cell; an application setting. */
     private BooleanSupplier quickKeyMode = () -> false;
@@ -164,14 +167,14 @@ public final class ProjectController {
     }
 
     /**
-     * Undoes this spreadsheet's last edit, and shows its cells again, unless the edit refuses (see {@code GuardedEdit}),
-     * which leaves the history as it was.
+     * Undoes this spreadsheet's last edit, and shows its cells again, unless the edit refuses (see
+     * {@code GuardedEdit}), which leaves the history as it was.
      *
-     * @return why the edit refused, for the user, or null if it was undone
+     * @return why the edit refused, for the user, or null if it was undone or there was nothing to undo
      */
     public String undo() {
         String refusal = undoManager.undoRefusal();
-        if (refusal == null) {
+        if (refusal == null && undoManager.canUndo()) {
             undoManager.undo();
             redrawCells();
         }
@@ -182,11 +185,11 @@ public final class ProjectController {
      * Redoes this spreadsheet's last undone edit, and shows its cells again, unless the edit refuses, which leaves the
      * history as it was.
      *
-     * @return why the edit refused, for the user, or null if it was redone
+     * @return why the edit refused, for the user, or null if it was redone or there was nothing to redo
      */
     public String redo() {
         String refusal = undoManager.redoRefusal();
-        if (refusal == null) {
+        if (refusal == null && undoManager.canRedo()) {
             undoManager.redo();
             redrawCells();
         }
@@ -245,12 +248,17 @@ public final class ProjectController {
 
     /** Returns the commands that make, delete and time this spreadsheet's cells. */
     public CellCommands cells() {
-        return cells;
+        return cellCommands;
     }
 
     /** Returns the commands that add, delete, lock, hide and move this spreadsheet's columns. */
     public ColumnCommands columns() {
-        return columns;
+        return columnCommands;
+    }
+
+    /** Returns the commands that add media to this spreadsheet. */
+    public MediaCommands media() {
+        return mediaCommands;
     }
 
     /**

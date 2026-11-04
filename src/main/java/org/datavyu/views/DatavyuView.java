@@ -782,11 +782,11 @@ public final class DatavyuView implements FileDropEventListener {
 
     private void addMediaFiles(final List<File> files) {
         SpreadSheetPanel panel = getSpreadsheetPanel();
-        if (files.isEmpty() || panel == null || panel.getMediaPlayers() == null) {
+        if (files.isEmpty() || panel == null) {
             return;
         }
         try {
-            panel.getMediaPlayers().addMediaFiles(files, panel.getVideoController().getCurrentTime(),
+            selectedController().media().addMedia(files, panel.getVideoController().getCurrentTime(),
                 locked -> Dialogs.confirm(getFrame(), locked.getName()
                     + " is locked, so no clips can be added to it. Add the media to a new media column instead?",
                     "Column Locked", "Add to New Column"));
@@ -1347,6 +1347,8 @@ public final class DatavyuView implements FileDropEventListener {
         spreadsheetMenu.addMenuListener(new MenuListener() {
             @Override
             public void menuSelected(final MenuEvent e) {
+                // An edit's name can name a column renamed since in the Code Editor, which is not yet an edit (B21).
+                refreshUndoRedo();
                 spreadsheetMenuSelected(e);
             }
 

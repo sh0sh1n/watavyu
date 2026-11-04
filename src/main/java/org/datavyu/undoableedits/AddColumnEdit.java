@@ -22,15 +22,19 @@ import javax.swing.undo.CannotRedoException;
 import javax.swing.undo.CannotUndoException;
 
 /**
- * Adding an empty column: an annotation column, from the spreadsheet's {@code +} button or the Code Editor, or a
- * media column. Undo takes the column out and redo puts the same column back in its place, so later edits that hold it
- * or its cells still find it.
+ * Adding a column: an empty annotation column, from the spreadsheet's {@code +} button or the Code Editor; an empty
+ * media column, from New Media Column; or a media column holding a clip, from Add Media. Undo takes the column out and
+ * redo puts the same column back in its place, so later edits that hold it or its cells still find it.
  */
 public final class AddColumnEdit extends AbstractUndoableEdit implements GuardedEdit {
 
     private final DataStore dataStore;
     private final Variable column;
     private final int index;
+    private final String presentationName;
+
+    /** Whether the column was the one selected when added, as new columns are, unlike those of Add Media. */
+    private final boolean selected;
 
     /**
      * Records a column that has just been added.
@@ -46,14 +50,22 @@ public final class AddColumnEdit extends AbstractUndoableEdit implements Guarded
         if (index < 0) {
             throw new IllegalArgumentException("Column " + column.getName() + " is not in the spreadsheet");
         }
+        selected = column.isSelected();
+        if (!column.isMedia()) {
+            presentationName = "New Column \"" + column.getName() + "\"";
+        } else if (column.getCells().isEmpty()) {
+            presentationName = "New Media Column " + column.getName();
+        } else {
+            presentationName = "Add Media " + column.getCells().get(0).getClip().fileName();
+        }
     }
 
     @Override
     public String getPresentationName() {
-        return column.isMedia() ? "New Media Column " + column.getName() : "New Column \"" + column.getName() + "\"";
+        return presentationName;
     }
 
-    /** Never refused: a column already taken out without an edit is left out. */
+    /** Never refused: the column is in the spreadsheet, as every later edit has been undone. */
     @Override
     public String undoRefusal() {
         return null;
@@ -65,19 +77,19 @@ public final class AddColumnEdit extends AbstractUndoableEdit implements Guarded
             : "Another column is named " + column.getName() + ". Rename or delete it to redo this.";
     }
 
-    /** Takes the column out, unless it has already been taken out without an edit. */
+    /** Takes the column out. */
     @Override
     public void undo() throws CannotUndoException {
         super.undo();
-        if (dataStore.contains(column)) {
+        if (selected) {
             dataStore.deselectAll();
-            dataStore.removeVariable(column);
         }
+        dataStore.removeVariable(column);
     }
 
     /**
-     * Puts the column back, the one column selected, as it was when new; refused, leaving the edit as it was, if the
-     * spreadsheet has a column of its name.
+     * Puts the column back, selected as it was when added (the one column selected, if it was); refused, leaving the
+     * edit as it was, if the spreadsheet has a column of its name.
      */
     @Override
     public void redo() throws CannotRedoException {
@@ -85,8 +97,11 @@ public final class AddColumnEdit extends AbstractUndoableEdit implements Guarded
             throw new CannotRedoException();
         }
         super.redo();
-        dataStore.deselectAll();
+        if (selected) {
+            dataStore.deselectAll();
+        }
+        // A place past the end, which only a column taken out without an edit could leave, puts the column last.
         dataStore.addVariable(column, Math.min(index, dataStore.getAllVariables().size()));
-        column.setSelected(true);
+        column.setSelected(selected);
     }
 }
