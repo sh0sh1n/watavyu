@@ -187,7 +187,7 @@ public final class EditorTracker
             return;
         }
         EditorComponent follower = getEditorAtArgIndex(place);
-        currentEditor = follower == NO_EDITOR ? lastEditor() : follower;
+        currentEditor = follower.isEditable() ? follower : lastEditor();
         calculatePrePostCounts();
         if (currentEditor.canSubSelect()) {
             currentEditor.setCaretPosition(caret);
