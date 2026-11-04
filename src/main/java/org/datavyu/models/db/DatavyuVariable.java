@@ -80,6 +80,10 @@ public final class DatavyuVariable implements Variable {
             return;
         }
         if (cell.getCellValue().getArgument() == this.getRootNode()) {
+            if (isHidden()) {
+                // As an undo puts back a cell that was selected.
+                cell.setSelected(false);
+            }
             cells.add(cell);
             for (VariableListener vl : listeners) {
                 vl.cellInserted(cell);
@@ -234,12 +238,12 @@ public final class DatavyuVariable implements Variable {
 
     @Override
     public boolean isSelected() {
-        return selected && !isHidden();
+        return selected;
     }
 
     @Override
     public void setSelected(final boolean selected) {
-        this.selected = selected;
+        this.selected = selected && !isHidden();
     }
 
     @Override

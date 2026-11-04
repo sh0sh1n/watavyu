@@ -118,6 +118,25 @@ public class VariableTest {
         assertFalse(cell.isSelected());
         assertTrue(ds.getSelectedCells().isEmpty());
         assertTrue(ds.getSelectedVariables().isEmpty());
+
+        // Nor is it once shown again: nothing was selected while it was hidden.
+        model.setHidden(false);
+        assertFalse(model.isSelected());
+        assertFalse(cell.isSelected());
+    }
+
+    /** A cell put back into a hidden column, as undoing its deletion does, comes back unselected. */
+    @Test
+    public void aCellPutBackIntoAHiddenColumnIsNotSelected() {
+        Cell cell = model.createPointCell(1_000);
+        cell.setSelected(true);
+        model.removeCell(cell);
+        model.setHidden(true);
+
+        model.addCell(cell);
+        model.setHidden(false);
+
+        assertFalse(cell.isSelected());
     }
 
     @Test

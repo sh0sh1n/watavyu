@@ -47,8 +47,9 @@ public class DatavyuCell implements Cell {
 
         this.onset = 0L;
         this.offset = 0L;
-        this.selected = true;
-        this.highlighted = true;
+        // A new cell is selected and highlighted, unless its column is hidden.
+        this.selected = shown();
+        this.highlighted = selected;
 
         // One value for each of the column's codes
         this.cellValue = new DatavyuMatrixCellValue(getID(), type, this);
@@ -195,19 +196,25 @@ public class DatavyuCell implements Cell {
 
     @Override
     public boolean isSelected() {
-        return selected && !parent.isHidden();
+        return selected;
+    }
+
+    /** @return whether the cell's column is shown, so the cell can be selected */
+    private boolean shown() {
+        return parent == null || !parent.isHidden();
     }
 
     @Override
-    public void setSelected(final boolean selected) {
-        this.selected = selected;
-        if (!selected) {
+    public void setSelected(final boolean select) {
+        boolean now = select && shown();
+        this.selected = now;
+        if (!now) {
             setHighlighted(false);
         }
 
         for (CellListener cl : listeners) {
-            cl.selectionChange(selected);
-            if (!selected) {
+            cl.selectionChange(now);
+            if (!now) {
                 cl.highlightingChange(false);
             }
         }

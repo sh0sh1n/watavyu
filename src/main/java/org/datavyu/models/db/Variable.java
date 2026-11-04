@@ -99,14 +99,13 @@ public interface Variable {
     boolean contains(final Cell c);
 
     /**
-     * Tells whether the column is selected. A hidden column never is, whatever selected it.
-     *
      * @return True if the variable is currently selected or not.
      */
     boolean isSelected();
 
     /**
-     * Selects the variable in the datastore.
+     * Selects the variable in the datastore. A hidden column is never selected, whatever asks: the selection is always
+     * of what can be seen.
      *
      * @param selected True if the variable is selected, false otherwise.
      */

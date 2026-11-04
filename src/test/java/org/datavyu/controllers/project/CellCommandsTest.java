@@ -528,6 +528,8 @@ public class CellCommandsTest {
         spreadsheet.setLastCreatedVariable(speech);
 
         assertSame(cells.newCellInSelectedColumn(1_000).getVariable(), speech);
+        spreadsheet.columns().show(notes);
+        assertFalse(notes.isSelected(), "nor is it selected once shown");
     }
 
     @Test
