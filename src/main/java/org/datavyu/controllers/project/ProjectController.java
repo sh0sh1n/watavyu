@@ -100,8 +100,11 @@ public final class ProjectController {
     /** The commands that make, delete and time cells */
     private final CellCommands cellCommands = new CellCommands(this);
 
-    /** The commands that add, delete, lock, hide and move columns */
+    /** The commands that add, delete, rename, lock, hide and move columns */
     private final ColumnCommands columnCommands = new ColumnCommands(this);
+
+    /** The commands that add, delete, move and rename columns' codes */
+    private final CodeCommands codeCommands = new CodeCommands(this);
 
     /** The commands that add media */
     private final MediaCommands mediaCommands = new MediaCommands(this);
@@ -251,9 +254,14 @@ public final class ProjectController {
         return cellCommands;
     }
 
-    /** Returns the commands that add, delete, lock, hide and move this spreadsheet's columns. */
+    /** Returns the commands that add, delete, rename, lock, hide and move this spreadsheet's columns. */
     public ColumnCommands columns() {
         return columnCommands;
+    }
+
+    /** Returns the commands that add, delete, move and rename the codes of this spreadsheet's columns. */
+    public CodeCommands codes() {
+        return codeCommands;
     }
 
     /** Returns the commands that add media to this spreadsheet. */

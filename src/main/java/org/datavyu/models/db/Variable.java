@@ -143,29 +143,52 @@ public interface Variable {
     void setName(final String newName, final boolean grandfathered) throws UserWarningException;
 
     /**
-     * Adds a code to the variable, named {@code codeNN} after the codes added before it.
+     * Adds a code after the others, named {@code codeNN} after the codes added before it, with an empty value in each
+     * cell.
      *
      * @return the new code
+     * @throws IllegalStateException if the column is locked
      */
     Argument addArgument();
 
     /**
-     * Moves an argument left
+     * Puts a code back at a place among the others, with an empty value in each cell, as undoing its deletion does.
      *
-     * @param String name - the type of argument to move
-     * @param index  - index to move the argument to
+     * @param code  the code
+     * @param index its place, from 0 to the number of codes
+     * @throws IllegalStateException if the column is locked
      */
-    void moveArgument(final int old_index, final int new_index);
-
-    void moveArgument(final String name, final int new_index);
+    void insertArgument(Argument code, int index);
 
     /**
-     * Removes an argument from a matrix variable.
+     * Moves a code and each cell's value for it to another place, shifting those between. A place out of range, or a
+     * locked column, leaves the codes as they are.
      *
-     * @param String name - the type of argument to remove from the matrix
+     * @param oldIndex the code's place
+     * @param newIndex its new place
      */
-    void removeArgument(final String name);
+    void moveArgument(int oldIndex, int newIndex);
 
+    /**
+     * Deletes a code and each cell's value for it, unless the column is locked.
+     *
+     * @param index the code's place
+     */
+    void removeArgument(int index);
+
+    /**
+     * Renames a code, unless the column is locked. Any name is taken, as undo puts back the names a code has had, which
+     * a Datavyu import may have given it; {@code CodeCommands} keeps the names typed to those a project file allows.
+     *
+     * @param index the code's place
+     * @param name  its new name
+     */
+    void renameArgument(int index, String name);
+
+    /**
+     * @param name a code's name
+     * @return the place of the first code of that name, or -1 if there is none
+     */
     int getArgumentIndex(String name);
 
     /**

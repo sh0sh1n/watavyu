@@ -32,6 +32,8 @@ import javax.swing.border.Border;
 import java.awt.*;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * A view for a vocab element.
@@ -85,6 +87,9 @@ public class VocabElementV extends JPanel {
      * Is the name currently displayed for this column invalid
      */
     private boolean invalidState;
+
+    /** How many changes typed into this view's editors are being applied. */
+    private int typing;
     /**
      * Is this vocab element view marked for removal?
      */
@@ -102,13 +107,15 @@ public class VocabElementV extends JPanel {
      */
     private final LockMark lockMark;
     /**
-     * Hears of the column being locked and of changes it refuses, while this view is showing.
+     * Hears of the column being renamed or locked or its codes changing, as undo does from the spreadsheet, and of
+     * changes it refuses, while this view is showing.
      */
-    private final VariableListener lockListener = new VariableListener() {
-        @Override public void nameChanged(final String newName) { }
+    private final VariableListener columnListener = new VariableListener() {
+        @Override public void nameChanged(final String newName) { showModel(); }
         @Override public void visibilityChanged(final boolean isHidden) { }
         @Override public void cellInserted(final Cell newCell) { }
         @Override public void cellRemoved(final Cell deletedCell) { }
+        @Override public void codesChanged() { showModel(); }
         @Override public void lockChanged(final boolean locked) { updateMark(); }
         @Override public void editRefused() { lockMark.shake(); }
     };
@@ -169,12 +176,14 @@ public class VocabElementV extends JPanel {
     @Override
     public void addNotify() {
         super.addNotify();
-        varModel.addListener(lockListener);
+        varModel.addListener(columnListener);
+        // The column may have changed while this view was not showing.
+        showModel();
     }
 
     @Override
     public void removeNotify() {
-        varModel.removeListener(lockListener);
+        varModel.removeListener(columnListener);
         super.removeNotify();
     }
 
@@ -197,10 +206,64 @@ public class VocabElementV extends JPanel {
         veRootView.setVocabElement(varModel, this);
     }
 
-    public final void setInvalid(final boolean invalid, final String lastValidName) {
-        invalidState = invalid;
+    /**
+     * Applies a change typed into one of this view's editors. They already show it, so the change does not rebuild them
+     * under the cursor; then the warning mark shows whether the column refused a name.
+     *
+     * @param change the change, through a command
+     */
+    final void applyTyped(final Runnable change) {
+        typing++;
+        try {
+            change.run();
+        } finally {
+            typing--;
+        }
+        refreshRefused(true);
+    }
+
+    /**
+     * Rebuilds the view when the column's name or codes have changed from elsewhere, as undo changes them, and forgets
+     * a selected code, whose editor is gone.
+     */
+    private void showModel() {
+        if (typing > 0 || (varModel.getName().equals(getCurrentNameDisplay()) && shownCodes().equals(codeNames()))) {
+            return;
+        }
+        rebuildContents();
+        parentEditor.columnRebuilt(this);
+        refreshRefused(false);
+    }
+
+    /** Returns the names shown that the column does not have: typed ones it refused, or ones it has since changed. */
+    public final List<String> refusedNames() {
+        List<String> refused = new ArrayList<>();
+        if (!varModel.getName().equals(getCurrentNameDisplay())) {
+            refused.add(getCurrentNameDisplay());
+        }
+        List<String> codes = codeNames();
+        List<String> shown = shownCodes();
+        for (int i = 0; i < shown.size(); i++) {
+            if (i >= codes.size() || !codes.get(i).equals(shown.get(i))) {
+                refused.add(shown.get(i));
+            }
+        }
+        return refused;
+    }
+
+    private List<String> shownCodes() {
+        return veRootView.getEditors().stream()
+            .filter(FormalArgEditor.class::isInstance).map(EditorComponent::getText).toList();
+    }
+
+    private List<String> codeNames() {
+        return varModel.getRootNode().childArguments.stream().map(code -> code.name).toList();
+    }
+
+    private void refreshRefused(final boolean typed) {
+        invalidState = !refusedNames().isEmpty();
         updateMark();
-        parentEditor.refreshNameWarnings();
+        parentEditor.refreshNameWarnings(typed);
     }
 
     /** Shows the warning beside a name that cannot be applied, or else the lock beside a locked column's name. */
@@ -215,10 +278,6 @@ public class VocabElementV extends JPanel {
             invalidBangIcon.setIcon(null);
             invalidBangIcon.setToolTipText(null);
         }
-    }
-
-    public boolean getInvalid() {
-        return invalidState;
     }
 
     public String getCurrentNameDisplay() {
@@ -291,9 +350,11 @@ public class VocabElementV extends JPanel {
      * argument view in this vocab element has focus.
      */
     public final FormalArgEditor getArgWithFocus() {
+        // An editor that a rebuild has replaced, which the tracker can still hold, is no selection.
         EditorComponent ed = veRootView.getEdTracker().getCurrentEditor();
-        if(ed.getClass() == FormalArgEditor.class)
-            return (FormalArgEditor) ed;
+        if (ed instanceof FormalArgEditor code && veRootView.getEditors().contains(code)) {
+            return code;
+        }
         return null;
     }
 

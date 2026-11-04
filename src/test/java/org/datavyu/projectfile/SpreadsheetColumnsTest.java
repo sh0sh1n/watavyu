@@ -75,7 +75,7 @@ public class SpreadsheetColumnsTest {
     public void aColumnWithNoCodesKeepsItsTiming() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
         Variable timing = dataStore.createVariable("Timing");
-        timing.removeArgument("code01");
+        timing.removeArgument(0);
         Cell cell = timing.createCell();
         cell.setOnset(10);
         cell.setOffset(20);

@@ -3,10 +3,11 @@ package org.datavyu.undoableedits;
 import javax.swing.undo.UndoableEdit;
 
 /**
- * An edit that can tell, before it starts, that undoing or redoing it would be refused: when putting a column back
- * would clash with another column's name, which a change that is not an edit can take (renaming in the Code Editor,
- * B21). The spreadsheet's undo history asks first, so a refused edit stays where it was in the history rather than
- * being stepped past, and the user is told why and can rename or delete the other column.
+ * An edit that can tell, before it starts, that undoing or redoing it would be refused: when putting a column or its
+ * name back would clash with another column's name. Every user action that names a column is an edit, so only a change
+ * made outside the commands can take a name, but the history is kept sound against one. The spreadsheet's undo history
+ * asks first, so a refused edit stays where it was in the history rather than being stepped past, and the user is told
+ * why and can rename or delete the other column.
  */
 public interface GuardedEdit extends UndoableEdit {
 

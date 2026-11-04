@@ -21,6 +21,7 @@ import org.apache.logging.log4j.Logger;
 import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.util.Dialogs;
 import org.datavyu.models.db.Argument;
+import org.datavyu.models.db.DataStoreListener;
 import org.datavyu.models.db.UserWarningException;
 import org.datavyu.models.db.Variable;
 import org.datavyu.util.StringUtils;
@@ -33,7 +34,9 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -49,6 +52,9 @@ public final class VocabEditorV extends DatavyuDialog {
 
     /** The spreadsheet whose columns and codes are edited: the selected tab's */
     private ProjectController controller;
+
+    /** Follows the columns added, deleted and moved in the spreadsheet, undo included, while the editor is open. */
+    private final ColumnsFollower columnsListener = new ColumnsFollower(this);
 
     /** All the vocab views displayed in the editor */
     private List<VocabElementV> veViews;
@@ -157,19 +163,6 @@ public final class VocabEditorV extends DatavyuDialog {
                     }
                 });
 
-        addWindowFocusListener(
-                new java.awt.event.WindowAdapter() {
-                    @Override
-                    public void windowGainedFocus(java.awt.event.WindowEvent e) {
-                        if (!isCurrent()) makeElements();
-                    }
-
-                    @Override
-
-                    public void windowLostFocus(java.awt.event.WindowEvent e) {
-                        //applyChanges(); //update spreadsheet here?
-                    }
-                });
 
         makeElements();
     }
@@ -181,10 +174,11 @@ public final class VocabEditorV extends DatavyuDialog {
      */
     public void setProjectController(final ProjectController controller) {
         if (controller != this.controller) {
+            if (isDisplayable()) {
+                this.controller.getDataStore().removeListener(columnsListener);
+                controller.getDataStore().addListener(columnsListener);
+            }
             this.controller = controller;
-            selectedVocabElement = null;
-            selectedArgument = null;
-            selectedArgumentI = -1;
             makeElements();
         }
     }
@@ -194,21 +188,90 @@ public final class VocabEditorV extends DatavyuDialog {
         return controller;
     }
 
+    /** Listens to the spreadsheet while open, and catches up with what changed while it was closed. */
+    @Override
+    public void addNotify() {
+        super.addNotify();
+        controller.getDataStore().addListener(columnsListener);
+        if (veViews != null) {
+            followColumns();
+        }
+    }
+
+    @Override
+    public void removeNotify() {
+        controller.getDataStore().removeListener(columnsListener);
+        super.removeNotify();
+    }
+
+    /** Rebuilds the rows when a column is added, deleted or moved; serializable, as the dialog holding it is. */
+    private static final class ColumnsFollower implements DataStoreListener, java.io.Serializable {
+        private static final long serialVersionUID = 1L;
+
+        private final VocabEditorV editor;
+
+        ColumnsFollower(final VocabEditorV editor) {
+            this.editor = editor;
+        }
+
+        @Override public void variableAdded(final Variable column) { editor.followColumns(); }
+        @Override public void variableRemoved(final Variable column) { editor.followColumns(); }
+        @Override public void variableOrderChanged() { editor.followColumns(); }
+        @Override public void variableHidden(final Variable column) { }
+        @Override public void variableVisible(final Variable column) { }
+        @Override public void variableNameChange(final Variable column) { }
+    }
+
+    /**
+     * Makes the rows the spreadsheet's annotation columns again, in its order. A column's row is kept, with what is
+     * typed in it and the focus, so only new columns get rows.
+     */
+    private void followColumns() {
+        Map<Variable, VocabElementV> kept = new HashMap<>();
+        veViews.forEach(row -> kept.put(row.getVariable(), row));
+        List<VocabElementV> rows = new ArrayList<>();
+        for (Variable column : annotationColumns()) {
+            VocabElementV row = kept.remove(column);
+            rows.add(row != null ? row : new VocabElementV(column.getRootNode(), column, this));
+        }
+        // What is left was the rows of columns deleted.
+        kept.values().forEach(verticalFrame::remove);
+        if (!rows.contains(selectedVocabElement)) {
+            selectedVocabElement = null;
+            selectedArgument = null;
+            selectedArgumentI = -1;
+        }
+        for (int i = 0; i < rows.size(); i++) {
+            if (rows.get(i).getParent() == verticalFrame) {
+                // Moved without being taken out, so a row keeps the focus.
+                verticalFrame.setComponentZOrder(rows.get(i), i);
+            } else {
+                verticalFrame.add(rows.get(i), i);
+            }
+        }
+        veViews = rows;
+        verticalFrame.revalidate();
+        verticalFrame.repaint();
+        refreshNameWarnings(false);
+        updateDialogState();
+    }
+
+    private List<Variable> annotationColumns() {
+        List<Variable> columns = new ArrayList<>(controller.getDataStore().getAllVariables());
+        columns.removeIf(Variable::isMedia);
+        return columns;
+    }
+
+    /** Puts the focus in a column's row, as on its name. */
+    private void focusRow(final Variable column) {
+        veViews.stream().filter(row -> row.getVariable().equals(column)).forEach(VocabElementV::requestFocus);
+    }
+
     private void makeElements() {
-        // Populate current vocab list with vocab data from the database.
-        veViews = new ArrayList<VocabElementV>();
+        veViews = new ArrayList<>();
         verticalFrame = new JPanel();
         verticalFrame.setName("verticalFrame");
         verticalFrame.setLayout(new BoxLayout(verticalFrame, BoxLayout.Y_AXIS));
-
-        for (Variable var : controller.getDataStore().getAllVariables()) {
-            if (var.isMedia()) {
-                continue;
-            }
-            VocabElementV matrixV = new VocabElementV(var.getRootNode(), var, this);
-            verticalFrame.add(matrixV);
-            veViews.add(matrixV);
-        }
 
         // Add a pad cell to fill out the bottom of the vertical frame.
         JPanel holdPanel = new JPanel();
@@ -216,29 +279,10 @@ public final class VocabEditorV extends DatavyuDialog {
         holdPanel.setLayout(new BorderLayout());
         holdPanel.add(verticalFrame, BorderLayout.NORTH);
         currentVocabList.setViewportView(holdPanel);
-        refreshNameWarnings(true);
-        updateDialogState();
+        followColumns();
 
         String titleName = controller.getProjectNamePretty();
         setTitle(bundle.getString("window.title") + " - " + titleName);
-    }
-
-    private boolean isCurrent() {
-        List<Variable> varList = new ArrayList<>(controller.getDataStore().getAllVariables());
-        varList.removeIf(Variable::isMedia);
-        java.util.ListIterator<Variable> varIt = varList.listIterator();
-        for (VocabElementV v : veViews) //wish i could map...
-        {
-            String curVocab = v.getNameComponent().getText();
-            if (varIt.hasNext()) {
-                String curDatastore = varIt.next().getName();
-                if (!curVocab.equals(curDatastore)) return false;
-            } else {
-                return false;
-            }
-        }
-
-        return !varIt.hasNext(); //return true iff both lists are exhausted
     }
 
     /**
@@ -250,16 +294,8 @@ public final class VocabEditorV extends DatavyuDialog {
             LOGGER.info("vocEd - add column");
 
             Variable v = controller.columns().newColumn(varName);
-
-            VocabElementV matrixV = new VocabElementV(v.getRootNode(), v, this);
-            verticalFrame.add(matrixV);
-            veViews.add(matrixV);
-
-            matrixV.requestFocus();
-            matrixV.rebuildContents();
-            matrixV.requestFocus();
-
-            applyChanges();
+            // The rows follow the spreadsheet's columns, so the new one has its row already.
+            focusRow(v);
             updateDialogState();
 
             // Whoops, user has done something strange - show warning dialog.
@@ -272,21 +308,17 @@ public final class VocabEditorV extends DatavyuDialog {
      * The action to invoke when the user clicks on the move arg left button.
      */
     public void moveArgumentLeft() {
-        LOGGER.error("vocEd - move code left");
+        LOGGER.info("vocEd - move code left");
         Argument va = selectedVocabElement.getModel().childArguments.get(selectedArgumentI);
         Variable var = selectedVocabElement.getVariable();
-        if (var.refusesEdits()) {
+        if (!controller.codes().move(var, selectedArgumentI, selectedArgumentI - 1)) {
             return;
         }
-        var.moveArgument(va.name, var.getArgumentIndex(va.name) - 1);
-
-        selectedVocabElement.rebuildContents();
 
         selectedVocabElement.requestFocus();
 
         selectedVocabElement.requestArgFocus(selectedVocabElement.getArgumentView(va));
 
-        applyChanges();
         updateDialogState();
     }
 
@@ -294,21 +326,17 @@ public final class VocabEditorV extends DatavyuDialog {
      * The action to invoke when the user clicks on the move arg right button.
      */
     public void moveArgumentRight() {
-        LOGGER.error("vocEd - move code right");
+        LOGGER.info("vocEd - move code right");
         Argument va = selectedVocabElement.getModel().childArguments.get(selectedArgumentI);
         Variable var = selectedVocabElement.getVariable();
-        if (var.refusesEdits()) {
+        if (!controller.codes().move(var, selectedArgumentI, selectedArgumentI + 1)) {
             return;
         }
-        var.moveArgument(va.name, var.getArgumentIndex(va.name) + 1);
-
-        selectedVocabElement.rebuildContents();
 
         selectedVocabElement.requestFocus();
 
         selectedVocabElement.requestArgFocus(selectedVocabElement.getArgumentView(va));
 
-        applyChanges();
         updateDialogState();
     }
 
@@ -322,12 +350,7 @@ public final class VocabEditorV extends DatavyuDialog {
         int idx = getVocabElements().indexOf(v);
         if(idx > 0) {
             controller.columns().move(var, getVocabElements().get(idx-1).getVariable());
-            makeElements();
-            for(VocabElementV vev : getVocabElements()) {
-                if(vev.getVariable() == var) {
-                    vev.requestFocus();
-                }
-            }
+            focusRow(var);
         }
     }
 
@@ -341,12 +364,7 @@ public final class VocabEditorV extends DatavyuDialog {
         int idx = getVocabElements().indexOf(v);
         if(idx < getVocabElements().size() - 1) {
             controller.columns().move(var, getVocabElements().get(idx+1).getVariable());
-            makeElements();
-            for(VocabElementV vev : getVocabElements()) {
-                if(vev.getVariable() == var) {
-                    vev.requestFocus();
-                }
-            }
+            focusRow(var);
         }
     }
 
@@ -354,24 +372,17 @@ public final class VocabEditorV extends DatavyuDialog {
      * The action to invoke when the user clicks on the add code button.
      */
     public void addCode() {
-        Variable var = selectedVocabElement.getVariable();
-        if (var.refusesEdits()) {
+        Argument fa = controller.codes().add(selectedVocabElement.getVariable());
+        if (fa == null) {
             return;
         }
-        Argument fa = var.addArgument();
-        selectedVocabElement.setModel(var.getRootNode());
-
-        String type = "Nominal"; //Hardcoded. Was previously (String) argTypeComboBox.getSelectedItem() but this form element is now removed
-        LOGGER.info("vocEd - add argument:" + type);
-
-        selectedVocabElement.rebuildContents();
+        LOGGER.info("vocEd - add code");
 
         // Select the contents of the newly created formal argument.
         selectedVocabElement.requestFocus();
         FormalArgEditor faV = selectedVocabElement.getArgumentView(fa);
         selectedVocabElement.requestArgFocus(faV);
 
-        applyChanges();
         updateDialogState();
     }
 
@@ -389,33 +400,16 @@ public final class VocabEditorV extends DatavyuDialog {
                     selectedVocabElement.getVariable().getName() + "?", "Delete Column",
                     JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
                 LOGGER.info("vocEd - delete element");
-                if (controller.columns().delete(List.of(selectedVocabElement.getVariable()))) {
-                    deleteElementVFromView(selectedVocabElement.getVariable().getName());
-                    applyChanges();
-                }
+                controller.columns().delete(List.of(selectedVocabElement.getVariable()));
             }
 
             // User has argument selected - delete it from the vocab element.
         } else if (selectedArgument != null) {
-            LOGGER.info("vocEd - delete argument");
-            //TODO no edit created for this!!!
-            selectedVocabElement.getVariable().removeArgument(selectedArgument.getModel().name);
-            selectedVocabElement.rebuildContents();
-            applyChanges();
+            LOGGER.info("vocEd - delete code");
+            controller.codes().delete(selectedVocabElement.getVariable(), selectedArgument.getArgPos());
         }
 
         updateDialogState();
-    }
-
-    private void deleteElementVFromView(String name) {
-        for (VocabElementV i : veViews) {
-            if (name.equals(i.getCurrentNameDisplay())) {
-                veViews.remove(i);
-                verticalFrame.remove(i);
-
-                return;
-            }
-        }
     }
 
     /**
@@ -463,6 +457,19 @@ public final class VocabEditorV extends DatavyuDialog {
         }
         applyChanges();
         updateDialogState();
+    }
+
+    /**
+     * Forgets a selected code whose editor a column's view has replaced, as it does when an undo changes the column.
+     *
+     * @param column the column's view
+     */
+    public void columnRebuilt(final VocabElementV column) {
+        if (column.equals(selectedVocabElement)) {
+            selectedArgument = null;
+            selectedArgumentI = -1;
+            updateDialogState();
+        }
     }
 
     /**
@@ -536,7 +543,6 @@ public final class VocabEditorV extends DatavyuDialog {
             moveCodeRightButton.setEnabled(false);
         }
 
-        toFront(); //to fix Bug 120 - code editor losing focus on Windows
     }
 
     /**
@@ -798,32 +804,26 @@ public final class VocabEditorV extends DatavyuDialog {
         return veViews.size() + 1;
     }
 
-    public void refreshNameWarnings() {
-        refreshNameWarnings(false);
-    }
-
-    public void refreshNameWarnings(boolean first) {
+    /**
+     * Lists the names the columns refused, or says that what was typed was applied.
+     *
+     * @param typed whether a name was just typed; if not, and none is refused, the list says nothing
+     */
+    public void refreshNameWarnings(final boolean typed) {
         String s = "";
         for (VocabElementV i : veViews) {
-            if (i.getInvalid()) {
-                String curString = i.getCurrentNameDisplay();
+            for (String refused : i.refusedNames()) {
                 if (!s.isEmpty()) s += ", ";
-                if (curString.isEmpty()) s += "<i>(empty string)</i>";
-                s += "<i>" + StringUtils.escapeHtml(i.getCurrentNameDisplay()) + "</i>  ";
-                //s += "remains '"+i.getLastValid()+"'. "; //this would include a reminder of what the last valid name was
+                s += refused.isEmpty() ? "<i>(empty string)</i>" : "<i>" + StringUtils.escapeHtml(refused) + "</i>";
             }
-
         }
 
-        if (s.isEmpty() && first != true) {
-            nameWarningsLabel.setText("All changes applied.");
-            nameWarningsLabel.setForeground(SpreadsheetTheme.PALETTE.text());
-        } else if (s.isEmpty() && first == true) {
-            nameWarningsLabel.setText("");
-            nameWarningsLabel.setForeground(SpreadsheetTheme.PALETTE.text());
-        } else {
-            nameWarningsLabel.setText("<html><b><u>Invalid names:</u></b> " + s + "<br />Names must begin with a letter, be non-empty, and underscore is the ONLY permitted special character. Repeated names are not allowed.</html>");
+        if (!s.isEmpty()) {
+            nameWarningsLabel.setText("<html><b><u>Invalid names:</u></b> " + s + "<br />Names must not be empty or repeated. Column names must begin with a letter, and underscore is the only special character they allow.</html>");
             nameWarningsLabel.setForeground(SpreadsheetTheme.PALETTE.warning());
+        } else {
+            nameWarningsLabel.setText(typed ? "All changes applied." : "");
+            nameWarningsLabel.setForeground(SpreadsheetTheme.PALETTE.text());
         }
     }
 }

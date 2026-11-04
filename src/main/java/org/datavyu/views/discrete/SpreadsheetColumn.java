@@ -529,6 +529,29 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
     public void lockChanged(final boolean locked) {
         updateLockMark();
         // Its clips' onsets show whether they can be edited.
+        redrawValues();
+    }
+
+    /** Redraws each cell's values, which follow a code added, deleted or moved. */
+    @Override
+    public void codesChanged() {
+        redrawValues();
+    }
+
+    /**
+     * Redraws the cells that show a renamed code's name, as each key typed renames it: a cell draws a code's name only
+     * as the placeholder of an empty value.
+     */
+    @Override
+    public void codeRenamed(final int index) {
+        for (SpreadsheetCell cell : getCells()) {
+            if (cell.getCell().getMatrixValue(index).isEmpty()) {
+                cell.valueChange(cell.getCell().getCellValue());
+            }
+        }
+    }
+
+    private void redrawValues() {
         for (SpreadsheetCell cell : getCells()) {
             cell.valueChange(cell.getCell().getCellValue());
             cell.updateSelectionDisplay();

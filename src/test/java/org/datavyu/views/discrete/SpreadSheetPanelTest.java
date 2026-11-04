@@ -6,6 +6,7 @@ import static org.testng.Assert.assertTrue;
 
 import org.datavyu.TestSpreadsheets;
 import org.datavyu.controllers.project.ProjectController;
+import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.DataStoreFactory;
 import org.datavyu.models.db.UserWarningException;
@@ -17,6 +18,7 @@ import java.awt.KeyEventDispatcher;
 import java.awt.KeyboardFocusManager;
 import java.awt.Toolkit;
 import java.awt.event.KeyEvent;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -119,5 +121,36 @@ public class SpreadSheetPanelTest {
 
     private static List<String> names(final List<SpreadsheetColumn> columns) {
         return columns.stream().map(column -> column.getVariable().getName()).toList();
+    }
+
+    /** A column's cells redraw when its codes change, undo included, as the Code Editor no longer redraws them. */
+    @Test
+    public void cellsShowTheirColumnsCodesAfterEachChange() throws Exception {
+        DataStore dataStore = DataStoreFactory.newDataStore();
+        Variable gaze = dataStore.createVariable("gaze");
+        gaze.addArgument();
+        Cell cell = gaze.createPointCell(0);
+        cell.setMatrixValue(0, "left");
+        AtomicReference<SpreadSheetPanel> panel = new AtomicReference<>();
+        SwingUtilities.invokeAndWait(
+            () -> panel.set(new SpreadSheetPanel(TestSpreadsheets.withPlayback(dataStore), null)));
+        ProjectController spreadsheet = panel.get().getProjectController();
+        AtomicReference<List<String>> shown = new AtomicReference<>(new ArrayList<>());
+        Runnable look = () -> shown.get().add(
+            panel.get().getColumns().get(0).getCells().get(0).getDataView().getText());
+        try {
+            SwingUtilities.invokeAndWait(() -> {
+                look.run();
+                spreadsheet.codes().rename(gaze, 1, "side", false);
+                look.run();
+                spreadsheet.codes().delete(gaze, 0);
+                look.run();
+                spreadsheet.undo();
+                look.run();
+            });
+            assertEquals(shown.get(), List.of("(left, <code02>)", "(left, <side>)", "(<side>)", "(left, <side>)"));
+        } finally {
+            SwingUtilities.invokeAndWait(() -> panel.get().close());
+        }
     }
 }

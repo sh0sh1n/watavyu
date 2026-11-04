@@ -8,13 +8,14 @@ import org.datavyu.models.db.Variable;
 import org.datavyu.undoableedits.AddColumnEdit;
 import org.datavyu.undoableedits.LockColumnEdit;
 import org.datavyu.undoableedits.RemoveColumnEdit;
+import org.datavyu.undoableedits.RenameColumnEdit;
 
 import java.util.List;
 
 /**
- * The commands that add, delete, lock, hide and move one spreadsheet's columns. Each is the one path for its user
- * action, whether it comes from a menu, a column's header, the Column List or the Code Editor: it changes the data
- * model and records in the spreadsheet's undo history what is an edit there. The views follow the model.
+ * The commands that add, delete, rename, lock, hide and move one spreadsheet's columns. Each is the one path for its
+ * user action, whether it comes from a menu, a column's header, the Column List or the Code Editor: it changes the
+ * data model and records in the spreadsheet's undo history what is an edit there. The views follow the model.
  */
 public final class ColumnCommands {
 
@@ -83,6 +84,34 @@ public final class ColumnCommands {
         dataStore().deselectAll();
         deleted.forEach(dataStore()::removeVariable);
         spreadsheet.postEdit(edit);
+        return true;
+    }
+
+    /**
+     * Renames an annotation column, from the Code Editor, where a name is typed a key at a time: a rename continuing
+     * the last one joins its edit, so undo puts back the name from before the typing began. Media columns keep the
+     * names they are given.
+     *
+     * @param column     the column
+     * @param name       its new name
+     * @param continuing whether this continues the last rename, as each key typed into one name after the first does
+     * @return whether it was renamed: its own name, or a column not in the spreadsheet, is no change
+     * @throws UserWarningException if the column is a media column or locked, or the name is taken or not allowed
+     */
+    public boolean rename(final Variable column, final String name, final boolean continuing)
+        throws UserWarningException {
+        if (column.getName().equals(name) || !dataStore().contains(column)) {
+            return false;
+        }
+        if (column.isMedia()) {
+            throw new UserWarningException("Media column " + column.getName() + " keeps the name it was given.");
+        }
+        if (dataStore().getVariable(name) != null) {
+            throw new UserWarningException("Another column is named " + name + ".");
+        }
+        String from = column.getName();
+        column.setName(name);
+        spreadsheet.postEdit(new RenameColumnEdit(column, from, continuing));
         return true;
     }
 
