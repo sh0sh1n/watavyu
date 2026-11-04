@@ -77,6 +77,17 @@ public class CellTypingTest {
         });
     }
 
+    /** A key that changes no text, such as Escape, leaves an empty code empty, not holding its placeholder. */
+    @Test
+    public void aKeyThatChangesNothingLeavesAnEmptyCodeEmpty() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            type("\u001b\t");
+
+            assertEquals(cell.getMatrixValue(0).toString(), "");
+            assertFalse(spreadsheet.getUndoManager().canUndo());
+        });
+    }
+
     @Test
     public void eachDigitTypedIntoATimeIsAnEdit() throws Exception {
         SwingUtilities.invokeAndWait(() -> {

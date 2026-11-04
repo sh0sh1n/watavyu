@@ -99,7 +99,7 @@ public abstract class DataValueEditor extends EditorComponent {
     // *************************************************************************
     @Override
     public void focusGained(final FocusEvent fe) {
-        // The cell records a change of its values when it loses focus (MatrixRootView).
+        // Each change is recorded as it is typed (TypingCommands.typeValue).
     }
 
     // *************************************************************************

@@ -193,6 +193,30 @@ public class TypingCommandsTest {
     }
 
     @Test
+    public void aCellDeletedOrGoneWithItsColumnIsNotTypedInto() {
+        Cell deleted = gaze.createPointCell(1_000);
+        Cell gone = speech.createPointCell(1_000);
+        spreadsheet.removeCells(List.of(deleted));
+        dataStore.removeVariable(speech);
+
+        assertFalse(typing.typeValue(deleted, 0, "x", false));
+        assertFalse(typing.typeOnset(gone, 2_000));
+        assertFalse(typing.typeOffset(gone, 2_000));
+        assertEquals(gone.getOnset(), 1_000);
+        assertFalse(spreadsheet.getUndoManager().canUndo());
+    }
+
+    /** The edit is named for its column as it is named now, after any rename since. */
+    @Test
+    public void anEditIsNamedForItsColumnAsItIsNamedNow() throws Exception {
+        Cell cell = gaze.createPointCell(1_000);
+        typing.typeValue(cell, 0, "smile", false);
+        gaze.setName("look");
+
+        assertEquals(spreadsheet.getUndoManager().getUndoPresentationName(), "Undo Change Value in look");
+    }
+
+    @Test
     public void typingBackToTheValueBeforeLeavesNothingToUndo() {
         Cell cell = gaze.createPointCell(1_000);
         typing.typeValue(cell, 0, "s", false);

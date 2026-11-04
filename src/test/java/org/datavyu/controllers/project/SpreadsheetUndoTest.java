@@ -55,19 +55,21 @@ public class SpreadsheetUndoTest {
         assertEquals(cell(second).getOnset(), 3_000);
     }
 
+    /** Typing after an undo, though it continues the typing undone, is an edit of its own that undo takes back. */
     @Test
-    public void anEditAfterAnUndoIsRecorded() throws Exception {
+    public void typingAfterAnUndoIsAnEditOfItsOwn() throws Exception {
         ProjectController spreadsheet = spreadsheet();
         Cell cell = cell(spreadsheet);
-        spreadsheet.cells().setOnsets(2_000);
-        spreadsheet.undo();
-        assertEquals(cell.getOnset(), 1_000);
-
-        cell.setSelected(true);
-        spreadsheet.cells().setOnsets(3_000);
+        spreadsheet.typing().typeValue(cell, 0, "smile", false);
         spreadsheet.undo();
 
-        assertEquals(cell.getOnset(), 1_000);
+        spreadsheet.typing().typeValue(cell, 0, "frown", true);
+        spreadsheet.undo();
+
+        assertEquals(cell.getMatrixValue(0).toString(), "");
+        assertFalse(spreadsheet.getUndoManager().canUndo());
+        spreadsheet.redo();
+        assertEquals(cell.getMatrixValue(0).toString(), "frown");
     }
 
     /** Edits equal by value are still told apart, so a new edit drops only what could be redone. */

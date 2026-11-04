@@ -86,6 +86,7 @@ public final class NominalDataValueEditor extends DataValueEditor {
 
     @Override
     public void keyTyped(final KeyEvent e) {
+        String before = getText();
         super.keyTyped(e);
 
         // Just a regular vanilla keystroke - insert it into nominal field.
@@ -119,8 +120,9 @@ public final class NominalDataValueEditor extends DataValueEditor {
             e.consume();
         }
 
-        // Push the character changes into the database.
-        if (model.isValid(this.getText()) || this.getText().isEmpty()) {
+        // Push the character changes into the database. A key that changed nothing, such as a reserved one, sends
+        // nothing: the text may be the placeholder of an empty code.
+        if (!getText().equals(before) && (model.isValid(this.getText()) || this.getText().isEmpty())) {
             typed(this.getText());
         }
     }

@@ -14,34 +14,9 @@ abstract class TypedRenameEdit extends TypedEdit<String> {
         super(from, to, continuing);
     }
 
-    /**
-     * Tells whether another rename is of the same thing.
-     *
-     * @param other a rename of the same class
-     * @return whether it renames what this edit renames
-     */
-    abstract boolean sameTarget(TypedRenameEdit other);
-
     @Override
     final TypedEdit<String> sameKind(final UndoableEdit edit) {
         return edit != null && edit.getClass() == getClass() ? (TypedRenameEdit) edit : null;
-    }
-
-    @Override
-    final boolean sameTarget(final TypedEdit<String> other) {
-        return sameTarget((TypedRenameEdit) other);
-    }
-
-    /**
-     * Gives the thing renamed a name.
-     *
-     * @param name the name
-     */
-    abstract void rename(String name);
-
-    @Override
-    final void apply(final String name) {
-        rename(name);
     }
 
     /** Returns what is renamed, for the edit's name, such as "Code". */

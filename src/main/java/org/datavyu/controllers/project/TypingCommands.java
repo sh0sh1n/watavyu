@@ -23,11 +23,6 @@ public final class TypingCommands {
         this.spreadsheet = spreadsheet;
     }
 
-    /** @return whether a cell is in the spreadsheet, as an editor may outlive its cell's column */
-    private boolean inSpreadsheet(final Cell cell) {
-        return spreadsheet.getDataStore().getVariable(cell) != null;
-    }
-
     /**
      * A time typed into a cell's onset, from its time field: each change is an edit of its own.
      *
@@ -36,7 +31,7 @@ public final class TypingCommands {
      * @return whether it changed: not in a locked column, nor when it is already the onset
      */
     public boolean typeOnset(final Cell cell, final long onset) {
-        return inSpreadsheet(cell) && CellTimes.set(spreadsheet, cell, true, onset);
+        return spreadsheet.getDataStore().contains(cell) && CellTimes.setOnset(spreadsheet, cell, onset);
     }
 
     /**
@@ -48,7 +43,7 @@ public final class TypingCommands {
      * @return whether it changed: not in a locked column or for a clip, nor when it is already the offset
      */
     public boolean typeOffset(final Cell cell, final long offset) {
-        return inSpreadsheet(cell) && CellTimes.set(spreadsheet, cell, false, offset);
+        return spreadsheet.getDataStore().contains(cell) && CellTimes.setOffset(spreadsheet, cell, offset);
     }
 
     /**
@@ -66,7 +61,7 @@ public final class TypingCommands {
      * @return whether the value changed: not in a locked column, a clip or a cell not in the spreadsheet
      */
     public boolean typeValue(final Cell cell, final int code, final String value, final boolean continuing) {
-        if (!inSpreadsheet(cell) || cell.getClip() != null || cell.getVariable().refusesEdits()) {
+        if (!spreadsheet.getDataStore().contains(cell) || cell.getClip() != null || cell.getVariable().refusesEdits()) {
             return false;
         }
         List<CellValue> codes = ((MatrixCellValue) cell.getCellValue()).getArguments();

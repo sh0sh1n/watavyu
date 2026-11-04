@@ -24,7 +24,7 @@ public final class RenameColumnEdit extends TypedRenameEdit implements GuardedEd
     }
 
     @Override
-    boolean sameTarget(final TypedRenameEdit other) {
+    boolean sameTarget(final TypedEdit<String> other) {
         return ((RenameColumnEdit) other).column.equals(column);
     }
 
@@ -66,7 +66,7 @@ public final class RenameColumnEdit extends TypedRenameEdit implements GuardedEd
     }
 
     @Override
-    void rename(final String name) {
+    void apply(final String name) {
         try {
             // A name it has had may be one Datavyu allowed and Watavyu does not, kept from an imported file.
             column.setName(name, true);

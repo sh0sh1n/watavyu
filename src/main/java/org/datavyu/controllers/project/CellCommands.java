@@ -124,7 +124,7 @@ public final class CellCommands {
             }
             Cell previous = cellToClose(closing, time);
             if (previous != null) {
-                CellTimes.set(spreadsheet, previous, false, Math.max(0, time - 1));
+                CellTimes.setOffset(spreadsheet, previous, Math.max(0, time - 1));
             }
         }
         return newCellIn(columnForNewCellAt(), time);
@@ -183,7 +183,7 @@ public final class CellCommands {
 
     /** @return whether a cell is in the spreadsheet, as one remembered as last selected may have gone with its column */
     private boolean inSpreadsheet(final Cell cell) {
-        return cell != null && dataStore().getVariable(cell) != null;
+        return dataStore().contains(cell);
     }
 
     private Cell createPointCell(final Variable column, final long time) {
@@ -260,7 +260,7 @@ public final class CellCommands {
      */
     public void setOnsets(final long time) {
         for (Cell cell : cellsToTime()) {
-            CellTimes.set(spreadsheet, cell, true, time);
+            CellTimes.setOnset(spreadsheet, cell, time);
         }
     }
 
@@ -272,7 +272,7 @@ public final class CellCommands {
      */
     public void setOffsets(final long time) {
         for (Cell cell : cellsToTime()) {
-            CellTimes.set(spreadsheet, cell, false, time);
+            CellTimes.setOffset(spreadsheet, cell, time);
         }
     }
 

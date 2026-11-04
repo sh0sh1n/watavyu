@@ -71,10 +71,14 @@ abstract class TypedEdit<T> extends AbstractUndoableEdit {
         return !before.equals(after);
     }
 
+    /**
+     * Joins a change that continues this one. The undo history offers a new edit only to the last edit done, having
+     * dropped those undone, so this edit is never joined once undone.
+     */
     @Override
     public final boolean addEdit(final UndoableEdit edit) {
         TypedEdit<T> next = sameKind(edit);
-        if (!closed && canUndo() && next != null && next.continuing && sameTarget(next) && next.before.equals(after)) {
+        if (!closed && next != null && next.continuing && sameTarget(next) && next.before.equals(after)) {
             after = next.after;
             return true;
         }

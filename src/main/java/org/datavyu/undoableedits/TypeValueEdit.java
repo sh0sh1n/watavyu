@@ -14,7 +14,6 @@ public final class TypeValueEdit extends TypedEdit<List<String>> {
 
     /** The cell typed in, held itself, as its place in its column changes whenever the column is sorted by time. */
     private final Cell cell;
-    private final String columnName;
 
     /**
      * Records typing that has just changed a cell's values.
@@ -27,7 +26,6 @@ public final class TypeValueEdit extends TypedEdit<List<String>> {
     public TypeValueEdit(final Cell cell, final List<String> from, final List<String> to, final boolean continuing) {
         super(List.copyOf(from), List.copyOf(to), continuing);
         this.cell = cell;
-        this.columnName = cell.getVariable().getName();
     }
 
     @Override
@@ -50,6 +48,6 @@ public final class TypeValueEdit extends TypedEdit<List<String>> {
 
     @Override
     public String getPresentationName() {
-        return "Change Value in " + columnName;
+        return "Change Value in " + cell.getVariable().getName();
     }
 }
