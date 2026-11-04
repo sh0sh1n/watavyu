@@ -34,13 +34,13 @@ public class CellValuesTest {
     @Test
     public void aNewCellHasAnEmptyValueForEachCode() {
         assertEquals(cell.getValues(), List.of(""));
-        column.addArgument();
+        column.addCode();
         assertEquals(column.createCell().getValues(), List.of("", ""));
     }
 
     @Test
     public void aValueIsSetForOneCode() {
-        column.addArgument();
+        column.addCode();
 
         cell.setValue(1, "left, then right");
 
@@ -108,22 +108,22 @@ public class CellValuesTest {
 
     @Test
     public void valuesFollowTheirCodesAsCodesAreAddedMovedAndDeleted() {
-        column.addArgument();
-        column.addArgument();
+        column.addCode();
+        column.addCode();
         cell.setValue(0, "a");
         cell.setValue(1, "b");
         cell.setValue(2, "c");
 
-        column.moveArgument(0, 2);
+        column.moveCode(0, 2);
         assertEquals(cell.getValues(), List.of("b", "c", "a"));
 
-        column.removeArgument(1);
+        column.removeCode(1);
         assertEquals(cell.getValues(), List.of("b", "a"));
 
-        column.insertArgument(new Argument("again"), 1);
+        column.insertCode(1, "again");
         assertEquals(cell.getValues(), List.of("b", "", "a"));
 
-        column.addArgument();
+        column.addCode();
         assertEquals(cell.getValues(), List.of("b", "", "a", ""));
     }
 
@@ -148,7 +148,7 @@ public class CellValuesTest {
     /** Setting every value at once, as undo does, is heard once. */
     @Test
     public void allTheValuesAreSetAtOnceAndHeardOnce() {
-        column.addArgument();
+        column.addCode();
         CellListener listener = mock(CellListener.class);
         cell.addListener(listener);
         dataStore.markAsUnchanged();

@@ -29,7 +29,7 @@ public class MediaColumnTest {
         assertEquals(clip.getOffset(), 12_000L);
         assertEquals(clip.getClip(), CAM);
         assertEquals(media.getCells(), List.of(clip));
-        assertEquals(media.getRootNode().childArguments, List.of());
+        assertEquals(media.getCodes(), List.of());
     }
 
     @Test

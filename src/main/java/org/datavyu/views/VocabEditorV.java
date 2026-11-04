@@ -20,7 +20,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.util.Dialogs;
-import org.datavyu.models.db.Argument;
 import org.datavyu.models.db.DataStoreListener;
 import org.datavyu.models.db.UserWarningException;
 import org.datavyu.models.db.Variable;
@@ -229,7 +228,7 @@ public final class VocabEditorV extends DatavyuDialog {
         List<VocabElementV> rows = new ArrayList<>();
         for (Variable column : annotationColumns()) {
             VocabElementV row = kept.remove(column);
-            rows.add(row != null ? row : new VocabElementV(column.getRootNode(), column, this));
+            rows.add(row != null ? row : new VocabElementV(column, this));
         }
         // What is left was the rows of columns deleted.
         kept.values().forEach(verticalFrame::remove);
@@ -306,15 +305,15 @@ public final class VocabEditorV extends DatavyuDialog {
      */
     public void moveArgumentLeft() {
         LOGGER.info("vocEd - move code left");
-        Argument va = selectedVocabElement.getModel().childArguments.get(selectedArgumentI);
         Variable var = selectedVocabElement.getVariable();
-        if (!controller.codes().move(var, selectedArgumentI, selectedArgumentI - 1)) {
+        int moved = selectedArgumentI - 1;
+        if (!controller.codes().move(var, selectedArgumentI, moved)) {
             return;
         }
 
         selectedVocabElement.requestFocus();
 
-        selectedVocabElement.requestArgFocus(selectedVocabElement.getArgumentView(va));
+        selectedVocabElement.requestArgFocus(selectedVocabElement.getArgumentView(moved));
 
         updateDialogState();
     }
@@ -324,15 +323,15 @@ public final class VocabEditorV extends DatavyuDialog {
      */
     public void moveArgumentRight() {
         LOGGER.info("vocEd - move code right");
-        Argument va = selectedVocabElement.getModel().childArguments.get(selectedArgumentI);
         Variable var = selectedVocabElement.getVariable();
-        if (!controller.codes().move(var, selectedArgumentI, selectedArgumentI + 1)) {
+        int moved = selectedArgumentI + 1;
+        if (!controller.codes().move(var, selectedArgumentI, moved)) {
             return;
         }
 
         selectedVocabElement.requestFocus();
 
-        selectedVocabElement.requestArgFocus(selectedVocabElement.getArgumentView(va));
+        selectedVocabElement.requestArgFocus(selectedVocabElement.getArgumentView(moved));
 
         updateDialogState();
     }
@@ -369,15 +368,15 @@ public final class VocabEditorV extends DatavyuDialog {
      * The action to invoke when the user clicks on the add code button.
      */
     public void addCode() {
-        Argument fa = controller.codes().add(selectedVocabElement.getVariable());
-        if (fa == null) {
+        int added = controller.codes().add(selectedVocabElement.getVariable());
+        if (added < 0) {
             return;
         }
         LOGGER.info("vocEd - add code");
 
         // Select the contents of the newly created formal argument.
         selectedVocabElement.requestFocus();
-        FormalArgEditor faV = selectedVocabElement.getArgumentView(fa);
+        FormalArgEditor faV = selectedVocabElement.getArgumentView(added);
         selectedVocabElement.requestArgFocus(faV);
 
         updateDialogState();
@@ -490,7 +489,7 @@ public final class VocabEditorV extends DatavyuDialog {
                 moveCodeLeftButton.setEnabled(false);
             }
 
-            if (selectedArgumentI < (selectedVocabElement.getModel().childArguments.size() - 1)) {
+            if (selectedArgumentI < (selectedVocabElement.getVariable().getCodes().size() - 1)) {
                 moveCodeRightButton.setEnabled(true);
             } else {
                 moveCodeRightButton.setEnabled(false);

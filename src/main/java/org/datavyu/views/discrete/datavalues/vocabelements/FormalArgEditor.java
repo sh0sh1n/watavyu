@@ -16,7 +16,6 @@ package org.datavyu.views.discrete.datavalues.vocabelements;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.datavyu.models.db.Argument;
 import org.datavyu.models.db.Variable;
 import org.datavyu.views.discrete.EditorComponent;
 
@@ -79,19 +78,7 @@ public final class FormalArgEditor extends EditorComponent {
      * Resets the text value of this editor.
      */
     public void resetValue() {
-        Argument model = parentVariable.getRootNode().childArguments.get(argIndex);
-        String argName = "";
-        if (model != null) {
-            argName = model.name;
-        }
-        setText(argName);
-    }
-
-    /**
-     * @return the model.
-     */
-    public Argument getModel() {
-        return parentVariable.getRootNode().childArguments.get(argIndex);
+        setText(parentVariable.getCodes().get(argIndex));
     }
 
     /**

@@ -128,7 +128,7 @@ public class SpreadSheetPanelTest {
     public void cellsShowTheirColumnsCodesAfterEachChange() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
         Variable gaze = dataStore.createVariable("gaze");
-        gaze.addArgument();
+        gaze.addCode();
         Cell cell = gaze.createPointCell(0);
         cell.setValue(0, "left");
         AtomicReference<SpreadSheetPanel> panel = new AtomicReference<>();

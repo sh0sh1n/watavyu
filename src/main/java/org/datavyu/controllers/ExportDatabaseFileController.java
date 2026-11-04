@@ -78,9 +78,9 @@ public final class ExportDatabaseFileController {
 
                 g.writeObjectFieldStart("arguments");
 
-                column.getRootNode().childArguments.forEach(argument -> {
+                column.getCodes().forEach(code -> {
                     try {
-                        g.writeStringField(argument.name, "NOMINAL");
+                        g.writeStringField(code, "NOMINAL");
                     } catch (IOException e) {
                         e.printStackTrace();
                     }

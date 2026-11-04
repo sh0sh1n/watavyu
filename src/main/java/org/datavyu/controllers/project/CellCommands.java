@@ -241,7 +241,7 @@ public final class CellCommands {
         if (!inSpreadsheet(column) || !takesCells(column) || column.refusesEdits()) {
             return null;
         }
-        if (column.getRootNode().childArguments.isEmpty()) {
+        if (column.getCodes().isEmpty()) {
             // A column with no codes holds timing only, with nowhere to put the key.
             return null;
         }

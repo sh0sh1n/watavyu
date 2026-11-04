@@ -14,7 +14,6 @@
  */
 package org.datavyu.views.discrete.datavalues.vocabelements;
 
-import org.datavyu.models.db.Argument;
 import org.datavyu.models.db.Variable;
 import org.datavyu.views.discrete.EditorComponent;
 import org.datavyu.views.discrete.datavalues.FixedText;
@@ -39,32 +38,28 @@ public class VocabElementEditorFactory {
      * data cell.
      *
      * @param ta The parent JTextComponent the editor is in.
-     * @param ve The parent VocabElement the editor is in.
+     * @param var The column whose name and codes the editors show.
      * @param pv The parent VocabElementV the editor is in.
      * @return A vector of editor components to represent the element.
      */
     public static List<EditorComponent> buildVocabElement(final JTextComponent ta,
                                                           final Variable var,
-                                                          final Argument ve,
                                                           final VocabElementV pv) {
 
         List<EditorComponent> eds = new ArrayList<EditorComponent>();
+        eds.add(new VENameEditor(ta, var, pv));
+        eds.add(new FixedText(ta, "("));
 
-        if (ve != null) {
-            eds.add(new VENameEditor(ta, var, pv));
-            eds.add(new FixedText(ta, "("));
-
-            int numArgs = ve.childArguments.size();
-            // For each of the arguments, build a view representation
-            for (int i = 0; i < numArgs; i++) {
-                eds.addAll(buildFormalArg(ta, ve, var, i, pv));
-                if (numArgs > 1 && i < (numArgs - 1)) {
-                    eds.add(new FixedText(ta, ","));
-                }
+        int numArgs = var.getCodes().size();
+        // For each of the arguments, build a view representation
+        for (int i = 0; i < numArgs; i++) {
+            eds.addAll(buildFormalArg(ta, var, i, pv));
+            if (numArgs > 1 && i < (numArgs - 1)) {
+                eds.add(new FixedText(ta, ","));
             }
-
-            eds.add(new FixedText(ta, ")"));
         }
+
+        eds.add(new FixedText(ta, ")"));
         return eds;
     }
 
@@ -73,13 +68,12 @@ public class VocabElementEditorFactory {
      * data cell's matrix.
      *
      * @param ta The parent JTextComponent the editor is in.
-     * @param ve The parent VocabElement the editor is in.
+     * @param var The column the code is in.
      * @param i  The index of the argument within the element.
      * @param pv The parent VocabElementV the editor is in.
      * @return A vector of editor components to represent the argument.
      */
     public static List<EditorComponent> buildFormalArg(JTextComponent ta,
-                                                       Argument ve,
                                                        Variable var,
                                                        int i,
                                                        VocabElementV pv) {

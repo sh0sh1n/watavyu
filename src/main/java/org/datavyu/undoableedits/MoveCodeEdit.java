@@ -1,6 +1,5 @@
 package org.datavyu.undoableedits;
 
-import org.datavyu.models.db.Argument;
 import org.datavyu.models.db.Variable;
 
 import javax.swing.undo.AbstractUndoableEdit;
@@ -11,7 +10,7 @@ import javax.swing.undo.CannotUndoException;
 public final class MoveCodeEdit extends AbstractUndoableEdit {
 
     private final Variable column;
-    private final Argument code;
+    private final String code;
     private final int from;
     private final int to;
 
@@ -26,23 +25,23 @@ public final class MoveCodeEdit extends AbstractUndoableEdit {
         this.column = column;
         this.from = from;
         this.to = to;
-        this.code = column.getRootNode().childArguments.get(to);
+        this.code = column.getCodes().get(to);
     }
 
     @Override
     public String getPresentationName() {
-        return "Move Code " + code.name;
+        return "Move Code " + code;
     }
 
     @Override
     public void undo() throws CannotUndoException {
         super.undo();
-        column.moveArgument(to, from);
+        column.moveCode(to, from);
     }
 
     @Override
     public void redo() throws CannotRedoException {
         super.redo();
-        column.moveArgument(from, to);
+        column.moveCode(from, to);
     }
 }

@@ -1,6 +1,5 @@
 package org.datavyu.controllers.project;
 
-import org.datavyu.models.db.Argument;
 import org.datavyu.models.db.Variable;
 import org.datavyu.undoableedits.AddCodeEdit;
 import org.datavyu.undoableedits.DeleteCodeEdit;
@@ -29,15 +28,16 @@ public final class CodeCommands {
      * Adds a code after a column's others, with an empty value in each cell.
      *
      * @param column the column
-     * @return the new code, or null if the column is locked
+     * @return the new code's place among the column's codes, or -1 if the column is locked
      */
-    public Argument add(final Variable column) {
+    public int add(final Variable column) {
         if (column.refusesEdits()) {
-            return null;
+            return -1;
         }
-        Argument code = column.addArgument();
-        spreadsheet.postEdit(new AddCodeEdit(column, code));
-        return code;
+        column.addCode();
+        int index = column.getCodes().size() - 1;
+        spreadsheet.postEdit(new AddCodeEdit(column, index));
+        return index;
     }
 
     /**
@@ -52,7 +52,7 @@ public final class CodeCommands {
             return false;
         }
         DeleteCodeEdit edit = new DeleteCodeEdit(column, index);
-        column.removeArgument(index);
+        column.removeCode(index);
         spreadsheet.postEdit(edit);
         return true;
     }
@@ -69,7 +69,7 @@ public final class CodeCommands {
         if (from == to || !inRange(column, from) || !inRange(column, to) || column.refusesEdits()) {
             return false;
         }
-        column.moveArgument(from, to);
+        column.moveCode(from, to);
         spreadsheet.postEdit(new MoveCodeEdit(column, from, to));
         return true;
     }
@@ -90,18 +90,18 @@ public final class CodeCommands {
         if (!inRange(column, index)) {
             return false;
         }
-        List<Argument> codes = column.getRootNode().childArguments;
-        String from = codes.get(index).name;
-        if (from.equals(name) || name.isEmpty() || codes.stream().anyMatch(code -> code.name.equals(name))
+        List<String> codes = column.getCodes();
+        String from = codes.get(index);
+        if (from.equals(name) || name.isEmpty() || codes.contains(name)
                 || column.refusesEdits()) {
             return false;
         }
-        column.renameArgument(index, name);
+        column.renameCode(index, name);
         spreadsheet.postEdit(new RenameCodeEdit(column, index, from, continuing));
         return true;
     }
 
     private static boolean inRange(final Variable column, final int index) {
-        return index >= 0 && index < column.getRootNode().childArguments.size();
+        return index >= 0 && index < column.getCodes().size();
     }
 }

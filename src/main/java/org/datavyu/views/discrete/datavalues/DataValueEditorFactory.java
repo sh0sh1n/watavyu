@@ -63,13 +63,13 @@ public class DataValueEditorFactory {
             return eds;
         }
 
-        List<Argument> codes = c.getVariable().getRootNode().childArguments;
+        int codes = c.getVariable().getCodes().size();
         eds.add(new FixedText(ta, "("));
-        for (int i = 0; i < codes.size(); i++) {
+        for (int i = 0; i < codes; i++) {
             int code = i;
-            eds.add(buildNominal(ta, () -> c.getValue(code), () -> "<" + c.getVariable().getRootNode().childArguments.get(code).name + ">", quickKeyMode,
-                value -> typing.typed(code, value)));
-            if (i < codes.size() - 1) {
+            eds.add(buildNominal(ta, () -> c.getValue(code), () -> "<" + c.getVariable().getCodes().get(code) + ">",
+                quickKeyMode, value -> typing.typed(code, value)));
+            if (i < codes - 1) {
                 eds.add(new FixedText(ta, ", "));
             }
         }

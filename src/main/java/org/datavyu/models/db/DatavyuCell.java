@@ -37,10 +37,13 @@ public class DatavyuCell implements Cell {
     /** Whether the clip's file is there but could not be opened; not saved. */
     private boolean clipFailed;
 
-    public DatavyuCell() {
-    }
-
-    public DatavyuCell(Variable parent, Argument type) {
+    /**
+     * An annotation column's cell, with an empty value for each of its codes.
+     *
+     * @param parent the column
+     * @param codes  how many codes it has
+     */
+    DatavyuCell(final Variable parent, final int codes) {
         this.parent = parent;
 
         this.onset = 0L;
@@ -50,14 +53,14 @@ public class DatavyuCell implements Cell {
         this.highlighted = selected;
 
         // One value for each of the column's codes
-        for (int i = 0; i < type.childArguments.size(); i++) {
+        for (int i = 0; i < codes; i++) {
             values.add("");
         }
     }
 
     /** A media column's cell, which plays a clip from its onset for the clip's duration. */
-    DatavyuCell(Variable parent, Argument type, long onset, MediaClip clip) {
-        this(parent, type);
+    DatavyuCell(final Variable parent, final long onset, final MediaClip clip) {
+        this(parent, 0);
         this.clip = clip;
         this.onset = Timestamp.requireNotNegative(onset);
         this.offset = onset + clip.duration();

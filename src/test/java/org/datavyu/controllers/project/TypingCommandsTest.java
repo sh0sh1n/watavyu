@@ -50,7 +50,7 @@ public class TypingCommandsTest {
 
     private List<String> values(final Cell cell) {
         List<String> values = new ArrayList<>();
-        for (int i = 0; i < cell.getVariable().getRootNode().childArguments.size(); i++) {
+        for (int i = 0; i < cell.getVariable().getCodes().size(); i++) {
             values.add(cell.getValue(i));
         }
         return values;
@@ -146,7 +146,7 @@ public class TypingCommandsTest {
     /** Typing into each code of a cell is one edit, which puts back every code's value, commas and all. */
     @Test
     public void undoPutsBackEveryCodeTypedIntoWithItsCommas() {
-        gaze.addArgument();
+        gaze.addCode();
         Cell cell = gaze.createPointCell(1_000);
         cell.setValue(0, "a, b");
 

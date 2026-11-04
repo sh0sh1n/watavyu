@@ -391,7 +391,7 @@ public class CellCommandsTest {
     /** A column whose codes have all been deleted holds timing only, with nowhere for the key. */
     @Test
     public void aColumnWithNoCodesTakesNoTypedKey() {
-        gaze.getRootNode().clearChildArguments();
+        gaze.removeCode(0);
 
         assertNull(cells.newCellTyped(gaze, 'k', 4_000));
         assertTrue(gaze.getCells().isEmpty());
@@ -402,7 +402,7 @@ public class CellCommandsTest {
     public void aLockedColumnWithNoCodesStillShowsItRefusesATypedKey() {
         VariableListener header = mock(VariableListener.class);
         gaze.addListener(header);
-        gaze.getRootNode().clearChildArguments();
+        gaze.removeCode(0);
         gaze.setLocked(true);
 
         assertNull(cells.newCellTyped(gaze, 'k', 4_000));
@@ -585,7 +585,7 @@ public class CellCommandsTest {
     /** Deleting one cell names its values, a comma between each code's. */
     @Test
     public void deletingOneCellIsNamedForItsValues() {
-        gaze.addArgument();
+        gaze.addCode();
         Cell cell = gaze.createPointCell(1_000);
         cell.setValue(1, "left");
         dataStore.deselectAll();
