@@ -199,10 +199,14 @@ public class TypingCommandsTest {
         spreadsheet.removeCells(List.of(deleted));
         dataStore.removeVariable(speech);
 
-        assertFalse(typing.typeValue(deleted, 0, "x", false));
-        assertFalse(typing.typeOnset(gone, 2_000));
-        assertFalse(typing.typeOffset(gone, 2_000));
-        assertEquals(gone.getOnset(), 1_000);
+        for (Cell cell : List.of(deleted, gone)) {
+            assertFalse(typing.typeValue(cell, 0, "x", false));
+            assertFalse(typing.typeOnset(cell, 2_000));
+            assertFalse(typing.typeOffset(cell, 2_000));
+            assertEquals(cell.getOnset(), 1_000);
+            assertEquals(cell.getOffset(), 1_000);
+            assertEquals(cell.getMatrixValue(0).toString(), "");
+        }
         assertFalse(spreadsheet.getUndoManager().canUndo());
     }
 

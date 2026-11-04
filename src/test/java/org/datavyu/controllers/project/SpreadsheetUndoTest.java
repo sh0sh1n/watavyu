@@ -55,6 +55,22 @@ public class SpreadsheetUndoTest {
         assertEquals(cell(second).getOnset(), 3_000);
     }
 
+    /** Set Onset after an undo is recorded, so undo takes it back too. */
+    @Test
+    public void anEditAfterAnUndoIsRecorded() throws Exception {
+        ProjectController spreadsheet = spreadsheet();
+        Cell cell = cell(spreadsheet);
+        spreadsheet.cells().setOnsets(2_000);
+        spreadsheet.undo();
+        assertEquals(cell.getOnset(), 1_000);
+
+        cell.setSelected(true);
+        spreadsheet.cells().setOnsets(3_000);
+        spreadsheet.undo();
+
+        assertEquals(cell.getOnset(), 1_000);
+    }
+
     /** Typing after an undo, though it continues the typing undone, is an edit of its own that undo takes back. */
     @Test
     public void typingAfterAnUndoIsAnEditOfItsOwn() throws Exception {

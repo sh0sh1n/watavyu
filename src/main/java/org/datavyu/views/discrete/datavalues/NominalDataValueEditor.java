@@ -122,7 +122,7 @@ public final class NominalDataValueEditor extends DataValueEditor {
 
         // Push the character changes into the database. A key that changed nothing, such as a reserved one, sends
         // nothing: the text may be the placeholder of an empty code.
-        if (!getText().equals(before) && (model.isValid(this.getText()) || this.getText().isEmpty())) {
+        if (!getText().equals(before)) {
             typed(this.getText());
         }
     }

@@ -146,10 +146,8 @@ public class DatavyuDataStore implements DataStore {
 
     @Override
     public Variable getVariable(Cell cell) {
-        for (Variable v : order) {
-            if (v.getCells().contains(cell)) return v;
-        }
-        return null;
+        // A column takes only its own cells (DatavyuVariable.addCell).
+        return contains(cell) ? cell.getVariable() : null;
     }
 
     @Override

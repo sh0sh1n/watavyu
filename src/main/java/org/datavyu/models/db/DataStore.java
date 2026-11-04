@@ -56,14 +56,14 @@ public interface DataStore {
     }
 
     /**
-     * Tells whether a cell is in the spreadsheet: one remembered, or held by an editor or an undo edit, may have gone,
-     * or gone with its column. Only its own column is searched, so it is cheap enough for each key typed.
+     * Tells whether a cell is in the spreadsheet: one remembered, or held by an editor, may have been deleted, or gone
+     * with its column. Only its own column is searched, so it is cheap enough for each key typed.
      *
      * @param cell a cell, or null
      * @return whether it is in the spreadsheet
      */
     default boolean contains(final Cell cell) {
-        return cell != null && contains(cell.getVariable()) && cell.getVariable().getCells().contains(cell);
+        return cell != null && contains(cell.getVariable()) && cell.getVariable().contains(cell);
     }
 
     /**

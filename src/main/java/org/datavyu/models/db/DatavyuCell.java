@@ -311,13 +311,7 @@ public class DatavyuCell implements Cell {
         if (!(other instanceof DatavyuCell)) {
             return false;
         }
-        DatavyuCell otherC = (DatavyuCell) other;
-
-        if (otherC.getID().toString().equals(this.getID().toString())) {
-            return true;
-        } else {
-            return false;
-        }
+        return id.equals(((DatavyuCell) other).id);
     }
 
     @Override
