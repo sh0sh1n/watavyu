@@ -117,7 +117,7 @@ public class CellCommandsTest {
         assertFalse(cells.hasColumnForNewCell());
     }
 
-    /** A column hidden without being deselected, as closing its media window hides it, is passed over. */
+    /** Hiding a column however it is hidden, as closing its media window does, deselects it. */
     @Test
     public void aSelectedColumnHiddenSinceIsPassedOver() {
         gaze.setSelected(true);
@@ -506,7 +506,7 @@ public class CellCommandsTest {
         Cell shown = speech.createPointCell(1_000);
         spreadsheet.setLastSelectedCells(List.of(hidden, shown));
         spreadsheet.columns().hide(List.of(gaze));
-        // Nothing is selected, so the cells last selected are timed.
+        // A new cell starts selected; with nothing selected, the cells last selected are timed.
         shown.setSelected(false);
 
         cells.setOnsets(5_000);

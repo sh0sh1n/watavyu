@@ -67,9 +67,10 @@ public final class CellCommands {
     }
 
     /**
-     * Tells whether the cell commands act on a column. They act only on shown columns (owner, B22): a hidden column
-     * takes no new cell and its cells are not timed, closed or deleted, though it is selected, holds the cells last
-     * selected or was the column last given a cell, however it was hidden.
+     * Tells whether the cell commands act on a column. They act only on shown columns (owner, B22). Hiding deselects
+     * a column and its cells, so the selection is always shown; what the spreadsheet remembers is checked here: a
+     * hidden column takes no new cell though it was the one last given a cell, and the cells last selected in it are
+     * not timed or closed.
      *
      * @param column a column
      * @return whether it is shown
@@ -78,19 +79,16 @@ public final class CellCommands {
         return !column.isHidden();
     }
 
-    /** @return the selected shown columns, in spreadsheet order */
+    /** @return the selected columns, in spreadsheet order */
     private List<Variable> selectedColumns() {
-        return dataStore().getAllVariables().stream().filter(Variable::isSelected).filter(CellCommands::shown)
-            .toList();
+        return dataStore().getAllVariables().stream().filter(Variable::isSelected).toList();
     }
 
-    /** @return the selected cells of shown columns, by column in spreadsheet order and then by time */
+    /** @return the selected cells, by column in spreadsheet order and then by time */
     private List<Cell> selectedCells() {
         List<Cell> selected = new ArrayList<>();
         for (Variable column : dataStore().getAllVariables()) {
-            if (shown(column)) {
-                column.getCells().stream().filter(Cell::isSelected).sorted(BY_ONSET).forEach(selected::add);
-            }
+            column.getCells().stream().filter(Cell::isSelected).sorted(BY_ONSET).forEach(selected::add);
         }
         return selected;
     }
@@ -163,9 +161,8 @@ public final class CellCommands {
                 return cell.getVariable();
             }
         }
-        Variable last = spreadsheet.getLastCreatedVariable();
-        if (inSpreadsheet(last) && takesCells(last)) {
-            return last;
+        if (hasColumnForNewCell()) {
+            return spreadsheet.getLastCreatedVariable();
         }
         return dataStore().getAllVariables().stream().filter(CellCommands::takesCells).findFirst().orElse(null);
     }

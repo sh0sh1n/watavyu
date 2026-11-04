@@ -89,6 +89,23 @@ public class VariableTest {
         verify(modelListener, times(0)).cellRemoved(null);
     }
 
+    /** However a column is hidden, it and its cells are deselected and unhighlighted, and stay so when shown. */
+    @Test
+    public void hidingDeselectsTheColumnAndItsCells() {
+        Cell cell = model.createPointCell(1_000);
+        cell.setSelected(true);
+        cell.setHighlighted(true);
+        model.setSelected(true);
+
+        model.setHidden(true);
+
+        assertFalse(model.isSelected());
+        assertFalse(cell.isSelected());
+        assertFalse(cell.isHighlighted());
+        model.setHidden(false);
+        assertFalse(cell.isSelected());
+    }
+
     @Test
     public void testIsSelected() {
         List<Variable> vars = new ArrayList<Variable>();

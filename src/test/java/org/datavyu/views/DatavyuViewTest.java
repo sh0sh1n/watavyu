@@ -2,6 +2,7 @@ package org.datavyu.views;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertSame;
 import static org.testng.Assert.assertTrue;
@@ -309,9 +310,9 @@ public class DatavyuViewTest {
 
         onEdt(() -> {
             study.getDataStore().getVariable("gaze").setSelected(true);
-            assertTrue(study.cells().newCellInSelectedColumn(1_000) != null);
+            assertNotNull(study.cells().newCellInSelectedColumn(1_000));
         });
-        assertTrue(newCell.isEnabled());
+        assertTrue(newCell.isEnabled(), "the new cell's edit refreshed the commands");
 
         onEdt(() -> {
             study.columns().hide(study.getDataStore().getAllVariables());

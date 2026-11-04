@@ -252,6 +252,14 @@ public final class DatavyuVariable implements Variable {
         if (hidden == null || hiddenParm != hidden) {
             owningDatastore.markAsChanged();
             hidden = hiddenParm;
+            if (hidden) {
+                // What cannot be seen is not selected, so commands on the selection leave it alone.
+                setSelected(false);
+                for (Cell cell : getCells()) {
+                    cell.setSelected(false);
+                    cell.setHighlighted(false);
+                }
+            }
 
             for (VariableListener vl : listeners) {
                 vl.visibilityChanged(hidden);

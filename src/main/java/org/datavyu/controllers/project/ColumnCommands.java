@@ -130,21 +130,13 @@ public final class ColumnCommands {
     }
 
     /**
-     * Hide Column, from a column's header and the Column List: hides columns, which silences a media column's window,
-     * and deselects them and their cells, so commands on the selection leave what cannot be seen alone. Hiding is not
-     * an edit.
+     * Hide Column, from a column's header and the Column List: hides columns, which silences a media column's window
+     * and deselects them and their cells ({@link Variable#setHidden}). Hiding is not an edit.
      *
      * @param columns the columns to hide
      */
     public void hide(final List<Variable> columns) {
-        for (Variable column : columns) {
-            column.setHidden(true);
-            column.setSelected(false);
-            column.getCells().forEach(cell -> {
-                cell.setSelected(false);
-                cell.setHighlighted(false);
-            });
-        }
+        columns.forEach(column -> column.setHidden(true));
     }
 
     /**
