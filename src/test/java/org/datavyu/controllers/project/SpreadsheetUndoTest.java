@@ -74,6 +74,63 @@ public class SpreadsheetUndoTest {
         assertEquals(second.getOnset(), 4_000);
     }
 
+    /**
+     * An edit made after an undo is compared with the last edit done, not the one waiting to be redone. It used to be
+     * dropped as that one's duplicate, so it could not be undone.
+     */
+    @Test
+    public void anEditAfterAnUndoIsRecorded() throws Exception {
+        ProjectController spreadsheet = spreadsheet();
+        Cell cell = cell(spreadsheet);
+        spreadsheet.cells().setOnsets(2_000);
+        spreadsheet.undo();
+        assertEquals(cell.getOnset(), 1_000);
+
+        cell.setSelected(true);
+        spreadsheet.cells().setOnsets(3_000);
+        spreadsheet.undo();
+
+        assertEquals(cell.getOnset(), 1_000);
+    }
+
+    /** Edits equal by value are still told apart, so a new edit drops only what could be redone. */
+    @Test
+    public void aNewEditKeepsEarlierEditsEqualToTheLast() throws Exception {
+        ProjectController spreadsheet = spreadsheet();
+        Cell cell = cell(spreadsheet);
+        moveOnset(spreadsheet, 2_000);
+        moveOnset(spreadsheet, 1_000);
+        moveOnset(spreadsheet, 2_000);
+        moveOnset(spreadsheet, 3_000);
+
+        spreadsheet.undo();
+        spreadsheet.undo();
+        spreadsheet.undo();
+
+        assertEquals(cell.getOnset(), 2_000);
+    }
+
+    /** A coarse edit replaces its cell's fine edits before it, even after one of them was undone. */
+    @Test
+    public void aCoarseEditAfterAnUndoReplacesTheFineEditsBeforeIt() throws Exception {
+        ProjectController spreadsheet = spreadsheet();
+        Cell cell = cell(spreadsheet);
+        cell.setOnset(2_000);
+        spreadsheet.postEdit(new ChangeOnsetCellEdit(spreadsheet, cell, 1_000, 2_000, Granularity.FINEGRAINED));
+        cell.setOnset(3_000);
+        spreadsheet.postEdit(new ChangeOnsetCellEdit(spreadsheet, cell, 2_000, 3_000, Granularity.FINEGRAINED));
+        spreadsheet.undo();
+        cell.setOnset(4_000);
+        spreadsheet.postEdit(new ChangeOnsetCellEdit(spreadsheet, cell, 1_000, 4_000, Granularity.COARSEGRAINED));
+
+        spreadsheet.undo();
+
+        assertEquals(cell.getOnset(), 1_000);
+        assertFalse(spreadsheet.getUndoManager().canUndo());
+        spreadsheet.redo();
+        assertEquals(cell.getOnset(), 4_000);
+    }
+
     @Test
     public void editsJoinOnlyTheirOwnSpreadsheetsHistory() throws Exception {
         ProjectController first = spreadsheet();

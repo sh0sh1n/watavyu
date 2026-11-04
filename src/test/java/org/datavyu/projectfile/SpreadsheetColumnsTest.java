@@ -25,10 +25,8 @@ public class SpreadsheetColumnsTest {
     private static DataStore spreadsheet() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
 
-        // The spreadsheet panel numbers columns as it shows them.
         Variable text = dataStore.createVariable("Notes");
         text.getRootNode().childArguments.get(0).name = "note";
-        text.setOrderIndex(0);
         Cell later = text.createCell();
         later.setOnset(5_000);
         later.setOffset(6_000);
@@ -39,7 +37,6 @@ public class SpreadsheetColumnsTest {
         earlier.setMatrixValue(0, "first, (with) \"quotes\"");
 
         Variable matrix = dataStore.createVariable("Mother");
-        matrix.setOrderIndex(1);
         matrix.addArgument();
         Cell cell = matrix.createCell();
         cell.setOnset(2_000);
@@ -47,7 +44,6 @@ public class SpreadsheetColumnsTest {
         cell.setMatrixValue(1, "happy");
 
         Variable hidden = dataStore.createVariable("Hidden");
-        hidden.setOrderIndex(2);
         hidden.setHidden(true);
         return dataStore;
     }

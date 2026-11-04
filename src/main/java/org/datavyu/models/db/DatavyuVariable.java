@@ -44,7 +44,6 @@ public final class DatavyuVariable implements Variable {
     private Boolean selected;
     private Boolean hidden;
     private String name;
-    private int orderIndex = -1;
     private DatavyuDataStore owningDatastore;
     private boolean media;
     private boolean locked;
@@ -389,16 +388,6 @@ public final class DatavyuVariable implements Variable {
         listeners.remove(listener);
     }
 
-    @Override
-    public int getOrderIndex() {
-        return orderIndex;
-    }
-
-    @Override
-    public void setOrderIndex(final int newIndex) {
-        orderIndex = newIndex;
-        owningDatastore.markAsChanged();
-    }
 
     //would like to change the above calls to DatavyuDataStore.markAsChanged to this,
     //but am holding off for now to avoid merge complications

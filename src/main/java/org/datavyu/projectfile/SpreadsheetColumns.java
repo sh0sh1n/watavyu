@@ -100,7 +100,6 @@ public final class SpreadsheetColumns {
             } else if (column instanceof MediaColumn media) {
                 Variable variable = dataStore.createMediaVariable(media.name());
                 variable.setHidden(media.hidden());
-                variable.setOrderIndex(dataStore.getAllVariables().size() - 1);
                 for (Clip clip : media.clips()) {
                     Source source = clip.source();
                     variable.createClip(clip.onset(), new MediaClip(
@@ -121,12 +120,9 @@ public final class SpreadsheetColumns {
      * @throws UserWarningException if the spreadsheet already has a column of the same name
      */
     public static void addTo(final DataStore dataStore, final List<AnnotationColumn> columns) throws UserWarningException {
-        int order = dataStore.getAllVariables().size();
         for (AnnotationColumn column : columns) {
             Variable variable = dataStore.createVariable(column.name(), true);
             variable.setHidden(column.hidden());
-            variable.setOrderIndex(order);
-            order++;
             Argument root = variable.getRootNode();
             root.clearChildArguments();
             for (String code : column.codes()) {

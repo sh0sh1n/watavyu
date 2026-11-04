@@ -179,10 +179,6 @@ public interface Variable {
      */
     void removeListener(final VariableListener listener);
 
-    int getOrderIndex();
-
-    void setOrderIndex(int newIndex);
-
     DataStore getOwningDatastore();
 
     /**

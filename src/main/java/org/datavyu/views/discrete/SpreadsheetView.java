@@ -72,6 +72,20 @@ public class SpreadsheetView extends JPanel implements Scrollable {
     }
 
     /**
+     * Puts the columns in a new order.
+     *
+     * @param arranged the columns this view holds, in their new order
+     */
+    public void arrangeColumns(final List<SpreadsheetColumn> arranged) {
+        columns.clear();
+        columns.addAll(arranged);
+        for (int i = 0; i < arranged.size(); i++) {
+            remove(arranged.get(i).getDataPanel());
+            add(arranged.get(i).getDataPanel(), i);
+        }
+    }
+
+    /**
      * Moves the playhead's line across the columns.
      *
      * @param y the line's height in the sheet, or -1 for no line

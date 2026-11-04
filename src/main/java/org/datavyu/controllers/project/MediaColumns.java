@@ -23,9 +23,7 @@ public final class MediaColumns {
      */
     public static Variable add(final DataStore dataStore) throws UserWarningException {
         Set<String> names = dataStore.getAllVariables().stream().map(Variable::getName).collect(Collectors.toSet());
-        Variable column = dataStore.createMediaVariable(MediaColumnNames.next(names));
-        column.setOrderIndex(dataStore.getAllVariables().size() - 1);
-        return column;
+        return dataStore.createMediaVariable(MediaColumnNames.next(names));
     }
 
     /**

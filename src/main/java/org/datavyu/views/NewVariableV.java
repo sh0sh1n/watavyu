@@ -19,12 +19,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.util.Dialogs;
-import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.UserWarningException;
-import org.datavyu.models.db.Variable;
-import org.datavyu.undoableedits.AddVariableEdit;
-
-import javax.swing.undo.UndoableEdit;
 
 /**
  * The dialog for users to add new variables to the spreadsheet.
@@ -35,10 +30,6 @@ public final class NewVariableV extends DatavyuDialog {
      * The logger for this class.
      */
     private static final Logger logger = LogManager.getLogger(NewVariableV.class);
-    /**
-     * The database to add the new variable to.
-     */
-    private DataStore dataStore;
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton cancelButton;
     private javax.swing.JLabel jLabel1;
@@ -61,8 +52,6 @@ public final class NewVariableV extends DatavyuDialog {
         logger.info("newVar - show");
         initComponents();
         setName(this.getClass().getSimpleName());
-
-        dataStore = controller.getDataStore();
 
         getRootPane().setDefaultButton(okButton);
     }
@@ -155,16 +144,7 @@ public final class NewVariableV extends DatavyuDialog {
     private void okButtonActionPerformed(final java.awt.event.ActionEvent evt) {// GEN-FIRST:event_okButtonActionPerformed
         try {
             logger.info("newVar - create column:" + getVariableName());
-            Variable var = dataStore.createVariable(getVariableName());
-            controller.setLastCreatedVariable(var);
-
-            // record the effect
-            UndoableEdit edit = new AddVariableEdit(controller, getVariableName());
-
-            // Display any changes.
-            controller.getSpreadSheetPanel().validate();
-            controller.postEdit(edit);
-
+            controller.columns().newColumn(getVariableName());
             dispose();
 
             // Whoops, user has done something strange - show warning dialog.

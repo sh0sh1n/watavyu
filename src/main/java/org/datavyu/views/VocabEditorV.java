@@ -20,19 +20,14 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.util.Dialogs;
-import org.datavyu.controllers.DeleteColumnController;
 import org.datavyu.models.db.Argument;
 import org.datavyu.models.db.UserWarningException;
 import org.datavyu.models.db.Variable;
 import org.datavyu.util.StringUtils;
-import org.datavyu.undoableedits.AddVariableEdit;
-import org.datavyu.undoableedits.RemoveVariableEdit;
-import org.datavyu.views.discrete.SpreadSheetPanel;
 import org.datavyu.views.discrete.datavalues.vocabelements.FormalArgEditor;
 import org.datavyu.views.discrete.datavalues.vocabelements.VocabElementV;
 
 import javax.swing.*;
-import javax.swing.undo.UndoableEdit;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
@@ -254,18 +249,11 @@ public final class VocabEditorV extends DatavyuDialog {
         try {
             LOGGER.info("vocEd - add column");
 
-            // perform the action
-            Variable v = controller.getDataStore().createVariable(varName);
-            // Need to get the template from the variable.
-            //Matrix m = v.getCellValue();
+            Variable v = controller.columns().newColumn(varName);
 
             VocabElementV matrixV = new VocabElementV(v.getRootNode(), v, this);
             verticalFrame.add(matrixV);
             veViews.add(matrixV);
-
-            // record the effect
-            UndoableEdit edit = new AddVariableEdit(controller, varName);
-            controller.postEdit(edit);
 
             matrixV.requestFocus();
             matrixV.rebuildContents();
@@ -333,9 +321,7 @@ public final class VocabEditorV extends DatavyuDialog {
         VocabElementV v = selectedVocabElement;
         int idx = getVocabElements().indexOf(v);
         if(idx > 0) {
-            SpreadSheetPanel sp = controller.getSpreadSheetPanel();
-            Variable varToSwap = getVocabElements().get(idx-1).getVariable();
-            sp.moveColumn(var, varToSwap);
+            controller.columns().move(var, getVocabElements().get(idx-1).getVariable());
             makeElements();
             for(VocabElementV vev : getVocabElements()) {
                 if(vev.getVariable() == var) {
@@ -354,9 +340,7 @@ public final class VocabEditorV extends DatavyuDialog {
         VocabElementV v = selectedVocabElement;
         int idx = getVocabElements().indexOf(v);
         if(idx < getVocabElements().size() - 1) {
-            SpreadSheetPanel sp = controller.getSpreadSheetPanel();
-            Variable varToSwap = getVocabElements().get(idx+1).getVariable();
-            sp.moveColumn(var, varToSwap);
+            controller.columns().move(var, getVocabElements().get(idx+1).getVariable());
             makeElements();
             for(VocabElementV vev : getVocabElements()) {
                 if(vev.getVariable() == var) {
@@ -395,8 +379,6 @@ public final class VocabEditorV extends DatavyuDialog {
      * The action to invoke when the user presses the delete button.
      */
     public void delete() {
-
-        UndoableEdit edit = null;
         // A locked column, its codes included, is deleted only once it is unlocked.
         if (selectedVocabElement != null && selectedVocabElement.getVariable().refusesEdits()) {
             return;
@@ -407,14 +389,10 @@ public final class VocabEditorV extends DatavyuDialog {
                     selectedVocabElement.getVariable().getName() + "?", "Delete Column",
                     JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
                 LOGGER.info("vocEd - delete element");
-                // record the effect
-                List<Variable> varsToDelete = new ArrayList<Variable>();
-                varsToDelete.add(selectedVocabElement.getVariable());
-                edit = new RemoveVariableEdit(controller.getDataStore(), varsToDelete);
-                new DeleteColumnController(controller, varsToDelete);
-
-                deleteElementVFromView(selectedVocabElement.getVariable().getName());
-                applyChanges();
+                if (controller.columns().delete(List.of(selectedVocabElement.getVariable()))) {
+                    deleteElementVFromView(selectedVocabElement.getVariable().getName());
+                    applyChanges();
+                }
             }
 
             // User has argument selected - delete it from the vocab element.
@@ -427,10 +405,6 @@ public final class VocabEditorV extends DatavyuDialog {
         }
 
         updateDialogState();
-        if (edit != null) {
-            // notify the listeners
-            controller.postEdit(edit);
-        }
     }
 
     private void deleteElementVFromView(String name) {

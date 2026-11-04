@@ -100,6 +100,9 @@ public final class ProjectController {
     /** The commands that make, delete and time cells */
     private final CellCommands cells = new CellCommands(this);
 
+    /** The commands that add, delete, lock, hide and move columns */
+    private final ColumnCommands columns = new ColumnCommands(this);
+
     /** Whether quick-key mode is on, in which typing in a selected column makes a cell; an application setting. */
     private BooleanSupplier quickKeyMode = () -> false;
 
@@ -160,16 +163,34 @@ public final class ProjectController {
         return undoManager;
     }
 
-    /** Undoes this spreadsheet's last edit, and shows its cells again. */
-    public void undo() {
-        undoManager.undo();
-        redrawCells();
+    /**
+     * Undoes this spreadsheet's last edit, and shows its cells again, unless the edit refuses (see {@code GuardedEdit}),
+     * which leaves the history as it was.
+     *
+     * @return why the edit refused, for the user, or null if it was undone
+     */
+    public String undo() {
+        String refusal = undoManager.undoRefusal();
+        if (refusal == null) {
+            undoManager.undo();
+            redrawCells();
+        }
+        return refusal;
     }
 
-    /** Redoes this spreadsheet's last undone edit, and shows its cells again. */
-    public void redo() {
-        undoManager.redo();
-        redrawCells();
+    /**
+     * Redoes this spreadsheet's last undone edit, and shows its cells again, unless the edit refuses, which leaves the
+     * history as it was.
+     *
+     * @return why the edit refused, for the user, or null if it was redone
+     */
+    public String redo() {
+        String refusal = undoManager.redoRefusal();
+        if (refusal == null) {
+            undoManager.redo();
+            redrawCells();
+        }
+        return refusal;
     }
 
     /** Shows every cell's value and selection again, as after undo and redo. */
@@ -225,6 +246,11 @@ public final class ProjectController {
     /** Returns the commands that make, delete and time this spreadsheet's cells. */
     public CellCommands cells() {
         return cells;
+    }
+
+    /** Returns the commands that add, delete, lock, hide and move this spreadsheet's columns. */
+    public ColumnCommands columns() {
+        return columns;
     }
 
     /**

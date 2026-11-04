@@ -1,0 +1,343 @@
+package org.datavyu.controllers.project;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNull;
+import static org.testng.Assert.assertSame;
+import static org.testng.Assert.assertThrows;
+import static org.testng.Assert.assertTrue;
+
+import org.datavyu.models.db.Cell;
+import org.datavyu.models.db.DataStore;
+import org.datavyu.models.db.DataStoreFactory;
+import org.datavyu.models.db.UserWarningException;
+import org.datavyu.models.db.Variable;
+import org.datavyu.models.db.VariableListener;
+import org.datavyu.models.project.Project;
+import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Test;
+
+import javax.swing.undo.CannotRedoException;
+import javax.swing.undo.CannotUndoException;
+import java.util.List;
+
+/**
+ * Each column command is the one path for its user action: it changes the columns and records what is an edit, so undo
+ * puts back the same columns, in their places.
+ */
+public class ColumnCommandsTest {
+
+    private DataStore dataStore;
+    private ProjectController spreadsheet;
+    private ColumnCommands columns;
+    private Variable gaze;
+    private Variable speech;
+    private Variable gesture;
+
+    @BeforeMethod
+    public void setUp() throws Exception {
+        dataStore = DataStoreFactory.newDataStore();
+        spreadsheet = new ProjectController(new Project(), dataStore);
+        columns = spreadsheet.columns();
+        gaze = dataStore.createVariable("gaze");
+        speech = dataStore.createVariable("speech");
+        gesture = dataStore.createVariable("gesture");
+        dataStore.deselectAll();
+    }
+
+    private List<String> order() {
+        return dataStore.getAllVariables().stream().map(Variable::getName).toList();
+    }
+
+    private boolean canUndo() {
+        return spreadsheet.getUndoManager().canUndo();
+    }
+
+    // New Column
+
+    @Test
+    public void aNewColumnGoesLastAndIsTheOneSelected() throws Exception {
+        gaze.setSelected(true);
+
+        Variable notes = columns.newColumn("notes");
+
+        assertEquals(order(), List.of("gaze", "speech", "gesture", "notes"));
+        assertEquals(dataStore.getSelectedVariables(), List.of(notes));
+        assertSame(spreadsheet.getLastCreatedVariable(), notes);
+        assertEquals(spreadsheet.getUndoManager().getUndoPresentationName(), "Undo New Column \"notes\"");
+    }
+
+    @Test
+    public void undoTakesANewColumnOutAndRedoPutsTheSameColumnBack() throws Exception {
+        Variable notes = columns.newColumn("notes");
+
+        spreadsheet.undo();
+        assertNull(dataStore.getVariable("notes"));
+
+        spreadsheet.redo();
+        assertSame(dataStore.getVariable("notes"), notes);
+        assertEquals(order(), List.of("gaze", "speech", "gesture", "notes"));
+        assertEquals(dataStore.getSelectedVariables(), List.of(notes));
+    }
+
+    /** Redo used to make a new column of the same name, so a cell redone after it went into the old, deleted one. */
+    @Test
+    public void aCellRedoneAfterItsNewColumnIsInTheSpreadsheet() throws Exception {
+        Variable notes = columns.newColumn("notes");
+        Cell cell = spreadsheet.cells().newCell(1_000);
+        assertSame(cell.getVariable(), notes);
+
+        spreadsheet.undo();
+        spreadsheet.undo();
+        spreadsheet.redo();
+        spreadsheet.redo();
+
+        assertEquals(dataStore.getVariable("notes").getCells(), List.of(cell));
+        assertSame(dataStore.getVariable(cell), notes);
+    }
+
+    @Test
+    public void aTakenNameAddsNothingAndKeepsTheSelection() {
+        Cell cell = gaze.createPointCell(1_000);
+        cell.setSelected(true);
+        speech.setSelected(true);
+
+        assertThrows(UserWarningException.class, () -> columns.newColumn("gaze"));
+
+        assertEquals(order(), List.of("gaze", "speech", "gesture"));
+        assertFalse(canUndo());
+        assertTrue(cell.isSelected());
+        assertTrue(speech.isSelected());
+    }
+
+    // New Media Column
+
+    @Test
+    public void newMediaColumnCanBeUndoneAndRedone() throws Exception {
+        Variable media = columns.newMediaColumn();
+
+        assertTrue(media.isMedia());
+        assertEquals(dataStore.getSelectedVariables(), List.of(media));
+        assertEquals(spreadsheet.getUndoManager().getUndoPresentationName(), "Undo New Media Column media_1");
+        spreadsheet.undo();
+        assertEquals(order(), List.of("gaze", "speech", "gesture"));
+
+        spreadsheet.redo();
+        assertSame(dataStore.getVariable("media_1"), media);
+        assertEquals(order(), List.of("gaze", "speech", "gesture", "media_1"));
+    }
+
+    // Delete Column
+
+    @Test
+    public void deletingColumnsIsOneEditAndClearsSelection() {
+        Cell cell = gesture.createPointCell(1_000);
+        cell.setSelected(true);
+        gaze.setSelected(true);
+
+        assertTrue(columns.delete(List.of(gaze, speech)));
+
+        assertEquals(order(), List.of("gesture"));
+        assertFalse(cell.isSelected());
+        assertEquals(spreadsheet.getUndoManager().getUndoPresentationName(), "Undo Delete 2 Columns");
+    }
+
+    @Test
+    public void undoPutsDeletedColumnsBackInTheirPlaces() {
+        Cell cell = speech.createPointCell(1_000);
+        columns.delete(List.of(gaze, gesture));
+
+        spreadsheet.undo();
+        assertEquals(order(), List.of("gaze", "speech", "gesture"));
+        assertEquals(speech.getCells(), List.of(cell));
+
+        spreadsheet.redo();
+        assertEquals(order(), List.of("speech"));
+    }
+
+    /** A deleted column's place used to be given to the next new column, so undoing the deletion misplaced it. */
+    @Test
+    public void undoingADeletionAfterANewColumnKeepsEveryPlace() throws Exception {
+        columns.delete(List.of(gaze));
+        columns.newColumn("notes");
+        assertEquals(order(), List.of("speech", "gesture", "notes"));
+
+        spreadsheet.undo();
+        spreadsheet.undo();
+        assertEquals(order(), List.of("gaze", "speech", "gesture"));
+    }
+
+    /** Media added is not yet an edit (B14), so a deleted media column's name can be taken before its undo. */
+    @Test
+    public void undoingADeletionWhoseNameIsTakenIsRefusedAndStaysAsItWas() throws Exception {
+        Variable media = columns.newMediaColumn();
+        columns.delete(List.of(gaze, media));
+        Variable taken = dataStore.createMediaVariable("media_1");
+
+        assertEquals(spreadsheet.undo(), "Another column is named media_1. Rename or delete it to undo this.");
+        assertThrows(CannotUndoException.class, spreadsheet.getUndoManager()::undo);
+        assertEquals(order(), List.of("speech", "gesture", "media_1"));
+        assertSame(dataStore.getVariable("media_1"), taken);
+
+        dataStore.removeVariable(taken);
+        assertNull(spreadsheet.undo());
+        assertEquals(order(), List.of("gaze", "speech", "gesture", "media_1"));
+        assertSame(dataStore.getVariable("media_1"), media);
+    }
+
+    @Test
+    public void aRefusedRedoStaysWhereItWasInTheHistory() throws Exception {
+        Variable media = columns.newMediaColumn();
+        spreadsheet.undo();
+        Variable taken = dataStore.createMediaVariable("media_1");
+
+        assertEquals(spreadsheet.redo(), "Another column is named media_1. Rename or delete it to redo this.");
+        assertThrows(CannotRedoException.class, spreadsheet.getUndoManager()::redo);
+        dataStore.removeVariable(taken);
+        assertNull(spreadsheet.redo());
+
+        assertSame(dataStore.getVariable("media_1"), media);
+    }
+
+    /**
+     * A media column whose file fails to open is taken out without an edit and never comes back. Its edits change
+     * nothing then, rather than refusing, so the edits before them can still be undone.
+     */
+    @Test
+    public void editsOfAColumnTakenOutWithoutAnEditDoNotStopTheHistory() throws Exception {
+        columns.setLocked(gaze, true);
+        Variable media = columns.newMediaColumn();
+        columns.setLocked(media, true);
+        dataStore.removeVariable(media);
+
+        assertNull(spreadsheet.undo());
+        assertNull(spreadsheet.undo());
+        assertNull(spreadsheet.undo());
+
+        assertFalse(gaze.isLocked());
+        assertEquals(order(), List.of("gaze", "speech", "gesture"));
+    }
+
+    /** A media column that fails to open is taken out without an edit, so a deleted column's place can be past the end. */
+    @Test
+    public void aDeletedColumnWhosePlaceHasGoneComesBackLast() {
+        columns.delete(List.of(gesture));
+        dataStore.removeVariable(speech);
+
+        spreadsheet.undo();
+
+        assertEquals(order(), List.of("gaze", "gesture"));
+    }
+
+    @Test
+    public void aLockedColumnStopsTheWholeDeletionAndShowsIt() {
+        VariableListener speechLock = mock(VariableListener.class);
+        VariableListener gestureLock = mock(VariableListener.class);
+        speech.addListener(speechLock);
+        gesture.addListener(gestureLock);
+        speech.setLocked(true);
+        gesture.setLocked(true);
+
+        assertFalse(columns.delete(List.of(gaze, speech, gesture)));
+
+        assertEquals(order(), List.of("gaze", "speech", "gesture"));
+        verify(speechLock, times(1)).editRefused();
+        verify(gestureLock, times(1)).editRefused();
+        assertFalse(canUndo());
+    }
+
+    @Test
+    public void deletingNothingInTheSpreadsheetIsNoEdit() {
+        columns.delete(List.of(gaze));
+
+        assertFalse(columns.delete(List.of(gaze)));
+        assertFalse(columns.delete(List.of()));
+        assertEquals(spreadsheet.getUndoManager().getUndoPresentationName(), "Undo Delete Column gaze");
+    }
+
+    // Lock Column
+
+    @Test
+    public void lockingIsAnEditThatUndoReverses() {
+        columns.setLocked(speech, true);
+        assertTrue(speech.isLocked());
+        assertEquals(spreadsheet.getUndoManager().getUndoPresentationName(), "Undo Lock Column speech");
+
+        spreadsheet.undo();
+        assertFalse(speech.isLocked());
+    }
+
+    @Test
+    public void aLockLeftAsItWasIsNoEdit() {
+        columns.setLocked(speech, false);
+
+        assertFalse(canUndo());
+    }
+
+    // Hide and show
+
+    @Test
+    public void hidingDeselectsTheHiddenColumnsAndTheirCellsOnly() {
+        Cell hidden = speech.createPointCell(1_000);
+        Cell shown = gaze.createPointCell(1_000);
+        hidden.setSelected(true);
+        shown.setSelected(true);
+        speech.setSelected(true);
+        gaze.setSelected(true);
+
+        columns.hide(List.of(speech));
+
+        assertTrue(speech.isHidden());
+        assertFalse(speech.isSelected());
+        assertFalse(hidden.isSelected());
+        assertTrue(gaze.isSelected());
+        assertTrue(shown.isSelected());
+        assertFalse(canUndo(), "hiding is not an edit");
+    }
+
+    @Test
+    public void showAllShowsEveryHiddenColumn() {
+        columns.hide(List.of(gaze, gesture));
+        columns.show(gaze);
+        assertFalse(gaze.isHidden());
+        assertTrue(gesture.isHidden());
+
+        columns.showAll();
+        assertTrue(dataStore.getAllVariables().stream().noneMatch(Variable::isHidden));
+    }
+
+    // Move
+
+    @Test
+    public void aColumnMovesToAnothersPlaceShiftingThoseBetween() {
+        columns.move(gesture, gaze);
+        assertEquals(order(), List.of("gesture", "gaze", "speech"));
+
+        columns.move(gesture, speech);
+        assertEquals(order(), List.of("gaze", "speech", "gesture"));
+        assertFalse(canUndo(), "moving is not an edit");
+    }
+
+    @Test
+    public void aLockedColumnMoves() {
+        gaze.setLocked(true);
+
+        columns.move(gaze, gesture);
+
+        assertEquals(order(), List.of("speech", "gesture", "gaze"));
+    }
+
+    /** Moving after a deletion and its undo used to move a column next to the one asked for. */
+    @Test
+    public void movingAfterUndoingADeletionMovesTheColumnAsked() {
+        columns.delete(List.of(gaze));
+        spreadsheet.undo();
+
+        columns.move(gesture, speech);
+
+        assertEquals(order(), List.of("gaze", "gesture", "speech"));
+    }
+}

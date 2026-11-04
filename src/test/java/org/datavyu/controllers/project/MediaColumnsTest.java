@@ -7,10 +7,8 @@ import static org.testng.Assert.assertTrue;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.DataStoreFactory;
 import org.datavyu.models.db.Variable;
-import org.datavyu.undoableedits.AddMediaColumnEdit;
 import org.testng.annotations.Test;
 
-import javax.swing.undo.UndoManager;
 
 import java.util.List;
 
@@ -66,24 +64,5 @@ public class MediaColumnsTest {
         Variable column = MediaColumns.addSelected(dataStore);
 
         assertEquals(dataStore.getSelectedVariables(), List.of(column));
-    }
-
-    /** New Media Column is undone and redone like any edit: the column goes, then comes back as a media column. */
-    @Test
-    public void newMediaColumnCanBeUndoneAndRedone() throws Exception {
-        DataStore dataStore = DataStoreFactory.newDataStore();
-        dataStore.createVariable("codes");
-        UndoManager history = new UndoManager();
-        Variable column = MediaColumns.addSelected(dataStore);
-        history.addEdit(new AddMediaColumnEdit(dataStore, column.getName()));
-
-        assertEquals(history.getUndoPresentationName(), "Undo New Media Column media_1");
-        history.undo();
-        assertEquals(dataStore.getAllVariables().stream().map(Variable::getName).toList(), List.of("codes"));
-
-        history.redo();
-        Variable back = dataStore.getVariable("media_1");
-        assertTrue(back.isMedia());
-        assertEquals(dataStore.getAllVariables().get(1), back);
     }
 }

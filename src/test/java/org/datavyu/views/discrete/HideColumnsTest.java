@@ -4,14 +4,16 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
+import org.datavyu.controllers.project.ColumnCommands;
+import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.DataStoreFactory;
 import org.datavyu.models.db.Variable;
+import org.datavyu.models.project.Project;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import javax.swing.JMenuItem;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /** A column's header menu hides the column, or the selected columns when it is one of them. */
 public class HideColumnsTest {
@@ -20,7 +22,7 @@ public class HideColumnsTest {
     private Variable first;
     private Variable second;
     private Variable third;
-    private final AtomicInteger laidOut = new AtomicInteger();
+    private ColumnCommands columns;
 
     @BeforeMethod
     public void setUp() throws Exception {
@@ -31,12 +33,12 @@ public class HideColumnsTest {
         first.setSelected(true);
         second.setSelected(true);
         third.setSelected(false);
-        laidOut.set(0);
+        columns = new ProjectController(new Project(), dataStore).columns();
     }
 
     @Test
     public void anUnselectedColumnHidesAlone() {
-        JMenuItem item = SpreadsheetColumn.hideItem(dataStore, third, laidOut::incrementAndGet);
+        JMenuItem item = SpreadsheetColumn.hideItem(columns, dataStore, third);
         assertEquals(item.getText(), "Hide Column");
 
         item.doClick();
@@ -44,12 +46,11 @@ public class HideColumnsTest {
         assertTrue(third.isHidden());
         assertFalse(first.isHidden());
         assertFalse(second.isHidden());
-        assertEquals(laidOut.get(), 1);
     }
 
     @Test
     public void aSelectedColumnHidesTheSelection() {
-        JMenuItem item = SpreadsheetColumn.hideItem(dataStore, second, laidOut::incrementAndGet);
+        JMenuItem item = SpreadsheetColumn.hideItem(columns, dataStore, second);
         assertEquals(item.getText(), "Hide Selected Columns");
 
         item.doClick();
@@ -59,14 +60,13 @@ public class HideColumnsTest {
         assertFalse(first.isSelected());
         assertFalse(second.isSelected());
         assertFalse(third.isHidden());
-        assertEquals(laidOut.get(), 1);
     }
 
     @Test
     public void theOnlySelectedColumnHidesAlone() {
         second.setSelected(false);
 
-        JMenuItem item = SpreadsheetColumn.hideItem(dataStore, first, laidOut::incrementAndGet);
+        JMenuItem item = SpreadsheetColumn.hideItem(columns, dataStore, first);
         assertEquals(item.getText(), "Hide Column");
         item.doClick();
 

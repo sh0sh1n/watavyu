@@ -47,6 +47,7 @@ import java.awt.event.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
@@ -239,7 +240,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
                             @Override
                             public void actionPerformed(ActionEvent e)
                             {
-                                v.setHidden(false);
+                                projectController.columns().show(v);
                             }
                         }));
             }
@@ -440,10 +441,6 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
 
         // and add it to our maintained ref collection
         columns.add(col);
-
-        var.setOrderIndex(columns.size() - 1);
-
-//        updateColumnIndex();
     }
 
     /**
@@ -538,20 +535,24 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
     @Override
     public void variableAdded(final Variable newVariable) {
         addColumn(dataStore, newVariable);
+        // Undo puts a deleted column back in its place, not always last.
+        arrangeColumns();
+        revalidate();
+        repaint();
         variableVisible(newVariable);
     }
 
     @Override
     public void variableRemoved(final Variable deletedVariable) {
-        deselectAll();
         removeColumn(deletedVariable);
         revalidate();
+        repaint();
         variableHidden(deletedVariable);
     }
 
     @Override
     public void variableOrderChanged() {
-        // Do nothing.
+        arrangeColumns();
     }
 
     @Override
@@ -693,64 +694,25 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
     }
 
     /**
-     * Moves a given column to the right by a certain number of positions.
-     *
-     * @param var       The variable for the column to move
-     * @param swapVar   The variable we are swapping with
+     * Puts the columns in the spreadsheet's order, as the data store keeps it: after a column is moved, or put back
+     * in its place by undo.
      */
-    public void moveColumn(final Variable var, final Variable swapVar) {
-        logger.info("move column right");
-
-        // What index does the column sit at
-        int columnIndex = var.getOrderIndex();
-        int swapColumnIndex = swapVar.getOrderIndex();
-
-        if (columnIndex >= 0 && swapColumnIndex >= 0) {
-            shuffleColumn(columnIndex, swapColumnIndex);
-        }
-    }
-
-    /**
-     * Removes the source column and reinserts the column at a given
-     * destination.
-     *
-     * @param source      index of the source column
-     * @param destination index of the destination column
-     */
-    public void shuffleColumn(final int source, final int destination) {
-        int numCols = columns.size();
-        assert (source < numCols && destination < numCols) : String.format("%d and %d must be less than %d", source, destination, numCols);
-
-        if (source == destination) {
+    private void arrangeColumns() {
+        List<SpreadsheetColumn> arranged = new ArrayList<>(columns);
+        arranged.sort(Comparator.comparingInt(col -> dataStore.indexOf(col.getVariable())));
+        if (arranged.equals(columns)) {
             return;
         }
-        logger.info(source + ", " + destination);
-
-
-        synchronized(this.getTreeLock()) {
-            // Reorder the columns vector
-            SpreadsheetColumn sourceColumn = columns.get(source);
-            columns.remove(source);
-            columns.add(destination, sourceColumn);
-
-            // Go through columns and setOrderIndex().
-//            updateColumnIndex();
-            for(int i = Math.min(source, destination); i<= Math.max(source, destination); i++){
-                columns.get(i).getVariable().setOrderIndex(i);
-            }
-            // Reorder the header components
-            Component comp = headerView.getComponent(source + 1);
-            headerView.remove(source + 1);
-            headerView.add(comp, destination + 1);
-
-            // Reorder the data components
-            comp = mainView.getComponent(source);
-            mainView.remove(source);
-            mainView.add(comp, destination);
-
+        columns.clear();
+        columns.addAll(arranged);
+        for (int i = 0; i < arranged.size(); i++) {
+            // The header holds a strut before the columns.
+            headerView.remove(arranged.get(i));
+            headerView.add(arranged.get(i), i + 1);
         }
-        dataStore.columnsReordered();
+        mainView.arrangeColumns(arranged);
         revalidate();
+        repaint();
     }
 
     /**
@@ -902,6 +864,8 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
     @Override
     public void columnVisibilityChanged() {
         updateHiddenVars();
+        revalidate();
+        repaint();
     }
 
     /**

@@ -14,46 +14,42 @@ import javax.swing.undo.CannotUndoException;
 public final class LockColumnEdit extends AbstractUndoableEdit {
 
     private final DataStore dataStore;
-    private final String columnName;
+    private final Variable column;
     private final boolean locked;
 
     /**
      * Records a lock change that has already been made.
      *
-     * @param dataStore  the spreadsheet holding the column
-     * @param columnName the column's name, which finds it again after it has been deleted and restored
-     * @param locked     whether the column was locked (true) or unlocked
+     * @param dataStore the spreadsheet holding the column
+     * @param column    the column, which undo of its deletion puts back as the same object
+     * @param locked    whether the column was locked (true) or unlocked
      */
-    public LockColumnEdit(final DataStore dataStore, final String columnName, final boolean locked) {
+    public LockColumnEdit(final DataStore dataStore, final Variable column, final boolean locked) {
         this.dataStore = dataStore;
-        this.columnName = columnName;
+        this.column = column;
         this.locked = locked;
     }
 
     @Override
     public String getPresentationName() {
-        return (locked ? "Lock Column " : "Unlock Column ") + columnName;
+        return (locked ? "Lock Column " : "Unlock Column ") + column.getName();
     }
 
-    /** Undoes the lock change; refused, leaving the edit as it was, if the column is gone. */
+    /** Undoes the lock change, unless the column has been taken out without an edit, leaving nothing to change. */
     @Override
     public void undo() throws CannotUndoException {
-        Variable column = dataStore.getVariable(columnName);
-        if (column == null || !canUndo()) {
-            throw new CannotUndoException();
-        }
         super.undo();
-        column.setLocked(!locked);
+        if (dataStore.contains(column)) {
+            column.setLocked(!locked);
+        }
     }
 
-    /** Redoes the lock change; refused, leaving the edit as it was, if the column is gone. */
+    /** Redoes the lock change, unless the column has been taken out without an edit, leaving nothing to change. */
     @Override
     public void redo() throws CannotRedoException {
-        Variable column = dataStore.getVariable(columnName);
-        if (column == null || !canRedo()) {
-            throw new CannotRedoException();
-        }
         super.redo();
-        column.setLocked(locked);
+        if (dataStore.contains(column)) {
+            column.setLocked(locked);
+        }
     }
 }
