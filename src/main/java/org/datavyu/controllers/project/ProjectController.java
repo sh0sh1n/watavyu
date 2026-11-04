@@ -18,7 +18,6 @@ import org.datavyu.util.Resources;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.controllers.AutoSaveController;
-import org.datavyu.controllers.DeleteCellController;
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.DataStoreFactory;
@@ -27,7 +26,6 @@ import org.datavyu.models.db.Variable;
 import org.datavyu.models.project.Project;
 import org.datavyu.projectfile.ProjectDocument;
 import org.datavyu.projectfile.SpreadsheetColumns;
-import org.datavyu.undoableedits.RemoveCellEdit;
 import org.datavyu.undoableedits.SpreadsheetUndoManager;
 import org.datavyu.views.VideoController;
 import org.datavyu.views.discrete.SpreadSheetPanel;
@@ -99,6 +97,9 @@ public final class ProjectController {
     /** Autosaves this spreadsheet while its tab is open; null until started. */
     private AutoSaveController autoSave;
 
+    /** The commands that make, delete and time cells */
+    private final CellCommands cells = new CellCommands(this);
+
     /** Whether quick-key mode is on, in which typing in a selected column makes a cell; an application setting. */
     private BooleanSupplier quickKeyMode = () -> false;
 
@@ -146,7 +147,9 @@ public final class ProjectController {
     }
 
     /**
-     * @param listener told of each edit posted, after the undo history has it
+     * Tells a listener of each edit posted, after the undo history has it.
+     *
+     * @param listener the listener
      */
     public void addUndoableEditListener(final UndoableEditListener listener) {
         undoSupport.addUndoableEditListener(listener);
@@ -169,7 +172,8 @@ public final class ProjectController {
         redrawCells();
     }
 
-    private void redrawCells() {
+    /** Shows every cell's value and selection again, as after undo and redo. */
+    void redrawCells() {
         if (spreadSheetPanel != null) {
             spreadSheetPanel.redrawCells();
         }
@@ -218,20 +222,32 @@ public final class ProjectController {
         return quickKeyMode.getAsBoolean();
     }
 
-    /** Deletes the selected cells, except those in locked columns, as one edit in the undo history. */
-    public void deleteSelectedCells() {
-        List<Cell> selectedCells = new ArrayList<>();
-        for (Cell cell : dataStore.getSelectedCells()) {
-            if (!cell.getVariable().refusesEdits()) {
-                selectedCells.add(cell);
+    /** Returns the commands that make, delete and time this spreadsheet's cells. */
+    public CellCommands cells() {
+        return cells;
+    }
+
+    /**
+     * Removes cells without recording an edit, as deleting and undoing a new cell do; the cells last created and
+     * selected are forgotten if they go. A cell already in no column is left as it is.
+     *
+     * @param removed cells of this spreadsheet
+     */
+    public void removeCells(final List<Cell> removed) {
+        List<Cell> stillSelected = new ArrayList<>(lastSelectedCells);
+        stillSelected.removeAll(removed);
+        lastSelectedCells = stillSelected;
+        for (Cell cell : removed) {
+            if (cell.equals(lastCreatedCell)) {
+                lastCreatedCell = null;
+            }
+            if (cell.equals(lastSelectedCell)) {
+                lastSelectedCell = null;
+            }
+            if (dataStore.getVariable(cell) != null) {
+                dataStore.removeCell(cell);
             }
         }
-        if (selectedCells.isEmpty()) {
-            return;
-        }
-        UndoableEdit edit = new RemoveCellEdit(this, selectedCells);
-        new DeleteCellController(this, selectedCells);
-        postEdit(edit);
     }
 
     /** @return this spreadsheet's clock, players and playback commands; null until set */

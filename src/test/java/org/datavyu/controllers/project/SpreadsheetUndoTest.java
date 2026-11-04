@@ -56,6 +56,24 @@ public class SpreadsheetUndoTest {
         assertEquals(cell(second).getOnset(), 3_000);
     }
 
+    /** A coarse edit of one cell replaces that cell's fine edits before it, not another cell's. */
+    @Test
+    public void aCoarseEditKeepsAnotherCellsFineEdits() throws Exception {
+        ProjectController spreadsheet = spreadsheet();
+        Cell first = cell(spreadsheet);
+        Cell second = spreadsheet.getDataStore().getVariable("notes").createPointCell(4_000);
+        first.setOnset(2_000);
+        spreadsheet.postEdit(new ChangeOnsetCellEdit(spreadsheet, first, 1_000, 2_000, Granularity.FINEGRAINED));
+        second.setOnset(5_000);
+        spreadsheet.postEdit(new ChangeOnsetCellEdit(spreadsheet, second, 4_000, 5_000, Granularity.COARSEGRAINED));
+
+        spreadsheet.undo();
+        spreadsheet.undo();
+
+        assertEquals(first.getOnset(), 1_000);
+        assertEquals(second.getOnset(), 4_000);
+    }
+
     @Test
     public void editsJoinOnlyTheirOwnSpreadsheetsHistory() throws Exception {
         ProjectController first = spreadsheet();

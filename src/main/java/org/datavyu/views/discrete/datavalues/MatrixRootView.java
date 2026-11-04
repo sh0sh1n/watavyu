@@ -79,7 +79,7 @@ public final class MatrixRootView extends JTextArea implements FocusListener {
 
         parentCell = cell;
         allEditors = new ArrayList<>();
-        edTracker = new EditorTracker(this, allEditors, cell.getVariable(), controller::deleteSelectedCells);
+        edTracker = new EditorTracker(this, allEditors, cell.getVariable(), controller.cells()::deleteSelected);
 
         setMatrix(cellValue);
 

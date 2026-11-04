@@ -16,10 +16,10 @@ package org.datavyu.undoableedits;
 
 import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.Cell;
-import org.datavyu.models.db.Variable;
 
 import javax.swing.undo.CannotRedoException;
 import javax.swing.undo.CannotUndoException;
+import java.util.List;
 
 /**
  * An undoable edit for adding a cell to the spreadsheet.
@@ -45,15 +45,14 @@ public class AddCellEdit extends SpreadSheetEdit {
     @Override
     public void redo() throws CannotRedoException {
         super.redo();
-        Variable var = model.getVariable(varName);
-        var.addCell(addedCell);
+        addedCell.getVariable().addCell(addedCell);
+        controller.setLastCreatedCell(addedCell);
         unselectAll();
     }
 
     @Override
     public void undo() throws CannotUndoException {
         super.undo();
-        Variable var = model.getVariable(varName);
-        var.removeCell(addedCell);
+        controller.removeCells(List.of(addedCell));
     }
 }

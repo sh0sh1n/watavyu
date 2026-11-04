@@ -58,7 +58,7 @@ public class ChangeOnsetCellEdit extends ChangeCellEdit {
         // Must be this class to be here
         ChangeOnsetCellEdit t = (ChangeOnsetCellEdit) obj; 
 
-        return (this.oldOnset == t.oldOnset && this.newOnset == t.newOnset);
+        return sameCell(t) && this.oldOnset == t.oldOnset && this.newOnset == t.newOnset;
     }
 
     @Override

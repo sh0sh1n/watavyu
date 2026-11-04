@@ -153,4 +153,22 @@ public class CellTest {
 //        assertEquals(model.getOnset(), 17999999);
         assertEquals(model.getOnsetString(), "04:59:59:999");
     }
+
+    /** A code set in the model reaches the cell's views, as a quick key's does. */
+    @Test
+    public void settingACodeTellsTheCellsListeners() {
+        model.setMatrixValue(0, "smile");
+
+        verify(modelListener).valueChange(model.getCellValue());
+    }
+
+    @Test
+    public void aCodeLeftAsItWasTellsNothing() {
+        model.setMatrixValue(0, "smile");
+        model.setMatrixValue(0, "smile");
+        var.setLocked(true);
+        model.setMatrixValue(0, "frown");
+
+        verify(modelListener, times(1)).valueChange(any());
+    }
 }

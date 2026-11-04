@@ -58,8 +58,7 @@ public class ChangeOffsetCellEdit extends ChangeCellEdit {
         // Must be this class to be here
         ChangeOffsetCellEdit t = (ChangeOffsetCellEdit) obj;
 
-        return ((this.newOffset == t.newOffset)
-                && (this.oldOffset == t.oldOffset));
+        return sameCell(t) && this.newOffset == t.newOffset && this.oldOffset == t.oldOffset;
     }
 
     @Override

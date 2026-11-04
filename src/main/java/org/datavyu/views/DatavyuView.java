@@ -28,7 +28,6 @@ import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.event.component.FileDropEvent;
 import org.datavyu.event.component.FileDropEventListener;
 import org.datavyu.models.db.*;
-import org.datavyu.plugins.StreamViewer;
 import org.datavyu.plugins.javafx.JavaFxVideoPlugin;
 import org.datavyu.projectfile.ProjectDocument;
 import org.datavyu.projectfile.ProjectPaths;
@@ -39,7 +38,6 @@ import org.datavyu.util.DragAndDrop.TransparentPanel;
 import org.datavyu.util.FileFilters.*;
 import org.datavyu.views.discrete.SpreadSheetPanel;
 import org.datavyu.views.discrete.SpreadsheetTheme;
-import org.datavyu.views.discrete.SpreadsheetColumn;
 import org.datavyu.views.discrete.layouts.SheetLayoutFactory;
 import org.datavyu.views.discrete.layouts.SheetLayoutFactory.SheetLayoutType;
 
@@ -924,7 +922,7 @@ public final class DatavyuView implements FileDropEventListener {
      * Action for removing cells from the database.
      */
     public void deleteCells() {
-        selectedController().deleteSelectedCells();
+        selectedController().cells().deleteSelected();
     }
 
     /**
@@ -1085,13 +1083,11 @@ public final class DatavyuView implements FileDropEventListener {
     }
 
     public void newCellLeft() {
-        ProjectController selected = selectedController();
-        new CreateNewCellController(selected, selected.getDataStore().getSelectedCells(), ArrayDirection.LEFT);
+        selectedController().cells().newCellsBeside(ArrayDirection.LEFT);
     }
 
     public void newCellRight() {
-        ProjectController selected = selectedController();
-        new CreateNewCellController(selected, selected.getDataStore().getSelectedCells(), ArrayDirection.RIGHT);
+        selectedController().cells().newCellsBeside(ArrayDirection.RIGHT);
     }
 
     /**
@@ -1429,11 +1425,10 @@ public final class DatavyuView implements FileDropEventListener {
         return on ? "Disable Highlight and Focus Mode" : "Enable Highlight and Focus Mode";
     }
 
-    /**
-     * Creates a cell in the selected column, as the New Cell menu item does.
-     */
+    /** Creates a cell at the current time in the column last given a cell or edited, as the New Cell menu item does. */
     public void newCell() {
-        new CreateNewCellController(selectedController()).createDefaultCell();
+        ProjectController selected = selectedController();
+        selected.cells().newCell(selected.getVideoController().getCurrentTime());
     }
 
     /**

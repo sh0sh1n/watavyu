@@ -17,7 +17,6 @@ package org.datavyu.undoableedits;
 import org.datavyu.controllers.project.ProjectController;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.datavyu.controllers.DeleteCellController;
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.Variable;
 
@@ -68,21 +67,13 @@ public class RemoveCellEdit extends SpreadSheetEdit {
         super.redo();
         LOGGER.info("Redoing remove cells");
 
+        // Undo put these very cells back, so they are removed themselves, not looked up by their times and value.
         List<Cell> cellsToDelete = new ArrayList<Cell>();
-
         for (CellTO cellTO : cellTOV) {
-            Variable var = model.getVariable(cellTO.getParentVariableName());
-
-            for (Cell cell : var.getCells()) {
-                if (cell.getOnset() == cellTO.getOnset() &&
-                        cell.getOffset() == cellTO.getOffset() &&
-                        cell.getValueAsString().equals(cellTO.getValue())) {
-                    cellsToDelete.add(cell);
-                    break;
-                }
-            }
+            cellsToDelete.add(cellTO.getCell());
         }
-        new DeleteCellController(controller, cellsToDelete);
+        model.deselectAll();
+        controller.removeCells(cellsToDelete);
     }
 
     @Override

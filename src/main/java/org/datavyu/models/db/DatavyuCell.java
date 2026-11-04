@@ -239,7 +239,14 @@ public class DatavyuCell implements Cell {
     public void setMatrixValue(final int index, final String value) {
         DatavyuMatrixCellValue val = (DatavyuMatrixCellValue) getCellValue();
         List<CellValue> cellValues = val.getArguments();
-        cellValues.get(index).set(value);
+        CellValue code = cellValues.get(index);
+        String before = code.toString();
+        code.set(value);
+        if (!code.toString().equals(before)) {
+            for (CellListener cl : listeners) {
+                cl.valueChange(val);
+            }
+        }
     }
 
     @Override
