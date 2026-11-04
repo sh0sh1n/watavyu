@@ -15,15 +15,17 @@ Updated 2026-11-03. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
-| Java source (main) | 242 files, 42.5k lines | 138 files, 24.8k lines |
-| Tests / line coverage | 113 / 9.9% | 571 / 60.3%; views about half, undo edits 69% |
+| Java source (main) | 242 files, 42.5k lines | 139 files, 24.9k lines |
+| Tests / line coverage | 113 / 9.9% | 576 / 60.5%; views about half, undo edits 72% |
 | Runtime dependencies / with known vulnerabilities | 28 / 8 | 13 / 0 |
-| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 486 |
+| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 485 |
 | PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 339 / 61 (none on thread safety, now gated); 15 |
 | Never-invoked methods (`dead-code.py`) | 109+ | 21: test-only accessors, unused settings setters, and Swing overrides the script cannot see |
 | Static global access (`grep -rohP 'Datavyu\.(get\|set)\w*\(' src/main/java \| wc -l`) | about 330 call sites | 0: each tab's `ProjectController` is passed to what it owns |
 
 ## Bugs
+
+**B22. New Cell can add a cell to a hidden column.** ready, *from reading*; a question for the owner. Hiding a column deselects it and its cells, but it stays the column last given a cell (`ProjectController.getLastCreatedVariable`) and can hold the last selected cell, so Spreadsheet > New Cell, and New Cell and Set Offset with nothing selected, can add or close a cell no one can see (`CellCommands.newCell`, `newCellClosingPrevious`). Whether a hidden column takes new cells is a rule to settle before fixing.
 
 **B21. The Code Editor's code edits cannot be undone.** ready, *from reading*. Adding, deleting and moving a code in the Code Editor, and renaming a code or a column, post no undoable edit (`VocabEditorV.addCode`, `delete`, `moveArgumentLeft` and `Right`; `FormalArgEditor` and `VENameEditor` rename), while adding and deleting a column there can be undone. Deleting a code drops its value from every cell of the column. Settle with R10, as a command for each code edit.
 
@@ -33,7 +35,7 @@ Updated 2026-11-03. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 **B11. Crash recovery is lost on an ordinary exit, and recovering needs a dialog.** ready, *verified*. `AutoSaveController` marks each autosave `deleteOnExit`, so the JVM deletes it on every orderly exit: quitting, Ctrl+C in the terminal running `make run`, or a plain `kill`. On 2026-10-30 an autosave written after the app's first minute was gone 2 seconds after SIGINT. Only exits that skip the JVM's shutdown hooks (SIGKILL, a JVM crash, a power cut) leave one behind, which is why the recovery dialog no longer appears. When one is left, `DatavyuView.checkForAutosavedFile` asks about every `~*.watavyu.json` in the temporary folder at launch: the dialog itself is a chore (owner), and it includes the autosave a running Watavyu is writing, which answering No deletes. Owner's direction: open unsaved autosaves without asking, and only those no running Watavyu owns (a lock file, or the owning process recorded in the autosave's name). An autosave should go only when its work was saved or knowingly discarded (through `UnsavedWork`'s prompt), not on any exit. With that, add a safeguard against saving over a newer file: if the project file changed on disk since it was opened or last saved (by another Watavyu, a recovered copy or another tool), say so before overwriting it. Settle with R9.
 
-**B14. Adding media cannot be undone.** ready, *from reading*. Spreadsheet > Add Media and dropping files post no undoable edit (`MediaPlayers.addMediaFiles`), while deleting the clip or column afterwards can be undone. Undo should take an added clip or column out again, closing its player.
+**B14. Adding media cannot be undone.** ready, *from reading*. Spreadsheet > Add Media and dropping files post no undoable edit (`MediaPlayers.addMediaFiles`), while deleting the clip or column afterwards can be undone. Undo should take an added clip or column out again, closing its player. Until it can, undoing New Media Column takes out the column with any clips added to it since, and a deleted media column whose name new media has taken cannot be undone until that column goes.
 
 ## Features
 

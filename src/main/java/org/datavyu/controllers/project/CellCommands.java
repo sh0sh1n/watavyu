@@ -155,7 +155,7 @@ public final class CellCommands {
 
     /** @return whether a column is in the spreadsheet, as one remembered as last given a cell may have been deleted */
     private boolean inSpreadsheet(final Variable column) {
-        return column != null && dataStore().getAllVariables().contains(column);
+        return column != null && dataStore().indexOf(column) >= 0;
     }
 
     /** @return whether a cell is in the spreadsheet, as one remembered as last selected may have gone with its column */

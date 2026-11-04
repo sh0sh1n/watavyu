@@ -1,4 +1,4 @@
-/**
+/*
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -26,7 +26,7 @@ import javax.swing.undo.CannotUndoException;
  * media column. Undo takes the column out and redo puts the same column back in its place, so later edits that hold it
  * or its cells still find it.
  */
-public final class AddColumnEdit extends AbstractUndoableEdit {
+public final class AddColumnEdit extends AbstractUndoableEdit implements GuardedEdit {
 
     private final DataStore dataStore;
     private final Variable column;
@@ -53,10 +53,22 @@ public final class AddColumnEdit extends AbstractUndoableEdit {
         return column.isMedia() ? "New Media Column " + column.getName() : "New Column \"" + column.getName() + "\"";
     }
 
+    /** @return whether the column is out of the spreadsheet, so there is nothing to take out */
+    @Override
+    public boolean refusesUndo() {
+        return dataStore.indexOf(column) < 0;
+    }
+
+    /** @return whether the spreadsheet has a column of its name, so it cannot be put back */
+    @Override
+    public boolean refusesRedo() {
+        return dataStore.getVariable(column.getName()) != null;
+    }
+
     /** Takes the column out; refused, leaving the edit as it was, if the column is not in the spreadsheet. */
     @Override
     public void undo() throws CannotUndoException {
-        if (dataStore.indexOf(column) < 0 || !canUndo()) {
+        if (refusesUndo() || !canUndo()) {
             throw new CannotUndoException();
         }
         super.undo();
@@ -70,7 +82,7 @@ public final class AddColumnEdit extends AbstractUndoableEdit {
      */
     @Override
     public void redo() throws CannotRedoException {
-        if (dataStore.getVariable(column.getName()) != null || !canRedo()) {
+        if (refusesRedo() || !canRedo()) {
             throw new CannotRedoException();
         }
         super.redo();

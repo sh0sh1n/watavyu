@@ -74,6 +74,25 @@ public class SpreadsheetUndoTest {
         assertEquals(second.getOnset(), 4_000);
     }
 
+    /**
+     * An edit made after an undo is compared with the last edit done, not the one waiting to be redone. It used to be
+     * dropped as that one's duplicate, so it could not be undone.
+     */
+    @Test
+    public void anEditAfterAnUndoIsRecorded() throws Exception {
+        ProjectController spreadsheet = spreadsheet();
+        Cell cell = cell(spreadsheet);
+        spreadsheet.cells().setOnsets(2_000);
+        spreadsheet.undo();
+        assertEquals(cell.getOnset(), 1_000);
+
+        cell.setSelected(true);
+        spreadsheet.cells().setOnsets(3_000);
+        spreadsheet.undo();
+
+        assertEquals(cell.getOnset(), 1_000);
+    }
+
     @Test
     public void editsJoinOnlyTheirOwnSpreadsheetsHistory() throws Exception {
         ProjectController first = spreadsheet();

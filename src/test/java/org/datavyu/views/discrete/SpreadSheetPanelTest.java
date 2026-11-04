@@ -12,11 +12,13 @@ import org.datavyu.models.db.UserWarningException;
 import org.datavyu.models.db.Variable;
 import org.testng.annotations.Test;
 
+import java.awt.Component;
 import java.awt.KeyEventDispatcher;
 import java.awt.KeyboardFocusManager;
 import java.awt.Toolkit;
 import java.awt.event.KeyEvent;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -77,6 +79,7 @@ public class SpreadSheetPanelTest {
         AtomicReference<List<String>> afterMove = new AtomicReference<>();
         AtomicReference<List<String>> afterUndo = new AtomicReference<>();
         AtomicReference<List<String>> headers = new AtomicReference<>();
+        AtomicReference<List<String>> dataPanels = new AtomicReference<>();
         SwingUtilities.invokeAndWait(() -> {
             ProjectController spreadsheet = TestSpreadsheets.withPlayback(dataStore);
             SpreadSheetPanel panel = new SpreadSheetPanel(spreadsheet, null);
@@ -96,6 +99,11 @@ public class SpreadSheetPanelTest {
                 headers.set(Arrays.stream(panel.getColumns().get(0).getParent().getComponents())
                     .filter(SpreadsheetColumn.class::isInstance)
                     .map(header -> ((SpreadsheetColumn) header).getVariable().getName()).toList());
+                // Each column's cells sit under its header: the sheet's data panels are in the same order.
+                List<Component> sheet = Arrays.asList(panel.getColumns().get(0).getDataPanel().getParent().getComponents());
+                dataPanels.set(panel.getColumns().stream()
+                    .sorted(Comparator.comparingInt(column -> sheet.indexOf(column.getDataPanel())))
+                    .map(column -> column.getVariable().getName()).toList());
             } catch (UserWarningException e) {
                 throw new AssertionError(e);
             } finally {
@@ -106,6 +114,7 @@ public class SpreadSheetPanelTest {
         assertEquals(afterMove.get(), List.of("gesture", "gaze", "speech"));
         assertEquals(afterUndo.get(), List.of("gesture", "gaze", "speech"));
         assertEquals(headers.get(), List.of("gesture", "gaze", "speech"));
+        assertEquals(dataPanels.get(), List.of("gesture", "gaze", "speech"));
     }
 
     private static List<String> names(final List<SpreadsheetColumn> columns) {

@@ -252,6 +252,10 @@ public class DatavyuDataStore implements DataStore {
 
     @Override
     public void updateVariableName(String oldName, String newName, Variable variable) {
+        // A column out of the spreadsheet, as undo leaves one, keeps no name here.
+        if (!order.contains(variable)) {
+            return;
+        }
         this.variables.remove(oldName);
         this.variables.put(newName, variable);
         if (!oldName.equals(newName)) {

@@ -16,6 +16,8 @@ package org.datavyu.undoableedits;
 
 import org.datavyu.undoableedits.ChangeCellEdit.Granularity;
 
+import javax.swing.undo.CannotRedoException;
+import javax.swing.undo.CannotUndoException;
 import javax.swing.undo.UndoManager;
 import javax.swing.undo.UndoableEdit;
 
@@ -29,6 +31,9 @@ public class SpreadsheetUndoManager extends UndoManager {
         boolean addEdit = true;
         boolean result;
         boolean cond;
+        // A new edit ends what could be redone. Dropping it first compares the new edit with the last edit done, not
+        // one waiting to be redone. Every edit here is significant, so the last done is the one to be undone.
+        trimEdits(edits.indexOf(editToBeUndone()) + 1, edits.size() - 1);
         if ((edits != null) && (edits.size() > 0)) {
             UndoableEdit prevEdit = edits.lastElement();
             // Do not insert duplicated edits
@@ -60,5 +65,29 @@ public class SpreadsheetUndoManager extends UndoManager {
         }
 
         return result;
+    }
+
+    /** Undoes the last edit, unless it would refuse, which then leaves the history as it was. */
+    @Override
+    public void undo() throws CannotUndoException {
+        // Locked as Swing's manager locks its own undo.
+        synchronized (this) {
+            // Swing's manager steps back before the edit undoes, so an edit that refused part way would be skipped.
+            if (editToBeUndone() instanceof GuardedEdit guarded && guarded.refusesUndo()) {
+                throw new CannotUndoException();
+            }
+            super.undo();
+        }
+    }
+
+    /** Redoes the last undone edit, unless it would refuse, which then leaves the history as it was. */
+    @Override
+    public void redo() throws CannotRedoException {
+        synchronized (this) {
+            if (editToBeRedone() instanceof GuardedEdit guarded && guarded.refusesRedo()) {
+                throw new CannotRedoException();
+            }
+            super.redo();
+        }
     }
 }

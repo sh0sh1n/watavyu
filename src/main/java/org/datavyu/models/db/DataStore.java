@@ -128,15 +128,6 @@ public interface DataStore {
     void removeVariable(final Variable var);
 
     /**
-     * Puts a column created earlier back after the others, as undo and redo do, then tells the listeners.
-     *
-     * @param var the column
-     */
-    default void addVariable(final Variable var) {
-        addVariable(var, getAllVariables().size());
-    }
-
-    /**
      * Puts a column created earlier back at a place in the spreadsheet order, as undo and redo do, then tells the
      * listeners.
      *

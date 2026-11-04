@@ -43,8 +43,9 @@ public final class ColumnCommands {
      */
     public Variable newColumn(final String name) throws UserWarningException {
         logger.info("New column " + name);
-        dataStore().deselectAll();
         Variable column = dataStore().createVariable(name);
+        dataStore().deselectAll();
+        column.setSelected(true);
         spreadsheet.setLastCreatedVariable(column);
         spreadsheet.postEdit(new AddColumnEdit(dataStore(), column));
         return column;
@@ -72,8 +73,7 @@ public final class ColumnCommands {
      * @return whether they were deleted
      */
     public boolean delete(final List<Variable> columns) {
-        List<Variable> deleted = columns.stream().filter(column -> dataStore().indexOf(column) >= 0).distinct()
-            .toList();
+        List<Variable> deleted = columns.stream().filter(this::inSpreadsheet).distinct().toList();
         // Every locked column shakes its padlock, not just the first.
         if (deleted.isEmpty() || deleted.stream().filter(Variable::refusesEdits).count() > 0) {
             return false;
@@ -93,7 +93,7 @@ public final class ColumnCommands {
      * @param locked whether it is to be locked
      */
     public void setLocked(final Variable column, final boolean locked) {
-        if (column.isLocked() == locked || dataStore().indexOf(column) < 0) {
+        if (column.isLocked() == locked || !inSpreadsheet(column)) {
             return;
         }
         column.setLocked(locked);
@@ -102,7 +102,8 @@ public final class ColumnCommands {
 
     /**
      * Hide Column, from a column's header and the Column List: hides columns, which silences a media column's window,
-     * and deselects them and their cells, so no command acts on what cannot be seen. Hiding is not an edit.
+     * and deselects them and their cells, so commands on the selection leave what cannot be seen alone. Hiding is not
+     * an edit.
      *
      * @param columns the columns to hide
      */
@@ -139,9 +140,12 @@ public final class ColumnCommands {
      * @param to     the column whose place it takes
      */
     public void move(final Variable column, final Variable to) {
-        int index = dataStore().indexOf(to);
-        if (index >= 0 && dataStore().indexOf(column) >= 0) {
-            dataStore().moveVariable(column, index);
+        if (inSpreadsheet(column) && inSpreadsheet(to)) {
+            dataStore().moveVariable(column, dataStore().indexOf(to));
         }
+    }
+
+    private boolean inSpreadsheet(final Variable column) {
+        return dataStore().indexOf(column) >= 0;
     }
 }

@@ -537,12 +537,13 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
         addColumn(dataStore, newVariable);
         // Undo puts a deleted column back in its place, not always last.
         arrangeColumns();
+        revalidate();
+        repaint();
         variableVisible(newVariable);
     }
 
     @Override
     public void variableRemoved(final Variable deletedVariable) {
-        deselectAll();
         removeColumn(deletedVariable);
         revalidate();
         repaint();

@@ -272,7 +272,7 @@ public class MediaPlayersTest {
         dataStore.removeVariable(column);
         verify(videoController).shutdown(player.getIdentifier(), false);
 
-        dataStore.addVariable(column);
+        dataStore.addVariable(column, dataStore.getAllVariables().size());
         assertSame(players.getPlayer(clip), opened.get(1));
     }
 

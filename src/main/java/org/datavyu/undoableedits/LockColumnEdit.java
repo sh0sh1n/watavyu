@@ -11,7 +11,7 @@ import javax.swing.undo.CannotUndoException;
  * Locking or unlocking a column. Being in the undo history keeps it in order with the edits around
  * it: undoing past a lock first unlocks the column, so an earlier change to it can be undone too.
  */
-public final class LockColumnEdit extends AbstractUndoableEdit {
+public final class LockColumnEdit extends AbstractUndoableEdit implements GuardedEdit {
 
     private final DataStore dataStore;
     private final String columnName;
@@ -33,6 +33,18 @@ public final class LockColumnEdit extends AbstractUndoableEdit {
     @Override
     public String getPresentationName() {
         return (locked ? "Lock Column " : "Unlock Column ") + columnName;
+    }
+
+    /** @return whether the column is gone */
+    @Override
+    public boolean refusesUndo() {
+        return dataStore.getVariable(columnName) == null;
+    }
+
+    /** @return whether the column is gone */
+    @Override
+    public boolean refusesRedo() {
+        return refusesUndo();
     }
 
     /** Undoes the lock change; refused, leaving the edit as it was, if the column is gone. */

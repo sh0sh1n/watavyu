@@ -29,7 +29,7 @@ import java.util.TreeMap;
  * them or their cells still find them. The spreadsheet and the media players hear of each column leaving and coming
  * back through the data store.
  */
-public final class RemoveColumnEdit extends AbstractUndoableEdit {
+public final class RemoveColumnEdit extends AbstractUndoableEdit implements GuardedEdit {
 
     private final DataStore dataStore;
 
@@ -62,11 +62,32 @@ public final class RemoveColumnEdit extends AbstractUndoableEdit {
         return "Delete " + deleted.size() + " Columns";
     }
 
+    /** @return whether the spreadsheet has a column of one of their names, so they cannot all be put back */
+    @Override
+    public boolean refusesUndo() {
+        return deleted.values().stream().anyMatch(column -> dataStore.getVariable(column.getName()) != null);
+    }
+
+    /** @return never: redo deletes those of the columns still in the spreadsheet */
+    @Override
+    public boolean refusesRedo() {
+        return false;
+    }
+
+    /**
+     * Puts the columns back; refused, leaving the edit as it was, if the spreadsheet has a column of one of their
+     * names, as it can after media is added (not yet an edit, B14). A column whose place is past the end, as one can be
+     * after a media column that failed to open was taken out, goes last.
+     */
     @Override
     public void undo() throws CannotUndoException {
+        if (refusesUndo() || !canUndo()) {
+            throw new CannotUndoException();
+        }
         super.undo();
         // From the first place to the last, so each column goes back between those it was between.
-        deleted.forEach((index, column) -> dataStore.addVariable(column, index));
+        deleted.forEach((index, column) ->
+            dataStore.addVariable(column, Math.min(index, dataStore.getAllVariables().size())));
     }
 
     @Override

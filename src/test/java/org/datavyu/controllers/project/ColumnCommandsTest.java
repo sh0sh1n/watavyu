@@ -20,6 +20,8 @@ import org.datavyu.models.project.Project;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import javax.swing.undo.CannotRedoException;
+import javax.swing.undo.CannotUndoException;
 import java.util.List;
 
 /**
@@ -98,11 +100,17 @@ public class ColumnCommandsTest {
     }
 
     @Test
-    public void aTakenNameAddsNothing() {
+    public void aTakenNameAddsNothingAndKeepsTheSelection() {
+        Cell cell = gaze.createPointCell(1_000);
+        cell.setSelected(true);
+        speech.setSelected(true);
+
         assertThrows(UserWarningException.class, () -> columns.newColumn("gaze"));
 
         assertEquals(order(), List.of("gaze", "speech", "gesture"));
         assertFalse(canUndo());
+        assertTrue(cell.isSelected());
+        assertTrue(speech.isSelected());
     }
 
     // New Media Column
@@ -160,6 +168,47 @@ public class ColumnCommandsTest {
         spreadsheet.undo();
         spreadsheet.undo();
         assertEquals(order(), List.of("gaze", "speech", "gesture"));
+    }
+
+    /** Media added is not yet an edit (B14), so a deleted media column's name can be taken before its undo. */
+    @Test
+    public void undoingADeletionWhoseNameIsTakenIsRefusedAndStaysAsItWas() throws Exception {
+        Variable media = columns.newMediaColumn();
+        columns.delete(List.of(gaze, media));
+        Variable taken = dataStore.createMediaVariable("media_1");
+
+        assertThrows(CannotUndoException.class, spreadsheet::undo);
+        assertEquals(order(), List.of("speech", "gesture", "media_1"));
+        assertSame(dataStore.getVariable("media_1"), taken);
+
+        dataStore.removeVariable(taken);
+        spreadsheet.undo();
+        assertEquals(order(), List.of("gaze", "speech", "gesture", "media_1"));
+        assertSame(dataStore.getVariable("media_1"), media);
+    }
+
+    @Test
+    public void aRefusedRedoStaysWhereItWasInTheHistory() throws Exception {
+        Variable media = columns.newMediaColumn();
+        spreadsheet.undo();
+        Variable taken = dataStore.createMediaVariable("media_1");
+
+        assertThrows(CannotRedoException.class, spreadsheet::redo);
+        dataStore.removeVariable(taken);
+        spreadsheet.redo();
+
+        assertSame(dataStore.getVariable("media_1"), media);
+    }
+
+    /** A media column that fails to open is taken out without an edit, so a deleted column's place can be past the end. */
+    @Test
+    public void aDeletedColumnWhosePlaceHasGoneComesBackLast() {
+        columns.delete(List.of(gesture));
+        dataStore.removeVariable(speech);
+
+        spreadsheet.undo();
+
+        assertEquals(order(), List.of("gaze", "gesture"));
     }
 
     @Test

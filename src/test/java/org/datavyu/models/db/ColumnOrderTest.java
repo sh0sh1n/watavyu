@@ -5,6 +5,7 @@ import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertThrows;
 import static org.testng.Assert.assertTrue;
 
@@ -121,5 +122,17 @@ public class ColumnOrderTest {
         dataStore.moveVariable(third, 0);
 
         assertEquals(places, List.of(-1, 0, 0));
+    }
+
+    /** A column renamed while out of the spreadsheet, as in a stale Code Editor, leaves no name behind. */
+    @Test
+    public void renamingAColumnOutOfTheSpreadsheetLeavesNoName() throws Exception {
+        dataStore.removeVariable(first);
+
+        first.setName("renamed");
+
+        assertNull(dataStore.getVariable("renamed"));
+        assertNull(dataStore.getVariable("first"));
+        dataStore.createVariable("renamed");
     }
 }
