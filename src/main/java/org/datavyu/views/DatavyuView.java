@@ -1347,8 +1347,6 @@ public final class DatavyuView implements FileDropEventListener {
         spreadsheetMenu.addMenuListener(new MenuListener() {
             @Override
             public void menuSelected(final MenuEvent e) {
-                // Media whose file failed to open, after its edit was made, leaves the history without a word.
-                refreshUndoRedo();
                 spreadsheetMenuSelected(e);
             }
 

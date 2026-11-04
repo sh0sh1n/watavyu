@@ -101,19 +101,25 @@ public class ClipTimesTest {
         }
     }
 
-    /** A clip cell names its file, its frame rate once known for video, and whether the file is missing. */
+    /**
+     * A clip cell names its file, its frame rate once known for video, and whether the file is missing or could not be
+     * opened.
+     */
     @Test
     public void aClipShowsItsFileFrameRateAndWhetherItIsMissing() {
         String present = System.getProperty("java.home");
         String name = Path.of(present).getFileName().toString();
 
-        assertEquals(DataValueEditorFactory.clipLabel(CAM), "cam.mp4 \u00b7 30 fps (missing)");
-        assertEquals(DataValueEditorFactory.clipLabel(MediaClip.of(present)), name);
-        assertEquals(DataValueEditorFactory.clipLabel(MediaClip.of(present).withDetails(60_000, 29.97, 1920, 1080)),
+        assertEquals(DataValueEditorFactory.clipLabel(CAM, false), "cam.mp4 \u00b7 30 fps (missing)");
+        assertEquals(DataValueEditorFactory.clipLabel(MediaClip.of(present), false), name);
+        assertEquals(DataValueEditorFactory.clipLabel(MediaClip.of(present).withDetails(60_000, 29.97, 1920, 1080), false),
             name + " \u00b7 29.97 fps");
         assertEquals(DataValueEditorFactory.clipLabel(MediaClip.of(present).withDetails(60_000, 23.976023976, 1920,
-            1080)), name + " \u00b7 23.976 fps");
+            1080), false), name + " \u00b7 23.976 fps");
+        // A file there that could not be opened says so; a missing one says only that.
+        assertEquals(DataValueEditorFactory.clipLabel(MediaClip.of(present), true), name + " (could not open)");
+        assertEquals(DataValueEditorFactory.clipLabel(CAM, true), "cam.mp4 \u00b7 30 fps (missing)");
         // Audio has no frame rate.
-        assertEquals(DataValueEditorFactory.clipLabel(MediaClip.of(present).withDetails(60_000, 0, 0, 0)), name);
+        assertEquals(DataValueEditorFactory.clipLabel(MediaClip.of(present).withDetails(60_000, 0, 0, 0), false), name);
     }
 }

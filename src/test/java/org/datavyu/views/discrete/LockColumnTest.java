@@ -112,28 +112,6 @@ public class LockColumnTest {
         }
     }
 
-    /**
-     * A lock whose column is out of the spreadsheet changes nothing when undone or redone: there is nothing to change,
-     * and another column taking its name is not the same column.
-     */
-    @Test
-    public void aLockWhoseColumnHasGoneChangesNothing() throws Exception {
-        DataStore dataStore = DataStoreFactory.newDataStore();
-        Variable media = dataStore.createMediaVariable("media_1");
-        media.setLocked(true);
-        UndoableEdit lock = new LockColumnEdit(dataStore, media, true);
-        dataStore.removeVariable(media);
-        Variable other = dataStore.createMediaVariable("media_1");
-        other.setLocked(true);
-
-        lock.undo();
-        assertTrue(other.isLocked());
-        assertTrue(media.isLocked());
-
-        lock.redo();
-        assertTrue(lock.canUndo());
-    }
-
     /** Renaming a column, which is not an edit, does not stop its lock being undone. */
     @Test
     public void aRenamedColumnsLockCanBeUndone() throws Exception {

@@ -3,7 +3,6 @@ package org.datavyu.controllers.project;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.models.db.Cell;
-import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.UserWarningException;
 import org.datavyu.models.db.Variable;
 import org.datavyu.undoableedits.AddCellEdit;
@@ -15,8 +14,8 @@ import java.util.function.Predicate;
 
 /**
  * The commands that add media to one spreadsheet. Each file added is an edit in the undo history, so undo takes the
- * clip or column out again and closes its player. {@link MediaPlayers} opens the players; a file that does not open is
- * taken out again, and its edit then changes nothing.
+ * clip or column out again and closes its player. {@link MediaPlayers} opens the players; a file that does not open
+ * stays, marked as such (owner, 2026-11-03), for the user to undo or delete.
  */
 public final class MediaCommands {
 
@@ -75,20 +74,13 @@ public final class MediaCommands {
         return spreadsheet.getVideoController().getMediaPlayers();
     }
 
-    /** Adds a clip to a column, as an edit unless its file failed to open at once. */
     private void addClip(final Variable column, final File file, final long time) {
         Cell clip = players().addClip(column, file, time);
-        if (spreadsheet.getDataStore().getVariable(clip) != null) {
-            spreadsheet.postEdit(new AddCellEdit(spreadsheet, column.getName(), clip));
-        }
+        spreadsheet.postEdit(new AddCellEdit(spreadsheet, column.getName(), clip));
     }
 
-    /** Adds a media column holding a clip of the file, as an edit unless the file failed to open at once. */
     private void addInNewColumn(final File file) throws UserWarningException {
-        DataStore dataStore = spreadsheet.getDataStore();
         Variable column = players().addMedia(file);
-        if (dataStore.contains(column)) {
-            spreadsheet.postEdit(new AddColumnEdit(dataStore, column));
-        }
+        spreadsheet.postEdit(new AddColumnEdit(spreadsheet.getDataStore(), column));
     }
 }

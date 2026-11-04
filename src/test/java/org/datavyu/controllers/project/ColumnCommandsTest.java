@@ -202,38 +202,6 @@ public class ColumnCommandsTest {
         assertSame(dataStore.getVariable("media_1"), media);
     }
 
-    /**
-     * A media column whose file fails to open is taken out without an edit and never comes back. Its edits change
-     * nothing then, rather than refusing, so undo passes over them to the edit before.
-     */
-    @Test
-    public void editsOfAColumnTakenOutWithoutAnEditDoNotStopTheHistory() throws Exception {
-        columns.setLocked(gaze, true);
-        Variable media = columns.newMediaColumn();
-        columns.setLocked(media, true);
-        dataStore.removeVariable(media);
-
-        assertEquals(spreadsheet.getUndoManager().getUndoPresentationName(), "Undo Lock Column gaze");
-        assertNull(spreadsheet.undo());
-
-        assertFalse(gaze.isLocked());
-        assertFalse(spreadsheet.getUndoManager().canUndo());
-        assertEquals(order(), List.of("gaze", "speech", "gesture"));
-    }
-
-    /**
-     * A media column that fails to open is taken out without an edit, so a deleted column's place can be past the end.
-     */
-    @Test
-    public void aDeletedColumnWhosePlaceHasGoneComesBackLast() {
-        columns.delete(List.of(gesture));
-        dataStore.removeVariable(speech);
-
-        spreadsheet.undo();
-
-        assertEquals(order(), List.of("gaze", "gesture"));
-    }
-
     @Test
     public void aLockedColumnStopsTheWholeDeletionAndShowsIt() {
         VariableListener speechLock = mock(VariableListener.class);

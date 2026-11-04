@@ -77,9 +77,7 @@ public final class RemoveColumnEdit extends AbstractUndoableEdit implements Guar
 
     /**
      * Puts the columns back; refused, leaving the edit as it was, if the spreadsheet has a column of one of their
-     * names, as it can after a rename in the Code Editor (not yet an edit, B21). Each goes back at the place it had,
-     * counted in the spreadsheet as it is now, or last if that place is past the end, as it can be after a media column
-     * that failed to open was taken out.
+     * names, as it can after a rename in the Code Editor (not yet an edit, B21). Each goes back at the place it had.
      */
     @Override
     public void undo() throws CannotUndoException {
@@ -88,8 +86,7 @@ public final class RemoveColumnEdit extends AbstractUndoableEdit implements Guar
         }
         super.undo();
         // From the first place to the last, so each column goes back between those it was between.
-        deleted.forEach((index, column) ->
-            dataStore.addVariable(column, Math.min(index, dataStore.getAllVariables().size())));
+        deleted.forEach((index, column) -> dataStore.addVariable(column, index));
     }
 
     @Override

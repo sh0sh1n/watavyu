@@ -22,11 +22,9 @@ import java.awt.Frame;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.DoubleConsumer;
@@ -36,8 +34,9 @@ import java.util.function.Predicate;
 /**
  * Plays the spreadsheet's media columns. The spreadsheet holds each column and its clips; this opens a player for each
  * clip whose file exists, and keeps the players and the spreadsheet in step: a clip added, moved or removed in the
- * spreadsheet (by editing, undo or opening a project) opens, moves or closes its player. A clip whose file is missing
- * keeps its place and what is known about it, and has no player.
+ * spreadsheet (by editing, undo or opening a project) opens, moves or closes its player. A clip whose file is missing,
+ * or there but cannot be opened ({@link Cell#isClipFailed}), keeps its place and what is known about it, and has no
+ * player; nothing here takes a clip or column out of the spreadsheet.
  *
  * <p>Each media column has one window. At any time it shows the clip in play: of the clips whose span holds the time,
  * the one that starts latest (the later clip wins). Where no clip is in play, or the clip in play has no player, the
@@ -96,12 +95,6 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
 
     /** Clips whose players are opening, each with a token for the opening; a player whose token is gone is stale. */
     private final Map<Cell, Object> opening = new HashMap<>();
-
-    /** Clips added in the app, which go if their file does not open. */
-    private final Set<Cell> added = new HashSet<>();
-
-    /** Columns added in the app for one clip, which go with it if its file does not open. */
-    private final Set<Variable> addedColumns = new HashSet<>();
 
     /** Each media column's window, once a clip in it has a player. */
     private final Map<Variable, ColumnWindow> windows = new HashMap<>();
@@ -182,7 +175,7 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
     }
 
     /**
-     * Adds a clip of a media file to a media column. If the file does not open, the clip goes again.
+     * Adds a clip of a media file to a media column, and opens it.
      *
      * @param column a media column
      * @param file   the media file
@@ -190,18 +183,12 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
      * @return the clip
      */
     Cell addClip(final Variable column, final File file, final long onset) {
-        Cell clip = column.createClip(onset, MediaClip.of(file.getAbsolutePath()));
-        added.add(clip);
-        if (!open(clip)) {
-            added.remove(clip);
-            column.removeCell(clip);
-        }
-        return clip;
+        return column.createClip(onset, MediaClip.of(file.getAbsolutePath()));
     }
 
     /**
      * Adds media to the spreadsheet: a new media column, named {@code media_#}, holding one clip of the file at time
-     * zero. If the file does not open, the column goes again.
+     * zero, which opens.
      *
      * @param file the media file
      * @return the new column
@@ -211,14 +198,7 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
         Variable column = MediaColumns.add(dataStore);
         // Not selected, so that media added next gets its own column unless the user picks this one.
         column.setSelected(false);
-        addedColumns.add(column);
-        Cell clip = column.createClip(0, MediaClip.of(file.getAbsolutePath()));
-        added.add(clip);
-        if (!open(clip)) {
-            added.remove(clip);
-            addedColumns.remove(column);
-            dataStore.removeVariable(column);
-        }
+        column.createClip(0, MediaClip.of(file.getAbsolutePath()));
         return column;
     }
 
@@ -357,14 +337,13 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
                 return;
             }
             opening.remove(clip);
-            added.remove(clip);
-            addedColumns.remove(column);
             if (!column.contains(clip) || !columnListeners.containsKey(column)) {
                 // The clip went while its player was opening.
                 videoController.shutdown(player.getIdentifier(), false);
                 return;
             }
             players.put(clip, player);
+            clip.setClipFailed(false);
             windows.computeIfAbsent(column, this::newWindow).addClip(clip, player.getVideoComponent());
             // Media without video has no size or frame rate.
             Dimension size = player.getVideoSize();
@@ -378,13 +357,7 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
                 return;
             }
             opening.remove(clip);
-            if (added.remove(clip)) {
-                if (addedColumns.remove(column)) {
-                    dataStore.removeVariable(column);
-                } else {
-                    column.removeCell(clip);
-                }
-            }
+            clip.setClipFailed(true);
         });
         return true;
     }

@@ -180,20 +180,25 @@ public class MediaPlayersTest {
         assertSame(players.getPlayer(clip), opened.get(0));
     }
 
+    /** Media that does not open keeps its column, its clip marked as one that could not be opened. */
     @Test
-    public void mediaThatDoesNotOpenAddsNoColumn() throws Exception {
+    public void mediaThatDoesNotOpenKeepsItsColumn() throws Exception {
         failToOpen = true;
 
-        players.addMedia(new File(file("broken.mp4")));
+        Variable column = players.addMedia(new File(file("broken.mp4")));
 
-        assertEquals(dataStore.getAllVariables(), List.of());
+        assertEquals(dataStore.getAllVariables(), List.of(column));
+        assertTrue(column.getCells().get(0).isClipFailed());
     }
 
+    /** Missing media keeps its column, its clip without a player, as a missing file in a project does. */
     @Test
-    public void missingMediaAddsNoColumn() throws Exception {
-        players.addMedia(folder.resolve("missing.mp4").toFile());
+    public void missingMediaKeepsItsColumn() throws Exception {
+        Variable column = players.addMedia(folder.resolve("missing.mp4").toFile());
 
-        assertEquals(dataStore.getAllVariables(), List.of());
+        assertEquals(dataStore.getAllVariables(), List.of(column));
+        assertNull(players.getPlayer(column.getCells().get(0)));
+        assertFalse(column.getCells().get(0).isClipFailed(), "missing, rather than there but unopenable");
     }
 
     /** The file says how long it is, so the clip's offset follows. */
@@ -560,34 +565,26 @@ public class MediaPlayersTest {
     }
 
     /**
-     * A file that does not open is taken out again. Its edit, made while it opened, then changes nothing, so undo
-     * passes over it: one Undo undoes the edit before.
+     * A file that does not open stays, marked as such, and its edit is undone like any other (owner, 2026-11-03).
      */
     @Test
-    public void mediaThatFailsToOpenLeavesNothingToUndo() throws Exception {
-        Variable notes = spreadsheet.columns().newColumn("notes");
+    public void mediaThatFailsToOpenStaysMarkedAndCanBeUndone() throws Exception {
         Variable media = dataStore.createMediaVariable("media_1");
-        addClip(media, 0, "a.mp4");
-        pending = new ArrayList<>();
-
-        dataStore.deselectAll();
-        spreadsheet.media().addMedia(List.of(new File(file("broken.mp4"))), 0, column -> false);
         dataStore.deselectAll();
         media.setSelected(true);
+        pending = new ArrayList<>();
+
         spreadsheet.media().addMedia(List.of(new File(file("bad.mp4"))), 5_000, column -> false);
+        Cell clip = media.getCells().get(0);
+        assertFalse(clip.isClipFailed());
         pending.forEach(opening -> opening.<Runnable>getArgument(4).run());
-        assertEquals(dataStore.getAllVariables(), List.of(notes, media));
-        assertEquals(media.getCells().size(), 1);
-        assertEquals(spreadsheet.getUndoManager().getUndoPresentationName(), "Undo New Column \"notes\"");
 
-        assertNull(spreadsheet.undo());
-        assertNull(dataStore.getVariable("notes"));
-        assertFalse(spreadsheet.getUndoManager().canUndo());
-
-        assertNull(spreadsheet.redo());
-        assertFalse(spreadsheet.getUndoManager().canRedo());
-        assertEquals(dataStore.getAllVariables(), List.of(notes, media));
-        assertEquals(media.getCells().size(), 1);
+        assertEquals(media.getCells(), List.of(clip));
+        assertTrue(clip.isClipFailed());
+        assertNull(players.getPlayer(clip));
+        assertEquals(spreadsheet.getUndoManager().getUndoPresentationName(), "Undo Add Media bad.mp4");
+        spreadsheet.undo();
+        assertTrue(media.getCells().isEmpty());
     }
 
     /** Media added in a new column leaves the selection alone, and undo and redo do too. */
@@ -608,53 +605,36 @@ public class MediaPlayersTest {
         assertFalse(media.isSelected());
     }
 
-    /** A clip whose file never opens goes, even when undo and redo came between: its edit then changes nothing. */
+    /** A file that could not be opened is tried again when its clip comes back, and marked by how that goes. */
     @Test
-    public void aClipUndoneWhileOpeningGoesWhenItsReopeningFails() throws Exception {
+    public void aClipThatComesBackIsTriedAgain() throws Exception {
         Variable media = dataStore.createMediaVariable("media_1");
         dataStore.deselectAll();
         media.setSelected(true);
-        pending = new ArrayList<>();
+        failToOpen = true;
         spreadsheet.media().addMedia(List.of(new File(file("b.mp4"))), 2_000, column -> false);
         Cell clip = media.getCells().get(0);
+        assertTrue(clip.isClipFailed());
 
         spreadsheet.undo();
+        failToOpen = false;
         spreadsheet.redo();
-        assertEquals(media.getCells(), List.of(clip));
-        pending.forEach(opening -> opening.<Runnable>getArgument(4).run());
 
-        assertTrue(media.getCells().isEmpty());
-        assertFalse(spreadsheet.getUndoManager().canUndo());
-    }
-
-    /** A time set on a clip whose file then fails to open changes nothing either, so undo passes over it too. */
-    @Test
-    public void anEditOfAClipThatFailsToOpenIsPassedOver() throws Exception {
-        Variable notes = spreadsheet.columns().newColumn("notes");
-        Variable media = dataStore.createMediaVariable("media_1");
-        dataStore.deselectAll();
-        media.setSelected(true);
-        pending = new ArrayList<>();
-        spreadsheet.media().addMedia(List.of(new File(file("b.mp4"))), 2_000, column -> false);
-        media.getCells().get(0).setSelected(true);
-        spreadsheet.cells().setOnsets(3_000);
-
-        pending.forEach(opening -> opening.<Runnable>getArgument(4).run());
-
-        assertEquals(spreadsheet.getUndoManager().getUndoPresentationName(), "Undo New Column \"notes\"");
-        spreadsheet.undo();
-        assertNull(dataStore.getVariable("notes"));
+        assertFalse(clip.isClipFailed());
+        assertTrue(players.getPlayer(clip) != null);
     }
 
     @Test
-    public void aClipThatDoesNotOpenLeavesItsColumn() throws Exception {
+    public void aClipThatDoesNotOpenStaysInItsColumn() throws Exception {
         Variable media = dataStore.createMediaVariable("media_1");
         Cell kept = addClip(media, 0, "a.mp4");
         failToOpen = true;
 
-        players.addClip(media, new File(file("broken.mp4")), 5_000);
+        Cell broken = players.addClip(media, new File(file("broken.mp4")), 5_000);
 
-        assertEquals(media.getCells(), List.of(kept));
+        assertEquals(media.getCells(), List.of(kept, broken));
+        assertTrue(broken.isClipFailed());
+        assertFalse(kept.isClipFailed());
         assertEquals(dataStore.getAllVariables(), List.of(media));
     }
 

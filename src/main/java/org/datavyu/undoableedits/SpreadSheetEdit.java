@@ -16,9 +16,7 @@ package org.datavyu.undoableedits;
 
 
 import org.datavyu.controllers.project.ProjectController;
-import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.DataStore;
-import org.datavyu.models.db.Variable;
 import org.datavyu.views.discrete.SpreadSheetPanel;
 
 import javax.swing.undo.AbstractUndoableEdit;
@@ -44,18 +42,6 @@ public abstract class SpreadSheetEdit extends AbstractUndoableEdit {
         timestamp = new Date();
         this.controller = controller;
         model = controller.getDataStore();
-    }
-
-    /**
-     * Tells whether a cell is in the spreadsheet: one held by an edit may have been taken out without an edit, as a
-     * clip whose file does not open is.
-     *
-     * @param cell a cell
-     * @return whether it is in one of the spreadsheet's columns
-     */
-    protected boolean inSpreadsheet(final Cell cell) {
-        Variable column = cell.getVariable();
-        return column != null && model.contains(column) && column.contains(cell);
     }
 
     protected void unselectAll() {
