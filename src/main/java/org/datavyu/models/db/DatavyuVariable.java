@@ -322,6 +322,9 @@ public final class DatavyuVariable implements Variable {
 
     @Override
     public int addCode() {
+        if (media) {
+            throw new IllegalStateException("Media column " + name + " has no codes");
+        }
         requireUnlocked();
         codes.add(nextCodeName());
         int index = codes.size() - 1;

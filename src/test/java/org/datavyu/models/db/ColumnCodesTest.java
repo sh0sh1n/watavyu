@@ -83,9 +83,12 @@ public class ColumnCodesTest {
     }
 
     @Test
-    public void aMediaOrLockedColumnIsNotGivenCodes() throws UserWarningException {
+    public void aMediaOrLockedColumnTakesNoCodes() throws UserWarningException {
         Variable media = dataStore.createMediaVariable("media_1");
         assertThrows(IllegalStateException.class, () -> media.setCodes(List.of("direction")));
+        assertEquals(media.getCodes(), List.of());
+
+        assertThrows(IllegalStateException.class, media::addCode);
         assertEquals(media.getCodes(), List.of());
 
         column.setLocked(true);

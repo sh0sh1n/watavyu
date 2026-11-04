@@ -147,11 +147,11 @@ public interface Variable {
     void setName(final String newName, final boolean grandfathered) throws UserWarningException;
 
     /**
-     * Adds a code after the others, named {@code codeNN} after the codes added before it, with an empty value in each
-     * cell.
+     * Adds a code after the others, with an empty value in each cell. It is named {@code codeNN}, numbered after the
+     * last code added (from {@code code01} for a column given its codes) and skipping names a code has.
      *
      * @return the new code's place among the column's codes, the last
-     * @throws IllegalStateException if the column is locked
+     * @throws IllegalStateException if the column is a media column or locked
      */
     int addCode();
 
