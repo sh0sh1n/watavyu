@@ -18,6 +18,14 @@ import java.util.function.Supplier;
 final class CommandTable {
 
     private final Map<Command, CommandAction> actions = new EnumMap<>(Command.class);
+    private final Runnable beforeRefresh;
+
+    /**
+     * @param beforeRefresh run at the start of each refresh, to gather once the state that several commands read
+     */
+    CommandTable(final Runnable beforeRefresh) {
+        this.beforeRefresh = beforeRefresh;
+    }
 
     /**
      * Defines what a command does.
@@ -52,6 +60,7 @@ final class CommandTable {
 
     /** Works out every command's label, check mark and whether it can run, from the state now. */
     void refresh() {
+        beforeRefresh.run();
         actions.values().forEach(CommandAction::refresh);
     }
 

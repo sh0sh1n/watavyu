@@ -148,6 +148,23 @@ public class ShortcutsTest {
         assertEquals(refreshed, 2);
     }
 
+    /** A global or keypad key whose command cannot run now does nothing, and its key goes no further. */
+    @Test
+    public void aDisabledGlobalOrKeypadShortcutDoesNothing() {
+        actions.get(Command.NEW_CELL_LEFT).setEnabled(false);
+        actions.get(Command.PLAY).setEnabled(false);
+        mainWindowFocused = false;
+
+        KeyEvent left = press(KeyEvent.VK_L, Shortcuts.COMMAND, STANDARD);
+        KeyEvent play = press(KeyEvent.VK_NUMPAD8, 0, KEYPAD);
+        assertTrue(shortcuts.dispatchKeyEvent(left));
+        assertTrue(shortcuts.dispatchKeyEvent(play));
+
+        assertTrue(left.isConsumed());
+        assertTrue(play.isConsumed());
+        assertTrue(ran.isEmpty(), ran.toString());
+    }
+
     /** A shortcut names its command, as a key mapping will, and is listed by the command's label. */
     @Test
     public void aShortcutNamesItsCommand() {

@@ -20,13 +20,15 @@ public class CommandTableTest {
     private List<String> ran;
     private int cells;
     private boolean temporal;
+    private int gathered;
 
     @BeforeMethod
     public void setUp() {
-        commands = new CommandTable();
+        commands = new CommandTable(() -> gathered++);
         ran = new ArrayList<>();
         cells = 0;
         temporal = true;
+        gathered = 0;
     }
 
     @Test
@@ -70,6 +72,19 @@ public class CommandTableTest {
 
         assertEquals(cells, 1);
         assertTrue(delete.isEnabled());
+    }
+
+    /** State that several commands read is gathered once, before any command's is worked out from it. */
+    @Test
+    public void eachRefreshFirstGathersTheStateOnce() {
+        commands.define(Command.DELETE_CELLS, () -> { }).labelled(() -> "Delete " + gathered);
+        commands.define(Command.NEW_CELL, () -> { }).enabledWhen(() -> gathered > 0);
+
+        commands.refresh();
+
+        assertEquals(gathered, 1);
+        assertEquals(commands.get(Command.DELETE_CELLS).getValue(Action.NAME), "Delete 1");
+        assertTrue(commands.get(Command.NEW_CELL).isEnabled());
     }
 
     /** The main window defines its commands before the tabs whose state they show exist. */

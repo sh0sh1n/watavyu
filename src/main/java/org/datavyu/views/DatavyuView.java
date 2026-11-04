@@ -91,7 +91,10 @@ public final class DatavyuView implements FileDropEventListener {
     private final Resources resources = Resources.of(DatavyuView.class);
 
     /** Every command's action, which menus, shortcuts and the controls drawer share */
-    private final CommandTable commands = new CommandTable();
+    private final CommandTable commands = new CommandTable(this::countSelection);
+
+    /** The selected tab's selection, counted once each time the commands are refreshed. */
+    private Selection selection = Selection.NONE;
 
     private final Shortcuts shortcuts;
 
@@ -893,7 +896,7 @@ public final class DatavyuView implements FileDropEventListener {
         panel.setLayoutType(layout);
         pc.loadProject();
         // Selecting the tab refreshed the commands before it had its layout and project.
-        refreshCommands();
+        commands.refresh();
         return pc;
     }
 
@@ -936,23 +939,23 @@ public final class DatavyuView implements FileDropEventListener {
     /**
      * Undo Action.
      */
-    public void undo() {
+    private void undo() {
         String refusal = selectedController().undo();
         if (refusal != null) {
             warn(refusal);
         }
-        refreshCommands();
+        redrawSheet();
     }
 
     /**
      * Redo Action.
      */
-    public void redo() {
+    private void redo() {
         String refusal = selectedController().redo();
         if (refusal != null) {
             warn(refusal);
         }
-        refreshCommands();
+        redrawSheet();
     }
 
 
@@ -1054,8 +1057,12 @@ public final class DatavyuView implements FileDropEventListener {
      * Shows the state of the commands, which follows the selected spreadsheet: Undo and Redo name its edits, and its
      * modes and layout are shown checked or named as they are in it (B20).
      */
-    public void refreshCommands() {
+    void refreshCommands() {
         commands.refresh();
+        redrawSheet();
+    }
+
+    private void redrawSheet() {
         if (getSpreadsheetPanel() != null) {
             getSpreadsheetPanel().revalidate();
             getSpreadsheetPanel().repaint();
@@ -1091,23 +1098,23 @@ public final class DatavyuView implements FileDropEventListener {
         commands.define(Command.ADD_MEDIA, this::addMedia);
         commands.define(Command.COLUMN_LIST, this::showVariableList);
         commands.define(Command.CODE_EDITOR, this::showVocabEditor);
-        commands.define(Command.NEW_CELL, this::newCell).enabledWhen(this::hasVisibleColumns);
+        commands.define(Command.NEW_CELL, this::newCell).enabledWhen(() -> selection.visibleColumns());
         commands.define(Command.NEW_CELL_LEFT, this::newCellLeft)
-                .labelled(() -> countedLabel("newCellLeftMenuItem", adjacentSelectedCells(ArrayDirection.LEFT)))
-                .enabledWhen(() -> adjacentSelectedCells(ArrayDirection.LEFT) > 0);
+                .labelled(() -> countedLabel("newCellLeftMenuItem", selection.besideLeft()))
+                .enabledWhen(() -> selection.besideLeft() > 0);
         commands.define(Command.NEW_CELL_RIGHT, this::newCellRight)
-                .labelled(() -> countedLabel("newCellRightMenuItem", adjacentSelectedCells(ArrayDirection.RIGHT)))
-                .enabledWhen(() -> adjacentSelectedCells(ArrayDirection.RIGHT) > 0);
+                .labelled(() -> countedLabel("newCellRightMenuItem", selection.besideRight()))
+                .enabledWhen(() -> selection.besideRight() > 0);
         commands.define(Command.DELETE_CELLS, this::deleteCells)
-                .labelled(() -> countedLabel("deleteCellMenuItem", selectedCells()))
-                .enabledWhen(() -> selectedCells() > 0);
+                .labelled(() -> countedLabel("deleteCellMenuItem", selection.cells()))
+                .enabledWhen(() -> selection.cells() > 0);
         commands.define(Command.UNDO, this::undo)
                 .labelled(() -> history() == null ? Command.UNDO.label() : history().getUndoPresentationName())
                 .enabledWhen(() -> history() != null && history().canUndo());
         commands.define(Command.REDO, this::redo)
                 .labelled(() -> history() == null ? Command.REDO.label() : history().getRedoPresentationName())
                 .enabledWhen(() -> history() != null && history().canRedo());
-        commands.define(Command.EXPORT_JSON, this::exportToJSON).enabledWhen(this::hasVisibleColumns);
+        commands.define(Command.EXPORT_JSON, this::exportToJSON).enabledWhen(() -> selection.visibleColumns());
         commands.define(Command.IMPORT_JSON, this::importJSONToSpreadsheet);
         commands.define(Command.TEMPORAL_LAYOUT, this::toggleTemporalLayout)
                 .checked(() -> getSpreadsheetPanel() != null
@@ -1149,16 +1156,25 @@ public final class DatavyuView implements FileDropEventListener {
         return selected == null ? null : selected.getUndoManager();
     }
 
-    private boolean hasVisibleColumns() {
-        return getSpreadsheetPanel() != null && !getSpreadsheetPanel().getDataStore().getVisibleVariables().isEmpty();
+    /**
+     * What the cell commands' state is worked out from, counted once per refresh, which runs before every key.
+     *
+     * @param visibleColumns whether the selected tab shows any column
+     * @param cells          how many cells are selected
+     * @param besideLeft     how many selected cells have a column to their left, up to 2
+     * @param besideRight    how many have a column to their right, up to 2
+     */
+    private record Selection(boolean visibleColumns, int cells, int besideLeft, int besideRight) {
+        static final Selection NONE = new Selection(false, 0, 0, 0);
     }
 
-    private int selectedCells() {
-        return getSpreadsheetPanel() == null ? 0 : getSpreadsheetPanel().getDataStore().getSelectedCells().size();
-    }
-
-    private int adjacentSelectedCells(final ArrayDirection direction) {
-        return getSpreadsheetPanel() == null ? 0 : getSpreadsheetPanel().getAdjacentSelectedCells(direction);
+    private void countSelection() {
+        SpreadSheetPanel panel = getSpreadsheetPanel();
+        selection = panel == null ? Selection.NONE : new Selection(
+                !panel.getDataStore().getVisibleVariables().isEmpty(),
+                panel.getDataStore().getSelectedCells().size(),
+                panel.getAdjacentSelectedCells(ArrayDirection.LEFT),
+                panel.getAdjacentSelectedCells(ArrayDirection.RIGHT));
     }
 
     /** Returns a command's label for one cell or for several, such as Delete Cell or Delete Cells. */
@@ -1282,7 +1298,7 @@ public final class DatavyuView implements FileDropEventListener {
             @Override
             public void menuSelected(final MenuEvent e) {
                 // Delete Cells and New Cell to Left and Right follow the selection.
-                refreshCommands();
+                commands.refresh();
             }
 
             @Override

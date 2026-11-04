@@ -68,7 +68,7 @@ public final class Shortcuts implements KeyEventDispatcher {
                          final String keyText, final Scope scope, final Action action) {
             this.group = group;
             this.command = command;
-            this.name = name;
+            this.name = command == null ? name : command.label();
             this.key = key;
             this.keyText = keyText;
             this.scope = scope;
@@ -118,18 +118,18 @@ public final class Shortcuts implements KeyEventDispatcher {
         }
 
         public Builder menu(final String group, final Command command, final KeyStroke key) {
-            return add(new Shortcut(group, command, command.label(), key, describe(key, false), Scope.MENU,
+            return add(new Shortcut(group, command, null, key, describe(key, false), Scope.MENU,
                 actions.apply(command)));
         }
 
         public Builder global(final String group, final Command command, final KeyStroke key) {
-            return add(new Shortcut(group, command, command.label(), key, describe(key, false), Scope.GLOBAL,
+            return add(new Shortcut(group, command, null, key, describe(key, false), Scope.GLOBAL,
                 actions.apply(command)));
         }
 
         public Builder keypad(final Command command, final int keyCode, final int modifiers) {
             KeyStroke key = KeyStroke.getKeyStroke(keyCode, modifiers);
-            return add(new Shortcut("Video controller", command, command.label(), key, describe(key, true),
+            return add(new Shortcut("Video controller", command, null, key, describe(key, true),
                 Scope.KEYPAD, actions.apply(command)));
         }
 
@@ -244,9 +244,13 @@ public final class Shortcuts implements KeyEventDispatcher {
                 shortcut.action.putValue(Action.SELECTED_KEY, !(Boolean) selected);
             }
         }
-        shortcut.action.actionPerformed(new ActionEvent(e.getSource(), ActionEvent.ACTION_PERFORMED, shortcut.name));
         handledKeyCode = e.getKeyCode();
         e.consume();
+        // A global or keypad key whose command cannot run now does nothing, as its greyed menu item would.
+        if (!shortcut.action.isEnabled()) {
+            return true;
+        }
+        shortcut.action.actionPerformed(new ActionEvent(e.getSource(), ActionEvent.ACTION_PERFORMED, shortcut.name));
         return true;
     }
 

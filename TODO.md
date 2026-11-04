@@ -16,10 +16,10 @@ Updated 2026-11-03. Re-measure with the commands in [BUILDING.md › Analysis Re
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
 | Java source (main) | 242 files, 42.5k lines | 149 files, 25.8k lines |
-| Tests / line coverage | 113 / 9.9% | 632 / 64.9%; views 59%, undo edits 78% |
+| Tests / line coverage | 113 / 9.9% | 638 / 65.6%; views 59%, undo edits 78% |
 | Runtime dependencies / with known vulnerabilities | 28 / 8 | 13 / 0 |
 | Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 477 |
-| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 330 / 59 (none on thread safety, now gated); 15 |
+| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 329 / 59 (none on thread safety, now gated); 15 |
 | Never-invoked methods (`dead-code.py`) | 109+ | 21: test-only accessors, unused settings setters, and Swing overrides the script cannot see |
 | Static global access (`grep -rohP 'Datavyu\.(get\|set)\w*\(' src/main/java \| wc -l`) | about 330 call sites | 0: each tab's `ProjectController` is passed to what it owns |
 
@@ -71,7 +71,7 @@ None open.
 
 Tech debt is paid down in the Java app rather than left for the C++ rewrite (AGENTS.md › North Star, 2026-11-03). The items run in this order, each behaviour-preserving unless it says otherwise, and each pins the behaviour it touches with tests, since most views and undo have none. R10 comes first because the later items, and the new interaction model, build on its commands.
 
-**R10. One path for each user action.** ready. Cell, column, media and code actions are commands (`CellCommands`, `ColumnCommands`, `MediaCommands`, `CodeCommands`), and menus, shortcuts, the keypad and the drawer run them by name (`Command`), with state that follows the selected tab (`CommandTable`). Left: the value editors (`MatrixRootView`, `TimeStampDataValueEditor`) still change the model and post their own undo edits from views, so a typed value or time, its lock check and its undo can drift apart. Each becomes a command on the document that checks locks, changes the model and records its edit. With it, the views redraw from the model's listeners rather than from each caller, which now checks for a view first (`getSpreadSheetPanel() != null`).
+**R10. One path for each user action.** ready. Cell, column, media and code actions are commands (`CellCommands`, `ColumnCommands`, `MediaCommands`, `CodeCommands`), and the menu bar and shortcuts, the keypad's included, run them by name (`Command`), with state that follows the selected tab (`CommandTable`). Left: the value editors (`MatrixRootView`, `TimeStampDataValueEditor`) still change the model and post their own undo edits from views, so a typed value or time, its lock check and its undo can drift apart. Each becomes a command on the document that checks locks, changes the model and records its edit. With it, the views redraw from the model's listeners rather than from each caller, which now checks for a view first (`getSpreadSheetPanel() != null`).
 
 **R4. Per-editor key handling.** ready, with or after R10. `EditorTracker` and the value editors handle keys per editor, with 21 uses of the deprecated modifier API (`getModifiers`, `*_MASK`, `getMenuShortcutKeyMask`). Keys that are commands go through `Shortcuts` to R10's commands; editors keep only text editing. Do before F7.
 

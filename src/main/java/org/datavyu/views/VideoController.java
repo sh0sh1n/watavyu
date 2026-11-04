@@ -144,8 +144,6 @@ public final class VideoController implements ClockListener {
 
     private FrameRateController frameRateController = new FrameRateController();
 
-    private volatile int jumpDirection = -1;
-
     /** The spreadsheet whose cells the coding commands change */
     private final ProjectController spreadsheet;
 
@@ -604,13 +602,13 @@ public final class VideoController implements ClockListener {
 
 
         // Find button (small plus)
-        JButton findButton = buildButton(Command.FIND_ONSET, "find", Glyph.Shape.FIND, "find", "+", this::findAction);
+        JButton findButton = buildButton(null, "find", Glyph.Shape.FIND, "find", "+", this::findAction);
         gridButtonPanel.add(findButton, NUM_PAD_KEY_SIZE);
         // Where the frame rate was: the grid keeps its shape.
         gridButtonPanel.add(new JLabel(), WIDE_TEXT_FIELD_SIZE);
 
         // Jog back button with 1
-        JButton jogBackButton = buildButton(Command.JOG_BACK, "jogBack", Glyph.Shape.JOG_BACK, "jog", "1", this::jogBackAction);
+        JButton jogBackButton = buildButton(null, "jogBack", Glyph.Shape.JOG_BACK, "jog", "1", this::jogBackAction);
         gridButtonPanel.add(jogBackButton, NUM_PAD_KEY_SIZE);
 
         // Pause button with 2
@@ -618,7 +616,7 @@ public final class VideoController implements ClockListener {
         gridButtonPanel.add(pauseButton, NUM_PAD_KEY_SIZE);
 
         // Jog forward button with 3
-        JButton jogForwardButton = buildButton(Command.JOG_FORWARD, "jogForward", Glyph.Shape.JOG_FORWARD, "jog", "3", this::jogForwardAction);
+        JButton jogForwardButton = buildButton(null, "jogForward", Glyph.Shape.JOG_FORWARD, "jog", "3", this::jogForwardAction);
         gridButtonPanel.add(jogForwardButton, NUM_PAD_KEY_SIZE);
 
         // Create new cell button with enter
@@ -656,7 +654,7 @@ public final class VideoController implements ClockListener {
 
     private void addJumpByPair() {
         //Go back button - minus key
-        JButton jumpByButton = buildButton(Command.JUMP_BACK, "jumpBy", Glyph.Shape.JUMP_BACK, "jump", "−", this::jumpByAction);
+        JButton jumpByButton = buildButton(Command.JUMP_BACK, "jumpBy", Glyph.Shape.JUMP_BACK, "jump", "−", () -> jumpBy(-1));
         gridButtonPanel.add(jumpByButton, NUM_PAD_KEY_SIZE);
         //Go back text field
         jumpByTextField.setHorizontalAlignment(SwingConstants.CENTER);
@@ -708,8 +706,9 @@ public final class VideoController implements ClockListener {
     }
 
     /**
-     * Runs a playback or coding command, as its keypad key does, by pressing the drawer's key for it, which shows the
-     * press while the drawer is open. Jogging and finding the offset field's time have no key of their own to press.
+     * Runs a playback or coding command, as its keypad key does. A command whose drawer key does just that is run by
+     * pressing the key, which shows the press while the drawer is open. Jogging, which repeats faster than a press can
+     * show, jumping forward and finding, whose drawer keys depend on the direction or on Shift, are run directly.
      *
      * @param command the command
      * @throws IllegalArgumentException if it is not a command of the drawer
@@ -718,10 +717,8 @@ public final class VideoController implements ClockListener {
         switch (command) {
             case JOG_BACK -> jogBackAction();
             case JOG_FORWARD -> jogForwardAction();
-            case JUMP_BACK, JUMP_FORWARD -> {
-                jumpDirection = command == Command.JUMP_BACK ? -1 : 1;
-                keys.get(Command.JUMP_BACK).doClick();
-            }
+            case JUMP_FORWARD -> jumpBy(1);
+            case FIND_ONSET -> findOnsetAction();
             case FIND_OFFSET -> findOffsetAction();
             default -> {
                 JButton key = keys.get(command);
@@ -799,21 +796,23 @@ public final class VideoController implements ClockListener {
         offsetTextField.setText(Timestamp.format(milliseconds));
     }
 
-    /**
-     * Action to invoke when the user clicks on the find button.
-     */
-    public void findAction() {
+    /** The drawer's find key: to the onset field's time, or with Shift held to the offset field's. */
+    private void findAction() {
         if (shiftMask) {
             findOffsetAction();
         } else {
+            findOnsetAction();
+        }
+    }
 
-            try {
-                long onset = Timestamp.parse(onsetTextField.getText());
-                logger.info("Finding to " + onsetTextField.getText() + " " + onset);
-                clockTimer.setForceTime(onset);
-            } catch (IllegalArgumentException e) {
-                logger.error("unable to find within video", e);
-            }
+    /** Goes to the onset field's time. */
+    public void findOnsetAction() {
+        try {
+            long onset = Timestamp.parse(onsetTextField.getText());
+            logger.info("Finding to " + onsetTextField.getText() + " " + onset);
+            clockTimer.setForceTime(onset);
+        } catch (IllegalArgumentException e) {
+            logger.error("unable to find within video", e);
         }
     }
 
@@ -843,11 +842,13 @@ public final class VideoController implements ClockListener {
     }
 
     /**
-     * Action to invoke when the user clicks on the go back button.
+     * Jumps by the jump field's time.
+     *
+     * @param direction -1 to jump back, 1 to jump forward
      */
-    public void jumpByAction() {
+    private void jumpBy(final int direction) {
         try {
-            long backTime = jumpDirection * Timestamp.parse(jumpByTextField.getText());
+            long backTime = direction * Timestamp.parse(jumpByTextField.getText());
             long newTime = (long) clockTimer.getClockTime() + backTime;
             logger.info("Jump back by " +  backTime + " From: " + clockTimer.getStreamTime() + " To: " + newTime);
             clockTimer.setForceTime(newTime);

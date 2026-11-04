@@ -9,7 +9,9 @@ import static org.testng.Assert.assertTrue;
 import org.datavyu.TestSpreadsheets;
 import org.datavyu.controllers.SaveController;
 import org.datavyu.controllers.project.ProjectController;
+import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.DataStoreFactory;
+import org.datavyu.models.db.Variable;
 import org.datavyu.models.project.Project;
 import org.datavyu.views.discrete.SpreadSheetPanel;
 import org.datavyu.views.discrete.layouts.SheetLayoutFactory;
@@ -19,6 +21,8 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import javax.swing.Action;
@@ -248,5 +252,67 @@ public class DatavyuViewTest {
         select(0);
         assertEquals(undo.getValue(Action.NAME), "Undo");
         assertFalse(undo.isEnabled());
+    }
+
+    /** Delete Cells and New Cell to Left and Right count the selected tab's selected cells, to say Cell or Cells. */
+    @Test
+    public void cellCommandsCountTheSelectedTabsSelection() throws Exception {
+        ProjectController study = secondTab();
+        Action delete = view.action(Command.DELETE_CELLS);
+        Action left = view.action(Command.NEW_CELL_LEFT);
+        Action right = view.action(Command.NEW_CELL_RIGHT);
+        List<Cell> cells = new ArrayList<>();
+        onEdt(() -> {
+            Variable gaze = study.getDataStore().getVariable("gaze");
+            Variable speech = study.getDataStore().createVariable("speech");
+            cells.add(gaze.createPointCell(1_000));
+            cells.add(gaze.createPointCell(2_000));
+            cells.add(speech.createPointCell(1_000));
+            cells.forEach(cell -> cell.setSelected(false));
+            view.refreshCommands();
+        });
+        assertFalse(delete.isEnabled());
+        assertFalse(left.isEnabled());
+        assertFalse(right.isEnabled());
+
+        onEdt(() -> {
+            cells.get(0).setSelected(true);
+            view.refreshCommands();
+        });
+        assertEquals(delete.getValue(Action.NAME), "Delete Cell");
+        assertTrue(delete.isEnabled());
+        assertFalse(left.isEnabled(), "gaze is the first column");
+        assertEquals(right.getValue(Action.NAME), "New Cell to Right");
+        assertTrue(right.isEnabled());
+
+        onEdt(() -> {
+            cells.get(1).setSelected(true);
+            cells.get(2).setSelected(true);
+            view.refreshCommands();
+        });
+        assertEquals(delete.getValue(Action.NAME), "Delete Cells");
+        assertEquals(left.getValue(Action.NAME), "New Cell to Left", "only the speech cell has a column to its left");
+        assertEquals(right.getValue(Action.NAME), "New Cells to Right");
+
+        select(0);
+        assertFalse(delete.isEnabled(), "the untitled tab has no cells selected");
+    }
+
+    /** New Cell and Export need a column to show: they are disabled in a tab whose columns are all hidden. */
+    @Test
+    public void newCellAndExportNeedAVisibleColumn() throws Exception {
+        ProjectController study = secondTab();
+        Action newCell = view.action(Command.NEW_CELL);
+        Action export = view.action(Command.EXPORT_JSON);
+        assertTrue(newCell.isEnabled());
+        assertTrue(export.isEnabled());
+
+        onEdt(() -> {
+            study.columns().hide(study.getDataStore().getAllVariables());
+            view.refreshCommands();
+        });
+
+        assertFalse(newCell.isEnabled());
+        assertFalse(export.isEnabled());
     }
 }

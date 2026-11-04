@@ -47,11 +47,14 @@ import java.awt.event.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.IdentityHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 
@@ -649,25 +652,24 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
      * 2 = many columns to the left of the current cell selection.
      */
     public int getAdjacentSelectedCells(final ArrayDirection dir) {
+        // The menus count to two, for the label's Cell or Cells, and this runs before every key, so it stays linear.
+        List<Variable> columns = dataStore.getVisibleVariables();
+        Set<Variable> beside = Collections.newSetFromMap(new IdentityHashMap<>());
+        for (int i = 0; i < columns.size(); i++) {
+            int neighbour = i + dir.getModifier();
+            if (neighbour >= 0 && neighbour < columns.size()) {
+                beside.add(columns.get(i));
+            }
+        }
         int result = 0;
-
         for (Cell cell : dataStore.getSelectedCells()) {
-            for (int i = 0; i < dataStore.getVisibleVariables().size(); i++) {
-                if (dataStore.getVisibleVariables().get(i).equals(dataStore.getVariable(cell))) {
-                    // We have at least one column to the left of the cells.
-                    if (((i + dir.getModifier()) >= 0) && ((i + dir.getModifier())
-                            < dataStore.getVisibleVariables().size())) {
-                        result++;
-                    }
-
-                    // We have many columns to the left of the cells - end.
-                    if (result == 2) {
-                        return result;
-                    }
+            if (beside.contains(cell.getVariable())) {
+                result++;
+                if (result == 2) {
+                    break;
                 }
             }
         }
-
         return result;
     }
 

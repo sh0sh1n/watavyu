@@ -3,9 +3,11 @@ package org.datavyu.views;
 import org.datavyu.util.Resources;
 
 /**
- * Every user command, by a stable name. Menus, keyboard shortcuts and the controls drawer refer to a command by its
- * name and run it through one action ({@link CommandTable}), so a command, its label and its state are defined once;
- * a key mapping can name commands too (F7). The label is the command's name in menus and the shortcut list.
+ * The main window's commands, by stable names. Its menu bar and keyboard shortcuts, the keypad's included, run a
+ * command through one action ({@link CommandTable}), so a command, its label and its state are defined once; a key
+ * mapping can name commands too (F7). The label is the command's name in menus and the shortcut list. The controls
+ * drawer's keys call the selected tab's playback themselves; the keypad runs them by name through
+ * {@link VideoController#run}.
  */
 public enum Command {
     NEW_PROJECT(menu("newMenuItem.text")),
@@ -62,7 +64,12 @@ public enum Command {
     }
 
     private static String menu(final String key) {
-        return Resources.of(DatavyuView.class).getString(key);
+        return Labels.MENU.getString(key);
+    }
+
+    /** The menu labels, loaded once, when the first command is made. */
+    private static final class Labels {
+        static final Resources MENU = Resources.of(DatavyuView.class);
     }
 
     /** Returns the command's name in menus and the shortcut list. */

@@ -10,6 +10,10 @@ import org.datavyu.models.db.Variable;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.awt.Component;
+import java.awt.Container;
+import javax.swing.JButton;
+
 /** The keypad and the menu bar run the controls drawer's commands by name, each as its key in the drawer does. */
 public class VideoControllerCommandsTest {
 
@@ -32,6 +36,49 @@ public class VideoControllerCommandsTest {
         controller.run(Command.JUMP_FORWARD);
         controller.run(Command.JUMP_FORWARD);
         assertEquals(controller.getCurrentTime(), 25_000L);
+    }
+
+    /** The drawer's key jumps back whichever way the keypad last jumped. */
+    @Test
+    public void theDrawersJumpKeyJumpsBackAfterAJumpForward() {
+        controller.run(Command.JUMP_FORWARD);
+
+        key("jumpByButton").doClick();
+
+        assertEquals(controller.getCurrentTime(), 20_000L);
+    }
+
+    /** Shift with the drawer's find key goes to the offset; a find run by name goes where its name says. */
+    @Test
+    public void findByNameIgnoresShiftAndTheDrawersKeyHeedsIt() {
+        controller.setOnsetField(3_000);
+        controller.setOffsetField(7_000);
+        controller.setShiftMask(true);
+
+        controller.run(Command.FIND_ONSET);
+        assertEquals(controller.getCurrentTime(), 3_000L);
+
+        key("findButton").doClick();
+        assertEquals(controller.getCurrentTime(), 7_000L);
+    }
+
+    private JButton key(final String name) {
+        return find(controller.getControls(), name);
+    }
+
+    private static JButton find(final Container container, final String name) {
+        for (Component child : container.getComponents()) {
+            if (child instanceof JButton button && name.equals(button.getName())) {
+                return button;
+            }
+            if (child instanceof Container inner) {
+                JButton found = find(inner, name);
+                if (found != null) {
+                    return found;
+                }
+            }
+        }
+        return null;
     }
 
     @Test
