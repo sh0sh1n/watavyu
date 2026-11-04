@@ -8,6 +8,7 @@ import static org.testng.Assert.assertTrue;
 import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.DataStoreFactory;
+import org.datavyu.models.db.UserWarningException;
 import org.datavyu.models.db.Variable;
 import org.datavyu.models.project.Project;
 import org.datavyu.views.discrete.EditorComponent;
@@ -224,6 +225,77 @@ public class VocabEditorVTest {
         });
         try {
             assertEquals(rows, List.of(List.of(speech), List.of(gaze, speech), List.of(speech, gaze)));
+        } finally {
+            SwingUtilities.invokeAndWait(() -> editor.get().dispose());
+        }
+    }
+
+    /** Makes a column, from inside a Swing task, which cannot throw a checked exception. */
+    private static Variable column(final ProjectController spreadsheet, final String name) {
+        try {
+            return spreadsheet.getDataStore().createVariable(name);
+        } catch (UserWarningException e) {
+            throw new AssertionError(e);
+        }
+    }
+
+    private static List<Variable> rows(final VocabEditorV editor) {
+        return editor.getVocabElements().stream().map(VocabElementV::getVariable).toList();
+    }
+
+    /** A column added elsewhere gets a row of its own; the other rows keep what is typed in them, refused or not. */
+    @Test
+    public void aNewColumnLeavesTheOtherRowsAsTheyAre() throws Exception {
+        ProjectController spreadsheet = spreadsheet();
+        Variable gaze = spreadsheet.getDataStore().createVariable("gaze");
+        AtomicReference<VocabEditorV> editor = new AtomicReference<>();
+        AtomicReference<VocabElementV> before = new AtomicReference<>();
+        AtomicReference<Variable> added = new AtomicReference<>();
+        SwingUtilities.invokeAndWait(() -> {
+            editor.set(new VocabEditorV(null, false, spreadsheet));
+            before.set(editor.get().getVocabElements().get(0));
+            type(before.get(), before.get().getNameComponent(), "1st");
+            added.set(column(spreadsheet, "speech"));
+        });
+        try {
+            assertSame(editor.get().getVocabElements().get(0), before.get());
+            assertEquals(before.get().refusedNames(), List.of("1st"));
+            assertEquals(rows(editor.get()), List.of(gaze, added.get()));
+        } finally {
+            SwingUtilities.invokeAndWait(() -> editor.get().dispose());
+        }
+    }
+
+    /** The editor follows the selected tab's columns only, and catches up with changes made while it was closed. */
+    @Test
+    public void theEditorFollowsTheSpreadsheetItShowsWhileOpen() throws Exception {
+        ProjectController first = spreadsheet();
+        ProjectController second = spreadsheet();
+        Variable gaze = second.getDataStore().createVariable("gaze");
+        AtomicReference<VocabEditorV> editor = new AtomicReference<>();
+        List<List<Variable>> seen = new ArrayList<>();
+        List<List<String>> codes = new ArrayList<>();
+        SwingUtilities.invokeAndWait(() -> {
+            editor.set(new VocabEditorV(null, false, first));
+            editor.get().setProjectController(second);
+            column(first, "other");
+            Variable early = column(second, "early");
+            seen.add(rows(editor.get()));
+            assertSame(seen.get(0).get(1), early);
+
+            editor.get().dispose();
+            second.codes().add(gaze);
+            Variable speech = column(second, "speech");
+            editor.get().pack();
+            seen.add(rows(editor.get()));
+            codes.add(shownCodes(editor.get().getVocabElements().get(0)));
+            assertSame(seen.get(1).get(2), speech);
+        });
+        try {
+            assertEquals(seen.get(0).size(), 2);
+            assertSame(seen.get(0).get(0), gaze);
+            assertEquals(seen.get(1).size(), 3);
+            assertEquals(codes.get(0), List.of("code01", "code02"));
         } finally {
             SwingUtilities.invokeAndWait(() -> editor.get().dispose());
         }

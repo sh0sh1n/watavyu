@@ -161,19 +161,6 @@ public final class VocabEditorV extends DatavyuDialog {
                     }
                 });
 
-        addWindowFocusListener(
-                new java.awt.event.WindowAdapter() {
-                    @Override
-                    public void windowGainedFocus(java.awt.event.WindowEvent e) {
-                        if (!isCurrent()) makeElements();
-                    }
-
-                    @Override
-
-                    public void windowLostFocus(java.awt.event.WindowEvent e) {
-                        //applyChanges(); //update spreadsheet here?
-                    }
-                });
 
         makeElements();
     }
@@ -236,11 +223,50 @@ public final class VocabEditorV extends DatavyuDialog {
         @Override public void variableNameChange(final Variable column) { }
     }
 
-    /** Shows the spreadsheet's annotation columns again if they are not those shown, in their order. */
+    /**
+     * Makes the rows the spreadsheet's annotation columns again, in its order. A column's row is kept, with what is
+     * typed in it and the focus, so only new columns get rows.
+     */
     private void followColumns() {
-        if (!isCurrent()) {
-            makeElements();
+        List<VocabElementV> rows = new ArrayList<>();
+        for (Variable column : annotationColumns()) {
+            rows.add(veViews.stream().filter(row -> row.getVariable().equals(column)).findFirst()
+                .orElseGet(() -> new VocabElementV(column.getRootNode(), column, this)));
         }
+        for (VocabElementV row : veViews) {
+            if (!rows.contains(row)) {
+                verticalFrame.remove(row);
+            }
+        }
+        if (!rows.contains(selectedVocabElement)) {
+            selectedVocabElement = null;
+            selectedArgument = null;
+            selectedArgumentI = -1;
+        }
+        for (int i = 0; i < rows.size(); i++) {
+            if (rows.get(i).getParent() == verticalFrame) {
+                // Moved without being taken out, so a row keeps the focus.
+                verticalFrame.setComponentZOrder(rows.get(i), i);
+            } else {
+                verticalFrame.add(rows.get(i), i);
+            }
+        }
+        veViews = rows;
+        verticalFrame.revalidate();
+        verticalFrame.repaint();
+        refreshNameWarnings();
+        updateDialogState();
+    }
+
+    private List<Variable> annotationColumns() {
+        List<Variable> columns = new ArrayList<>(controller.getDataStore().getAllVariables());
+        columns.removeIf(Variable::isMedia);
+        return columns;
+    }
+
+    /** Puts the focus in a column's row, as on its name. */
+    private void focusRow(final Variable column) {
+        veViews.stream().filter(row -> row.getVariable().equals(column)).forEach(VocabElementV::requestFocus);
     }
 
     private void makeElements() {
@@ -254,10 +280,7 @@ public final class VocabEditorV extends DatavyuDialog {
         verticalFrame.setName("verticalFrame");
         verticalFrame.setLayout(new BoxLayout(verticalFrame, BoxLayout.Y_AXIS));
 
-        for (Variable var : controller.getDataStore().getAllVariables()) {
-            if (var.isMedia()) {
-                continue;
-            }
+        for (Variable var : annotationColumns()) {
             VocabElementV matrixV = new VocabElementV(var.getRootNode(), var, this);
             verticalFrame.add(matrixV);
             veViews.add(matrixV);
@@ -276,13 +299,6 @@ public final class VocabEditorV extends DatavyuDialog {
         setTitle(bundle.getString("window.title") + " - " + titleName);
     }
 
-    /** Tells whether the rows are the spreadsheet's annotation columns, in its order; each row follows its name. */
-    private boolean isCurrent() {
-        List<Variable> columns = new ArrayList<>(controller.getDataStore().getAllVariables());
-        columns.removeIf(Variable::isMedia);
-        return veViews.stream().map(VocabElementV::getVariable).toList().equals(columns);
-    }
-
     /**
      * The action to invoke when the user clicks on the add matrix button.
      */
@@ -293,11 +309,7 @@ public final class VocabEditorV extends DatavyuDialog {
 
             Variable v = controller.columns().newColumn(varName);
             // The rows follow the spreadsheet's columns, so the new one has its row already.
-            for (VocabElementV vev : veViews) {
-                if (vev.getVariable().equals(v)) {
-                    vev.requestFocus();
-                }
-            }
+            focusRow(v);
             updateDialogState();
 
             // Whoops, user has done something strange - show warning dialog.
@@ -352,11 +364,7 @@ public final class VocabEditorV extends DatavyuDialog {
         int idx = getVocabElements().indexOf(v);
         if(idx > 0) {
             controller.columns().move(var, getVocabElements().get(idx-1).getVariable());
-            for(VocabElementV vev : getVocabElements()) {
-                if(vev.getVariable() == var) {
-                    vev.requestFocus();
-                }
-            }
+            focusRow(var);
         }
     }
 
@@ -370,11 +378,7 @@ public final class VocabEditorV extends DatavyuDialog {
         int idx = getVocabElements().indexOf(v);
         if(idx < getVocabElements().size() - 1) {
             controller.columns().move(var, getVocabElements().get(idx+1).getVariable());
-            for(VocabElementV vev : getVocabElements()) {
-                if(vev.getVariable() == var) {
-                    vev.requestFocus();
-                }
-            }
+            focusRow(var);
         }
     }
 
