@@ -21,7 +21,8 @@ import java.util.List;
 
 /**
  * Importing Datavyu's JSON refuses a file with a time Watavyu cannot read, such as a negative one Datavyu could
- * write, or a value that is not text or has no code: nothing is added, and the message says which cell is wrong.
+ * write, a value that is not text or has no code, or a code a project file could not save: nothing is added, and the
+ * message says which cell or code is wrong.
  */
 public class JsonImportRefusalTest {
 
@@ -107,6 +108,36 @@ public class JsonImportRefusalTest {
         assertTrue(dataStore.getAllVariables().isEmpty());
         assertTrue(e.getMessage().contains("cell 2 of column \"mother\" has more values than its column has codes"),
             e.getMessage());
+    }
+
+    /** A project file needs each code named, and named once, so the import refuses what it could not save. */
+    @Test
+    public void aCodeWithNoNameImportsNothing() throws Exception {
+        DataStore dataStore = DataStoreFactory.newDataStore();
+
+        UserWarningException e = expectThrows(UserWarningException.class,
+            () -> importJson(withCodes("{\"mood\": \"NOMINAL\", \"\": \"NOMINAL\"}"), dataStore));
+
+        assertTrue(dataStore.getAllVariables().isEmpty());
+        assertTrue(e.getMessage().endsWith("column \"mother\" has a code with no name (line 4). Nothing was imported."),
+            e.getMessage());
+    }
+
+    @Test
+    public void twoCodesOfOneNameImportNothing() throws Exception {
+        DataStore dataStore = DataStoreFactory.newDataStore();
+
+        UserWarningException e = expectThrows(UserWarningException.class,
+            () -> importJson(withCodes("{\"mood\": \"NOMINAL\", \"mood\": \"NOMINAL\"}"), dataStore));
+
+        assertTrue(dataStore.getAllVariables().isEmpty(), "the pass read before is removed too");
+        assertTrue(e.getMessage().contains("column \"mother\" has two codes named \"mood\""), e.getMessage());
+    }
+
+    private static String withCodes(final String arguments) {
+        return "{\"passes\": [\n" + READABLE_PASS + ",\n"
+            + "{\"name\": \"mother\", \"type\": \"MATRIX\", \"arguments\": " + arguments + ", \"cells\": []}\n"
+            + "]}";
     }
 
     @Test

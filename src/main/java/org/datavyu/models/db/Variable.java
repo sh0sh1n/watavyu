@@ -182,8 +182,8 @@ public interface Variable {
     void removeCode(int index);
 
     /**
-     * Renames a code, unless the column is locked. Any name is taken, as undo puts back the names a code has had, which
-     * a Datavyu import may have given it; {@code CodeCommands} keeps the names typed to those a project file allows.
+     * Renames a code, unless the column is locked. Any name is taken, as undo puts back the names a code has had;
+     * {@code CodeCommands} and the Datavyu JSON import keep names to those a project file allows.
      *
      * @param index the code's place
      * @param name  its new name

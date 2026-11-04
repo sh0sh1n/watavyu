@@ -79,7 +79,7 @@ public final class OpenDataStoreFileController {
         List<Variable> added = new ArrayList<>();
         try {
             importPasses(file, spreadSheet, added);
-        } catch (UnreadableCellException e) {
+        } catch (UnimportableException e) {
             for (Variable column : added) {
                 if (dataStore.getAllVariables().contains(column)) {
                     dataStore.removeVariable(column);
@@ -94,9 +94,9 @@ public final class OpenDataStoreFileController {
         }
     }
 
-    /** A cell's time or value in the file that cannot be read, described for the user. */
-    private static final class UnreadableCellException extends Exception {
-        UnreadableCellException(final String message, final Throwable cause) {
+    /** A part of the file that Watavyu cannot take, a cell's time or value or a code's name, described for the user. */
+    private static final class UnimportableException extends Exception {
+        UnimportableException(final String message, final Throwable cause) {
             super(message, cause);
         }
     }
@@ -108,19 +108,40 @@ public final class OpenDataStoreFileController {
      * @param field      {@code onset} or {@code offset}
      * @param column     the cell's column
      * @param cellNumber the cell's place in its column, from 1
-     * @throws UnreadableCellException if the value is not a time, or is negative
+     * @throws UnimportableException if the value is not a time, or is negative
      */
     private static long readTime(final JsonParser parser, final String field, final String column,
-                                 final int cellNumber) throws IOException, UnreadableCellException {
+                                 final int cellNumber) throws IOException, UnimportableException {
         String text = parser.getValueAsString();
         try {
             return Timestamp.parse(text);
         } catch (IllegalArgumentException e) {
-            throw new UnreadableCellException("cell " + cellNumber + " of column \"" + column + "\" has the " + field
+            throw new UnimportableException("cell " + cellNumber + " of column \"" + column + "\" has the " + field
                     + " " + (text == null ? "null" : "\"" + text + "\"") + " (line "
                     + parser.currentLocation().getLineNr() + "), which is not a time. Times are HH:MM:SS:mmm and "
                     + "never negative. Nothing was imported.", e);
         }
+    }
+
+    /**
+     * Reads a code's name, which a project file requires to be neither empty nor another code's.
+     *
+     * @param parser the parser, on the code
+     * @param codes  the column's codes read so far
+     * @param column the column
+     * @return the name
+     * @throws UnimportableException if the name is empty or another code's
+     */
+    private static String readCode(final JsonParser parser, final List<String> codes, final String column)
+            throws IOException, UnimportableException {
+        String code = parser.currentName();
+        String problem = code.isEmpty() ? "a code with no name" : codes.contains(code) ? "two codes named \"" + code
+            + "\"" : null;
+        if (problem != null) {
+            throw new UnimportableException("column \"" + column + "\" has " + problem + " (line "
+                + parser.currentLocation().getLineNr() + "). Nothing was imported.", null);
+        }
+        return code;
     }
 
     /**
@@ -131,23 +152,23 @@ public final class OpenDataStoreFileController {
      * @param code       the value's place among the cell's values
      * @param column     the cell's column
      * @param cellNumber the cell's place in its column, from 1
-     * @throws UnreadableCellException if the value is not text or a number, or the column has no code for it
+     * @throws UnimportableException if the value is not text or a number, or the column has no code for it
      */
     private static void readValue(final JsonParser parser, final Cell cell, final int code, final String column,
-                                  final int cellNumber) throws IOException, UnreadableCellException {
+                                  final int cellNumber) throws IOException, UnimportableException {
         String text = parser.getValueAsString();
         // A number or true or false is read as its text.
         String problem = text == null ? "a value that is not text or a number"
             : code >= cell.getValues().size() ? "more values than its column has codes" : null;
         if (problem != null) {
-            throw new UnreadableCellException("cell " + cellNumber + " of column \"" + column + "\" has " + problem
+            throw new UnimportableException("cell " + cellNumber + " of column \"" + column + "\" has " + problem
                 + " (line " + parser.currentLocation().getLineNr() + "). Nothing was imported.", null);
         }
         cell.setValue(code, text);
     }
 
     private void importPasses(File file, SpreadSheetPanel spreadSheet, List<Variable> added)
-            throws UserWarningException, IOException, UnreadableCellException {
+            throws UserWarningException, IOException, UnimportableException {
         if (file.getAbsolutePath().endsWith(".json")) {
             JsonFactory factory = new JsonFactory();
             try (JsonParser parser = factory.createParser(file)) {
@@ -211,7 +232,7 @@ public final class OpenDataStoreFileController {
                                                     token = parser.nextToken();
                                                     if (variableType == ColumnKind.MATRIX) {
                                                         if (getVarType(parser.getValueAsString()) != null) {
-                                                            codes.add(parser.currentName());
+                                                            codes.add(readCode(parser, codes, columnName));
                                                         } else {
                                                             logger.warn("Unknown argument ('" + parser.currentName
                                                                     () + "' line " + parser.currentLocation()
