@@ -9,7 +9,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
 /**
- * One action for each command, which menus, shortcuts and the controls drawer share. A command's label, check mark and
+ * One action for each command, which its menu item and shortcut share. A command's label, check mark and
  * whether it can run are worked out from the application's state, such as the selected tab's, each time the table
  * is refreshed: after a command runs, when a tab is selected or an edit made, when a menu opens and before a shortcut
  * runs. So no part of the window shows another tab's state. Nothing is worked out until the first refresh, so commands
@@ -72,9 +72,9 @@ final class CommandTable {
         private final transient Runnable run;
         /** Refreshes the whole table, since a command can change any command's state. */
         private final transient Runnable afterRun;
-        private transient Supplier<String> label;
-        private transient BooleanSupplier checked;
-        private transient BooleanSupplier enabled;
+        private transient Supplier<String> labelNow;
+        private transient BooleanSupplier checkedNow;
+        private transient BooleanSupplier enabledNow;
 
         private CommandAction(final Command command, final Runnable run, final Runnable afterRun) {
             super(command.label());
@@ -89,7 +89,7 @@ final class CommandTable {
          * @return this action
          */
         CommandAction labelled(final Supplier<String> label) {
-            this.label = label;
+            this.labelNow = label;
             return this;
         }
 
@@ -100,7 +100,7 @@ final class CommandTable {
          * @return this action
          */
         CommandAction checked(final BooleanSupplier checked) {
-            this.checked = checked;
+            this.checkedNow = checked;
             return this;
         }
 
@@ -111,19 +111,19 @@ final class CommandTable {
          * @return this action
          */
         CommandAction enabledWhen(final BooleanSupplier enabled) {
-            this.enabled = enabled;
+            this.enabledNow = enabled;
             return this;
         }
 
         private void refresh() {
-            if (label != null) {
-                putValue(NAME, label.get());
+            if (labelNow != null) {
+                putValue(NAME, labelNow.get());
             }
-            if (checked != null) {
-                putValue(SELECTED_KEY, checked.getAsBoolean());
+            if (checkedNow != null) {
+                putValue(SELECTED_KEY, checkedNow.getAsBoolean());
             }
-            if (enabled != null) {
-                setEnabled(enabled.getAsBoolean());
+            if (enabledNow != null) {
+                setEnabled(enabledNow.getAsBoolean());
             }
         }
 

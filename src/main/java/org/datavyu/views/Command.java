@@ -57,10 +57,10 @@ public enum Command {
     SHORTCUTS(menu("hotkeysMenuItem.text")),
     CITATION(menu("citationMenuItem.text"));
 
-    private final String label;
+    private final String text;
 
     Command(final String label) {
-        this.label = label;
+        this.text = label;
     }
 
     private static String menu(final String key) {
@@ -74,6 +74,6 @@ public enum Command {
 
     /** Returns the command's name in menus and the shortcut list. */
     public String label() {
-        return label;
+        return text;
     }
 }

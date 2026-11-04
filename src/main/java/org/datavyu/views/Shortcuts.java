@@ -235,10 +235,21 @@ public final class Shortcuts implements KeyEventDispatcher {
             return false;
         }
         beforeShortcut.run();
-        if (shortcut.scope == Scope.MENU) {
-            if (mainWindowFocused.getAsBoolean() || !shortcut.action.isEnabled()) {
+        boolean menu = shortcut.scope == Scope.MENU;
+        if (menu && mainWindowFocused.getAsBoolean()) {
+            return false;
+        }
+        if (!shortcut.action.isEnabled()) {
+            // A menu key whose item is greyed goes on to the focused component, as in the main window; a global or
+            // keypad key does nothing.
+            if (menu) {
                 return false;
             }
+            handledKeyCode = e.getKeyCode();
+            e.consume();
+            return true;
+        }
+        if (menu) {
             Object selected = shortcut.action.getValue(Action.SELECTED_KEY);
             if (selected instanceof Boolean) {
                 shortcut.action.putValue(Action.SELECTED_KEY, !(Boolean) selected);
@@ -246,10 +257,6 @@ public final class Shortcuts implements KeyEventDispatcher {
         }
         handledKeyCode = e.getKeyCode();
         e.consume();
-        // A global or keypad key whose command cannot run now does nothing, as its greyed menu item would.
-        if (!shortcut.action.isEnabled()) {
-            return true;
-        }
         shortcut.action.actionPerformed(new ActionEvent(e.getSource(), ActionEvent.ACTION_PERFORMED, shortcut.name));
         return true;
     }

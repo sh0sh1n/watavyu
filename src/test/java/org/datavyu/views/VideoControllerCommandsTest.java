@@ -1,6 +1,8 @@
 package org.datavyu.views;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.assertThrows;
 
 import org.datavyu.TestSpreadsheets;
@@ -11,10 +13,13 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.awt.Component;
+import java.util.ArrayList;
+import java.util.List;
+import javax.swing.SwingUtilities;
 import java.awt.Container;
 import javax.swing.JButton;
 
-/** The keypad and the menu bar run the controls drawer's commands by name, each as its key in the drawer does. */
+/** The keypad runs the controls drawer's commands by name, as the drawer's keys do. */
 public class VideoControllerCommandsTest {
 
     private ProjectController spreadsheet;
@@ -27,9 +32,9 @@ public class VideoControllerCommandsTest {
         controller.setCurrentTime(20_000);
     }
 
-    /** One key in the drawer jumps; the keypad's minus jumps back by the jump time and Shift with it forward. */
+    /** The keypad's minus jumps back by the jump time, and Shift with it forward. */
     @Test
-    public void jumpBackAndForwardShareTheDrawersKey() {
+    public void jumpBackAndForwardByTheJumpTime() {
         controller.run(Command.JUMP_BACK);
         assertEquals(controller.getCurrentTime(), 15_000L);
 
@@ -102,6 +107,25 @@ public class VideoControllerCommandsTest {
 
         assertEquals(gaze.getCells().size(), 1);
         assertEquals(gaze.getCells().get(0).getOnset(), 20_000L);
+    }
+
+    /** A key run by name shows as pressed for a moment, without holding the event thread, and runs once. */
+    @Test
+    public void aKeyRunByNameShowsThePressAndRunsOnce() throws Exception {
+        JButton stop = key("stopButton");
+        List<String> ran = new ArrayList<>();
+        SwingUtilities.invokeAndWait(() -> stop.addActionListener(e -> ran.add("stop")));
+
+        long start = System.nanoTime();
+        SwingUtilities.invokeAndWait(() -> controller.run(Command.STOP));
+        long took = (System.nanoTime() - start) / 1_000_000;
+        assertTrue(stop.getModel().isPressed());
+
+        Thread.sleep(300);
+        SwingUtilities.invokeAndWait(() -> { });
+        assertFalse(stop.getModel().isPressed());
+        assertEquals(ran, List.of("stop"));
+        assertTrue(took < 60, took + " ms");
     }
 
     @Test

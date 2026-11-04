@@ -52,10 +52,8 @@ import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 /**
  * The main window: a tab per open spreadsheet, the menu bar, and the keyboard shortcuts.
@@ -90,7 +88,7 @@ public final class DatavyuView implements FileDropEventListener {
     /** Text of this view's menus and dialogs */
     private final Resources resources = Resources.of(DatavyuView.class);
 
-    /** Every command's action, which menus, shortcuts and the controls drawer share */
+    /** Every command's action, which its menu item and shortcut share */
     private final CommandTable commands = new CommandTable(this::countSelection);
 
     /** The selected tab's selection, counted once each time the commands are refreshed. */
@@ -1157,12 +1155,13 @@ public final class DatavyuView implements FileDropEventListener {
     }
 
     /**
-     * What the cell commands' state is worked out from, counted once per refresh, which runs before every key.
+     * What the cell commands' state is worked out from, counted in one pass over the cells per refresh, which runs
+     * before every key.
      *
      * @param visibleColumns whether the selected tab shows any column
      * @param cells          how many cells are selected
-     * @param besideLeft     how many selected cells have a column to their left, up to 2
-     * @param besideRight    how many have a column to their right, up to 2
+     * @param besideLeft     how many selected cells have a shown column to their left
+     * @param besideRight    how many have a shown column to their right
      */
     private record Selection(boolean visibleColumns, int cells, int besideLeft, int besideRight) {
         static final Selection NONE = new Selection(false, 0, 0, 0);
@@ -1170,11 +1169,22 @@ public final class DatavyuView implements FileDropEventListener {
 
     private void countSelection() {
         SpreadSheetPanel panel = getSpreadsheetPanel();
-        selection = panel == null ? Selection.NONE : new Selection(
-                !panel.getDataStore().getVisibleVariables().isEmpty(),
-                panel.getDataStore().getSelectedCells().size(),
-                panel.getAdjacentSelectedCells(ArrayDirection.LEFT),
-                panel.getAdjacentSelectedCells(ArrayDirection.RIGHT));
+        if (panel == null) {
+            selection = Selection.NONE;
+            return;
+        }
+        List<Variable> shown = panel.getDataStore().getVisibleVariables();
+        int cells = 0;
+        int left = 0;
+        int right = 0;
+        for (Variable column : panel.getDataStore().getAllVariables()) {
+            int place = shown.indexOf(column);
+            int selected = (int) column.getCells().stream().filter(Cell::isSelected).count();
+            cells += selected;
+            left += place > 0 ? selected : 0;
+            right += place >= 0 && place < shown.size() - 1 ? selected : 0;
+        }
+        selection = new Selection(!shown.isEmpty(), cells, left, right);
     }
 
     /** Returns a command's label for one cell or for several, such as Delete Cell or Delete Cells. */

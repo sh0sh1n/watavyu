@@ -22,7 +22,6 @@ import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.event.component.FileDropEvent;
 import org.datavyu.event.component.FileDropEventListener;
 import org.datavyu.models.db.*;
-import org.datavyu.util.ArrayDirection;
 import org.datavyu.util.Constants;
 import org.datavyu.views.VideoController;
 import org.datavyu.views.WindowPlacement;
@@ -47,14 +46,11 @@ import java.awt.event.*;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
-import java.util.IdentityHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 
@@ -640,37 +636,6 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
             }
         }
         return false;
-    }
-
-    /**
-     * @param dir The direction in which to search for adjacent cells (left or
-     *            right).
-     * @return An indication of the columns adjacent of the current cell
-     * selection,
-     * 0 = no columns to the left of the current cell selection.
-     * 1 = one column to the left of the current cell selection.
-     * 2 = many columns to the left of the current cell selection.
-     */
-    public int getAdjacentSelectedCells(final ArrayDirection dir) {
-        // The menus count to two, for the label's Cell or Cells, and this runs before every key, so it stays linear.
-        List<Variable> columns = dataStore.getVisibleVariables();
-        Set<Variable> beside = Collections.newSetFromMap(new IdentityHashMap<>());
-        for (int i = 0; i < columns.size(); i++) {
-            int neighbour = i + dir.getModifier();
-            if (neighbour >= 0 && neighbour < columns.size()) {
-                beside.add(columns.get(i));
-            }
-        }
-        int result = 0;
-        for (Cell cell : dataStore.getSelectedCells()) {
-            if (beside.contains(cell.getVariable())) {
-                result++;
-                if (result == 2) {
-                    break;
-                }
-            }
-        }
-        return result;
     }
 
     /** Returns how the cells are laid out: in time (temporal) or one after another (ordinal). */
