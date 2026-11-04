@@ -54,7 +54,7 @@ public class AddCellEdit extends SpreadSheetEdit {
     /** @return whether undoing or redoing the edit changes anything: not once the cell is taken out without one */
     @Override
     public boolean isSignificant() {
-        return canUndo() ? model.getVariable(addedCell) != null : !takenOut;
+        return canUndo() ? inSpreadsheet(addedCell) : !takenOut;
     }
 
     @Override
@@ -71,7 +71,7 @@ public class AddCellEdit extends SpreadSheetEdit {
     @Override
     public void undo() throws CannotUndoException {
         super.undo();
-        takenOut = model.getVariable(addedCell) == null;
+        takenOut = !inSpreadsheet(addedCell);
         controller.removeCells(List.of(addedCell));
     }
 }

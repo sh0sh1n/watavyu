@@ -76,8 +76,19 @@ abstract public class ChangeCellEdit extends SpreadSheetEdit {
     }
 
     /**
+     * @return whether undoing or redoing the edit changes anything: not once the cell is taken out without an edit, as
+     *     a clip whose file does not open is
+     */
+    @Override
+    public boolean isSignificant() {
+        return inSpreadsheet(cell);
+    }
+
+    /**
+     * Tells whether another edit changed the same cell; edits of different cells are never duplicates of each other.
+     *
      * @param other another edit of a cell
-     * @return whether it changed the same cell; edits of different cells are never duplicates of each other
+     * @return whether it changed the same cell
      */
     protected boolean sameCell(final ChangeCellEdit other) {
         return other.cell.equals(cell);

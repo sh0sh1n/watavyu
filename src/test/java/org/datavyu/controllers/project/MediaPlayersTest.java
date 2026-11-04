@@ -608,9 +608,9 @@ public class MediaPlayersTest {
         assertFalse(media.isSelected());
     }
 
-    /** A clip taken out by undo while it opened is, put back by redo, a clip like any other: a failed open keeps it. */
+    /** A clip whose file never opens goes, even when undo and redo came between: its edit then changes nothing. */
     @Test
-    public void aClipUndoneWhileOpeningIsKeptWhenItsReopeningFails() throws Exception {
+    public void aClipUndoneWhileOpeningGoesWhenItsReopeningFails() throws Exception {
         Variable media = dataStore.createMediaVariable("media_1");
         dataStore.deselectAll();
         media.setSelected(true);
@@ -620,9 +620,30 @@ public class MediaPlayersTest {
 
         spreadsheet.undo();
         spreadsheet.redo();
+        assertEquals(media.getCells(), List.of(clip));
         pending.forEach(opening -> opening.<Runnable>getArgument(4).run());
 
-        assertEquals(media.getCells(), List.of(clip));
+        assertTrue(media.getCells().isEmpty());
+        assertFalse(spreadsheet.getUndoManager().canUndo());
+    }
+
+    /** A time set on a clip whose file then fails to open changes nothing either, so undo passes over it too. */
+    @Test
+    public void anEditOfAClipThatFailsToOpenIsPassedOver() throws Exception {
+        Variable notes = spreadsheet.columns().newColumn("notes");
+        Variable media = dataStore.createMediaVariable("media_1");
+        dataStore.deselectAll();
+        media.setSelected(true);
+        pending = new ArrayList<>();
+        spreadsheet.media().addMedia(List.of(new File(file("b.mp4"))), 2_000, column -> false);
+        media.getCells().get(0).setSelected(true);
+        spreadsheet.cells().setOnsets(3_000);
+
+        pending.forEach(opening -> opening.<Runnable>getArgument(4).run());
+
+        assertEquals(spreadsheet.getUndoManager().getUndoPresentationName(), "Undo New Column \"notes\"");
+        spreadsheet.undo();
+        assertNull(dataStore.getVariable("notes"));
     }
 
     @Test

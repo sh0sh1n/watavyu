@@ -391,8 +391,6 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
 
     private void close(final Cell clip) {
         opening.remove(clip);
-        // Taken out before it opened, as by undo: put back, it is a clip like any other.
-        added.remove(clip);
         StreamViewer player = players.remove(clip);
         if (player != null) {
             Variable column = clip.getVariable();
@@ -483,7 +481,6 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
     }
 
     private void unfollow(final Variable column) {
-        addedColumns.remove(column);
         VariableListener listener = columnListeners.remove(column);
         if (listener != null) {
             column.removeListener(listener);

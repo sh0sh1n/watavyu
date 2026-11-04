@@ -44,7 +44,8 @@ public final class MediaCommands {
      */
     public void addMedia(final List<File> files, final long time, final Predicate<Variable> intoNewColumns)
             throws UserWarningException {
-        if (players() == null) {
+        // No players until the spreadsheet's view is made.
+        if (spreadsheet.getVideoController() == null || players() == null) {
             return;
         }
         Variable target = selectedMediaColumn();
