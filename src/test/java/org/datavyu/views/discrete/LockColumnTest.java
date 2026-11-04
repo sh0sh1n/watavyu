@@ -113,32 +113,25 @@ public class LockColumnTest {
     }
 
     /**
-     * A lock whose column is out of the spreadsheet is refused, and the edit stays as it was rather than half undone.
-     * Another column taking its name is not the same column.
+     * A lock whose column is out of the spreadsheet changes nothing when undone or redone: there is nothing to change,
+     * and another column taking its name is not the same column.
      */
     @Test
-    public void aLockWhoseColumnHasGoneIsRefusedAndStaysAsItWas() throws Exception {
+    public void aLockWhoseColumnHasGoneChangesNothing() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
         Variable media = dataStore.createMediaVariable("media_1");
         media.setLocked(true);
         UndoableEdit lock = new LockColumnEdit(dataStore, media, true);
         dataStore.removeVariable(media);
-
-        assertThrows(CannotUndoException.class, lock::undo);
-        assertTrue(lock.canUndo(), "still undoable once the column is back");
         Variable other = dataStore.createMediaVariable("media_1");
         other.setLocked(true);
-        assertThrows(CannotUndoException.class, lock::undo);
-        assertTrue(other.isLocked());
 
-        dataStore.removeVariable(other);
-        dataStore.addVariable(media, 0);
         lock.undo();
-        assertFalse(media.isLocked());
+        assertTrue(other.isLocked());
+        assertTrue(media.isLocked());
 
-        dataStore.removeVariable(media);
-        assertThrows(CannotRedoException.class, lock::redo);
-        assertTrue(lock.canRedo());
+        lock.redo();
+        assertTrue(lock.canUndo());
     }
 
     /** Renaming a column, which is not an edit, does not stop its lock being undone. */

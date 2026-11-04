@@ -31,20 +31,22 @@ public class SpreadsheetUndoManager extends UndoManager {
         if (ue == null) {
             return false;
         }
-        // Compared with the last edit done: Swing's manager drops any waiting to be redone as the new edit is added.
         UndoableEdit lastDone = editToBeUndone();
-        if (ue instanceof ChangeCellEdit change && lastDone != null && ue.getClass() == lastDone.getClass()) {
-            if (change.getGranularity() == Granularity.COARSEGRAINED) {
-                // The end of the history is the last edit done only while nothing waits to be redone.
-                if (!canRedo()) {
-                    dropFineEditsBefore(change);
-                }
-            } else if (lastDone.equals(change)) {
-                // A fine edit repeating the last one done is a duplicate.
-                return false;
-            }
+        if (ue instanceof ChangeCellEdit change && lastDone != null && ue.getClass() == lastDone.getClass()
+                && change.getGranularity() == Granularity.FINEGRAINED && lastDone.equals(change)) {
+            // A fine edit repeating the last one done is a duplicate.
+            return false;
         }
-        return super.addEdit(ue);
+        // Swing's manager drops what waits to be redone, then adds the edit at the end.
+        boolean added = super.addEdit(ue);
+        if (ue instanceof ChangeCellEdit change && change.getGranularity() == Granularity.COARSEGRAINED) {
+            // The same cell's fine edits before a coarse one give way to it. Taking the coarse edit out and adding it
+            // again leaves the manager's place at the end of the history.
+            edits.removeElementAt(edits.size() - 1);
+            dropFineEditsBefore(change);
+            added = super.addEdit(ue);
+        }
+        return added;
     }
 
     /** Drops the fine edits of the same cell, and of the same kind, that end the history: the coarse edit replaces them. */
@@ -52,7 +54,7 @@ public class SpreadsheetUndoManager extends UndoManager {
         while (!edits.isEmpty() && edits.lastElement() instanceof ChangeCellEdit last
                 && last.getClass() == coarse.getClass() && last.getGranularity() == Granularity.FINEGRAINED
                 && last.sameCell(coarse)) {
-            edits.removeElementAt(edits.size() - 1);
+            edits.remove(edits.size() - 1).die();
         }
     }
 

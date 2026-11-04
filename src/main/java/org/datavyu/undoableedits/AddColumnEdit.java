@@ -53,9 +53,10 @@ public final class AddColumnEdit extends AbstractUndoableEdit implements Guarded
         return column.isMedia() ? "New Media Column " + column.getName() : "New Column \"" + column.getName() + "\"";
     }
 
+    /** Never refused: a column already taken out without an edit is left out. */
     @Override
     public String undoRefusal() {
-        return dataStore.contains(column) ? null : "Column " + column.getName() + " is no longer in the spreadsheet.";
+        return null;
     }
 
     @Override
@@ -64,15 +65,14 @@ public final class AddColumnEdit extends AbstractUndoableEdit implements Guarded
             : "Another column is named " + column.getName() + ". Rename or delete it to redo this.";
     }
 
-    /** Takes the column out; refused, leaving the edit as it was, if the column is not in the spreadsheet. */
+    /** Takes the column out, unless it has already been taken out without an edit. */
     @Override
     public void undo() throws CannotUndoException {
-        if (undoRefusal() != null || !canUndo()) {
-            throw new CannotUndoException();
-        }
         super.undo();
-        dataStore.deselectAll();
-        dataStore.removeVariable(column);
+        if (dataStore.contains(column)) {
+            dataStore.deselectAll();
+            dataStore.removeVariable(column);
+        }
     }
 
     /**

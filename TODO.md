@@ -16,7 +16,7 @@ Updated 2026-11-03. Re-measure with the commands in [BUILDING.md › Analysis Re
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
 | Java source (main) | 242 files, 42.5k lines | 139 files, 25.0k lines |
-| Tests / line coverage | 113 / 9.9% | 578 / 60.4%; views about half, undo edits 71% |
+| Tests / line coverage | 113 / 9.9% | 580 / 60.5%; views about half, undo edits 71% |
 | Runtime dependencies / with known vulnerabilities | 28 / 8 | 13 / 0 |
 | Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 482 |
 | PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 337 / 61 (none on thread safety, now gated); 15 |
@@ -35,7 +35,7 @@ Updated 2026-11-03. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 **B11. Crash recovery is lost on an ordinary exit, and recovering needs a dialog.** ready, *verified*. `AutoSaveController` marks each autosave `deleteOnExit`, so the JVM deletes it on every orderly exit: quitting, Ctrl+C in the terminal running `make run`, or a plain `kill`. On 2026-10-30 an autosave written after the app's first minute was gone 2 seconds after SIGINT. Only exits that skip the JVM's shutdown hooks (SIGKILL, a JVM crash, a power cut) leave one behind, which is why the recovery dialog no longer appears. When one is left, `DatavyuView.checkForAutosavedFile` asks about every `~*.watavyu.json` in the temporary folder at launch: the dialog itself is a chore (owner), and it includes the autosave a running Watavyu is writing, which answering No deletes. Owner's direction: open unsaved autosaves without asking, and only those no running Watavyu owns (a lock file, or the owning process recorded in the autosave's name). An autosave should go only when its work was saved or knowingly discarded (through `UnsavedWork`'s prompt), not on any exit. With that, add a safeguard against saving over a newer file: if the project file changed on disk since it was opened or last saved (by another Watavyu, a recovered copy or another tool), say so before overwriting it. Settle with R9.
 
-**B14. Adding media cannot be undone.** ready, *from reading*. Spreadsheet > Add Media and dropping files post no undoable edit (`MediaPlayers.addMediaFiles`), while deleting the clip or column afterwards can be undone. Undo should take an added clip or column out again, closing its player. Until it can, undoing New Media Column takes out the column with any clips added to it since, and a deleted media column whose name new media has taken cannot be undone until that column goes.
+**B14. Adding media cannot be undone.** ready, *from reading*. Spreadsheet > Add Media and dropping files post no undoable edit (`MediaPlayers.addMediaFiles`), while deleting the clip or column afterwards can be undone. Undo should take an added clip or column out again, closing its player. Until it can, undoing New Media Column takes out the column with any clips added to it since, and a deleted media column whose name new media has taken cannot be undone until that column is renamed or deleted.
 
 ## Features
 

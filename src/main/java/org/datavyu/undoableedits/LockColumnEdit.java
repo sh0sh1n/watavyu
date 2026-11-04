@@ -11,7 +11,7 @@ import javax.swing.undo.CannotUndoException;
  * Locking or unlocking a column. Being in the undo history keeps it in order with the edits around
  * it: undoing past a lock first unlocks the column, so an earlier change to it can be undone too.
  */
-public final class LockColumnEdit extends AbstractUndoableEdit implements GuardedEdit {
+public final class LockColumnEdit extends AbstractUndoableEdit {
 
     private final DataStore dataStore;
     private final Variable column;
@@ -35,33 +35,21 @@ public final class LockColumnEdit extends AbstractUndoableEdit implements Guarde
         return (locked ? "Lock Column " : "Unlock Column ") + column.getName();
     }
 
-    @Override
-    public String undoRefusal() {
-        return dataStore.contains(column) ? null : "Column " + column.getName() + " is no longer in the spreadsheet.";
-    }
-
-    @Override
-    public String redoRefusal() {
-        return undoRefusal();
-    }
-
-    /** Undoes the lock change; refused, leaving the edit as it was, if the column is not in the spreadsheet. */
+    /** Undoes the lock change, unless the column has been taken out without an edit, leaving nothing to change. */
     @Override
     public void undo() throws CannotUndoException {
-        if (undoRefusal() != null || !canUndo()) {
-            throw new CannotUndoException();
-        }
         super.undo();
-        column.setLocked(!locked);
+        if (dataStore.contains(column)) {
+            column.setLocked(!locked);
+        }
     }
 
-    /** Redoes the lock change; refused, leaving the edit as it was, if the column is not in the spreadsheet. */
+    /** Redoes the lock change, unless the column has been taken out without an edit, leaving nothing to change. */
     @Override
     public void redo() throws CannotRedoException {
-        if (redoRefusal() != null || !canRedo()) {
-            throw new CannotRedoException();
-        }
         super.redo();
-        column.setLocked(locked);
+        if (dataStore.contains(column)) {
+            column.setLocked(locked);
+        }
     }
 }

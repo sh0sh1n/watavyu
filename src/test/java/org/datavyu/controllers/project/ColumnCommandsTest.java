@@ -177,14 +177,13 @@ public class ColumnCommandsTest {
         columns.delete(List.of(gaze, media));
         Variable taken = dataStore.createMediaVariable("media_1");
 
-        assertEquals(spreadsheet.getUndoManager().undoRefusal(),
-            "Another column is named media_1. Rename or delete it to undo this.");
-        assertThrows(CannotUndoException.class, spreadsheet::undo);
+        assertEquals(spreadsheet.undo(), "Another column is named media_1. Rename or delete it to undo this.");
+        assertThrows(CannotUndoException.class, spreadsheet.getUndoManager()::undo);
         assertEquals(order(), List.of("speech", "gesture", "media_1"));
         assertSame(dataStore.getVariable("media_1"), taken);
 
         dataStore.removeVariable(taken);
-        spreadsheet.undo();
+        assertNull(spreadsheet.undo());
         assertEquals(order(), List.of("gaze", "speech", "gesture", "media_1"));
         assertSame(dataStore.getVariable("media_1"), media);
     }
@@ -195,14 +194,31 @@ public class ColumnCommandsTest {
         spreadsheet.undo();
         Variable taken = dataStore.createMediaVariable("media_1");
 
-        assertEquals(spreadsheet.getUndoManager().redoRefusal(),
-            "Another column is named media_1. Rename or delete it to redo this.");
-        assertThrows(CannotRedoException.class, spreadsheet::redo);
+        assertEquals(spreadsheet.redo(), "Another column is named media_1. Rename or delete it to redo this.");
+        assertThrows(CannotRedoException.class, spreadsheet.getUndoManager()::redo);
         dataStore.removeVariable(taken);
-        assertNull(spreadsheet.getUndoManager().redoRefusal());
-        spreadsheet.redo();
+        assertNull(spreadsheet.redo());
 
         assertSame(dataStore.getVariable("media_1"), media);
+    }
+
+    /**
+     * A media column whose file fails to open is taken out without an edit and never comes back. Its edits change
+     * nothing then, rather than refusing, so the edits before them can still be undone.
+     */
+    @Test
+    public void editsOfAColumnTakenOutWithoutAnEditDoNotStopTheHistory() throws Exception {
+        columns.setLocked(gaze, true);
+        Variable media = columns.newMediaColumn();
+        columns.setLocked(media, true);
+        dataStore.removeVariable(media);
+
+        assertNull(spreadsheet.undo());
+        assertNull(spreadsheet.undo());
+        assertNull(spreadsheet.undo());
+
+        assertFalse(gaze.isLocked());
+        assertEquals(order(), List.of("gaze", "speech", "gesture"));
     }
 
     /** A media column that fails to open is taken out without an edit, so a deleted column's place can be past the end. */

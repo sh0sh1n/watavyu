@@ -163,16 +163,34 @@ public final class ProjectController {
         return undoManager;
     }
 
-    /** Undoes this spreadsheet's last edit, and shows its cells again. */
-    public void undo() {
-        undoManager.undo();
-        redrawCells();
+    /**
+     * Undoes this spreadsheet's last edit, and shows its cells again, unless the edit refuses (see {@code GuardedEdit}),
+     * which leaves the history as it was.
+     *
+     * @return why the edit refused, for the user, or null if it was undone
+     */
+    public String undo() {
+        String refusal = undoManager.undoRefusal();
+        if (refusal == null) {
+            undoManager.undo();
+            redrawCells();
+        }
+        return refusal;
     }
 
-    /** Redoes this spreadsheet's last undone edit, and shows its cells again. */
-    public void redo() {
-        undoManager.redo();
-        redrawCells();
+    /**
+     * Redoes this spreadsheet's last undone edit, and shows its cells again, unless the edit refuses, which leaves the
+     * history as it was.
+     *
+     * @return why the edit refused, for the user, or null if it was redone
+     */
+    public String redo() {
+        String refusal = undoManager.redoRefusal();
+        if (refusal == null) {
+            undoManager.redo();
+            redrawCells();
+        }
+        return refusal;
     }
 
     /** Shows every cell's value and selection again, as after undo and redo. */
