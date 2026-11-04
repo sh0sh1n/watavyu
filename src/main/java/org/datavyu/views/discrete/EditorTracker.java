@@ -186,18 +186,8 @@ public final class EditorTracker
         if (place < 0) {
             return;
         }
-        EditorComponent follower = NO_EDITOR;
-        int count = 0;
-        for (EditorComponent ed : editors) {
-            if (ed.isEditable()) {
-                follower = ed;
-                if (count == place) {
-                    break;
-                }
-                count++;
-            }
-        }
-        currentEditor = follower;
+        EditorComponent follower = getEditorAtArgIndex(place);
+        currentEditor = follower == NO_EDITOR ? lastEditor() : follower;
         calculatePrePostCounts();
         if (currentEditor.canSubSelect()) {
             currentEditor.setCaretPosition(caret);

@@ -236,7 +236,7 @@ public final class CellValuesView extends JTextArea implements FocusListener {
         // Typing after the cell takes the focus again is an edit of its own.
         typing = false;
         // New Cell from the menu goes to the column of the cell last in focus.
-        controller.setLastCreatedVariable(controller.getDataStore().getVariable(parentCell));
+        controller.setLastCreatedVariable(parentCell.getVariable());
         controller.setLastSelectedCell(parentCell);
         parentCell.setSelected(true);
     }
