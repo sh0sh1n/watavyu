@@ -278,8 +278,6 @@ public final class VocabEditorV extends DatavyuDialog {
             return;
         }
 
-        selectedVocabElement.rebuildContents();
-
         selectedVocabElement.requestFocus();
 
         selectedVocabElement.requestArgFocus(selectedVocabElement.getArgumentView(va));
@@ -297,8 +295,6 @@ public final class VocabEditorV extends DatavyuDialog {
         if (!controller.codes().move(var, selectedArgumentI, selectedArgumentI + 1)) {
             return;
         }
-
-        selectedVocabElement.rebuildContents();
 
         selectedVocabElement.requestFocus();
 
@@ -355,8 +351,6 @@ public final class VocabEditorV extends DatavyuDialog {
         }
         LOGGER.info("vocEd - add code");
 
-        selectedVocabElement.rebuildContents();
-
         // Select the contents of the newly created formal argument.
         selectedVocabElement.requestFocus();
         FormalArgEditor faV = selectedVocabElement.getArgumentView(fa);
@@ -380,7 +374,7 @@ public final class VocabEditorV extends DatavyuDialog {
                     JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
                 LOGGER.info("vocEd - delete element");
                 if (controller.columns().delete(List.of(selectedVocabElement.getVariable()))) {
-                    deleteElementVFromView(selectedVocabElement.getVariable().getName());
+                    deleteElementVFromView(selectedVocabElement);
                 }
             }
 
@@ -388,20 +382,20 @@ public final class VocabEditorV extends DatavyuDialog {
         } else if (selectedArgument != null) {
             LOGGER.info("vocEd - delete code");
             controller.codes().delete(selectedVocabElement.getVariable(), selectedArgument.getArgPos());
-            selectedVocabElement.rebuildContents();
         }
 
         updateDialogState();
     }
 
-    private void deleteElementVFromView(String name) {
-        for (VocabElementV i : veViews) {
-            if (name.equals(i.getCurrentNameDisplay())) {
-                veViews.remove(i);
-                verticalFrame.remove(i);
-
-                return;
-            }
+    private void deleteElementVFromView(final VocabElementV column) {
+        veViews.remove(column);
+        verticalFrame.remove(column);
+        verticalFrame.revalidate();
+        verticalFrame.repaint();
+        if (column.equals(selectedVocabElement)) {
+            selectedVocabElement = null;
+            selectedArgument = null;
+            selectedArgumentI = -1;
         }
     }
 

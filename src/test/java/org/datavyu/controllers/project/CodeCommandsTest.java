@@ -214,6 +214,16 @@ public class CodeCommandsTest {
         assertFalse(spreadsheet.getUndoManager().canUndo());
     }
 
+    /** The column itself refuses such names, whatever path renames a code. */
+    @Test
+    public void aColumnRefusesAnEmptyOrRepeatedCodeName() {
+        assertThrows(IllegalArgumentException.class, () -> gaze.renameArgument(0, ""));
+        assertThrows(IllegalArgumentException.class, () -> gaze.renameArgument(0, "code03"));
+        gaze.renameArgument(0, "code01");
+
+        assertEquals(names(), List.of("code01", "code02", "code03"));
+    }
+
     /** Typing a name back to what it was leaves nothing to undo, rather than a step that changes nothing. */
     @Test
     public void typingBackToTheOldNameLeavesNothingToUndo() throws Exception {

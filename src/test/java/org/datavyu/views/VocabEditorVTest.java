@@ -1,6 +1,7 @@
 package org.datavyu.views;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertSame;
 import static org.testng.Assert.assertTrue;
 
@@ -165,6 +166,34 @@ public class VocabEditorVTest {
             assertEquals(refused.get(), List.of("1st", "code02"));
             assertEquals(gaze.getName(), "gaze");
             assertEquals(gaze.getRootNode().childArguments.get(0).name, "code0");
+        } finally {
+            SwingUtilities.invokeAndWait(() -> editor.get().dispose());
+        }
+    }
+
+    /**
+     * A code selected in the editor is forgotten when a change from elsewhere, such as an undo, rebuilds its column, so
+     * Delete and the arrows do not act on a code that has moved or gone.
+     */
+    @Test
+    public void aSelectedCodeIsForgottenWhenAnUndoRebuildsItsColumn() throws Exception {
+        ProjectController spreadsheet = spreadsheet();
+        Variable gaze = spreadsheet.getDataStore().createVariable("gaze");
+        gaze.addArgument();
+        AtomicReference<VocabEditorV> editor = new AtomicReference<>();
+        AtomicReference<FormalArgEditor> before = new AtomicReference<>();
+        AtomicReference<FormalArgEditor> after = new AtomicReference<>();
+        SwingUtilities.invokeAndWait(() -> {
+            editor.set(new VocabEditorV(null, false, spreadsheet));
+            VocabElementV column = editor.get().getVocabElements().get(0);
+            type(column, column.getArgumentView(gaze.getRootNode().childArguments.get(1)), "side");
+            before.set(column.getArgWithFocus());
+            spreadsheet.undo();
+            after.set(column.getArgWithFocus());
+        });
+        try {
+            assertEquals(before.get().getArgPos(), 1);
+            assertNull(after.get());
         } finally {
             SwingUtilities.invokeAndWait(() -> editor.get().dispose());
         }

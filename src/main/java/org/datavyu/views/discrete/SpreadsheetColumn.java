@@ -538,7 +538,10 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
         redrawValues();
     }
 
-    /** Redraws the cells that show a renamed code's name, those without a value, as each key typed renames it. */
+    /**
+     * Redraws the cells that show a renamed code's name, as each key typed renames it: a cell draws a code's name only
+     * as the placeholder of an empty value.
+     */
     @Override
     public void codeRenamed(final int index) {
         for (SpreadsheetCell cell : getCells()) {

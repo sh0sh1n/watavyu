@@ -181,6 +181,7 @@ public interface Variable {
      *
      * @param index the code's place
      * @param name  its new name
+     * @throws IllegalArgumentException if the name is empty or another code's, which a project file refuses
      */
     void renameArgument(int index, String name);
 

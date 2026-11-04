@@ -88,8 +88,8 @@ public class VocabElementV extends JPanel {
      */
     private boolean invalidState;
 
-    /** The change typed into one of this view's editors that is being applied, if any. */
-    private Runnable typed;
+    /** How many changes typed into this view's editors are being applied. */
+    private int typing;
     /**
      * Is this vocab element view marked for removal?
      */
@@ -211,11 +211,11 @@ public class VocabElementV extends JPanel {
      * @param change the change, through a command
      */
     final void applyTyped(final Runnable change) {
-        typed = change;
+        typing++;
         try {
-            typed.run();
+            change.run();
         } finally {
-            typed = null;
+            typing--;
         }
         refreshRefused();
     }
@@ -225,7 +225,7 @@ public class VocabElementV extends JPanel {
      * a selected code, whose editor is gone.
      */
     private void showModel() {
-        if (typed != null || (varModel.getName().equals(getCurrentNameDisplay()) && shownCodes().equals(codeNames()))) {
+        if (typing > 0 || (varModel.getName().equals(getCurrentNameDisplay()) && shownCodes().equals(codeNames()))) {
             return;
         }
         rebuildContents();
@@ -348,9 +348,11 @@ public class VocabElementV extends JPanel {
      * argument view in this vocab element has focus.
      */
     public final FormalArgEditor getArgWithFocus() {
+        // An editor that a rebuild has replaced, which the tracker can still hold, is no selection.
         EditorComponent ed = veRootView.getEdTracker().getCurrentEditor();
-        if(ed.getClass() == FormalArgEditor.class)
-            return (FormalArgEditor) ed;
+        if (ed instanceof FormalArgEditor code && veRootView.getEditors().contains(code)) {
+            return code;
+        }
         return null;
     }
 
