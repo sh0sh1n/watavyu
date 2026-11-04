@@ -110,6 +110,9 @@ public interface Cell {
     Variable getVariable();
 
     /**
+     * Tells whether the cell is selected. A cell in a hidden column never is, so commands on the selection leave what
+     * cannot be seen alone, even after an undo puts back a cell that was selected.
+     *
      * @return True if the cell is selected, false otherwise
      */
     boolean isSelected();

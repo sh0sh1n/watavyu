@@ -117,7 +117,7 @@ public class CellCommandsTest {
         assertFalse(cells.hasColumnForNewCell());
     }
 
-    /** Hiding a column however it is hidden, as closing its media window does, deselects it. */
+    /** A hidden column is not selected, however it was hidden, as closing its media window hides it. */
     @Test
     public void aSelectedColumnHiddenSinceIsPassedOver() {
         gaze.setSelected(true);
@@ -516,6 +516,18 @@ public class CellCommandsTest {
         assertEquals(hidden.getOffset(), 1_000);
         assertEquals(shown.getOnset(), 5_000);
         assertEquals(shown.getOffset(), 6_000);
+    }
+
+    /** Redoing a new column puts it back selected; hidden since, it is not where the keypad's New Cell goes. */
+    @Test
+    public void aColumnPutBackHiddenAndSelectedIsPassedOver() throws Exception {
+        Variable notes = spreadsheet.columns().newColumn("notes");
+        spreadsheet.columns().hide(List.of(notes));
+        undo();
+        spreadsheet.redo();
+        spreadsheet.setLastCreatedVariable(speech);
+
+        assertSame(cells.newCellInSelectedColumn(1_000).getVariable(), speech);
     }
 
     @Test

@@ -99,6 +99,8 @@ public interface Variable {
     boolean contains(final Cell c);
 
     /**
+     * Tells whether the column is selected. A hidden column never is, whatever selected it.
+     *
      * @return True if the variable is currently selected or not.
      */
     boolean isSelected();

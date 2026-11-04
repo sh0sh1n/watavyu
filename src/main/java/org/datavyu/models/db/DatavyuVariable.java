@@ -234,7 +234,7 @@ public final class DatavyuVariable implements Variable {
 
     @Override
     public boolean isSelected() {
-        return selected;
+        return selected && !isHidden();
     }
 
     @Override

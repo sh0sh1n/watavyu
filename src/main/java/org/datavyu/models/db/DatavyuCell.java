@@ -195,7 +195,7 @@ public class DatavyuCell implements Cell {
 
     @Override
     public boolean isSelected() {
-        return selected;
+        return selected && !parent.isHidden();
     }
 
     @Override

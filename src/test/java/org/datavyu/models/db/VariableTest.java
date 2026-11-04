@@ -106,6 +106,20 @@ public class VariableTest {
         assertFalse(cell.isSelected());
     }
 
+    /** Whatever selects a hidden column or its cells, as undo and redo put back what was selected, none reads so. */
+    @Test
+    public void nothingInAHiddenColumnIsSelected() {
+        model.setHidden(true);
+        Cell cell = model.createPointCell(1_000);
+        cell.setSelected(true);
+        model.setSelected(true);
+
+        assertFalse(model.isSelected());
+        assertFalse(cell.isSelected());
+        assertTrue(ds.getSelectedCells().isEmpty());
+        assertTrue(ds.getSelectedVariables().isEmpty());
+    }
+
     @Test
     public void testIsSelected() {
         List<Variable> vars = new ArrayList<Variable>();
