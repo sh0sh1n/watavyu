@@ -1,14 +1,20 @@
 package org.datavyu.views.discrete.datavalues;
 
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotEquals;
+import static org.testng.Assert.assertNotSame;
+import static org.testng.Assert.assertSame;
 
 import org.datavyu.TestSpreadsheets;
 import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.Cell;
+import org.datavyu.models.db.CellListener;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.DataStoreFactory;
+import org.datavyu.views.discrete.EditorComponent;
 import org.datavyu.views.discrete.datavalues.TimeStampDataValueEditor.TimeStampSource;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -35,7 +41,14 @@ public class CellTypingTest {
         cell = dataStore.createVariable("notes").createPointCell(1_000);
         SwingUtilities.invokeAndWait(() -> {
             spreadsheet = TestSpreadsheets.withPlayback(dataStore);
-            view = new MatrixRootView(spreadsheet, cell, cell.getCellValue());
+            view = new MatrixRootView(spreadsheet, cell);
+            // As the cell's SpreadsheetCell does.
+            CellListener follower = mock(CellListener.class);
+            doAnswer(call -> {
+                view.showValues();
+                return null;
+            }).when(follower).contentChanged();
+            cell.addListener(follower);
             view.getEdTracker().setEditor(view.getEdTracker().firstEditor());
         });
     }
@@ -56,11 +69,26 @@ public class CellTypingTest {
     public void typingWhileTheCellKeepsTheFocusIsOneEdit() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
             type("smile");
-            assertEquals(cell.getMatrixValue(0).toString(), "smile");
+            assertEquals(cell.getValue(0), "smile");
 
             spreadsheet.undo();
-            assertEquals(cell.getMatrixValue(0).toString(), "");
+            assertEquals(cell.getValue(0), "");
             assertFalse(spreadsheet.getUndoManager().canUndo());
+        });
+    }
+
+    /** The cell tells the view of the typing, which the view shows already, so the editor typed in stays. */
+    @Test
+    public void typingKeepsTheEditorTypedInAndUndoRebuildsIt() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            EditorComponent typedIn = view.getEdTracker().firstEditor();
+            type("smile");
+            assertSame(view.getEdTracker().firstEditor(), typedIn);
+            assertEquals(view.getText(), "(smile)");
+
+            spreadsheet.undo();
+            assertNotSame(view.getEdTracker().firstEditor(), typedIn);
+            assertEquals(view.getText(), "(<code01>)");
         });
     }
 
@@ -70,10 +98,10 @@ public class CellTypingTest {
             type("smile");
             refocus();
             type("frown");
-            assertEquals(cell.getMatrixValue(0).toString(), "frown");
+            assertEquals(cell.getValue(0), "frown");
 
             spreadsheet.undo();
-            assertEquals(cell.getMatrixValue(0).toString(), "smile");
+            assertEquals(cell.getValue(0), "smile");
         });
     }
 
@@ -83,7 +111,7 @@ public class CellTypingTest {
         SwingUtilities.invokeAndWait(() -> {
             type("\u001b\t");
 
-            assertEquals(cell.getMatrixValue(0).toString(), "");
+            assertEquals(cell.getValue(0), "");
             assertFalse(spreadsheet.getUndoManager().canUndo());
         });
     }

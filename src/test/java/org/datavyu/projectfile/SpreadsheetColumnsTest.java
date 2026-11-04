@@ -30,18 +30,18 @@ public class SpreadsheetColumnsTest {
         Cell later = text.createCell();
         later.setOnset(5_000);
         later.setOffset(6_000);
-        later.setMatrixValue(0, "second");
+        later.setValue(0, "second");
         Cell earlier = text.createCell();
         earlier.setOnset(1_000);
         earlier.setOffset(1_000);
-        earlier.setMatrixValue(0, "first, (with) \"quotes\"");
+        earlier.setValue(0, "first, (with) \"quotes\"");
 
         Variable matrix = dataStore.createVariable("Mother");
         matrix.addArgument();
         Cell cell = matrix.createCell();
         cell.setOnset(2_000);
         cell.setOffset(3_000);
-        cell.setMatrixValue(1, "happy");
+        cell.setValue(1, "happy");
 
         Variable hidden = dataStore.createVariable("Hidden");
         hidden.setHidden(true);
@@ -112,7 +112,7 @@ public class SpreadsheetColumnsTest {
 
         Variable notes = dataStore.getVariable("notes");
         assertTrue(notes.isLocked());
-        assertEquals(notes.getCells().get(0).getMatrixValue(0).toString(), "calm");
+        assertEquals(notes.getCells().get(0).getValue(0), "calm");
         assertEquals(notes.getCells().get(0).getOffset(), 2_000L);
         assertEquals(SpreadsheetColumns.columns(dataStore, FOLDER), columns);
     }

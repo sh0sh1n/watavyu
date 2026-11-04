@@ -34,8 +34,8 @@ public final class DeleteCodeEdit extends AbstractUndoableEdit {
         this.index = index;
         this.code = column.getRootNode().childArguments.get(index);
         this.values = column.getCells().stream()
-            .filter(cell -> !cell.getMatrixValue(index).isEmpty())
-            .map(cell -> Map.entry(cell, cell.getMatrixValue(index).toString()))
+            .filter(cell -> !cell.getValue(index).isEmpty())
+            .map(cell -> Map.entry(cell, cell.getValue(index)))
             .toList();
     }
 
@@ -49,7 +49,7 @@ public final class DeleteCodeEdit extends AbstractUndoableEdit {
         super.undo();
         column.insertArgument(code, index);
         for (Map.Entry<Cell, String> value : values) {
-            value.getKey().setMatrixValue(index, value.getValue());
+            value.getKey().setValue(index, value.getValue());
         }
     }
 

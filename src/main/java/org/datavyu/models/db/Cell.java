@@ -22,6 +22,8 @@
  */
 package org.datavyu.models.db;
 
+import java.util.List;
+
 /**
  * Represents a cell in the OpenSHAPA spreadsheet.
  */
@@ -92,16 +94,26 @@ public interface Cell {
     String getOnsetString();
 
     /**
-     * @return The value stored in the cell as a string. Returns null if the
-     * string value cannot be resolved.
+     * @return the cell's values, one for each of its column's codes in their order, {@code ""} for an empty one; a
+     *         clip has none
      */
-    String getValueAsString();
+    List<String> getValues();
 
     /**
-     *
-     * @return The value of the cell.
+     * @param code a code's place among the column's codes
+     * @return the cell's value for the code, {@code ""} if empty
+     * @throws IndexOutOfBoundsException if the column has no such code
      */
-    CellValue getCellValue();
+    String getValue(int code);
+
+    /**
+     * Sets the cell's value for one code, and tells the cell's listeners if it changed. A locked column refuses it.
+     *
+     * @param code  a code's place among the column's codes
+     * @param value the value, {@code ""} to empty it
+     * @throws IndexOutOfBoundsException if the column has no such code
+     */
+    void setValue(int code, String value);
 
     /**
      *
@@ -133,43 +145,6 @@ public interface Cell {
      * @param highlighted True if this cell is highlighted, false otherwise.
      */
     void setHighlighted(final boolean highlighted);
-
-    /**
-     * Adds a new argument to a matrix variable.
-     *
-     * @param index index - the index of the argument in childArguments to change
-     * @param value - The value to set the argument to
-     */
-    void setMatrixValue(final int index, final String value);
-
-    /**
-     *
-     * @param index
-     * @return
-     */
-    CellValue getMatrixValue(final int index);
-
-    /**
-     * Adds a new argument to a matrix variable.
-     *
-     * @param type - the type of argument to add to the matrix
-     */
-    void addMatrixValue(final Argument type);
-
-    /**
-     * Moves an argument from one index to another in a matrix.
-     *
-     * @param oldIndex - the index in childArguments of argument to move
-     * @param oldIndex - the index in childArguments of where to move to
-     */
-    void moveMatrixValue(final int oldIndex, final int newIndex);
-
-    /**
-     * Removes an argument from a matrix variable.
-     *
-     * @param index - the index in childArguments of argument to remove from the matrix
-     */
-    void removeMatrixValue(final int index);
 
     /**
      * Adds a cellListener that needs to be notified when the cell changes.

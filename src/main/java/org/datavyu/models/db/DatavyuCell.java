@@ -26,12 +26,11 @@ public class DatavyuCell implements Cell {
     final private UUID id = UUID.randomUUID();
     private long onset = 0L;
     private long offset = 0L;
-    private Argument type;
     private boolean selected;
     private boolean highlighted;
     private Variable parent;
-    private Map<String, CellValue> arguments = new HashMap<String, CellValue>();
-    private CellValue cellValue;
+    /** One value for each of the column's codes, in their order; {@code ""} is empty. */
+    private final List<String> values = new ArrayList<>();
     /** What a media column's cell plays; null in an annotation column. */
     private MediaClip clip;
 
@@ -43,7 +42,6 @@ public class DatavyuCell implements Cell {
 
     public DatavyuCell(Variable parent, Argument type) {
         this.parent = parent;
-        this.type = type;
 
         this.onset = 0L;
         this.offset = 0L;
@@ -52,7 +50,9 @@ public class DatavyuCell implements Cell {
         this.highlighted = selected;
 
         // One value for each of the column's codes
-        this.cellValue = new DatavyuMatrixCellValue(getID(), type, this);
+        for (int i = 0; i < type.childArguments.size(); i++) {
+            values.add("");
+        }
     }
 
     /** A media column's cell, which plays a clip from its onset for the clip's duration. */
@@ -145,7 +145,7 @@ public class DatavyuCell implements Cell {
         }
         clip = newClip;
         for (CellListener cl : listeners) {
-            cl.valueChange(cellValue);
+            cl.contentChanged();
         }
         clipOffsetChanged();
     }
@@ -163,7 +163,7 @@ public class DatavyuCell implements Cell {
         if (failed != clipFailed) {
             clipFailed = failed;
             for (CellListener cl : listeners) {
-                cl.valueChange(cellValue);
+                cl.contentChanged();
             }
         }
     }
@@ -185,13 +185,27 @@ public class DatavyuCell implements Cell {
     }
 
     @Override
-    public String getValueAsString() {
-        return getCellValue().toString();
+    public List<String> getValues() {
+        return List.copyOf(values);
     }
 
     @Override
-    public CellValue getCellValue() {
-        return this.cellValue;
+    public String getValue(final int code) {
+        return values.get(code);
+    }
+
+    @Override
+    public void setValue(final int code, final String value) {
+        // Read first, so a code the column does not have is refused even when it is locked.
+        String before = values.get(code);
+        if (parent.refusesEdits() || before.equals(value)) {
+            return;
+        }
+        values.set(code, value);
+        parent.getOwningDatastore().markAsChanged();
+        for (CellListener cl : listeners) {
+            cl.contentChanged();
+        }
     }
 
     @Override
@@ -240,48 +254,19 @@ public class DatavyuCell implements Cell {
         }
     }
 
-    @Override
-    public void addMatrixValue(Argument type) {
-        DatavyuMatrixCellValue val = (DatavyuMatrixCellValue) getCellValue();
-        val.createArgument(type);
+    /** Gives the cell an empty value for a code its column has inserted at a place. */
+    void insertValue(final int code) {
+        values.add(code, "");
     }
 
-    @Override
-    public void moveMatrixValue(final int oldIndex, int newIndex) {
-        DatavyuMatrixCellValue val = (DatavyuMatrixCellValue) getCellValue();
-        List<CellValue> cellValues = val.getArguments();
-        CellValue v = cellValues.get(oldIndex);
-
-        cellValues.remove(oldIndex);
-        cellValues.add(newIndex, v);
-
-        for (int i = 0; i < cellValues.size(); i++) {
-            ((DatavyuCellValue) cellValues.get(i)).setIndex(i);
-        }
+    /** Moves the cell's value for a code its column has moved. */
+    void moveValue(final int from, final int to) {
+        values.add(to, values.remove(from));
     }
 
-    @Override
-    public void removeMatrixValue(final int index) {
-        ((DatavyuMatrixCellValue) getCellValue()).removeArgument(index);
-    }
-
-    @Override
-    public void setMatrixValue(final int index, final String value) {
-        DatavyuMatrixCellValue val = (DatavyuMatrixCellValue) getCellValue();
-        List<CellValue> cellValues = val.getArguments();
-        CellValue code = cellValues.get(index);
-        String before = code.toString();
-        code.set(value);
-        if (!code.toString().equals(before)) {
-            for (CellListener cl : listeners) {
-                cl.valueChange(val);
-            }
-        }
-    }
-
-    @Override
-    public CellValue getMatrixValue(final int index) {
-        return ((DatavyuMatrixCellValue) getCellValue()).getArguments().get(index);
+    /** Drops the cell's value for a code its column has deleted. */
+    void removeValue(final int code) {
+        values.remove(code);
     }
 
     @Override
@@ -320,7 +305,7 @@ public class DatavyuCell implements Cell {
     @Override
     /* Print string representation of this cell. */
     public String toString(){
-        return "[" +onset+ "," + offset + "," + getValueAsString()+ "]";
+        return "[" + onset + "," + offset + ",(" + String.join(",", values) + ")]";
     }
 }
 

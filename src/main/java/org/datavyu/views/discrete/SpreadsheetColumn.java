@@ -452,26 +452,12 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
             SpreadsheetCell c = tempCells.get(i);
             if(c.getCell().isInTimeWindow(time)) {
                 if(!c.isFocusOwner()) {
-                    if(c.getCell().getCellValue() instanceof MatrixCellValue) {
-                        int firstEmpty = -1;
-                        List<CellValue> args = ((MatrixCellValue) c.getCell().getCellValue()).getArguments();
-                        for(int j = 0; j < args.size(); j++) {
-                            if(args.get(j).isEmpty()) {
-                                firstEmpty = j;
-                                break;
-                            }
-                        }
-                        if(firstEmpty > -1) {
-                            c.requestFocus();
-                            c.getDataView().getEdTracker().setEditor(c.getDataView().getEdTracker().getEditorAtArgIndex(firstEmpty));
-                        } else {
-                            c.requestFocus();
-                            c.getDataView().getEdTracker().setEditor(c.getDataView().getEdTracker().getEditorAtIndex(previouslyFocusedCellIdx > -1 ? previouslyFocusedCellIdx : 0));
-                        }
+                    int firstEmpty = c.getCell().getValues().indexOf("");
+                    c.requestFocus();
+                    if(firstEmpty > -1) {
+                        c.getDataView().getEdTracker().setEditor(c.getDataView().getEdTracker().getEditorAtArgIndex(firstEmpty));
                     } else {
-                        if(c.getCell().getCellValue().isEmpty()) {
-                            c.requestFocus();
-                        }
+                        c.getDataView().getEdTracker().setEditor(c.getDataView().getEdTracker().getEditorAtIndex(previouslyFocusedCellIdx > -1 ? previouslyFocusedCellIdx : 0));
                     }
                 }
                 if(c.getCell().getOnset() > time) {
@@ -545,15 +531,15 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
     @Override
     public void codeRenamed(final int index) {
         for (SpreadsheetCell cell : getCells()) {
-            if (cell.getCell().getMatrixValue(index).isEmpty()) {
-                cell.valueChange(cell.getCell().getCellValue());
+            if (cell.getCell().getValue(index).isEmpty()) {
+                cell.redrawValues();
             }
         }
     }
 
     private void redrawValues() {
         for (SpreadsheetCell cell : getCells()) {
-            cell.valueChange(cell.getCell().getCellValue());
+            cell.redrawValues();
             cell.updateSelectionDisplay();
         }
     }

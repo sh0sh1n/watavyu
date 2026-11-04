@@ -36,7 +36,7 @@ public class LockedColumnViewTest {
         DataStore dataStore = DataStoreFactory.newDataStore();
         notes = dataStore.createVariable("notes");
         cell = notes.createPointCell(1_000);
-        cell.setMatrixValue(0, "smile");
+        cell.setValue(0, "smile");
         SwingUtilities.invokeAndWait(() -> {
             spreadsheet = TestSpreadsheets.withPlayback(dataStore);
             try {
@@ -82,7 +82,7 @@ public class LockedColumnViewTest {
     @Test
     public void typingInALockedCellChangesNothingAndShakesThePadlock() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
-            MatrixRootView view = new MatrixRootView(spreadsheet, cell, cell.getCellValue());
+            MatrixRootView view = new MatrixRootView(spreadsheet, cell);
             view.getEdTracker().setEditor(view.getEdTracker().firstEditor());
             notes.setLocked(true);
 
@@ -93,7 +93,7 @@ public class LockedColumnViewTest {
 
             assertTrue(typed.isConsumed());
             assertTrue(backspace.isConsumed());
-            assertEquals(cell.getMatrixValue(0).toString(), "smile");
+            assertEquals(cell.getValue(0), "smile");
             assertTrue(header.getLockMark().isShaking());
         });
     }

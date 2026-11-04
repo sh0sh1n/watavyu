@@ -14,13 +14,11 @@
  */
 package org.datavyu.views.discrete.datavalues;
 
-import org.datavyu.models.db.NominalCellValue;
-
 import javax.swing.text.JTextComponent;
-import java.awt.event.FocusEvent;
 import java.awt.event.KeyEvent;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * This class is the character editor of a NominalDataValue.
@@ -35,11 +33,6 @@ public final class NominalDataValueEditor extends DataValueEditor {
      */
     private static final String RESERVED_CHARS = "\t\u001B";
 
-    /**
-     * The model that this editor is manipulating
-     */
-    NominalCellValue model;
-
     /** Tells whether quick-key mode is on, in which typing does not change the value */
     private final BooleanSupplier quickKeyMode;
 
@@ -47,18 +40,19 @@ public final class NominalDataValueEditor extends DataValueEditor {
      * Constructor.
      *
      * @param ta           The parent JTextComponent the editor resides within.
-     * @param nv           The value this editor manipulates.
+     * @param value        the cell's value for the code, as it is now
+     * @param placeholder  what an empty value shows
      * @param quickKeyMode tells whether quick-key mode is on, in which typing does not change the value
      * @param typing       where what is typed goes, to change the value
      */
     public NominalDataValueEditor(final JTextComponent ta,
-                                  final NominalCellValue nv,
+                                  final Supplier<String> value,
+                                  final String placeholder,
                                   final BooleanSupplier quickKeyMode,
                                   final Consumer<String> typing) {
-        super(ta, nv, typing);
+        super(ta, value, placeholder, typing);
         this.quickKeyMode = quickKeyMode;
         setAcceptReturnKey(true);
-        model = nv;
     }
 
     /**
@@ -67,21 +61,6 @@ public final class NominalDataValueEditor extends DataValueEditor {
      */
     public boolean isReserved(final char aChar) {
         return (RESERVED_CHARS.indexOf(aChar) >= 0);
-    }
-
-    // *************************************************************************
-    // Parent Class Overrides
-    // *************************************************************************
-    @Override
-    public void focusLost(final FocusEvent fe) {
-        // Trim trailing spaces from nominal (apparently they are
-        // not permitted).
-        super.focusLost(fe);
-        if (!model.isValid(this.getText())) {
-            this.setText(model.toString());
-        }
-
-        super.focusLost(fe);
     }
 
     @Override
@@ -94,7 +73,7 @@ public final class NominalDataValueEditor extends DataValueEditor {
                 && !isReserved(e.getKeyChar())) {
             
             // Avoids a nasty bug that occurs if carraige return goes to editor. 'New cell' numpad enter still processed as always
-            if (model.isEmpty() && e.getKeyChar() == '\n') {
+            if (isEmpty() && e.getKeyChar() == '\n') {
                 return;
             }
             

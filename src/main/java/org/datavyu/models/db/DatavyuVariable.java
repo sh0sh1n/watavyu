@@ -79,7 +79,7 @@ public final class DatavyuVariable implements Variable {
         if (refusesEdits()) {
             return;
         }
-        if (cell.getCellValue().getArgument() == this.getRootNode()) {
+        if (cell.getVariable() == this) {
             if (isHidden()) {
                 // As an undo puts back a cell that was selected.
                 cell.setSelected(false);
@@ -321,7 +321,7 @@ public final class DatavyuVariable implements Variable {
         requireUnlocked();
         Argument child = getRootNode().addChildArgument();
         for (Cell cell : getCells()) {
-            cell.addMatrixValue(child);
+            ((DatavyuCell) cell).insertValue(getRootNode().childArguments.size() - 1);
         }
         codesChanged();
         return child;
@@ -336,8 +336,7 @@ public final class DatavyuVariable implements Variable {
         }
         codes.add(index, code);
         for (Cell cell : getCells()) {
-            cell.addMatrixValue(code);
-            cell.moveMatrixValue(codes.size() - 1, index);
+            ((DatavyuCell) cell).insertValue(index);
         }
         codesChanged();
     }
@@ -350,7 +349,7 @@ public final class DatavyuVariable implements Variable {
         }
         codes.add(newIndex, codes.remove(oldIndex));
         for (Cell cell : getCells()) {
-            cell.moveMatrixValue(oldIndex, newIndex);
+            ((DatavyuCell) cell).moveValue(oldIndex, newIndex);
         }
         codesChanged();
     }
@@ -362,7 +361,7 @@ public final class DatavyuVariable implements Variable {
         }
         getRootNode().childArguments.remove(index);
         for (Cell cell : getCells()) {
-            cell.removeMatrixValue(index);
+            ((DatavyuCell) cell).removeValue(index);
         }
         codesChanged();
     }

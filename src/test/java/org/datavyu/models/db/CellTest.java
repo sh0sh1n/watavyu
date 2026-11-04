@@ -92,7 +92,7 @@ public class CellTest {
         verify(modelListener, times(0)).highlightingChange(true);
         verify(modelListener, times(0)).offsetChanged(0);
         verify(modelListener, times(0)).onsetChanged(0);
-        verify(modelListener, times(0)).valueChange(null);
+        verify(modelListener, times(0)).contentChanged();
     }
 
     @Test
@@ -105,7 +105,7 @@ public class CellTest {
         verify(modelListener, times(0)).selectionChange(true);
         verify(modelListener, times(0)).offsetChanged(0);
         verify(modelListener, times(0)).onsetChanged(0);
-        verify(modelListener, times(0)).valueChange(null);
+        verify(modelListener, times(0)).contentChanged();
     }
 
     @Test
@@ -120,7 +120,7 @@ public class CellTest {
         verify(modelListener, times(0)).onsetChanged(10);
         verify(modelListener, times(0)).highlightingChange(true);
         verify(modelListener, times(0)).selectionChange(true);
-        verify(modelListener, times(0)).valueChange(null);
+        verify(modelListener, times(0)).contentChanged();
 
         model.setOffset("00:12:01:050");
 //        assertEquals(model.getOffset(), 721050);
@@ -143,7 +143,7 @@ public class CellTest {
         verify(modelListener, times(0)).offsetChanged(20);
         verify(modelListener, times(0)).highlightingChange(true);
         verify(modelListener, times(0)).selectionChange(true);
-        verify(modelListener, times(0)).valueChange(null);
+        verify(modelListener, times(0)).contentChanged();
 
         model.setOnset("00:13:04:890");
 //        assertEquals(model.getOnset(), 784890);
@@ -157,19 +157,19 @@ public class CellTest {
     /** A code set in the model reaches the cell's views, as a quick key's does. */
     @Test
     public void settingACodeTellsTheCellsListeners() {
-        model.setMatrixValue(0, "smile");
+        model.setValue(0, "smile");
 
-        verify(modelListener).valueChange(model.getCellValue());
+        verify(modelListener).contentChanged();
     }
 
     @Test
     public void aCodeLeftAsItWasTellsNothing() {
-        model.setMatrixValue(0, "smile");
-        model.setMatrixValue(0, "smile");
+        model.setValue(0, "smile");
+        model.setValue(0, "smile");
         var.setLocked(true);
-        model.setMatrixValue(0, "frown");
+        model.setValue(0, "frown");
 
-        verify(modelListener, times(1)).valueChange(any());
+        verify(modelListener, times(1)).contentChanged();
     }
 
     /** A clip marked as one whose file could not be opened tells its views, once, so its text says so. */
@@ -183,7 +183,7 @@ public class CellTest {
         clip.setClipFailed(true);
 
         assertTrue(clip.isClipFailed());
-        verify(listener, times(1)).valueChange(any());
+        verify(listener, times(1)).contentChanged();
         assertThrows(IllegalStateException.class, () -> model.setClipFailed(true));
     }
 }

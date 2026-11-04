@@ -130,7 +130,7 @@ public class VocabEditorVTest {
         ProjectController spreadsheet = spreadsheet();
         Variable gaze = spreadsheet.getDataStore().createVariable("gaze");
         Cell cell = gaze.createPointCell(0);
-        cell.setMatrixValue(0, "left");
+        cell.setValue(0, "left");
         AtomicReference<VocabEditorV> editor = new AtomicReference<>();
         SwingUtilities.invokeAndWait(() -> {
             editor.set(new VocabEditorV(null, false, spreadsheet));
@@ -143,7 +143,7 @@ public class VocabEditorVTest {
             assertEquals(shownCodes(column), List.of());
             SwingUtilities.invokeAndWait(spreadsheet::undo);
             assertEquals(shownCodes(column), List.of("side"));
-            assertEquals(cell.getMatrixValue(0).toString(), "left");
+            assertEquals(cell.getValue(0), "left");
             SwingUtilities.invokeAndWait(spreadsheet::undo);
             assertEquals(shownCodes(column), List.of("code01"));
             assertTrue(!spreadsheet.getUndoManager().canUndo(), "the keys typed undo together");

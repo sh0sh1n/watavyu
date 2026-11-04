@@ -252,7 +252,7 @@ public final class OpenDataStoreFileController {
                                                                         while (!JsonToken.END_ARRAY.equals(token)) {
                                                                             if (token == null) { break; }
 
-                                                                            newCell.setMatrixValue(k, parser
+                                                                            newCell.setValue(k, parser
                                                                                     .getValueAsString());
                                                                             k++;
                                                                             token = parser.nextToken();

@@ -8,7 +8,6 @@ import static org.testng.Assert.assertTrue;
 
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.CellListener;
-import org.datavyu.models.db.CellValue;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.DataStoreFactory;
 import org.datavyu.models.db.MediaClip;
@@ -52,7 +51,7 @@ public class TypingCommandsTest {
     private List<String> values(final Cell cell) {
         List<String> values = new ArrayList<>();
         for (int i = 0; i < cell.getVariable().getRootNode().childArguments.size(); i++) {
-            values.add(cell.getMatrixValue(i).toString());
+            values.add(cell.getValue(i));
         }
         return values;
     }
@@ -68,10 +67,10 @@ public class TypingCommandsTest {
         assertEquals(spreadsheet.getUndoManager().getUndoPresentationName(), "Undo Change Value in gaze");
 
         undo();
-        assertEquals(cell.getMatrixValue(0).toString(), "");
+        assertEquals(cell.getValue(0), "");
         assertFalse(spreadsheet.getUndoManager().canUndo());
         spreadsheet.redo();
-        assertEquals(cell.getMatrixValue(0).toString(), "smile");
+        assertEquals(cell.getValue(0), "smile");
     }
 
     @Test
@@ -82,7 +81,7 @@ public class TypingCommandsTest {
         typing.typeValue(cell, 0, "frown", false);
 
         undo();
-        assertEquals(cell.getMatrixValue(0).toString(), "smile");
+        assertEquals(cell.getValue(0), "smile");
     }
 
     /** Another edit between keys ends the typing, so undo takes back the keys after it first. */
@@ -96,7 +95,7 @@ public class TypingCommandsTest {
         typing.typeValue(cell, 0, "smile", true);
 
         undo();
-        assertEquals(cell.getMatrixValue(0).toString(), "sm");
+        assertEquals(cell.getValue(0), "sm");
         assertEquals(cell.getOnset(), 2_000);
     }
 
@@ -112,21 +111,21 @@ public class TypingCommandsTest {
         typing.typeValue(cell, 0, "smile", true);
 
         undo();
-        assertEquals(cell.getMatrixValue(0).toString(), "sm");
+        assertEquals(cell.getValue(0), "sm");
     }
 
     @Test
     public void typingIntoAnotherCellIsAnEditOfItsOwn() {
         Cell cell = gaze.createPointCell(1_000);
         Cell other = gaze.createPointCell(2_000);
-        other.setMatrixValue(0, "smile");
+        other.setValue(0, "smile");
         typing.typeValue(cell, 0, "smile", false);
 
         typing.typeValue(other, 0, "frown", true);
 
         undo();
-        assertEquals(other.getMatrixValue(0).toString(), "smile");
-        assertEquals(cell.getMatrixValue(0).toString(), "smile");
+        assertEquals(other.getValue(0), "smile");
+        assertEquals(cell.getValue(0), "smile");
     }
 
     /** Typing joins only typing that ended where it starts, not a value changed in between by something else. */
@@ -134,14 +133,14 @@ public class TypingCommandsTest {
     public void typingJoinsOnlyFromWhereItLeftOff() {
         Cell cell = gaze.createPointCell(1_000);
         typing.typeValue(cell, 0, "sm", false);
-        cell.setMatrixValue(0, "grin");
+        cell.setValue(0, "grin");
 
         typing.typeValue(cell, 0, "grins", true);
 
         undo();
-        assertEquals(cell.getMatrixValue(0).toString(), "grin");
+        assertEquals(cell.getValue(0), "grin");
         undo();
-        assertEquals(cell.getMatrixValue(0).toString(), "");
+        assertEquals(cell.getValue(0), "");
     }
 
     /** Typing into each code of a cell is one edit, which puts back every code's value, commas and all. */
@@ -149,7 +148,7 @@ public class TypingCommandsTest {
     public void undoPutsBackEveryCodeTypedIntoWithItsCommas() {
         gaze.addArgument();
         Cell cell = gaze.createPointCell(1_000);
-        cell.setMatrixValue(0, "a, b");
+        cell.setValue(0, "a, b");
 
         typing.typeValue(cell, 0, "c", false);
         typing.typeValue(cell, 1, "d, e", true);
@@ -161,9 +160,9 @@ public class TypingCommandsTest {
         assertEquals(values(cell), List.of("c", "d, e"));
     }
 
-    /** Undo and redo set the values through the cell, so its view hears of them. */
+    /** Typing, undo and redo all set the values through the cell, so its views hear of each. */
     @Test
-    public void undoTellsTheCellsViewButTypingDoesNot() {
+    public void typingAndItsUndoAreHeard() {
         Cell cell = gaze.createPointCell(1_000);
         List<String> heard = new ArrayList<>();
         cell.addListener(new CellListener() {
@@ -180,16 +179,15 @@ public class TypingCommandsTest {
             public void selectionChange(final boolean isSelected) { }
 
             @Override
-            public void valueChange(final CellValue newCellValue) {
-                heard.add(newCellValue.toString());
+            public void contentChanged() {
+                heard.add(cell.getValue(0));
             }
         });
 
         typing.typeValue(cell, 0, "smile", false);
-        assertTrue(heard.isEmpty(), "the view shows the typing already");
-
         undo();
-        assertEquals(heard.size(), 1);
+
+        assertEquals(heard, List.of("smile", ""));
     }
 
     @Test
@@ -205,7 +203,7 @@ public class TypingCommandsTest {
             assertFalse(typing.typeOffset(cell, 2_000));
             assertEquals(cell.getOnset(), 1_000);
             assertEquals(cell.getOffset(), 1_000);
-            assertEquals(cell.getMatrixValue(0).toString(), "");
+            assertEquals(cell.getValue(0), "");
         }
         assertFalse(spreadsheet.getUndoManager().canUndo());
     }
@@ -232,7 +230,7 @@ public class TypingCommandsTest {
     @Test
     public void typingThatChangesNothingOrIsRefusedIsNoEdit() throws Exception {
         Cell cell = gaze.createPointCell(1_000);
-        cell.setMatrixValue(0, "smile");
+        cell.setValue(0, "smile");
         Cell clip = dataStore.createMediaVariable("media_1").createClip(0, CAM);
         VariableListener lock = mock(VariableListener.class);
         speech.addListener(lock);
@@ -245,7 +243,7 @@ public class TypingCommandsTest {
         assertFalse(typing.typeValue(clip, 0, "x", false));
         assertFalse(typing.typeValue(locked, 0, "x", false));
         verify(lock).editRefused();
-        assertEquals(locked.getMatrixValue(0).toString(), "");
+        assertEquals(locked.getValue(0), "");
         assertFalse(spreadsheet.getUndoManager().canUndo());
     }
 

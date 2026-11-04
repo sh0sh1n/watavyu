@@ -1,8 +1,6 @@
 package org.datavyu.controllers.project;
 
 import org.datavyu.models.db.Cell;
-import org.datavyu.models.db.CellValue;
-import org.datavyu.models.db.MatrixCellValue;
 import org.datavyu.undoableedits.TypeValueEdit;
 
 import java.util.List;
@@ -51,8 +49,8 @@ public final class TypingCommands {
      * change. Typing that continues the last, as each key typed into a cell while it keeps the focus after the first
      * does, joins its edit, so undo puts back the values from before the typing began, in every code typed into.
      *
-     * <p>The cell's view is not told, as it shows the typing already and telling it would rebuild the editor being
-     * typed in; undo and redo tell it.
+     * <p>The cell tells its listeners, as it does for undo and redo; the view typed in shows the typing already, so it
+     * leaves its editors as they are.
      *
      * @param cell       the cell
      * @param code       the code's place among the column's codes
@@ -64,21 +62,16 @@ public final class TypingCommands {
         if (!spreadsheet.getDataStore().contains(cell) || cell.getClip() != null || cell.getVariable().refusesEdits()) {
             return false;
         }
-        List<CellValue> codes = ((MatrixCellValue) cell.getCellValue()).getArguments();
-        if (code < 0 || code >= codes.size()) {
+        List<String> before = cell.getValues();
+        if (code < 0 || code >= before.size()) {
             return false;
         }
-        List<String> before = values(codes);
-        codes.get(code).set(value);
-        List<String> after = values(codes);
+        cell.setValue(code, value);
+        List<String> after = cell.getValues();
         if (after.equals(before)) {
             return false;
         }
         spreadsheet.postEdit(new TypeValueEdit(cell, before, after, continuing));
         return true;
-    }
-
-    private static List<String> values(final List<CellValue> codes) {
-        return codes.stream().map(CellValue::toString).toList();
     }
 }

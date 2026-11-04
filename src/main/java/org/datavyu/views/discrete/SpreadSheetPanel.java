@@ -267,7 +267,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
     public void redrawCells() {
         for (SpreadsheetColumn col : getColumns()) {
             for (SpreadsheetCell cell : col.getCells()) {
-                cell.valueChange(cell.getCell().getCellValue());
+                cell.redrawValues();
                 cell.updateSelectionDisplay();
             }
         }

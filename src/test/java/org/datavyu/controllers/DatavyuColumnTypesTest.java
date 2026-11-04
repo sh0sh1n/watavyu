@@ -62,8 +62,8 @@ public class DatavyuColumnTypesTest {
         var cell = mother.createCell();
         cell.setOnset(4_000);
         cell.setOffset(5_000);
-        cell.setMatrixValue(0, "calm, (mostly)");
-        cell.setMatrixValue(1, "away");
+        cell.setValue(0, "calm, (mostly)");
+        cell.setValue(1, "away");
         Path file = Files.createTempFile("export", ".json");
         try {
             new ExportDatabaseFileController().exportAsJSON(file.toString(), original);

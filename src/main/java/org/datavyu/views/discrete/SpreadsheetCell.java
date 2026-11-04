@@ -20,7 +20,6 @@ import org.apache.logging.log4j.Logger;
 import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.CellListener;
-import org.datavyu.models.db.CellValue;
 import org.datavyu.util.ClockTimer;
 import org.datavyu.util.Settings;
 import org.datavyu.views.discrete.datavalues.MatrixRootView;
@@ -155,7 +154,7 @@ public class SpreadsheetCell extends JPanel
         offset.addMouseListener(this);
         offset.setName("offsetTextField");
 
-        dataPanel = new MatrixRootView(controller, model, cell.getCellValue());
+        dataPanel = new MatrixRootView(controller, model);
         dataPanel.setFont(SpreadsheetTheme.dataFont());
         dataPanel.setForeground(SpreadsheetTheme.PALETTE.text());
 
@@ -393,8 +392,13 @@ public class SpreadsheetCell extends JPanel
     }
 
     @Override
-    public void valueChange(final CellValue newCellValue) {
-        dataPanel.setMatrix(newCellValue);
+    public void contentChanged() {
+        redrawValues();
+    }
+
+    /** Shows the cell's values again, as after its values, its column's codes or its lock change. */
+    public void redrawValues() {
+        dataPanel.showValues();
         revalidate();
     }
 
