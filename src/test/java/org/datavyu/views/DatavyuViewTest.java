@@ -9,7 +9,9 @@ import static org.testng.Assert.assertTrue;
 import org.datavyu.TestSpreadsheets;
 import org.datavyu.controllers.SaveController;
 import org.datavyu.controllers.project.ProjectController;
+import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.DataStoreFactory;
+import org.datavyu.models.db.Variable;
 import org.datavyu.models.project.Project;
 import org.datavyu.views.discrete.SpreadSheetPanel;
 import org.datavyu.views.discrete.layouts.SheetLayoutFactory;
@@ -19,8 +21,11 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import javax.swing.Action;
 import javax.swing.JFrame;
 import javax.swing.JTabbedPane;
 import javax.swing.SwingUtilities;
@@ -171,5 +176,164 @@ public class DatavyuViewTest {
         onEdt(() -> tabs.setSelectedIndex(0));
         assertTrue(frame.getTitle().contains("untitled"), frame.getTitle());
         assertNull(study.getDataStore().getVariable("speech"));
+    }
+
+    /** Opens a second tab, after the untitled one, which has a change so it stays. */
+    private ProjectController secondTab() throws Exception {
+        ProjectController untitled = view.selectedController();
+        onEdt(() -> {
+            untitled.getDataStore().createVariable("notes");
+            view.open(projectFile("study", "gaze"));
+        });
+        return view.selectedController();
+    }
+
+    private void select(final int tab) throws Exception {
+        onEdt(() -> view.getTabbedPane().setSelectedIndex(tab));
+    }
+
+    private void run(final Command command) throws Exception {
+        onEdt(() -> view.action(command).actionPerformed(null));
+    }
+
+    /** B20: each tab has its own highlight-and-focus mode, and the menu item names the selected tab's. */
+    @Test
+    public void highlightAndFocusNamesTheSelectedTabsMode() throws Exception {
+        ProjectController study = secondTab();
+        Action highlight = view.action(Command.HIGHLIGHT_AND_FOCUS);
+        assertEquals(highlight.getValue(Action.NAME), "Disable Highlight and Focus Mode");
+
+        run(Command.HIGHLIGHT_AND_FOCUS);
+        assertFalse(study.getVideoController().getCellHighlightAndFocus());
+        assertEquals(highlight.getValue(Action.NAME), "Enable Highlight and Focus Mode");
+
+        select(0);
+        assertEquals(highlight.getValue(Action.NAME), "Disable Highlight and Focus Mode");
+        select(1);
+        assertEquals(highlight.getValue(Action.NAME), "Enable Highlight and Focus Mode");
+    }
+
+    /** Each tab has its own layout, and the menu's check mark shows the selected tab's. */
+    @Test
+    public void temporalLayoutIsCheckedForTheSelectedTab() throws Exception {
+        secondTab();
+        Action temporal = view.action(Command.TEMPORAL_LAYOUT);
+        assertEquals(temporal.getValue(Action.SELECTED_KEY), true);
+
+        run(Command.TEMPORAL_LAYOUT);
+        assertEquals(view.getSpreadsheetPanel().getLayoutType(), SheetLayoutType.Ordinal);
+        assertEquals(temporal.getValue(Action.SELECTED_KEY), false);
+
+        select(0);
+        assertEquals(view.getSpreadsheetPanel().getLayoutType(), SheetLayoutType.WeakTemporal);
+        assertEquals(temporal.getValue(Action.SELECTED_KEY), true);
+    }
+
+    /** A new tab opens in the layout of the tab selected before it, as the menu showed it. */
+    @Test
+    public void aNewTabTakesTheSelectedTabsLayout() throws Exception {
+        run(Command.TEMPORAL_LAYOUT);
+
+        secondTab();
+
+        assertEquals(view.getSpreadsheetPanel().getLayoutType(), SheetLayoutType.Ordinal);
+        assertEquals(view.action(Command.TEMPORAL_LAYOUT).getValue(Action.SELECTED_KEY), false);
+    }
+
+    /** Undo names the selected tab's last edit, and is disabled in a tab with none. */
+    @Test
+    public void undoNamesTheSelectedTabsEdit() throws Exception {
+        ProjectController study = secondTab();
+        Action undo = view.action(Command.UNDO);
+        onEdt(() -> study.columns().newColumn("speech"));
+        assertEquals(undo.getValue(Action.NAME), "Undo New Column \"speech\"");
+        assertTrue(undo.isEnabled());
+
+        select(0);
+        assertEquals(undo.getValue(Action.NAME), "Undo");
+        assertFalse(undo.isEnabled());
+    }
+
+    /** Delete Cells and New Cell to Left and Right count the selected tab's selected cells, to say Cell or Cells. */
+    @Test
+    public void cellCommandsCountTheSelectedTabsSelection() throws Exception {
+        ProjectController study = secondTab();
+        Action delete = view.action(Command.DELETE_CELLS);
+        Action left = view.action(Command.NEW_CELL_LEFT);
+        Action right = view.action(Command.NEW_CELL_RIGHT);
+        List<Cell> cells = new ArrayList<>();
+        onEdt(() -> {
+            Variable gaze = study.getDataStore().getVariable("gaze");
+            Variable speech = study.getDataStore().createVariable("speech");
+            cells.add(gaze.createPointCell(1_000));
+            cells.add(gaze.createPointCell(2_000));
+            cells.add(speech.createPointCell(1_000));
+            cells.forEach(cell -> cell.setSelected(false));
+            view.refreshCommands();
+        });
+        assertFalse(delete.isEnabled());
+        assertFalse(left.isEnabled());
+        assertFalse(right.isEnabled());
+
+        onEdt(() -> {
+            cells.get(0).setSelected(true);
+            view.refreshCommands();
+        });
+        assertEquals(delete.getValue(Action.NAME), "Delete Cell");
+        assertTrue(delete.isEnabled());
+        assertFalse(left.isEnabled(), "gaze is the first column");
+        assertEquals(right.getValue(Action.NAME), "New Cell to Right");
+        assertTrue(right.isEnabled());
+
+        onEdt(() -> {
+            cells.get(1).setSelected(true);
+            cells.get(2).setSelected(true);
+            view.refreshCommands();
+        });
+        assertEquals(delete.getValue(Action.NAME), "Delete Cells");
+        assertEquals(left.getValue(Action.NAME), "New Cell to Left", "only the speech cell has a column to its left");
+        assertEquals(right.getValue(Action.NAME), "New Cells to Right");
+
+        select(0);
+        assertFalse(delete.isEnabled(), "the untitled tab has no cells selected");
+    }
+
+    /** New Cell and Export need a column to show: they are disabled in a tab whose columns are all hidden. */
+    @Test
+    public void newCellAndExportNeedAVisibleColumn() throws Exception {
+        ProjectController study = secondTab();
+        Action newCell = view.action(Command.NEW_CELL);
+        Action export = view.action(Command.EXPORT_JSON);
+        assertTrue(newCell.isEnabled());
+        assertTrue(export.isEnabled());
+
+        onEdt(() -> {
+            study.columns().hide(study.getDataStore().getAllVariables());
+            view.refreshCommands();
+        });
+
+        assertFalse(newCell.isEnabled());
+        assertFalse(export.isEnabled());
+    }
+
+    /** A hidden column is not beside anything: a cell between two hidden columns has none beside it. */
+    @Test
+    public void aHiddenColumnIsNotBesideTheSelection() throws Exception {
+        ProjectController study = secondTab();
+        Action left = view.action(Command.NEW_CELL_LEFT);
+        Action right = view.action(Command.NEW_CELL_RIGHT);
+        onEdt(() -> {
+            Variable speech = study.getDataStore().createVariable("speech");
+            Variable notes = study.getDataStore().createVariable("notes");
+            Cell cell = speech.createPointCell(1_000);
+            study.columns().hide(List.of(study.getDataStore().getVariable("gaze"), notes));
+            study.getDataStore().getSelectedCells().forEach(selected -> selected.setSelected(false));
+            cell.setSelected(true);
+            view.refreshCommands();
+        });
+
+        assertFalse(left.isEnabled(), "gaze, to speech's left, is hidden");
+        assertFalse(right.isEnabled(), "notes, to its right, is hidden");
+        assertTrue(view.action(Command.DELETE_CELLS).isEnabled());
     }
 }

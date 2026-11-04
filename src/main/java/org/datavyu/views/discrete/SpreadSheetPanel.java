@@ -22,7 +22,6 @@ import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.event.component.FileDropEvent;
 import org.datavyu.event.component.FileDropEventListener;
 import org.datavyu.models.db.*;
-import org.datavyu.util.ArrayDirection;
 import org.datavyu.util.Constants;
 import org.datavyu.views.VideoController;
 import org.datavyu.views.WindowPlacement;
@@ -639,36 +638,9 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
         return false;
     }
 
-    /**
-     * @param dir The direction in which to search for adjacent cells (left or
-     *            right).
-     * @return An indication of the columns adjacent of the current cell
-     * selection,
-     * 0 = no columns to the left of the current cell selection.
-     * 1 = one column to the left of the current cell selection.
-     * 2 = many columns to the left of the current cell selection.
-     */
-    public int getAdjacentSelectedCells(final ArrayDirection dir) {
-        int result = 0;
-
-        for (Cell cell : dataStore.getSelectedCells()) {
-            for (int i = 0; i < dataStore.getVisibleVariables().size(); i++) {
-                if (dataStore.getVisibleVariables().get(i).equals(dataStore.getVariable(cell))) {
-                    // We have at least one column to the left of the cells.
-                    if (((i + dir.getModifier()) >= 0) && ((i + dir.getModifier())
-                            < dataStore.getVisibleVariables().size())) {
-                        result++;
-                    }
-
-                    // We have many columns to the left of the cells - end.
-                    if (result == 2) {
-                        return result;
-                    }
-                }
-            }
-        }
-
-        return result;
+    /** Returns how the cells are laid out: in time (temporal) or one after another (ordinal). */
+    public SheetLayoutType getLayoutType() {
+        return currentLayoutType;
     }
 
     /**

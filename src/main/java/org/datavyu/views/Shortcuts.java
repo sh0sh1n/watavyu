@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 /**
  * The application's keyboard shortcuts, in one table, and the dispatcher that runs them. Menu items take their
@@ -56,20 +57,27 @@ public final class Shortcuts implements KeyEventDispatcher {
     /** One shortcut. */
     public static final class Shortcut {
         private final String group;
+        private final Command command;
         private final String name;
         private final KeyStroke key;
         private final String keyText;
         private final Scope scope;
         private final Action action;
 
-        private Shortcut(final String group, final String name, final KeyStroke key, final String keyText,
-                         final Scope scope, final Action action) {
+        private Shortcut(final String group, final Command command, final String name, final KeyStroke key,
+                         final String keyText, final Scope scope, final Action action) {
             this.group = group;
-            this.name = name;
+            this.command = command;
+            this.name = command == null ? name : command.label();
             this.key = key;
             this.keyText = keyText;
             this.scope = scope;
             this.action = action;
+        }
+
+        /** Returns the command the key runs, by its name, or null for a {@link Scope#REFERENCE} shortcut. */
+        public Command getCommand() {
+            return command;
         }
 
         public String getGroup() {
@@ -103,22 +111,30 @@ public final class Shortcuts implements KeyEventDispatcher {
     /** Collects shortcuts in the order they are listed to the user. */
     public static final class Builder {
         private final List<Shortcut> shortcuts = new ArrayList<>();
+        private final Function<Command, Action> actions;
 
-        public Builder menu(final String group, final String name, final KeyStroke key, final Action action) {
-            return add(new Shortcut(group, name, key, describe(key, false), Scope.MENU, action));
+        private Builder(final Function<Command, Action> actions) {
+            this.actions = actions;
         }
 
-        public Builder global(final String group, final String name, final KeyStroke key, final Action action) {
-            return add(new Shortcut(group, name, key, describe(key, false), Scope.GLOBAL, action));
+        public Builder menu(final String group, final Command command, final KeyStroke key) {
+            return add(new Shortcut(group, command, null, key, describe(key, false), Scope.MENU,
+                actions.apply(command)));
         }
 
-        public Builder keypad(final String name, final int keyCode, final int modifiers, final Action action) {
+        public Builder global(final String group, final Command command, final KeyStroke key) {
+            return add(new Shortcut(group, command, null, key, describe(key, false), Scope.GLOBAL,
+                actions.apply(command)));
+        }
+
+        public Builder keypad(final Command command, final int keyCode, final int modifiers) {
             KeyStroke key = KeyStroke.getKeyStroke(keyCode, modifiers);
-            return add(new Shortcut("Video controller", name, key, describe(key, true), Scope.KEYPAD, action));
+            return add(new Shortcut("Video controller", command, null, key, describe(key, true),
+                Scope.KEYPAD, actions.apply(command)));
         }
 
         public Builder reference(final String group, final String name, final String keyText) {
-            return add(new Shortcut(group, name, null, keyText, Scope.REFERENCE, null));
+            return add(new Shortcut(group, null, name, null, keyText, Scope.REFERENCE, null));
         }
 
         private Builder add(final Shortcut shortcut) {
@@ -129,23 +145,27 @@ public final class Shortcuts implements KeyEventDispatcher {
         /**
          * @param mainWindowFocused Whether the main window has keyboard focus, so its menu bar handles accelerators.
          * @param shiftHeld         Told whenever the Shift key goes down or up.
+         * @param beforeShortcut    Run when a key is a shortcut, before it runs, as the menu bar too sees whether its
+         *                          command can run now
          * @return The shortcuts.
          * @throws IllegalStateException If two shortcuts use the same key.
          */
-        public Shortcuts build(final BooleanSupplier mainWindowFocused, final Consumer<Boolean> shiftHeld) {
+        public Shortcuts build(final BooleanSupplier mainWindowFocused, final Consumer<Boolean> shiftHeld,
+                               final Runnable beforeShortcut) {
             Set<String> keys = new HashSet<>();
             for (Shortcut shortcut : shortcuts) {
                 if (shortcut.key != null && !keys.add((shortcut.scope == Scope.KEYPAD ? "keypad " : "") + shortcut.key)) {
                     throw new IllegalStateException(shortcut.keyText + " is used by more than one shortcut");
                 }
             }
-            return new Shortcuts(new ArrayList<>(shortcuts), mainWindowFocused, shiftHeld);
+            return new Shortcuts(new ArrayList<>(shortcuts), mainWindowFocused, shiftHeld, beforeShortcut);
         }
     }
 
     private final List<Shortcut> shortcuts;
     private final BooleanSupplier mainWindowFocused;
     private final Consumer<Boolean> shiftHeld;
+    private final Runnable beforeShortcut;
 
     /** True from the press of any keypad key until its release; the characters it types are dropped. */
     private boolean keypadKeyDown;
@@ -154,14 +174,21 @@ public final class Shortcuts implements KeyEventDispatcher {
     private int handledKeyCode = KeyEvent.VK_UNDEFINED;
 
     private Shortcuts(final List<Shortcut> shortcuts, final BooleanSupplier mainWindowFocused,
-                      final Consumer<Boolean> shiftHeld) {
+                      final Consumer<Boolean> shiftHeld, final Runnable beforeShortcut) {
         this.shortcuts = shortcuts;
         this.mainWindowFocused = mainWindowFocused;
         this.shiftHeld = shiftHeld;
+        this.beforeShortcut = beforeShortcut;
     }
 
-    public static Builder builder() {
-        return new Builder();
+    /**
+     * Starts a table of shortcuts.
+     *
+     * @param actions each command's action, which its shortcut runs
+     * @return the builder
+     */
+    public static Builder builder(final Function<Command, Action> actions) {
+        return new Builder(actions);
     }
 
     /** @return All shortcuts, in the order they are listed to the user. */
@@ -207,18 +234,30 @@ public final class Shortcuts implements KeyEventDispatcher {
         if (shortcut == null || shortcut.scope == Scope.REFERENCE) {
             return false;
         }
-        if (shortcut.scope == Scope.MENU) {
-            if (mainWindowFocused.getAsBoolean() || !shortcut.action.isEnabled()) {
+        beforeShortcut.run();
+        boolean menu = shortcut.scope == Scope.MENU;
+        if (menu && mainWindowFocused.getAsBoolean()) {
+            return false;
+        }
+        if (!shortcut.action.isEnabled()) {
+            // A menu key whose item is greyed goes on to the focused component, as in the main window; a global or
+            // keypad key does nothing.
+            if (menu) {
                 return false;
             }
+            handledKeyCode = e.getKeyCode();
+            e.consume();
+            return true;
+        }
+        if (menu) {
             Object selected = shortcut.action.getValue(Action.SELECTED_KEY);
             if (selected instanceof Boolean) {
                 shortcut.action.putValue(Action.SELECTED_KEY, !(Boolean) selected);
             }
         }
-        shortcut.action.actionPerformed(new ActionEvent(e.getSource(), ActionEvent.ACTION_PERFORMED, shortcut.name));
         handledKeyCode = e.getKeyCode();
         e.consume();
+        shortcut.action.actionPerformed(new ActionEvent(e.getSource(), ActionEvent.ACTION_PERFORMED, shortcut.name));
         return true;
     }
 
