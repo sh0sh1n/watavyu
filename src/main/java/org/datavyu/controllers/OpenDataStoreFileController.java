@@ -131,12 +131,13 @@ public final class OpenDataStoreFileController {
      * @param code       the value's place among the cell's values
      * @param column     the cell's column
      * @param cellNumber the cell's place in its column, from 1
-     * @throws UnreadableCellException if the value is not text, or the column has no code for it
+     * @throws UnreadableCellException if the value is not text or a number, or the column has no code for it
      */
     private static void readValue(final JsonParser parser, final Cell cell, final int code, final String column,
                                   final int cellNumber) throws IOException, UnreadableCellException {
         String text = parser.getValueAsString();
-        String problem = text == null ? "a value that is not text"
+        // A number or true or false is read as its text.
+        String problem = text == null ? "a value that is not text or a number"
             : code >= cell.getValues().size() ? "more values than its column has codes" : null;
         if (problem != null) {
             throw new UnreadableCellException("cell " + cellNumber + " of column \"" + column + "\" has " + problem

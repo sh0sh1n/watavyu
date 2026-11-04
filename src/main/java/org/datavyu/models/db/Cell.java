@@ -121,6 +121,7 @@ public interface Cell {
      *
      * @param values a value for each code, in their order
      * @throws IllegalArgumentException if there is not one value for each code
+     * @throws NullPointerException      if a value is null
      */
     void setValues(List<String> values);
 

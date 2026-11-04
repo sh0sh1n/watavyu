@@ -67,7 +67,7 @@ public class DataValueEditorFactory {
         eds.add(new FixedText(ta, "("));
         for (int i = 0; i < codes.size(); i++) {
             int code = i;
-            eds.add(buildNominal(ta, () -> c.getValue(code), () -> "<" + codes.get(code).name + ">", quickKeyMode,
+            eds.add(buildNominal(ta, () -> c.getValue(code), () -> "<" + c.getVariable().getRootNode().childArguments.get(code).name + ">", quickKeyMode,
                 value -> typing.typed(code, value)));
             if (i < codes.size() - 1) {
                 eds.add(new FixedText(ta, ", "));

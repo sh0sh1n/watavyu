@@ -84,8 +84,17 @@ public class JsonImportRefusalTest {
             () -> importJson(passes("\"00:00:03:000\"", "\"00:00:04:000\"", "null"), dataStore));
 
         assertTrue(dataStore.getAllVariables().isEmpty());
-        assertTrue(e.getMessage().endsWith("cell 2 of column \"mother\" has a value that is not text (line 6). "
+        assertTrue(e.getMessage().endsWith("cell 2 of column \"mother\" has a value that is not text or a number (line 6). "
             + "Nothing was imported."), e.getMessage());
+    }
+
+    @Test
+    public void aNumberIsReadAsItsText() throws Exception {
+        DataStore dataStore = DataStoreFactory.newDataStore();
+
+        importJson(passes("\"00:00:03:000\"", "\"00:00:04:000\"", "3"), dataStore);
+
+        assertEquals(dataStore.getVariable("mother").getCells().get(1).getValues(), List.of("3"));
     }
 
     @Test

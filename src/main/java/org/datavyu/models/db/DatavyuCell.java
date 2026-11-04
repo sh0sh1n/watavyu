@@ -203,10 +203,7 @@ public class DatavyuCell implements Cell {
             return;
         }
         values.set(code, value);
-        parent.getOwningDatastore().markAsChanged();
-        for (CellListener cl : listeners) {
-            cl.contentChanged();
-        }
+        valuesChanged();
     }
 
     @Override
@@ -266,6 +263,10 @@ public class DatavyuCell implements Cell {
         }
         values.clear();
         values.addAll(copy);
+        valuesChanged();
+    }
+
+    private void valuesChanged() {
         parent.getOwningDatastore().markAsChanged();
         for (CellListener cl : listeners) {
             cl.contentChanged();
