@@ -19,12 +19,10 @@ import org.apache.logging.log4j.Logger;
 import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.MediaClip;
-import org.datavyu.models.db.Variable;
 import org.datavyu.views.discrete.EditorComponent;
 import org.datavyu.views.discrete.EditorTracker;
 
 import javax.swing.*;
-import java.awt.*;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.awt.event.KeyEvent;
@@ -48,7 +46,7 @@ public final class CellValuesView extends JTextArea implements FocusListener {
     /**
      * The parent cell for this JPanel.
      */
-    private Cell parentCell = null;
+    private final Cell parentCell;
 
     /**
      * Whether a value has been typed since the cell took the focus, so what is typed next continues it, as one edit in
@@ -140,18 +138,15 @@ public final class CellValuesView extends JTextArea implements FocusListener {
         if (settingTyping) {
             return;
         }
-        // Determine selected editor, and internal caret position.
-        int pos = getCaretPosition();
-        EditorComponent comp = edTracker.findEditor(pos);
-        int edPos = comp.getCaretPosition();
+        // The editor in the current one's place takes over, with the caret where it was.
+        int place = edTracker.editableIndexOfCurrentEditor();
+        int caret = edTracker.getCurrentEditor().getCaretPosition();
 
         allEditors.clear();
         allEditors.addAll(buildEditors());
-
         rebuildText();
 
-        // restore caret position inside current editor.
-        comp.setCaretPosition(edPos);
+        edTracker.followRebuiltEditors(place, caret);
     }
 
     /** Builds the editors of the cell's values as they are now, or the fixed text of its clip. */
@@ -221,7 +216,6 @@ public final class CellValuesView extends JTextArea implements FocusListener {
         for (EditorComponent item : allEditors) {
             ans += item.getText();
         }
-        ans = ans.replaceAll("\\\\[\\\\]*\\\\", "\\\\");
         return ans;
     }
 
@@ -239,17 +233,11 @@ public final class CellValuesView extends JTextArea implements FocusListener {
     // *************************************************************************
     @Override
     public void focusGained(final FocusEvent fe) {
-        // We need to remember which cell should be duplicated if the user
-        // presses the enter key or selects New Cell from the menu.
-        if (parentCell != null) {
-            // Typing after the cell takes the focus again is an edit of its own.
-            typing = false;
-            // method names don't reflect usage - we didn't really create
-            // this column just now.
-            Variable v = controller.getDataStore().getVariable(parentCell);
-            controller.setLastCreatedVariable(v);
-            controller.setLastSelectedCell(parentCell);
-        }
+        // Typing after the cell takes the focus again is an edit of its own.
+        typing = false;
+        // New Cell from the menu goes to the column of the cell last in focus.
+        controller.setLastCreatedVariable(controller.getDataStore().getVariable(parentCell));
+        controller.setLastSelectedCell(parentCell);
         parentCell.setSelected(true);
     }
 

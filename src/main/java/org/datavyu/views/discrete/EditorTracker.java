@@ -157,6 +157,56 @@ public final class EditorTracker
         currentEditor.setStartPos(preCharCount);
     }
 
+    /**
+     * Returns the current editor's place among the editors that can be edited, or -1 if there is none, as before
+     * the editors are built again ({@link #followRebuiltEditors}).
+     */
+    public int editableIndexOfCurrentEditor() {
+        int place = 0;
+        for (EditorComponent ed : editors) {
+            if (ed.equals(currentEditor)) {
+                return place;
+            }
+            if (ed.isEditable()) {
+                place++;
+            }
+        }
+        return -1;
+    }
+
+    /**
+     * Follows the editors after they have been built again, as when a cell's values change from elsewhere: the
+     * editor in the place the current one had among those that can be edited becomes current, or the last if there
+     * are fewer now, with the caret at the same place in it, or an empty value's placeholder selected.
+     *
+     * @param place the current editor's place before, from {@link #editableIndexOfCurrentEditor}; -1 changes nothing
+     * @param caret where the caret was in it
+     */
+    public void followRebuiltEditors(final int place, final int caret) {
+        if (place < 0) {
+            return;
+        }
+        EditorComponent follower = NO_EDITOR;
+        int count = 0;
+        for (EditorComponent ed : editors) {
+            if (ed.isEditable()) {
+                follower = ed;
+                if (count == place) {
+                    break;
+                }
+                count++;
+            }
+        }
+        currentEditor = follower;
+        calculatePrePostCounts();
+        if (currentEditor.canSubSelect()) {
+            currentEditor.setCaretPosition(caret);
+        } else {
+            // An empty value shows its placeholder, which typing replaces whole.
+            currentEditor.selectAll();
+        }
+    }
+
     public int indexOfCurrentEditor()
     {
         int i = 0;

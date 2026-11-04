@@ -137,6 +137,97 @@ public class CellTypingTest {
         });
     }
 
+    /**
+     * A cell's values redrawn while it keeps the focus, as after an undo or a change from elsewhere, keep the typing in
+     * the code it was in, at the caret's place there, though the text before it changed length.
+     */
+    @Test
+    public void typingContinuesInItsCodeAfterTheValuesAreRedrawn() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            spreadsheet.codes().add(cell.getVariable());
+            view.showValues();
+            view.getEdTracker().setEditor(view.getEdTracker().getEditorAtArgIndex(1));
+            type("ne");
+
+            cell.setValue(0, "left");
+            type("ar");
+
+            assertEquals(cell.getValues(), List.of("left", "near"));
+            assertEquals(view.getText(), "(left, near)");
+        });
+    }
+
+    /** Typing undone while the cell keeps the focus leaves the code empty, and what is typed next replaces its name. */
+    @Test
+    public void typingAfterAnUndoReplacesThePlaceholder() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            type("smile");
+            spreadsheet.undo();
+            type("frown");
+
+            assertEquals(cell.getValue(0), "frown");
+            assertEquals(view.getText(), "(frown)");
+        });
+    }
+
+    /** Undo can take away the code being typed in; typing then goes on in the last code left. */
+    @Test
+    public void typingGoesOnInTheLastCodeWhenItsCodeIsTakenAway() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            spreadsheet.codes().add(cell.getVariable());
+            view.showValues();
+            view.getEdTracker().setEditor(view.getEdTracker().getEditorAtArgIndex(1));
+
+            spreadsheet.undo();
+            view.showValues();
+            type("up");
+
+            assertEquals(cell.getValues(), List.of("up"));
+            assertEquals(view.getText(), "(up)");
+        });
+    }
+
+    /** A value is shown as it is, backslashes and all, though it was set from elsewhere, as by an undo. */
+    @Test
+    public void aValueShowsAsItIs() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            cell.setValue(0, "\\\\server\\share");
+
+            assertEquals(view.getText(), "(\\\\server\\share)");
+        });
+    }
+
+    /** A cell never typed in starts its typing in its first code, though its values were redrawn. */
+    @Test
+    public void aRedrawnCellStartsInItsFirstCode() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            spreadsheet.codes().add(cell.getVariable());
+            CellValuesView fresh = new CellValuesView(spreadsheet, cell);
+            fresh.showValues();
+            fresh.setCaretPosition(fresh.getText().length());
+
+            fresh.getEdTracker().focusGained(new FocusEvent(fresh, FocusEvent.FOCUS_GAINED));
+
+            assertSame(fresh.getEdTracker().getCurrentEditor(), fresh.getEdTracker().firstEditor());
+        });
+    }
+
+    /** Typing in the first of several codes stays there when another code changes. */
+    @Test
+    public void typingStaysInTheFirstCodeWhenAnotherChanges() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            spreadsheet.codes().add(cell.getVariable());
+            view.showValues();
+            view.getEdTracker().setEditor(view.getEdTracker().firstEditor());
+            type("le");
+
+            cell.setValue(1, "near");
+            type("ft");
+
+            assertEquals(cell.getValues(), List.of("left", "near"));
+        });
+    }
+
     /** A key that changes no text, such as Escape, leaves an empty code empty, not holding its placeholder. */
     @Test
     public void aKeyThatChangesNothingLeavesAnEmptyCodeEmpty() throws Exception {

@@ -16,14 +16,16 @@ Updated 2026-11-04. Re-measure with the commands in [BUILDING.md › Analysis Re
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
 | Java source (main) | 242 files, 42.5k lines | 142 files, 24.9k lines |
-| Tests / line coverage | 113 / 9.9% | 696 / 67.2%; views 60%, undo edits 93% |
+| Tests / line coverage | 113 / 9.9% | 702 / 67.4%; views 60%, undo edits 93% |
 | Runtime dependencies / with known vulnerabilities | 28 / 8 | 13 / 0 |
 | Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 432 |
-| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 300 / 52 (none on thread safety, now gated); 14 |
+| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 298 / 51 (none on thread safety, now gated); 14 |
 | Never-invoked methods (`dead-code.py`) | 109+ | 27: test-only accessors, unused settings setters, and Swing overrides the script cannot see |
 | Static global access (`grep -rohP 'Datavyu\.(get\|set)\w*\(' src/main/java \| wc -l`) | about 330 call sites | 0: each tab's `ProjectController` is passed to what it owns |
 
 ## Bugs
+
+**B25. A media cell checks its file on every redraw.** ready, *from reading*. A media cell's text says whether its file is missing by asking the file system each time the cell's values are drawn (`CellValuesView.clipLabel`, `Files.exists`), on the Swing thread, and cells redraw on every change to their column, its codes or its lock. Media on a slow or unreachable network volume would stall the window. Check when the clip is opened or the file is looked for, and keep the answer on the cell, as `isClipFailed` is.
 
 **B24. A playback integration test fails now and then.** ready, *verified* once. On 2026-11-04 `PlaybackIntegrationTest.playsForwardFromAnOnset` failed "the paused position follows playback": after a second of play, pausing reported a frame (`currentFrame`) more than 2 frames behind the last one the probe saw shown. Two reruns passed. It ran straight after a full build, so load may be the trigger; whether the pause lands behind the picture or the test's bound is too tight is not known.
 
@@ -71,7 +73,7 @@ None open.
 
 Tech debt is paid down in the Java app rather than left for the C++ rewrite (AGENTS.md › North Star, 2026-11-03). The items run in this order, each behaviour-preserving unless it says otherwise, and each pins the behaviour it touches with tests, since most views and undo have none.
 
-**R4. Per-editor key handling.** ready. `EditorTracker` and the value editors handle keys per editor, with 22 uses of the deprecated modifier API (`getModifiers`, `*_MASK`, `getMenuShortcutKeyMask`). Keys that are commands go through `Shortcuts` to the commands (`Command`); editors keep only text editing. Do before F7.
+**R4. Per-editor key handling.** ready. `EditorTracker` and the value editors handle keys per editor, with 18 deprecation warnings from the old modifier API (`getModifiers`, `*_MASK`, `getMenuShortcutKeyMask`). Keys that are commands go through `Shortcuts` to the commands (`Command`); editors keep only text editing. Do before F7.
 
 **R7. Threading.** Make the boundary between the clock thread, the JavaFX thread and the EDT explicit, as `JavaFxPlayback` already does for the player. `ClockTimer` notifies its listeners on its own pool threads, most of them while holding its lock, so a listener that waits on another thread can deadlock it; the playhead (`PlayheadCarriage.show`) and `MediaPlayers` hand their work to the EDT. Cells still restyle for the needle on the clock thread (`SpreadsheetCell`'s clock listener, through `CellLook`), as they did before U5. SpotBugs's thread-safety findings are at zero and gated.
 
