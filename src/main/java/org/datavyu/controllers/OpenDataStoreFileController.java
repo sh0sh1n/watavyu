@@ -135,13 +135,19 @@ public final class OpenDataStoreFileController {
     private static String readCode(final JsonParser parser, final List<String> codes, final String column)
             throws IOException, UnimportableException {
         String code = parser.currentName();
-        String problem = code.isEmpty() ? "a code with no name" : codes.contains(code) ? "two codes named \"" + code
-            + "\"" : null;
-        if (problem != null) {
-            throw new UnimportableException("column \"" + column + "\" has " + problem + " (line "
-                + parser.currentLocation().getLineNr() + "). Nothing was imported.", null);
+        if (code.isEmpty()) {
+            throw refusedCode(parser, column, "a code with no name");
+        }
+        if (codes.contains(code)) {
+            throw refusedCode(parser, column, "two codes named \"" + code + "\"");
         }
         return code;
+    }
+
+    private static UnimportableException refusedCode(final JsonParser parser, final String column,
+                                                     final String problem) {
+        return new UnimportableException("column \"" + column + "\" has " + problem + " (line "
+            + parser.currentLocation().getLineNr() + "). Nothing was imported.", null);
     }
 
     /**
