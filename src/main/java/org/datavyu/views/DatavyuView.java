@@ -782,7 +782,7 @@ public final class DatavyuView implements FileDropEventListener {
 
     private void addMediaFiles(final List<File> files) {
         SpreadSheetPanel panel = getSpreadsheetPanel();
-        if (files.isEmpty() || panel == null || panel.getMediaPlayers() == null) {
+        if (files.isEmpty() || panel == null) {
             return;
         }
         try {

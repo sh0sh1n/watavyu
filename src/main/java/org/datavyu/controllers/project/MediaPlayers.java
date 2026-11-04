@@ -189,7 +189,7 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
      * @param onset  where the clip starts
      * @return the clip
      */
-    public Cell addClip(final Variable column, final File file, final long onset) {
+    Cell addClip(final Variable column, final File file, final long onset) {
         Cell clip = column.createClip(onset, MediaClip.of(file.getAbsolutePath()));
         added.add(clip);
         if (!open(clip)) {
@@ -207,7 +207,7 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
      * @return the new column
      * @throws UserWarningException if the column cannot be added
      */
-    public Variable addMedia(final File file) throws UserWarningException {
+    Variable addMedia(final File file) throws UserWarningException {
         Variable column = MediaColumns.add(dataStore);
         // Not selected, so that media added next gets its own column unless the user picks this one.
         column.setSelected(false);
@@ -391,6 +391,8 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
 
     private void close(final Cell clip) {
         opening.remove(clip);
+        // Taken out before it opened, as by undo: put back, it is a clip like any other.
+        added.remove(clip);
         StreamViewer player = players.remove(clip);
         if (player != null) {
             Variable column = clip.getVariable();
@@ -481,6 +483,7 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
     }
 
     private void unfollow(final Variable column) {
+        addedColumns.remove(column);
         VariableListener listener = columnListeners.remove(column);
         if (listener != null) {
             column.removeListener(listener);

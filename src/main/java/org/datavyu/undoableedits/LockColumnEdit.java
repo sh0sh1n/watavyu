@@ -35,6 +35,12 @@ public final class LockColumnEdit extends AbstractUndoableEdit {
         return (locked ? "Lock Column " : "Unlock Column ") + column.getName();
     }
 
+    /** @return whether undoing or redoing the edit changes anything: not once the column is taken out without one */
+    @Override
+    public boolean isSignificant() {
+        return dataStore.contains(column);
+    }
+
     /** Undoes the lock change, unless the column has been taken out without an edit, leaving nothing to change. */
     @Override
     public void undo() throws CannotUndoException {

@@ -510,7 +510,8 @@ public class MediaPlayersTest {
     public void addedMediaWithoutASelectedMediaColumnGetsNewColumns() throws Exception {
         dataStore.createVariable("notes").setSelected(true);
 
-        spreadsheet.media().addMedia(List.of(new File(file("a.mp4")), new File(file("b.mp4"))), 12_000, column -> false);
+        List<File> files = List.of(new File(file("a.mp4")), new File(file("b.mp4")));
+        spreadsheet.media().addMedia(files, 12_000, column -> false);
 
         assertEquals(dataStore.getAllVariables().stream().map(Variable::getName).toList(),
             List.of("notes", "media_1", "media_2"));
@@ -558,19 +559,70 @@ public class MediaPlayersTest {
         assertEquals(first.getCells().size(), 1);
     }
 
-    /** A file that does not open is taken out again; its edit, made while it opened, then changes nothing. */
+    /**
+     * A file that does not open is taken out again. Its edit, made while it opened, then changes nothing, so undo
+     * passes over it: one Undo undoes the edit before.
+     */
     @Test
-    public void mediaThatFailsToOpenLeavesNothingToUndoOrRedo() throws Exception {
-        Variable notes = dataStore.createVariable("notes");
+    public void mediaThatFailsToOpenLeavesNothingToUndo() throws Exception {
+        Variable notes = spreadsheet.columns().newColumn("notes");
+        Variable media = dataStore.createMediaVariable("media_1");
+        addClip(media, 0, "a.mp4");
         pending = new ArrayList<>();
 
+        dataStore.deselectAll();
         spreadsheet.media().addMedia(List.of(new File(file("broken.mp4"))), 0, column -> false);
-        pending.get(0).<Runnable>getArgument(4).run();
-        assertEquals(dataStore.getAllVariables(), List.of(notes));
+        dataStore.deselectAll();
+        media.setSelected(true);
+        spreadsheet.media().addMedia(List.of(new File(file("bad.mp4"))), 5_000, column -> false);
+        pending.forEach(opening -> opening.<Runnable>getArgument(4).run());
+        assertEquals(dataStore.getAllVariables(), List.of(notes, media));
+        assertEquals(media.getCells().size(), 1);
+        assertEquals(spreadsheet.getUndoManager().getUndoPresentationName(), "Undo New Column \"notes\"");
 
         assertNull(spreadsheet.undo());
+        assertNull(dataStore.getVariable("notes"));
+        assertFalse(spreadsheet.getUndoManager().canUndo());
+
         assertNull(spreadsheet.redo());
-        assertEquals(dataStore.getAllVariables(), List.of(notes));
+        assertFalse(spreadsheet.getUndoManager().canRedo());
+        assertEquals(dataStore.getAllVariables(), List.of(notes, media));
+        assertEquals(media.getCells().size(), 1);
+    }
+
+    /** Media added in a new column leaves the selection alone, and undo and redo do too. */
+    @Test
+    public void addingMediaKeepsTheSelectionThroughUndoAndRedo() throws Exception {
+        Variable notes = dataStore.createVariable("notes");
+        dataStore.deselectAll();
+        notes.setSelected(true);
+
+        spreadsheet.media().addMedia(List.of(new File(file("a.mp4"))), 0, column -> false);
+        Variable media = dataStore.getVariable("media_1");
+        assertEquals(dataStore.getSelectedVariables(), List.of(notes));
+
+        spreadsheet.undo();
+        assertEquals(dataStore.getSelectedVariables(), List.of(notes));
+        spreadsheet.redo();
+        assertEquals(dataStore.getSelectedVariables(), List.of(notes));
+        assertFalse(media.isSelected());
+    }
+
+    /** A clip taken out by undo while it opened is, put back by redo, a clip like any other: a failed open keeps it. */
+    @Test
+    public void aClipUndoneWhileOpeningIsKeptWhenItsReopeningFails() throws Exception {
+        Variable media = dataStore.createMediaVariable("media_1");
+        dataStore.deselectAll();
+        media.setSelected(true);
+        pending = new ArrayList<>();
+        spreadsheet.media().addMedia(List.of(new File(file("b.mp4"))), 2_000, column -> false);
+        Cell clip = media.getCells().get(0);
+
+        spreadsheet.undo();
+        spreadsheet.redo();
+        pending.forEach(opening -> opening.<Runnable>getArgument(4).run());
+
+        assertEquals(media.getCells(), List.of(clip));
     }
 
     @Test

@@ -44,6 +44,9 @@ public final class MediaCommands {
      */
     public void addMedia(final List<File> files, final long time, final Predicate<Variable> intoNewColumns)
             throws UserWarningException {
+        if (players() == null) {
+            return;
+        }
         Variable target = selectedMediaColumn();
         if (target != null && target.refusesEdits()) {
             if (!intoNewColumns.test(target)) {

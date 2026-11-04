@@ -51,6 +51,12 @@ public class AddCellEdit extends SpreadSheetEdit {
         return "New Cell to " + varName;
     }
 
+    /** @return whether undoing or redoing the edit changes anything: not once the cell is taken out without one */
+    @Override
+    public boolean isSignificant() {
+        return canUndo() ? model.getVariable(addedCell) != null : !takenOut;
+    }
+
     @Override
     public void redo() throws CannotRedoException {
         super.redo();

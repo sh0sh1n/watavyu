@@ -167,14 +167,14 @@ public final class ProjectController {
     }
 
     /**
-     * Undoes this spreadsheet's last edit, and shows its cells again, unless the edit refuses (see {@code GuardedEdit}),
-     * which leaves the history as it was.
+     * Undoes this spreadsheet's last edit, and shows its cells again, unless the edit refuses (see
+     * {@code GuardedEdit}), which leaves the history as it was.
      *
      * @return why the edit refused, for the user, or null if it was undone
      */
     public String undo() {
         String refusal = undoManager.undoRefusal();
-        if (refusal == null) {
+        if (refusal == null && undoManager.canUndo()) {
             undoManager.undo();
             redrawCells();
         }
@@ -189,7 +189,7 @@ public final class ProjectController {
      */
     public String redo() {
         String refusal = undoManager.redoRefusal();
-        if (refusal == null) {
+        if (refusal == null && undoManager.canRedo()) {
             undoManager.redo();
             redrawCells();
         }
