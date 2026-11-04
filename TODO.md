@@ -25,6 +25,8 @@ Updated 2026-11-04. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 ## Bugs
 
+**B24. A playback integration test fails now and then.** ready, *verified* once. On 2026-11-04 `PlaybackIntegrationTest.playsForwardFromAnOnset` failed "the paused position follows playback": after a second of play, pausing reported a frame (`currentFrame`) more than 2 frames behind the last one the probe saw shown. Two reruns passed. It ran straight after a full build, so load may be the trigger; whether the pause lands behind the picture or the test's bound is too tight is not known.
+
 **B23. A Datavyu JSON import can bring code names a project file refuses.** ready, *from reading*. The importer adds a matrix column's codes from the JSON keys as they come (`OpenDataStoreFileController`, around `variableArg.childArguments.add`), so repeated or empty keys become repeated or empty code names, and saving the project then fails its own check (`ProjectRules`: "is named twice", "must not be empty"). The import should refuse such a file, saying which column and key, as it does a negative time.
 
 **B2. The app changes a global macOS setting.** ready (owner: scope it to the app), *from reading*. At startup `Datavyu` runs `defaults write -g ApplePressAndHoldEnabled -bool false` for every application on the Mac, and restores it only on a clean shutdown; a crash or force-quit leaves it changed. (It used to run when the class loaded, so every test run turned the setting off and never restored it.) The intent is key repeat instead of the accent popup while holding keys. Scope it to the app: in-app key repeat, or a per-app defaults domain once there is an app bundle; then delete the global write.
