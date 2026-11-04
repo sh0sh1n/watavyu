@@ -77,11 +77,11 @@ public final class AddColumnEdit extends AbstractUndoableEdit implements Guarded
             : "Another column is named " + column.getName() + ". Rename or delete it to redo this.";
     }
 
-    /** Takes the column out. */
+    /** Takes the column out, and the selection with it if the column is selected now. */
     @Override
     public void undo() throws CannotUndoException {
         super.undo();
-        if (selected) {
+        if (column.isSelected()) {
             dataStore.deselectAll();
         }
         dataStore.removeVariable(column);
