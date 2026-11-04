@@ -125,6 +125,23 @@ public class VariableTest {
         assertFalse(cell.isSelected());
     }
 
+    /** A new cell is selected and highlighted, unless it is made in a hidden column; nor can it be highlighted then. */
+    @Test
+    public void aCellMadeInAHiddenColumnIsNeitherSelectedNorHighlighted() {
+        assertTrue(model.createPointCell(1_000).isSelected());
+        model.setHidden(true);
+
+        Cell cell = model.createPointCell(2_000);
+        assertFalse(cell.isSelected());
+        assertFalse(cell.isHighlighted());
+
+        CellListener listener = mock(CellListener.class);
+        cell.addListener(listener);
+        cell.setHighlighted(true);
+        assertFalse(cell.isHighlighted());
+        verify(listener, never()).highlightingChange(true);
+    }
+
     /** A cell put back into a hidden column, as undoing its deletion does, comes back unselected. */
     @Test
     public void aCellPutBackIntoAHiddenColumnIsNotSelected() {

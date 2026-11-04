@@ -248,7 +248,8 @@ public final class DatavyuVariable implements Variable {
 
     @Override
     public boolean isHidden() {
-        return hidden;
+        // Unset until the constructor sets it.
+        return Boolean.TRUE.equals(hidden);
     }
 
     @Override

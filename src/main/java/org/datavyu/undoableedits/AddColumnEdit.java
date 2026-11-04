@@ -88,8 +88,9 @@ public final class AddColumnEdit extends AbstractUndoableEdit implements Guarded
     }
 
     /**
-     * Puts the column back, selected as it was when added (the one column selected, if it was); refused, leaving the
-     * edit as it was, if the spreadsheet has a column of its name.
+     * Puts the column back, selected as it was when added (the one column selected, if it was), unless it has been
+     * hidden since, when the selection is left as it is; refused, leaving the edit as it was, if the spreadsheet has a
+     * column of its name.
      */
     @Override
     public void redo() throws CannotRedoException {
@@ -97,11 +98,12 @@ public final class AddColumnEdit extends AbstractUndoableEdit implements Guarded
             throw new CannotRedoException();
         }
         super.redo();
-        if (selected) {
+        boolean select = selected && !column.isHidden();
+        if (select) {
             dataStore.deselectAll();
         }
         // A place past the end, which only a column taken out without an edit could leave, puts the column last.
         dataStore.addVariable(column, Math.min(index, dataStore.getAllVariables().size()));
-        column.setSelected(selected);
+        column.setSelected(select);
     }
 }

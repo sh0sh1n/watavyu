@@ -226,15 +226,17 @@ public class DatavyuCell implements Cell {
     }
 
     @Override
-    public void setHighlighted(final boolean highlighted) {
-        this.highlighted = highlighted;
+    public void setHighlighted(final boolean highlight) {
+        // A highlighted cell is selected, so a cell in a hidden column is neither.
+        boolean now = highlight && shown();
+        this.highlighted = now;
 
-        if (highlighted) {
-            setSelected(highlighted);
+        if (now) {
+            setSelected(true);
         }
 
         for (CellListener cl : listeners) {
-            cl.highlightingChange(highlighted);
+            cl.highlightingChange(now);
         }
     }
 

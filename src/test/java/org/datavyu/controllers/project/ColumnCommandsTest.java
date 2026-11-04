@@ -130,6 +130,20 @@ public class ColumnCommandsTest {
         assertEquals(order(), List.of("gaze", "speech", "gesture", "media_1"));
     }
 
+    /** Redoing a column hidden since leaves the selection as it is, as a hidden column cannot be selected. */
+    @Test
+    public void redoingAColumnHiddenSinceKeepsTheSelection() throws Exception {
+        Variable notes = columns.newColumn("notes");
+        columns.hide(List.of(notes));
+        spreadsheet.undo();
+        speech.setSelected(true);
+
+        spreadsheet.redo();
+
+        assertSame(dataStore.getVariable("notes"), notes);
+        assertEquals(dataStore.getSelectedVariables(), List.of(speech));
+    }
+
     // Delete Column
 
     @Test
