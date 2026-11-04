@@ -112,6 +112,9 @@ public final class VideoController implements ClockListener {
     /** Keeps the players and the spreadsheet's media columns in step; null until a spreadsheet is set. */
     private MediaPlayers mediaPlayers;
 
+    /** Set once the spreadsheet's tab has closed. */
+    private volatile boolean closed;
+
     /** Button to create a new cell */
     private JButton createNewCell;
 
@@ -226,6 +229,19 @@ public final class VideoController implements ClockListener {
     }
 
     /**
+     * Closes the spreadsheet's playback, as its tab closes: playback stops, the clock stops, and then the players and
+     * their windows close, so no tick reaches a player as it closes. A player still opening is closed once it opens.
+     */
+    public void close() {
+        closed = true;
+        stopAction();
+        clockTimer.close();
+        if (mediaPlayers != null) {
+            mediaPlayers.close();
+        }
+    }
+
+    /**
      * Opens a stream on a background thread, because the player blocks while its media
      * loads, then adds the track on the Swing EDT. A file that fails to open adds no track
      * and shows the player's error message.
@@ -254,22 +270,36 @@ public final class VideoController implements ClockListener {
                 streamViewer = JavaFxVideoPlugin.open(id, file, owner, clockTimer, false);
             } catch (Throwable t) {
                 logger.error("Unable to open " + file, t);
-                SwingUtilities.invokeLater(() -> {
-                    JOptionPane.showMessageDialog(owner,
-                            t.getMessage() != null ? t.getMessage() : "Unable to open " + file.getName(),
-                            "Cannot Open Video", JOptionPane.ERROR_MESSAGE);
-                    failed.run();
-                });
+                SwingUtilities.invokeLater(() -> streamFailed(t, file, failed));
                 return;
             }
-            SwingUtilities.invokeLater(() -> {
-                beforeAdd.accept(streamViewer);
-                addStream(streamViewer);
-                afterAdd.accept(streamViewer);
-            });
+            SwingUtilities.invokeLater(() -> streamOpened(streamViewer, beforeAdd, afterAdd));
         }, "open-video-" + file.getName());
         opener.setDaemon(true);
         opener.start();
+    }
+
+    /** Adds a stream that has opened, on the EDT; once this controller is closed, closes it instead. */
+    void streamOpened(final StreamViewer streamViewer, final Consumer<StreamViewer> beforeAdd,
+                      final Consumer<StreamViewer> afterAdd) {
+        if (closed) {
+            streamViewer.close();
+            return;
+        }
+        beforeAdd.accept(streamViewer);
+        addStream(streamViewer);
+        afterAdd.accept(streamViewer);
+    }
+
+    /** Shows why a stream did not open, on the EDT; once this controller is closed, its tab is gone and says nothing. */
+    void streamFailed(final Throwable cause, final File file, final Runnable failed) {
+        if (closed) {
+            return;
+        }
+        JOptionPane.showMessageDialog(owner,
+                cause.getMessage() != null ? cause.getMessage() : "Unable to open " + file.getName(),
+                "Cannot Open Video", JOptionPane.ERROR_MESSAGE);
+        failed.run();
     }
 
     /**

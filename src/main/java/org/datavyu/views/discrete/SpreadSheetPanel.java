@@ -371,7 +371,8 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
 
     /**
      * Closes the spreadsheet once its tab is gone and its work saved or knowingly discarded: it stops listening for
-     * keys, its columns stop following the clock, playback stops and its autosave is deleted.
+     * keys, its columns stop following the clock, its playback, players and media windows close, and its autosave is
+     * deleted.
      */
     public void close() {
         deregisterListeners();
@@ -379,7 +380,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
             column.deregisterListeners();
         }
         dataStore.removeListener(this);
-        videoController.stopAction();
+        videoController.close();
         projectController.close();
     }
 

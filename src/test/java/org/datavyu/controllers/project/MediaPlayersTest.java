@@ -19,7 +19,9 @@ import org.datavyu.models.db.DataStoreFactory;
 import org.datavyu.models.db.MediaClip;
 import org.datavyu.models.db.Variable;
 import org.datavyu.plugins.StreamViewer;
+import org.datavyu.util.ClockTimer;
 import org.datavyu.views.VideoController;
+import org.mockito.invocation.InvocationOnMock;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -47,6 +49,8 @@ public class MediaPlayersTest {
     private VideoController videoController;
     private List<StreamViewer> opened;
     private boolean failToOpen;
+    /** When set, players do not open at once; their openings wait here, to be finished by the test. */
+    private List<InvocationOnMock> pending;
     private Map<Variable, FakeWindow> windows;
     private MediaPlayers players;
 
@@ -104,7 +108,12 @@ public class MediaPlayersTest {
         videoController = mock(VideoController.class);
         opened = new ArrayList<>();
         failToOpen = false;
+        pending = null;
         doAnswer(call -> {
+            if (pending != null) {
+                pending.add(call);
+                return null;
+            }
             if (failToOpen) {
                 call.<Runnable>getArgument(4).run();
                 return null;
@@ -265,6 +274,54 @@ public class MediaPlayersTest {
 
         dataStore.addVariable(column);
         assertSame(players.getPlayer(clip), opened.get(1));
+    }
+
+    /** Closing a spreadsheet's tab closes its players and windows, and it stops following the spreadsheet (B19). */
+    @Test
+    public void closingClosesEveryPlayerAndWindow() throws Exception {
+        Cell clip = clip("media_1", 0, file("cam.mp4"));
+        players.openAll();
+        StreamViewer player = players.getPlayer(clip);
+
+        players.close();
+
+        verify(videoController).shutdown(player.getIdentifier(), false);
+        assertNull(players.getPlayer(clip));
+        assertTrue(windows.get(clip.getVariable()).closed);
+        clip("media_2", 0, file("mic.mp4"));
+        assertEquals(opened.size(), 1);
+    }
+
+    /** A player still opening when the spreadsheet closes is closed once it opens, and gets no window. */
+    @Test
+    public void aPlayerOpeningWhenClosedIsClosedOnceItOpens() throws Exception {
+        pending = new ArrayList<>();
+        Cell clip = clip("media_1", 0, file("cam.mp4"));
+        players.openAll();
+        assertEquals(pending.size(), 1);
+
+        players.close();
+        InvocationOnMock opening = pending.get(0);
+        StreamViewer late = player(opening.getArgument(0), opening.getArgument(1));
+        opening.<Consumer<StreamViewer>>getArgument(2).accept(late);
+        opening.<Consumer<StreamViewer>>getArgument(3).accept(late);
+
+        verify(videoController).shutdown(late.getIdentifier(), false);
+        assertNull(players.getPlayer(clip));
+        assertTrue(windows.isEmpty());
+    }
+
+    @Test
+    public void closingStopsFollowingTheClock() throws Exception {
+        ClockTimer clock = mock(ClockTimer.class);
+        VideoController playback = mock(VideoController.class);
+        when(playback.getClockTimer()).thenReturn(clock);
+        MediaPlayers followed = new MediaPlayers(dataStore, playback, column -> new FakeWindow(), Runnable::run);
+        verify(clock).registerListener(followed);
+
+        followed.close();
+
+        verify(clock).unRegisterListener(followed);
     }
 
     @Test
