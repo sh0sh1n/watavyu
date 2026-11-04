@@ -156,6 +156,9 @@ public class DatavyuCell implements Cell {
 
     @Override
     public void setClipFailed(final boolean failed) {
+        if (clip == null) {
+            throw new IllegalStateException("An annotation cell has no clip");
+        }
         if (failed != clipFailed) {
             clipFailed = failed;
             for (CellListener cl : listeners) {

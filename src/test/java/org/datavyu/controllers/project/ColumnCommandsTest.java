@@ -202,6 +202,17 @@ public class ColumnCommandsTest {
         assertSame(dataStore.getVariable("media_1"), media);
     }
 
+    /** Should a column be taken out without an edit, a deleted column whose place is past the end comes back last. */
+    @Test
+    public void aDeletedColumnWhosePlaceHasGoneComesBackLast() {
+        columns.delete(List.of(gesture));
+        dataStore.removeVariable(speech);
+
+        spreadsheet.undo();
+
+        assertEquals(order(), List.of("gaze", "gesture"));
+    }
+
     @Test
     public void aLockedColumnStopsTheWholeDeletionAndShowsIt() {
         VariableListener speechLock = mock(VariableListener.class);

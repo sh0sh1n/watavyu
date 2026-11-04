@@ -213,6 +213,7 @@ public interface Cell {
      * Records whether this cell's media file could not be opened, and tells the cell's listeners, so its text says so.
      *
      * @param failed whether the file could not be opened
+     * @throws IllegalStateException if this is an annotation column's cell
      */
     void setClipFailed(boolean failed);
 }

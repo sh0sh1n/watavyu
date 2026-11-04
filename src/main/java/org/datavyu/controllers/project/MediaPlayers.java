@@ -325,6 +325,8 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
         }
         Object token = new Object();
         opening.put(clip, token);
+        // Tried again, as when the clip comes back: it is marked only if this try fails too.
+        clip.setClipFailed(false);
         Variable column = clip.getVariable();
         videoController.openStream(Identifier.generateIdentifier(), file, player -> {
             player.setWindowListener(showing -> setWindowShowing(column, showing));

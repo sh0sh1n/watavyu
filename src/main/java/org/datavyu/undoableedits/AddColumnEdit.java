@@ -100,7 +100,8 @@ public final class AddColumnEdit extends AbstractUndoableEdit implements Guarded
         if (selected) {
             dataStore.deselectAll();
         }
-        dataStore.addVariable(column, index);
+        // A place past the end, which only a column taken out without an edit could leave, puts the column last.
+        dataStore.addVariable(column, Math.min(index, dataStore.getAllVariables().size()));
         column.setSelected(selected);
     }
 }

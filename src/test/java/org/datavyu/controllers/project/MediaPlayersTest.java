@@ -587,6 +587,20 @@ public class MediaPlayersTest {
         assertTrue(media.getCells().isEmpty());
     }
 
+    /** Media that does not open in a new column of its own keeps the column, which undo takes out. */
+    @Test
+    public void mediaThatFailsToOpenInANewColumnCanBeUndone() throws Exception {
+        failToOpen = true;
+
+        spreadsheet.media().addMedia(List.of(new File(file("bad.mp4"))), 0, column -> false);
+        Variable column = dataStore.getVariable("media_1");
+        assertTrue(column.getCells().get(0).isClipFailed());
+        assertEquals(spreadsheet.getUndoManager().getUndoPresentationName(), "Undo Add Media bad.mp4");
+
+        spreadsheet.undo();
+        assertTrue(dataStore.getAllVariables().isEmpty());
+    }
+
     /** Media added in a new column leaves the selection alone, and undo and redo do too. */
     @Test
     public void addingMediaKeepsTheSelectionThroughUndoAndRedo() throws Exception {

@@ -86,7 +86,9 @@ public final class RemoveColumnEdit extends AbstractUndoableEdit implements Guar
         }
         super.undo();
         // From the first place to the last, so each column goes back between those it was between.
-        deleted.forEach((index, column) -> dataStore.addVariable(column, index));
+        // A place past the end, which only a column taken out without an edit could leave, puts the column last.
+        deleted.forEach((index, column) ->
+            dataStore.addVariable(column, Math.min(index, dataStore.getAllVariables().size())));
     }
 
     @Override
