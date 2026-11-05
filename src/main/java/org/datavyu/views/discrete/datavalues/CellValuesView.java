@@ -18,6 +18,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.Cell;
+import org.datavyu.models.db.Cell.ClipFile;
 import org.datavyu.models.db.MediaClip;
 import org.datavyu.views.discrete.EditorComponent;
 import org.datavyu.views.discrete.EditorTracker;
@@ -29,8 +30,6 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -154,7 +153,7 @@ public final class CellValuesView extends JTextArea implements FocusListener {
         List<EditorComponent> editors = new ArrayList<>();
         MediaClip clip = parentCell.getClip();
         if (clip != null) {
-            editors.add(new FixedText(this, clipLabel(clip, parentCell.isClipFailed())));
+            editors.add(new FixedText(this, clipLabel(clip, parentCell.getClipFile())));
             return editors;
         }
         int codes = parentCell.getVariable().getCodes().size();
@@ -173,23 +172,24 @@ public final class CellValuesView extends JTextArea implements FocusListener {
 
     /**
      * Names what a media cell plays: its file's name, its frame rate when the file has video and has said it, and
-     * whether the file is missing, as {@code cam.mp4 · 29.97 fps (missing)}, or there but could not be opened, as
-     * {@code cam.mp4 (could not open)}.
+     * whether the player found the file missing, as {@code cam.mp4 · 29.97 fps (missing)}, or there but could not
+     * open it, as {@code cam.mp4 (could not open)}.
      *
-     * @param clip   a media cell's clip
-     * @param failed whether the file could not be opened
+     * @param clip  a media cell's clip
+     * @param found what the player last found of its file
      * @return the cell's text
      */
-    public static String clipLabel(final MediaClip clip, final boolean failed) {
+    public static String clipLabel(final MediaClip clip, final ClipFile found) {
         String label = clip.fileName();
         if (clip.frameRate() > 0) {
             label += " \u00b7 " + new BigDecimal(clip.frameRate()).setScale(3, RoundingMode.HALF_UP)
                 .stripTrailingZeros().toPlainString() + " fps";
         }
-        if (!Files.exists(Path.of(clip.file()))) {
-            return label + " (missing)";
-        }
-        return failed ? label + " (could not open)" : label;
+        return switch (found) {
+            case FOUND -> label;
+            case MISSING -> label + " (missing)";
+            case FAILED -> label + " (could not open)";
+        };
     }
 
     /** Sends a code's value typed to the command that sets and records it. */

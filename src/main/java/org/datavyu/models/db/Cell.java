@@ -187,19 +187,27 @@ public interface Cell {
      */
     void setClip(MediaClip clip);
 
-    /**
-     * Tells whether this cell's media file is there but could not be opened, as its player last reported. This is
-     * the session's state, not saved: the file is tried again when the project opens.
-     *
-     * @return whether the file could not be opened
-     */
-    boolean isClipFailed();
+    /** What the player last found of a media cell's file. It is the session's state, not saved. */
+    enum ClipFile {
+        /** There, or not looked for yet */
+        FOUND,
+        /** Not there */
+        MISSING,
+        /** There, but it could not be opened */
+        FAILED
+    }
 
     /**
-     * Records whether this cell's media file could not be opened, and tells the cell's listeners, so its text says so.
+     * Returns what the player last found of this cell's media file: the file is looked for when its clip is opened,
+     * as when the project opens or the clip is added, and not each time the cell is drawn.
+     */
+    ClipFile getClipFile();
+
+    /**
+     * Records what the player found of this cell's media file, and tells the cell's listeners, so its text says so.
      *
-     * @param failed whether the file could not be opened
+     * @param found what it found
      * @throws IllegalStateException if this is an annotation column's cell
      */
-    void setClipFailed(boolean failed);
+    void setClipFile(ClipFile found);
 }
