@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertSame;
 import static org.testng.Assert.assertTrue;
@@ -224,6 +225,7 @@ public class MediaPlayersTest {
         assertEquals(players.openAll(), List.of(missing));
 
         assertNull(players.getPlayer(clip));
+        assertEquals(clip.getClipFile(), ClipFile.MISSING);
         assertEquals(clip.getOnset(), 2_000L);
         assertEquals(dataStore.getAllVariables().size(), 1);
     }
@@ -636,7 +638,7 @@ public class MediaPlayersTest {
         spreadsheet.redo();
 
         assertEquals(clip.getClipFile(), ClipFile.FOUND);
-        assertTrue(players.getPlayer(clip) != null);
+        assertNotNull(players.getPlayer(clip));
     }
 
     /** A file that could not be opened is tried again when its clip comes back, and marked by how that goes. */

@@ -311,18 +311,18 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
     }
 
     /**
-     * Opens a clip's player, unless it has one or is opening.
+     * Opens a clip's player, unless it has one or is opening, looking for its file first.
      *
      * @return false if the clip's file is missing
      */
     private boolean open(final Cell clip) {
+        if (players.containsKey(clip) || opening.containsKey(clip)) {
+            return true;
+        }
         File file = new File(clip.getClip().file());
         if (!file.exists()) {
             clip.setClipFile(ClipFile.MISSING);
             return false;
-        }
-        if (players.containsKey(clip) || opening.containsKey(clip)) {
-            return true;
         }
         Object token = new Object();
         opening.put(clip, token);
