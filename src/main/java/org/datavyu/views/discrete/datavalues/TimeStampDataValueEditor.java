@@ -24,7 +24,6 @@ import org.datavyu.views.discrete.EditorTracker;
 
 import javax.swing.text.JTextComponent;
 import java.awt.event.FocusEvent;
-import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 
 /**
@@ -202,7 +201,7 @@ public final class TimeStampDataValueEditor extends EditorComponent {
 
                 // If the user is holding down shift - alter the selection as
                 // well as the caret position.
-                if (e.getModifiersEx() == InputEvent.SHIFT_DOWN_MASK) {
+                if (onlyShift(e)) {
                     // Shrink selection left - removed entire selection.
                     if (getCaretPosition() == selectStart) {
                         select(selectStart, selectStart);
@@ -239,7 +238,7 @@ public final class TimeStampDataValueEditor extends EditorComponent {
 
                 // If the user is holding down shift - alter the selection as
                 // well as the caret position.
-                if (e.getModifiersEx() == InputEvent.SHIFT_DOWN_MASK) {
+                if (onlyShift(e)) {
                     // Shrink selection right - removed entire selection.
                     if (getCaretPosition() == selectEnd) {
                         select(selectEnd, selectEnd);

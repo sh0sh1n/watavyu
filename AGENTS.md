@@ -94,6 +94,8 @@ Ask the owner before acting on these.
 - The defaults for the values font (sans or mono) and for dimming past cells, once both have been tried (U5).
 - Whether quick-key mode stays.
 - Whether one user action is one undo step, such as Add Media with several files or Set Onset on several cells (deferred by the owner, 2026-11-04). Until then each file and each cell is a step of its own.
+- Whether the Code Editor's keys (Escape closes it, ⌃M adds a column, ⌃A adds a code, ⌃⌦ deletes) become named commands in `Shortcuts` and the Keyboard Shortcuts list, and whether ⌃A keeps moving a text field's caret to the start of its line as well (R4).
+- Whether a right-click in a cell adds it to the selection, or takes it out, as a ⌘-click does. Datavyu did so because its old modifier masks gave ⌘ and the right button one bit; the click is kept as it was until this is answered.
 - Whether a scripting shell returns, and in what form. It would start from a clean slate.
 
 ## Keeping TODO.md and AGENTS.md
