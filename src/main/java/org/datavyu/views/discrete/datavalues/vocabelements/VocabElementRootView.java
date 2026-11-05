@@ -65,9 +65,7 @@ public final class VocabElementRootView extends JTextArea {
         this.pv = pv;
 
         editors = new ArrayList<EditorComponent>();
-        // As in a cell, ⌘\ deletes the spreadsheet's selected cells.
-        edTracker = new EditorTracker(this, editors, vocabVariable,
-            () -> pv.getParentDialog().getProjectController().cells().deleteSelected());
+        edTracker = new EditorTracker(this, editors, vocabVariable);
 
         setVocabElement(vocabVariable, pv);
 

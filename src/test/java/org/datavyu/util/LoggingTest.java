@@ -27,7 +27,7 @@ public class LoggingTest {
         private final List<String> lines = new ArrayList<>();
 
         Lines() {
-            super("lines", null, PatternLayout.newBuilder().withPattern("%m").build(), true, Property.EMPTY_ARRAY);
+            super("lines", null, PatternLayout.newBuilder().setPattern("%m").build(), true, Property.EMPTY_ARRAY);
         }
 
         @Override

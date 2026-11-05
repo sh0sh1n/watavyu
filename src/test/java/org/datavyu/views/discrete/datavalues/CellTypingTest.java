@@ -15,11 +15,13 @@ import org.datavyu.models.db.CellListener;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.DataStoreFactory;
 import org.datavyu.views.discrete.EditorComponent;
+import org.datavyu.views.discrete.EditorTracker;
 import org.datavyu.views.discrete.datavalues.TimeStampDataValueEditor.TimeStampSource;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.awt.event.FocusEvent;
+import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.util.List;
 import javax.swing.JTextField;
@@ -225,6 +227,31 @@ public class CellTypingTest {
             type("ft");
 
             assertEquals(cell.getValues(), List.of("left", "near"));
+        });
+    }
+
+    /** Tab goes to the next code and ⇧Tab to the one before, each coming round from the end. */
+    @Test
+    public void tabAndShiftTabGoFromCodeToCode() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            spreadsheet.codes().add(cell.getVariable());
+            spreadsheet.codes().add(cell.getVariable());
+            view.showValues();
+            EditorTracker tracker = view.getEdTracker();
+            KeyEvent tab = new KeyEvent(view, KeyEvent.KEY_PRESSED, 0, 0, KeyEvent.VK_TAB, '\t');
+            KeyEvent shiftTab = new KeyEvent(view, KeyEvent.KEY_PRESSED, 0, InputEvent.SHIFT_DOWN_MASK, KeyEvent.VK_TAB,
+                '\t');
+            tracker.setEditor(tracker.getEditorAtArgIndex(1));
+
+            tracker.keyPressed(tab);
+            assertSame(tracker.getCurrentEditor(), tracker.getEditorAtArgIndex(2));
+            tracker.keyPressed(tab);
+            assertSame(tracker.getCurrentEditor(), tracker.getEditorAtArgIndex(0));
+
+            tracker.keyPressed(shiftTab);
+            assertSame(tracker.getCurrentEditor(), tracker.getEditorAtArgIndex(2));
+            tracker.keyPressed(shiftTab);
+            assertSame(tracker.getCurrentEditor(), tracker.getEditorAtArgIndex(1));
         });
     }
 

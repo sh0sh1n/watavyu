@@ -644,10 +644,8 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
         }
         // The second click of a double-click leaves the selection as the first made it.
         if (me.getClickCount() == 1) {
-            int keyMask = Toolkit.getDefaultToolkit().getMenuShortcutKeyMask();
-
-            boolean groupSel = (((me.getModifiers() & ActionEvent.SHIFT_MASK)
-                    != 0) || ((me.getModifiers() & keyMask) != 0));
+            int keyMask = Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
+            boolean groupSel = me.isShiftDown() || (me.getModifiersEx() & keyMask) != 0;
             boolean curSelected = this.isSelected();
 
             if (!groupSel) {

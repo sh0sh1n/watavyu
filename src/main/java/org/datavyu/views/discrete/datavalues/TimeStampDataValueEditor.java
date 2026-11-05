@@ -202,7 +202,7 @@ public final class TimeStampDataValueEditor extends EditorComponent {
 
                 // If the user is holding down shift - alter the selection as
                 // well as the caret position.
-                if (e.getModifiers() == InputEvent.SHIFT_MASK) {
+                if (e.getModifiersEx() == InputEvent.SHIFT_DOWN_MASK) {
                     // Shrink selection left - removed entire selection.
                     if (getCaretPosition() == selectStart) {
                         select(selectStart, selectStart);
@@ -239,7 +239,7 @@ public final class TimeStampDataValueEditor extends EditorComponent {
 
                 // If the user is holding down shift - alter the selection as
                 // well as the caret position.
-                if (e.getModifiers() == InputEvent.SHIFT_MASK) {
+                if (e.getModifiersEx() == InputEvent.SHIFT_DOWN_MASK) {
                     // Shrink selection right - removed entire selection.
                     if (getCaretPosition() == selectEnd) {
                         select(selectEnd, selectEnd);

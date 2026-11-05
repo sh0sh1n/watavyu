@@ -161,16 +161,33 @@ tasks.withType<JavaCompile>().configureEach {
     options.errorprone.error("MissingOverride")
 }
 
+// javac's deprecation warnings have reached zero in every source set. Error Prone's warnings have not, so -Werror
+// cannot go on the build's own compiles: each source set is compiled again, without Error Prone, with deprecation
+// warnings as errors, so they stay at zero.
+val deprecationGates = sourceSets.map { set ->
+    tasks.register<JavaCompile>("${set.name}DeprecationGate") {
+        description = "Fails if the ${set.name} sources use a deprecated API."
+        group = "verification"
+        source = set.java
+        classpath = set.compileClasspath
+        destinationDirectory.set(layout.buildDirectory.dir("deprecation-gate/${set.name}"))
+        options.errorprone.enabled.set(false)
+        options.compilerArgs.addAll(listOf("-Xlint:none", "-Xlint:deprecation", "-Werror"))
+    }
+}
+tasks.check { dependsOn(deprecationGates) }
+val compiles = tasks.withType<JavaCompile>().matching { !it.name.endsWith("DeprecationGate") }
+
 // ./gradlew compileJava compileTestJava -PerrorpronePatch=CheckA,CheckB rewrites the sources in place with Error
 // Prone's suggested fixes for those checks. Review the result like any other change.
 providers.gradleProperty("errorpronePatch").orNull?.let { checks ->
-    tasks.withType<JavaCompile>().configureEach {
+    compiles.configureEach {
         options.errorprone.errorproneArgs.addAll("-XepPatchChecks:$checks", "-XepPatchLocation:IN_PLACE")
     }
 }
 
 if (providers.gradleProperty("allWarnings").isPresent) {
-    tasks.withType<JavaCompile>().configureEach {
+    compiles.configureEach {
         options.compilerArgs.addAll(listOf("-Xmaxwarns", "100000", "-Xlint:all,-serial,-processing"))
     }
 }

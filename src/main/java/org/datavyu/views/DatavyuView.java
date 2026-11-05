@@ -1081,6 +1081,11 @@ public final class DatavyuView implements FileDropEventListener {
         return commands.get(command);
     }
 
+    /** Returns the main window's shortcuts, which the menu bar's accelerators and the keypad follow. */
+    Shortcuts getShortcuts() {
+        return shortcuts;
+    }
+
     /**
      * Defines what each command does and the state it shows, worked out from the selected spreadsheet whenever the
      * commands are refreshed.
@@ -1215,7 +1220,8 @@ public final class DatavyuView implements FileDropEventListener {
                 .menu("File", Command.SAVE_AS, KeyStroke.getKeyStroke(KeyEvent.VK_S, cmd | shift))
                 .global("Spreadsheet", Command.NEW_CELL_LEFT, KeyStroke.getKeyStroke(KeyEvent.VK_L, cmd))
                 .global("Spreadsheet", Command.NEW_CELL_RIGHT, KeyStroke.getKeyStroke(KeyEvent.VK_R, cmd))
-                .menu("Spreadsheet", Command.DELETE_CELLS, KeyStroke.getKeyStroke(KeyEvent.VK_BACK_SLASH, cmd))
+                // Run first: a cell's text takes ⌘\ to unselect.
+                .global("Spreadsheet", Command.DELETE_CELLS, KeyStroke.getKeyStroke(KeyEvent.VK_BACK_SLASH, cmd))
                 .menu("Spreadsheet", Command.UNDO, KeyStroke.getKeyStroke(KeyEvent.VK_Z, cmd))
                 .menu("Spreadsheet", Command.REDO, KeyStroke.getKeyStroke(KeyEvent.VK_Y, cmd))
                 .menu("Spreadsheet", Command.TEMPORAL_LAYOUT, KeyStroke.getKeyStroke(KeyEvent.VK_T, cmd))

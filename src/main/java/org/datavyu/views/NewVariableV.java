@@ -90,7 +90,7 @@ public final class NewVariableV extends DatavyuDialog {
             }
         });
 
-        cancelButton.setLabel(bundle.getString("cancelButton.text"));
+        cancelButton.setText(bundle.getString("cancelButton.text"));
         cancelButton.setName("cancelButton");
         cancelButton.addActionListener(new java.awt.event.ActionListener() {
             @Override

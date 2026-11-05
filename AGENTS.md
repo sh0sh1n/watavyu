@@ -83,7 +83,7 @@ Newest first. (owner) marks product decisions; the rest are engineering choices 
 - **2026-10-14: no Swing Application Framework.** A plain `main`, Swing `Action`s, `Resources` over `ResourceBundle`, and `WindowPlacement` replaced it. Settings are JSON (`Settings`, see BUILDING.md › Settings); colours follow the Mac's appearance rather than a setting.
 - **2026-10-14: one shortcut table.** `Shortcuts` drives menu accelerators, the keypad and the Keyboard Shortcuts dialog; new shortcuts go there, each bound to a named `Command`.
 - **2026-10-14: OpenJFX is the only video player.** The plugin system is gone. Project files do not name a player.
-- **Error Prone is the linter; analysis reports are not gates** (BUILDING.md › Lint). PMD, SpotBugs, JaCoCo and the scripts in `tools/analysis` measure TODO.md. A SpotBugs category at zero joins `spotbugsGate` and fails the build; thread safety is the first.
+- **Error Prone is the linter; analysis reports are not gates** (BUILDING.md › Lint). PMD, SpotBugs, JaCoCo and the scripts in `tools/analysis` measure TODO.md. A SpotBugs category at zero joins `spotbugsGate` and fails the build; thread safety is the first. A javac lint category at zero gets a compile of its own with `-Werror`, as deprecation has.
 
 ## Undecided
 
