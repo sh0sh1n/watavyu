@@ -161,14 +161,14 @@ tasks.withType<JavaCompile>().configureEach {
     options.errorprone.error("MissingOverride")
 }
 
-// javac's deprecation and removal warnings have reached zero in every source set. Error Prone's warnings have not, so -Werror
-// cannot go on the build's own compiles: each source set is compiled again, without Error Prone, with deprecation
-// warnings as errors, so they stay at zero.
+// javac's deprecation and removal warnings have reached zero in every source set. Error Prone's warnings have not, so
+// -Werror cannot go on the build's own compiles: each source set is compiled again, without Error Prone or annotation
+// processors (it has none), with those two warnings as errors, so they stay at zero.
 val deprecationGates = mutableSetOf<String>()
 sourceSets.configureEach {
     val set = this
     val gate = tasks.register<JavaCompile>("${set.name}DeprecationGate") {
-        description = "Fails if the ${set.name} sources use a deprecated API."
+        description = "Fails if the ${set.name} sources use a deprecated API, or one marked for removal."
         group = "verification"
         source = set.java
         classpath = set.compileClasspath
@@ -179,7 +179,7 @@ sourceSets.configureEach {
     deprecationGates += gate.name
     tasks.check { dependsOn(gate) }
 }
-val compiles = tasks.withType<JavaCompile>().matching { it.name !in deprecationGates }
+val compiles = tasks.withType<JavaCompile>().named { it !in deprecationGates }
 
 // ./gradlew compileJava compileTestJava -PerrorpronePatch=CheckA,CheckB rewrites the sources in place with Error
 // Prone's suggested fixes for those checks. Review the result like any other change.
