@@ -83,7 +83,7 @@ Newest first. (owner) marks product decisions; the rest are engineering choices 
 - **2026-10-14: no Swing Application Framework.** A plain `main`, Swing `Action`s, `Resources` over `ResourceBundle`, and `WindowPlacement` replaced it. Settings are JSON (`Settings`, see BUILDING.md › Settings); colours follow the Mac's appearance rather than a setting.
 - **2026-10-14: one shortcut table.** `Shortcuts` drives menu accelerators, the keypad and the Keyboard Shortcuts dialog; new shortcuts go there, each bound to a named `Command`.
 - **2026-10-14: OpenJFX is the only video player.** The plugin system is gone. Project files do not name a player.
-- **Error Prone is the linter; analysis reports are not gates** (BUILDING.md › Lint). PMD, SpotBugs, JaCoCo and the scripts in `tools/analysis` measure TODO.md. A SpotBugs category at zero joins `spotbugsGate` and fails the build; thread safety is the first.
+- **Error Prone is the linter; analysis reports are not gates** (BUILDING.md › Lint). PMD, SpotBugs, JaCoCo and the scripts in `tools/analysis` measure TODO.md. A SpotBugs category at zero joins `spotbugsGate` and fails the build; thread safety is the first. A javac lint category at zero gets a compile of its own with `-Werror`, as deprecation has.
 
 ## Undecided
 
@@ -94,6 +94,8 @@ Ask the owner before acting on these.
 - The defaults for the values font (sans or mono) and for dimming past cells, once both have been tried (U5).
 - Whether quick-key mode stays.
 - Whether one user action is one undo step, such as Add Media with several files or Set Onset on several cells (deferred by the owner, 2026-11-04). Until then each file and each cell is a step of its own.
+- Whether the Code Editor's keys (Escape closes it, ⌃M adds a column, ⌃A adds a code, ⌃⌦ deletes) become named commands in `Shortcuts` and the Keyboard Shortcuts list, and whether ⌃A keeps moving a text field's caret to the start of its line as well (R4).
+- Whether a right-click in a cell adds it to the selection, or takes it out, as a ⌘-click does. Datavyu did so because its old modifier masks gave ⌘ and the right button one bit; the click is kept as it was until this is answered.
 - Whether a scripting shell returns, and in what form. It would start from a clean slate.
 
 ## Keeping TODO.md and AGENTS.md

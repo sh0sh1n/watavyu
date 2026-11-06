@@ -85,7 +85,7 @@ public final class CellValuesView extends JTextArea implements FocusListener {
 
         parentCell = cell;
         allEditors = new ArrayList<>();
-        edTracker = new EditorTracker(this, allEditors, cell.getVariable(), controller.cells()::deleteSelected);
+        edTracker = new EditorTracker(this, allEditors, cell.getVariable());
 
         showValues();
 

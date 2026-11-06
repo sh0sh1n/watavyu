@@ -19,7 +19,6 @@ import org.datavyu.views.discrete.EditorComponent;
 
 import javax.swing.text.JTextComponent;
 import java.awt.event.FocusEvent;
-import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
@@ -130,7 +129,7 @@ public final class CodeValueEditor extends EditorComponent {
 
                 // If the user is holding down shift - alter the selection as
                 // well as the caret position.
-                if (e.getModifiers() == InputEvent.SHIFT_MASK) {
+                if (onlyShift(e)) {
                     // Shrink selection left - removed entire selection.
                     if (getCaretPosition() == selectStart) {
                         select(selectStart, selectStart);
@@ -169,7 +168,7 @@ public final class CodeValueEditor extends EditorComponent {
 
                 // If the user is holding down shift - alter the selection as
                 // well as the caret position.
-                if (e.getModifiers() == InputEvent.SHIFT_MASK) {
+                if (onlyShift(e)) {
                     // Shrink selection right - removed entire selection.
                     if (getCaretPosition() == selectEnd) {
                         select(selectEnd, selectEnd);

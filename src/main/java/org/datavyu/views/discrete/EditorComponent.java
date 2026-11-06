@@ -21,6 +21,7 @@ import javax.swing.text.JTextComponent;
 import java.awt.*;
 import java.awt.datatransfer.*;
 import java.awt.event.FocusEvent;
+import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 
 /**
@@ -99,6 +100,19 @@ public abstract class EditorComponent implements ClipboardOwner {
     public EditorComponent(final JTextComponent tc, final String text) {
         this(tc);
         editorText = text;
+    }
+
+    /** The modifier keys, without the mouse buttons the extended modifiers also carry. */
+    private static final int KEY_MODIFIERS = InputEvent.SHIFT_DOWN_MASK | InputEvent.CTRL_DOWN_MASK
+        | InputEvent.META_DOWN_MASK | InputEvent.ALT_DOWN_MASK | InputEvent.ALT_GRAPH_DOWN_MASK;
+
+    /**
+     * Returns whether ⇧ is the one modifier key held, whatever mouse button is.
+     *
+     * @param e a key event
+     */
+    protected static boolean onlyShift(final KeyEvent e) {
+        return (e.getModifiersEx() & KEY_MODIFIERS) == InputEvent.SHIFT_DOWN_MASK;
     }
 
     /**

@@ -66,23 +66,17 @@ public final class EditorTracker
      */
     private final Variable column;
 
-    /** Deletes the spreadsheet's selected cells */
-    private final Runnable deleteCells;
-
     /**
      * Constructor for editors of a column's cell or of its name and codes, which a locked column refuses.
      *
      * @param ta     JTextComponent containing the editors to track.
      * @param eds    Vector of the EditorComponents.
      * @param column The column they belong to.
-     * @param deleteCells deletes the spreadsheet's selected cells, which ⌘\ asks for
      */
-    public EditorTracker(final JTextComponent ta, final List<EditorComponent> eds, final Variable column,
-                         final Runnable deleteCells) {
+    public EditorTracker(final JTextComponent ta, final List<EditorComponent> eds, final Variable column) {
         textArea = ta;
         editors = eds;
         this.column = column;
-        this.deleteCells = deleteCells;
     }
 
     /**
@@ -396,14 +390,6 @@ public final class EditorTracker
     public void keyPressed(KeyEvent e) {
         switch (e.getKeyCode()) {
 
-            case KeyEvent.VK_BACK_SLASH:
-                // ⌘\ deletes the selected cells; a backslash on its own is typed.
-                if (e.getModifiers() == KeyEvent.META_MASK) {
-                    deleteCells.run();
-                    e.consume();
-                }
-                break;
-
             case KeyEvent.VK_BACK_SPACE:
                 if (!currentEditor.isEditable() || refused()) {
                     e.consume();
@@ -480,7 +466,7 @@ public final class EditorTracker
                     currentEditor.selectAll();
                     if (currentEditor.getSelectionEnd() - currentEditor.getSelectionStart() != currentEditor.getText().length()) {
                         setEditor(nextEditor());
-                    } else if ((e.getModifiers() & InputEvent.SHIFT_MASK) > 0) {
+                    } else if (e.isShiftDown()) {
                         setEditor(prevEditor());
                         if (currentEditor == NO_EDITOR) {
                             setEditor(lastEditor());

@@ -415,9 +415,10 @@ public class SpreadsheetCell extends JPanel
 
     @Override
     public void mousePressed(final MouseEvent me) {
-        int keyMask = Toolkit.getDefaultToolkit().getMenuShortcutKeyMask();
-        boolean groupSel = (me.getModifiers() & keyMask) != 0;
-        boolean contSel = (me.getModifiers() & ActionEvent.SHIFT_MASK) != 0;
+        // A right-click adds to the selection as ⌘ does, as it did when both had one bit in the old modifier masks.
+        int addMask = Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx() | InputEvent.BUTTON3_DOWN_MASK;
+        boolean groupSel = (me.getModifiersEx() & addMask) != 0;
+        boolean contSel = me.isShiftDown();
 
         Class source = me.getSource().getClass();
         boolean isEditorSrc = (source.equals(TimeStampTextField.class)

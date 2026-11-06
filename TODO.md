@@ -16,18 +16,20 @@ Updated 2026-11-04. Re-measure with the commands in [BUILDING.md › Analysis Re
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
 | Java source (main) | 242 files, 42.5k lines | 142 files, 24.9k lines |
-| Tests / line coverage | 113 / 9.9% | 706 / 67.5%; views 60%, undo edits 93% |
+| Tests / line coverage | 113 / 9.9% | 713 / 68.2%; views 60%, undo edits 93% |
 | Runtime dependencies / with known vulnerabilities | 28 / 8 | 13 / 0 |
-| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 432 |
+| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 413 |
 | PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 298 / 51 (none on thread safety, now gated); 14 |
 | Never-invoked methods (`dead-code.py`) | 109+ | 27: test-only accessors, unused settings setters, and Swing overrides the script cannot see |
 | Static global access (`grep -rohP 'Datavyu\.(get\|set)\w*\(' src/main/java \| wc -l`) | about 330 call sites | 0: each tab's `ProjectController` is passed to what it owns |
 
 ## Bugs
 
+**B27. ⇧ with an arrow selects nothing in a value or a time.** ready, *verified* in a value, *from reading* in a time. The editors move the caret themselves and then select with positions counted within the value, where `EditorComponent.select` counts them in the whole cell, and with a backward selection that `JTextComponent.select` cannot hold (`CodeValueEditor.keyPressed` and `TimeStampDataValueEditor.keyPressed`, the `VK_LEFT` and `VK_RIGHT` cases). So the selection comes out empty. Goes with R4's editors, which should leave caret movement and selection to the text component.
+
 **B26. A malformed Datavyu JSON file can crash its import or import part of it.** ready, *from reading*. The importer (`OpenDataStoreFileController.importPasses`) refuses an unreadable time, value or code and takes out what it added, but other faults escape that path: a pass whose `name` is `null` or not text, or a code whose type is `null`, an object or an array, ends in a `NullPointerException` (`createVariable`, `getVarType`); a name a column cannot take ends in a `UserWarningException` that leaves the passes before it imported; and a code of an unknown type is logged and leaves its column half read. Each should refuse the whole file, saying where, as an unreadable time does.
 
-**B24. A playback integration test fails now and then.** ready, *verified* once. On 2026-11-04 `PlaybackIntegrationTest.playsForwardFromAnOnset` failed "the paused position follows playback": after a second of play, pausing reported a frame (`currentFrame`) more than 2 frames behind the last one the probe saw shown. Two reruns passed. It ran straight after a full build, so load may be the trigger; whether the pause lands behind the picture or the test's bound is too tight is not known.
+**B24. A playback integration test fails now and then.** ready, *verified* twice. On 2026-11-04, twice that day (each time the first run after a build, and each followed by passing reruns), `PlaybackIntegrationTest.playsForwardFromAnOnset` failed "the paused position follows playback": after a second of play, pausing reported a frame (`currentFrame`) more than 2 frames behind the last one the probe saw shown. It ran straight after a full build, so load may be the trigger; whether the pause lands behind the picture or the test's bound is too tight is not known.
 
 **B2. The app changes a global macOS setting.** ready (owner: scope it to the app), *from reading*. At startup `Datavyu` runs `defaults write -g ApplePressAndHoldEnabled -bool false` for every application on the Mac, and restores it only on a clean shutdown; a crash or force-quit leaves it changed. (It used to run when the class loaded, so every test run turned the setting off and never restored it.) The intent is key repeat instead of the accent popup while holding keys. Scope it to the app: in-app key repeat, or a per-app defaults domain once there is an app bundle; then delete the global write.
 
@@ -71,7 +73,7 @@ None open.
 
 Tech debt is paid down in the Java app rather than left for the C++ rewrite (AGENTS.md › North Star, 2026-11-03). The items run in this order, each behaviour-preserving unless it says otherwise, and each pins the behaviour it touches with tests, since most views and undo have none.
 
-**R4. Per-editor key handling.** ready. `EditorTracker` and the value editors handle keys per editor, with 18 deprecation warnings from the old modifier API (`getModifiers`, `*_MASK`, `getMenuShortcutKeyMask`). Keys that are commands go through `Shortcuts` to the commands (`Command`); editors keep only text editing. Do before F7.
+**R4. Per-editor key handling.** ready (owner: whether the Code Editor's keys become commands, AGENTS.md › Undecided). The modifier API is modern and gated (no deprecated API), and Delete Cells (`⌘\`) runs through `Shortcuts` rather than from inside a cell. Left: the Code Editor handles its own keys (`VocabEditorV`'s key dispatcher: Escape closes it, ⌃M adds a column, ⌃A adds a code, ⌃⌦ deletes), outside `Shortcuts` and the Keyboard Shortcuts list, and ⌃A also moves a text field's caret to the start of its line. Making them named commands is a product choice. Do before F7.
 
 **R7. Threading.** Make the boundary between the clock thread, the JavaFX thread and the EDT explicit, as `JavaFxPlayback` already does for the player. `ClockTimer` notifies its listeners on its own pool threads, most of them while holding its lock, so a listener that waits on another thread can deadlock it; the playhead (`PlayheadCarriage.show`) and `MediaPlayers` hand their work to the EDT. Cells still restyle for the needle on the clock thread (`SpreadsheetCell`'s clock listener, through `CellLook`), as they did before U5. SpotBugs's thread-safety findings are at zero and gated.
 
