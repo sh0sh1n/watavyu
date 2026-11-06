@@ -22,7 +22,7 @@ import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.CellListener;
 import org.datavyu.util.ClockTimer;
 import org.datavyu.util.Settings;
-import org.datavyu.views.discrete.datavalues.MatrixRootView;
+import org.datavyu.views.discrete.datavalues.CellValuesView;
 import org.datavyu.views.discrete.datavalues.TimeStampDataValueEditor.TimeStampSource;
 import org.datavyu.views.discrete.datavalues.TimeStampTextField;
 
@@ -61,7 +61,7 @@ public class SpreadsheetCell extends JPanel
     /**
      * A panel for holding the value of the cell.
      */
-    private MatrixRootView dataPanel;
+    private CellValuesView dataPanel;
     /**
      * The Ordinal display component.
      */
@@ -154,7 +154,7 @@ public class SpreadsheetCell extends JPanel
         offset.addMouseListener(this);
         offset.setName("offsetTextField");
 
-        dataPanel = new MatrixRootView(controller, model);
+        dataPanel = new CellValuesView(controller, model);
         dataPanel.setFont(SpreadsheetTheme.dataFont());
         dataPanel.setForeground(SpreadsheetTheme.PALETTE.text());
 
@@ -298,9 +298,9 @@ public class SpreadsheetCell extends JPanel
     }
 
     /**
-     * @return The MatrixRootView of this cell.
+     * @return The CellValuesView of this cell.
      */
-    public final MatrixRootView getDataView() {
+    public final CellValuesView getDataView() {
         return dataPanel;
     }
 
@@ -421,7 +421,7 @@ public class SpreadsheetCell extends JPanel
 
         Class source = me.getSource().getClass();
         boolean isEditorSrc = (source.equals(TimeStampTextField.class)
-                || (source.equals(MatrixRootView.class)));
+                || (source.equals(CellValuesView.class)));
 
         model = model.getFreshCell();
 
