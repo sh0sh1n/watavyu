@@ -55,10 +55,6 @@ public interface CellListener {
      */
     void selectionChange(final boolean isSelected);
 
-    /**
-     * Called when the value for a cell changes.
-     *
-     * @param newCellValue The new value being used for a cell.
-     */
-    void valueChange(final CellValue newCellValue);
+    /** Called when what a cell shows changes: one of its values, or a clip's file or whether it opened. */
+    void contentChanged();
 }

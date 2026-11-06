@@ -3,7 +3,6 @@ package org.datavyu.controllers.project;
 import org.datavyu.models.Identifier;
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.CellListener;
-import org.datavyu.models.db.CellValue;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.DataStoreListener;
 import org.datavyu.models.db.MediaClip;
@@ -493,7 +492,7 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
             }
 
             @Override
-            public void valueChange(final CellValue newCellValue) {
+            public void contentChanged() {
             }
         };
         clipListeners.put(clip, listener);

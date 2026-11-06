@@ -75,11 +75,7 @@ public final class SpreadsheetColumns {
         variable.getRootNode().childArguments.forEach(code -> codes.add(code.name));
         List<AnnotationCell> cells = new ArrayList<>();
         for (Cell cell : variable.getCellsTemporally()) {
-            List<String> values = new ArrayList<>();
-            for (int i = 0; i < codes.size(); i++) {
-                values.add(cell.getMatrixValue(i).toString());
-            }
-            cells.add(new AnnotationCell(cell.getOnset(), cell.getOffset(), values));
+            cells.add(new AnnotationCell(cell.getOnset(), cell.getOffset(), cell.getValues()));
         }
         return new AnnotationColumn(variable.getName(), codes, variable.isHidden(), variable.isLocked(), cells);
     }
@@ -134,7 +130,7 @@ public final class SpreadsheetColumns {
                 cell.setOnset(annotated.onset());
                 cell.setOffset(annotated.offset());
                 for (int i = 0; i < annotated.values().size(); i++) {
-                    cell.setMatrixValue(i, annotated.values().get(i));
+                    cell.setValue(i, annotated.values().get(i));
                 }
             }
             // Locked last, once its cells are in.

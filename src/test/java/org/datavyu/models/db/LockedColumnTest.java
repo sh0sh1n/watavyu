@@ -39,7 +39,7 @@ public class LockedColumnTest {
         dataStore = DataStoreFactory.newDataStore();
         notes = dataStore.createVariable("notes");
         cell = notes.createPointCell(1_000);
-        cell.setMatrixValue(0, "smile");
+        cell.setValue(0, "smile");
         notes.addListener(listener);
         refusals = 0;
         lockChanges.clear();
@@ -64,12 +64,12 @@ public class LockedColumnTest {
     public void aLockedColumnsCellsKeepTheirTimesAndValues() {
         cell.setOnset(5_000);
         cell.setOffset(6_000);
-        cell.setMatrixValue(0, "frown");
-        cell.getMatrixValue(0).clear();
+        cell.setValue(0, "frown");
+        cell.setValue(0, "");
 
         assertEquals(cell.getOnset(), 1_000L);
         assertEquals(cell.getOffset(), 1_000L);
-        assertEquals(cell.getMatrixValue(0).toString(), "smile");
+        assertEquals(cell.getValue(0), "smile");
         assertEquals(refusals, 4);
     }
 
@@ -96,7 +96,7 @@ public class LockedColumnTest {
 
         assertEquals(notes.getRootNode().childArguments, codes);
         assertEquals(codes.get(0).name, "code01");
-        assertEquals(cell.getMatrixValue(0).toString(), "smile");
+        assertEquals(cell.getValue(0), "smile");
         assertEquals(notes.getName(), "notes");
         assertEquals(refusals, 6);
     }
@@ -119,12 +119,12 @@ public class LockedColumnTest {
         notes.setLocked(false);
 
         cell.setOnset(5_000);
-        cell.setMatrixValue(0, "frown");
+        cell.setValue(0, "frown");
         notes.createPointCell(2_000);
         notes.setName("renamed");
 
         assertEquals(cell.getOnset(), 5_000L);
-        assertEquals(cell.getMatrixValue(0).toString(), "frown");
+        assertEquals(cell.getValue(0), "frown");
         assertEquals(notes.getCells().size(), 2);
         assertEquals(refusals, 0);
     }

@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 
 /**
@@ -62,22 +63,17 @@ public class DataValueEditorFactory {
             return eds;
         }
 
-        MatrixCellValue mv = (MatrixCellValue) c.getCellValue();
-        if (mv != null) {
-            eds.add(new FixedText(ta, "("));
-
-            for (int i = 0; i < mv.getArguments().size(); i++) {
-                int code = i;
-                eds.add(buildNominal(ta, (NominalCellValue) mv.getArguments().get(i), quickKeyMode,
-                    value -> typing.typed(code, value)));
-
-                if ((mv.getArguments().size() > 1) && (i < (mv.getArguments().size() - 1))) {
-                    eds.add(new FixedText(ta, ", "));
-                }
+        List<Argument> codes = c.getVariable().getRootNode().childArguments;
+        eds.add(new FixedText(ta, "("));
+        for (int i = 0; i < codes.size(); i++) {
+            int code = i;
+            eds.add(buildNominal(ta, () -> c.getValue(code), () -> "<" + c.getVariable().getRootNode().childArguments.get(code).name + ">", quickKeyMode,
+                value -> typing.typed(code, value)));
+            if (i < codes.size() - 1) {
+                eds.add(new FixedText(ta, ", "));
             }
-
-            eds.add(new FixedText(ta, ")"));
         }
+        eds.add(new FixedText(ta, ")"));
 
         return eds;
     }
@@ -106,16 +102,18 @@ public class DataValueEditorFactory {
     /**
      * Creates a data value view from the specified data value within a matrix.
      *
-     * @param ta The parent JTextComponent the editor is in.
-     * @param v  The value this editor manipulates
+     * @param ta           The parent JTextComponent the editor is in.
+     * @param value        the cell's value for the code, as it is now
+     * @param placeholder  what an empty value shows
      * @param quickKeyMode tells whether quick-key mode is on, in which typing does not change the value
      * @param typing       where what is typed goes, to change the value
      * @return An editor component to represent the specified data value.
      */
     public static EditorComponent buildNominal(final JTextComponent ta,
-                                               final NominalCellValue v,
+                                               final Supplier<String> value,
+                                               final Supplier<String> placeholder,
                                                final BooleanSupplier quickKeyMode,
                                                final Consumer<String> typing) {
-        return new NominalDataValueEditor(ta, v, quickKeyMode, typing);
+        return new NominalDataValueEditor(ta, value, placeholder, quickKeyMode, typing);
     }
 }

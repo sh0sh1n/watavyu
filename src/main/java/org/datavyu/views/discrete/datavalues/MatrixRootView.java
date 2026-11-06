@@ -18,7 +18,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.Cell;
-import org.datavyu.models.db.CellValue;
 import org.datavyu.models.db.Variable;
 import org.datavyu.views.discrete.EditorComponent;
 import org.datavyu.views.discrete.EditorTracker;
@@ -52,6 +51,12 @@ public final class MatrixRootView extends JTextArea implements FocusListener {
     private boolean typing;
 
     /**
+     * Whether this view's own typing is being set in the cell. The view shows it already, so it passes over the cell's
+     * news of it rather than rebuild the editor being typed in.
+     */
+    private boolean settingTyping;
+
+    /**
      * All the editors that make up the representation of the data.
      */
     private List<EditorComponent> allEditors;
@@ -69,9 +74,8 @@ public final class MatrixRootView extends JTextArea implements FocusListener {
      *
      * @param controller the spreadsheet the cell is in
      * @param cell  The parent cell for this spread sheet cell.
-     * @param cellValue The Matrix holding data values that this view label will represent.
      */
-    public MatrixRootView(final ProjectController controller, final Cell cell, final CellValue cellValue) {
+    public MatrixRootView(final ProjectController controller, final Cell cell) {
         super();
         this.controller = controller;
 
@@ -82,7 +86,7 @@ public final class MatrixRootView extends JTextArea implements FocusListener {
         allEditors = new ArrayList<>();
         edTracker = new EditorTracker(this, allEditors, cell.getVariable(), controller.cells()::deleteSelected);
 
-        setMatrix(cellValue);
+        showValues();
 
         addFocusListener(this);
         addFocusListener(edTracker);
@@ -127,23 +131,19 @@ public final class MatrixRootView extends JTextArea implements FocusListener {
         return true;
     }
 
-    /**
-     * Sets the value that this MatrixRootView will represent.
-     *
-     * @param v The CellValue to display.
-     */
-    public void setMatrix(final CellValue v) {
+    /** Shows the cell's values, building an editor for each, unless it is this view's own typing being set. */
+    public void showValues() {
+        if (settingTyping) {
+            return;
+        }
         // Determine selected editor, and internal caret position.
         int pos = getCaretPosition();
         EditorComponent comp = edTracker.findEditor(pos);
         int edPos = comp.getCaretPosition();
 
-        if (v != null) {
-            // No editors exist yet - build some to begin with.
-            allEditors.clear();
-            allEditors.addAll(DataValueEditorFactory.buildMatrix(this, parentCell, controller::isQuickKeyMode,
-                this::typed));
-        }
+        allEditors.clear();
+        allEditors.addAll(DataValueEditorFactory.buildMatrix(this, parentCell, controller::isQuickKeyMode,
+            this::typed));
 
         rebuildText();
 
@@ -153,8 +153,13 @@ public final class MatrixRootView extends JTextArea implements FocusListener {
 
     /** Sends a code's value typed to the command that sets and records it. */
     private void typed(final int code, final String value) {
-        if (controller.typing().typeValue(parentCell, code, value, typing)) {
-            typing = true;
+        settingTyping = true;
+        try {
+            if (controller.typing().typeValue(parentCell, code, value, typing)) {
+                typing = true;
+            }
+        } finally {
+            settingTyping = false;
         }
     }
 

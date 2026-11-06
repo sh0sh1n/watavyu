@@ -48,8 +48,11 @@ public class CodeCommandsTest {
         gaze.addArgument();
         first = gaze.createPointCell(1_000);
         second = gaze.createPointCell(2_000);
-        first.getCellValue().set("left,up,near");
-        second.getCellValue().set("right,,far");
+        first.setValue(0, "left");
+        first.setValue(1, "up");
+        first.setValue(2, "near");
+        second.setValue(0, "right");
+        second.setValue(2, "far");
     }
 
     private List<String> names() {
@@ -57,7 +60,7 @@ public class CodeCommandsTest {
     }
 
     private static String values(final Cell cell) {
-        return cell.getCellValue().toString();
+        return "(" + String.join(",", cell.getValues()) + ")";
     }
 
     private String undoName() {
@@ -127,13 +130,13 @@ public class CodeCommandsTest {
     public void theLastCodeCanBeDeletedAndPutBack() throws Exception {
         Variable timing = dataStore.createVariable("timing");
         Cell cell = timing.createPointCell(0);
-        cell.setMatrixValue(0, "only");
+        cell.setValue(0, "only");
 
         codes.delete(timing, 0);
         assertTrue(timing.getRootNode().childArguments.isEmpty());
 
         spreadsheet.undo();
-        assertEquals(cell.getMatrixValue(0).toString(), "only");
+        assertEquals(cell.getValue(0), "only");
     }
 
     // Move
@@ -298,7 +301,7 @@ public class CodeCommandsTest {
     @Test
     public void aNewCodeTakesANameNoCodeHas() {
         gaze.renameArgument(2, "code05");
-        gaze.getRootNode().childArguments.add(new Argument("code04"));
+        gaze.insertArgument(new Argument("code04"), 3);
 
         assertEquals(codes.add(gaze).name, "code06");
     }

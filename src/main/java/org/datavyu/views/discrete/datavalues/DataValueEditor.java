@@ -16,8 +16,6 @@ package org.datavyu.views.discrete.datavalues;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.datavyu.models.db.*;
-import org.datavyu.models.db.CellValue;
 import org.datavyu.views.discrete.EditorComponent;
 
 import javax.swing.text.JTextComponent;
@@ -26,6 +24,7 @@ import java.awt.event.FocusEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * DataValueEditor - abstract class extending EditorComponent. Adds
@@ -37,14 +36,11 @@ public abstract class DataValueEditor extends EditorComponent {
      * The logger for this class.
      */
     private static Logger LOGGER = LogManager.getLogger(DataValueEditor.class);
-    /**
-     * The value that this view represents.
-     */
-    private CellValue model = null;
-    /**
-     * The specific type of model this view represents.
-     */
-    private Class modelType = null;
+    /** The cell's value for the code, as it is now; {@code ""} is empty */
+    private final Supplier<String> value;
+
+    /** What an empty value shows: the code's name as it is now, as {@code <code01>} */
+    private final Supplier<String> placeholder;
 
     /** Where what is typed goes, to change the value */
     private final Consumer<String> typing;
@@ -52,37 +48,32 @@ public abstract class DataValueEditor extends EditorComponent {
     /**
      * Constructor.
      *
-     * @param tc        JTextComponent this editor works with.
-     * @param cellValue The cellValue this data cellValue editor manipulates
-     * @param typing    where what is typed goes, to change the value
+     * @param tc          JTextComponent this editor works with.
+     * @param value       the cell's value for the code, as it is now
+     * @param placeholder what an empty value shows
+     * @param typing      where what is typed goes, to change the value
      */
     public DataValueEditor(final JTextComponent tc,
-                           final CellValue cellValue,
+                           final Supplier<String> value,
+                           final Supplier<String> placeholder,
                            final Consumer<String> typing) {
         super(tc);
+        this.value = value;
+        this.placeholder = placeholder;
         this.typing = typing;
 
         // So far all DataValueEditors are editable
         setEditable(true);
-        model = cellValue;
+        resetText(isEmpty() ? placeholder.get() : value.get());
+    }
 
-        if (cellValue instanceof NominalCellValue) {
-            modelType = NominalCellValue.class;
-        } else {
-            modelType = MatrixCellValue.class;
-        }
-
-        if(!model.isEmpty()) {
-            resetText(model.toString());
-        } else {
-            resetText(model.getPlaceholderString());
-        }
+    /** Returns whether the cell's value for the code is empty. */
+    protected final boolean isEmpty() {
+        return value.get().isEmpty();
     }
 
     private void updateModelText() {
-        if (!modelType.equals(MatrixCellValue.class)) {
-            typed(getText() == null ? "" : getText());
-        }
+        typed(getText() == null ? "" : getText());
     }
 
     /**
@@ -109,14 +100,14 @@ public abstract class DataValueEditor extends EditorComponent {
     public void keyPressed(final KeyEvent e) {
         switch (e.getKeyCode()) {
             case KeyEvent.VK_BACK_SPACE:
-                if (!model.isEmpty()) {
+                if (!isEmpty()) {
                     removeBehindCaret();
                     updateModelText();
                 }
                 e.consume();
                 break;
             case KeyEvent.VK_DELETE:
-                if (!model.isEmpty()) {
+                if (!isEmpty()) {
                     removeAheadOfCaret();
                     updateModelText();
                 }
@@ -211,7 +202,7 @@ public abstract class DataValueEditor extends EditorComponent {
     @Override
     public void keyReleased(final KeyEvent e) {
         if (getText().length() == 0) {
-            setText(model.getPlaceholderString());
+            setText(placeholder.get());
             selectAll();
         }
         /*
@@ -230,7 +221,7 @@ public abstract class DataValueEditor extends EditorComponent {
      */
     @Override
     public boolean canSubSelect() {
-        return (!model.isEmpty());
+        return (!isEmpty());
     }
 
     /**
@@ -241,7 +232,7 @@ public abstract class DataValueEditor extends EditorComponent {
      */
     @Override
     public final void select(final int startClick, final int endClick) {
-        if (model.isEmpty()) {
+        if (isEmpty()) {
             selectAll();
         } else {
             super.select(startClick, endClick);

@@ -84,10 +84,10 @@ public class SpreadsheetUndoTest {
         spreadsheet.typing().typeValue(cell, 0, "frown", true);
         spreadsheet.undo();
 
-        assertEquals(cell.getMatrixValue(0).toString(), "");
+        assertEquals(cell.getValue(0), "");
         assertFalse(spreadsheet.getUndoManager().canUndo());
         spreadsheet.redo();
-        assertEquals(cell.getMatrixValue(0).toString(), "frown");
+        assertEquals(cell.getValue(0), "frown");
     }
 
     /** Edits equal by value are still told apart, so a new edit drops only what could be redone. */

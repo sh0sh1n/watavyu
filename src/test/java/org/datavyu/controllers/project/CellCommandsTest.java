@@ -381,7 +381,7 @@ public class CellCommandsTest {
         Cell cell = cells.newCellTyped(gaze, 'k', 4_000);
 
         assertEquals(cell.getOnset(), 4_000);
-        assertEquals(cell.getMatrixValue(0).toString(), "k");
+        assertEquals(cell.getValue(0), "k");
         assertSame(spreadsheet.getLastCreatedVariable(), gaze);
 
         undo();
@@ -571,6 +571,7 @@ public class CellCommandsTest {
 
         cells.deleteSelected();
 
+        assertEquals(spreadsheet.getUndoManager().getUndoPresentationName(), "Undo Delete 2 Cells");
         assertTrue(gaze.getCells().isEmpty());
         assertEquals(speech.getCells(), List.of(locked));
         assertNull(spreadsheet.getLastCreatedCell());
@@ -579,6 +580,20 @@ public class CellCommandsTest {
         undo();
         assertEquals(gaze.getCells().size(), 2);
         assertFalse(spreadsheet.getUndoManager().canUndo(), "one edit");
+    }
+
+    /** Deleting one cell names its values, a comma between each code's. */
+    @Test
+    public void deletingOneCellIsNamedForItsValues() {
+        gaze.addArgument();
+        Cell cell = gaze.createPointCell(1_000);
+        cell.setValue(1, "left");
+        dataStore.deselectAll();
+        cell.setSelected(true);
+
+        cells.deleteSelected();
+
+        assertEquals(spreadsheet.getUndoManager().getUndoPresentationName(), "Undo Delete Cell (,left)");
     }
 
     /** Redo deletes the very cell deleted, not another with the same times and value. */

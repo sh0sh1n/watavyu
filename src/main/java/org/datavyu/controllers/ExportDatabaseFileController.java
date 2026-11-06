@@ -99,8 +99,8 @@ public final class ExportDatabaseFileController {
                     g.writeStringField("offset", cell.getOffsetString());
                     g.writeArrayFieldStart("values");
 
-                    for (int k = 0; k < column.getRootNode().childArguments.size(); k++) {
-                        g.writeString(cell.getMatrixValue(k).toString());
+                    for (String value : cell.getValues()) {
+                        g.writeString(value);
                     }
 
                     g.writeEndArray();

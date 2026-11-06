@@ -247,7 +247,7 @@ public final class CellCommands {
         }
         Cell cell = createPointCell(column, time);
         if (cell != null) {
-            cell.setMatrixValue(0, String.valueOf(typed));
+            cell.setValue(0, String.valueOf(typed));
         }
         return cell;
     }

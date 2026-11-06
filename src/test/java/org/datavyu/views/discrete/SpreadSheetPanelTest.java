@@ -130,7 +130,7 @@ public class SpreadSheetPanelTest {
         Variable gaze = dataStore.createVariable("gaze");
         gaze.addArgument();
         Cell cell = gaze.createPointCell(0);
-        cell.setMatrixValue(0, "left");
+        cell.setValue(0, "left");
         AtomicReference<SpreadSheetPanel> panel = new AtomicReference<>();
         SwingUtilities.invokeAndWait(
             () -> panel.set(new SpreadSheetPanel(TestSpreadsheets.withPlayback(dataStore), null)));

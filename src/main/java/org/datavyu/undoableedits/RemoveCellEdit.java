@@ -18,15 +18,13 @@ import org.datavyu.controllers.project.ProjectController;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.models.db.Cell;
-import org.datavyu.models.db.Variable;
 
 import javax.swing.undo.CannotRedoException;
 import javax.swing.undo.CannotUndoException;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Undoable edit for removing cells.
+ * Deleting cells, which undo puts back in their columns: the edit holds the cells themselves.
  */
 public class RemoveCellEdit extends SpreadSheetEdit {
     /**
@@ -34,55 +32,41 @@ public class RemoveCellEdit extends SpreadSheetEdit {
      */
     private static final Logger LOGGER = LogManager.getLogger(RemoveCellEdit.class);
 
-    private List<CellTO> cellTOV;
+    private final List<Cell> cells;
 
     /**
      * Constructor.
      *
      * @param cells The cells that are being removed.
      */
-    public RemoveCellEdit(final ProjectController controller, List<Cell> cells) {
+    public RemoveCellEdit(final ProjectController controller, final List<Cell> cells) {
         super(controller);
-        cellTOV = new ArrayList<CellTO>();
-        for (Cell cell : cells) {
-            cellTOV.add(new CellTO(cell, model.getVariable(cell)));
-        }
+        this.cells = List.copyOf(cells);
     }
 
     @Override
     public String getPresentationName() {
-        String msg = "nothing";
-
-        if ((cellTOV != null) && (cellTOV.size() > 1)) {
-            msg = "Delete " + cellTOV.size() + " Cells";
-        } else {
-            msg = "Delete Cell (" + cellTOV.get(0).getValue() + ")";
+        if (cells.size() > 1) {
+            return "Delete " + cells.size() + " Cells";
         }
-
-        return msg;
+        return "Delete Cell (" + String.join(",", cells.get(0).getValues()) + ")";
     }
 
     @Override
     public void redo() throws CannotRedoException {
         super.redo();
         LOGGER.info("Redoing remove cells");
-
         // Undo put these very cells back, so they are removed themselves, not looked up by their times and value.
-        List<Cell> cellsToDelete = new ArrayList<Cell>();
-        for (CellTO cellTO : cellTOV) {
-            cellsToDelete.add(cellTO.getCell());
-        }
         model.deselectAll();
-        controller.removeCells(cellsToDelete);
+        controller.removeCells(cells);
     }
 
     @Override
     public void undo() throws CannotUndoException {
         super.undo();
         LOGGER.info("Undoing remove cells");
-        for (CellTO cellTO : cellTOV) {
-            Variable var = model.getVariable(cellTO.getParentVariableName());
-            var.addCell(cellTO.getCell());
+        for (Cell cell : cells) {
+            cell.getVariable().addCell(cell);
         }
     }
 }
