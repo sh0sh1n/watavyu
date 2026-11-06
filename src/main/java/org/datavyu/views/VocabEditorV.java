@@ -29,7 +29,6 @@ import org.datavyu.views.discrete.datavalues.vocabelements.VocabElementV;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
@@ -70,9 +69,6 @@ public final class VocabEditorV extends DatavyuDialog {
     /** Vertical frame for holding the current listing of Vocab elements */
     private JPanel verticalFrame;
 
-    /** The handler for all keyboard shortcuts */
-    private KeyEventDispatcher ked;
-
     /** Swing components */
     private JButton addCodeButton;
     private JButton addColumnButton;
@@ -112,53 +108,6 @@ public final class VocabEditorV extends DatavyuDialog {
         selectedVocabElement = null;
         selectedArgument = null;
         selectedArgumentI = -1;
-
-        // manage keyboard inputs
-        KeyboardFocusManager kfm = KeyboardFocusManager.getCurrentKeyboardFocusManager();
-        kfm.addKeyEventDispatcher(
-                ked = new KeyEventDispatcher() {
-                    @Override
-                    public boolean dispatchKeyEvent(final KeyEvent ke) {
-                        // The editor's keys work only while it is the active window.
-                        if (!isActive()) {
-                            return false;
-                        }
-
-                        boolean result = false;
-                        //determine what key was pressed
-                        if (ke.getID() == KeyEvent.KEY_RELEASED) {
-                            switch (ke.getKeyCode()) {
-
-                                case KeyEvent.VK_ESCAPE:
-                                    closeWindow();
-                                    break;
-                            }
-                        }
-                        if (ke.isControlDown() && (ke.getID() == KeyEvent.KEY_RELEASED)) {
-                            switch (ke.getKeyCode()) {
-                                case KeyEvent.VK_M:
-                                    addColumn();
-                                    break;
-                                case KeyEvent.VK_A:
-                                    if (selectedVocabElement != null) {
-                                        addCode();
-                                    }
-                                    break;
-                                case KeyEvent.VK_DELETE:
-                                    delete();
-                                    break;
-                                default:
-                                    result = false;
-                            }
-                        }
-
-                        if (result)
-                            ke.consume();
-
-                        return result;
-                    }
-                });
-
 
         makeElements();
     }

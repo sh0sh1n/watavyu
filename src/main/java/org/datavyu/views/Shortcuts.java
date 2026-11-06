@@ -49,33 +49,29 @@ public final class Shortcuts implements KeyEventDispatcher {
         /** Run by this dispatcher in every window, before the focused component sees the key. */
         GLOBAL,
         /** A numeric keypad key, run by this dispatcher in every window. The character the key types is dropped. */
-        KEYPAD,
-        /** Handled by a component, such as the spreadsheet or the code editor. Listed for reference only. */
-        REFERENCE
+        KEYPAD
     }
 
     /** One shortcut. */
     public static final class Shortcut {
         private final String group;
         private final Command command;
-        private final String name;
         private final KeyStroke key;
         private final String keyText;
         private final Scope scope;
         private final Action action;
 
-        private Shortcut(final String group, final Command command, final String name, final KeyStroke key,
-                         final String keyText, final Scope scope, final Action action) {
+        private Shortcut(final String group, final Command command, final KeyStroke key, final String keyText,
+                         final Scope scope, final Action action) {
             this.group = group;
             this.command = command;
-            this.name = command == null ? name : command.label();
             this.key = key;
             this.keyText = keyText;
             this.scope = scope;
             this.action = action;
         }
 
-        /** Returns the command the key runs, by its name, or null for a {@link Scope#REFERENCE} shortcut. */
+        /** Returns the command the key runs, by its name. */
         public Command getCommand() {
             return command;
         }
@@ -85,21 +81,16 @@ public final class Shortcuts implements KeyEventDispatcher {
         }
 
         public String getName() {
-            return name;
+            return command.label();
         }
 
-        /** @return The key, or null for a {@link Scope#REFERENCE} shortcut. */
+        /** @return The key. */
         public KeyStroke getKey() {
             return key;
         }
 
         public Scope getScope() {
             return scope;
-        }
-
-        /** @return The command the key runs, or null for a {@link Scope#REFERENCE} shortcut. */
-        public Action getAction() {
-            return action;
         }
 
         /** @return The key as shown to the user, such as ⇧⌘S or Keypad 7. */
@@ -118,23 +109,19 @@ public final class Shortcuts implements KeyEventDispatcher {
         }
 
         public Builder menu(final String group, final Command command, final KeyStroke key) {
-            return add(new Shortcut(group, command, null, key, describe(key, false), Scope.MENU,
+            return add(new Shortcut(group, command, key, describe(key, false), Scope.MENU,
                 actions.apply(command)));
         }
 
         public Builder global(final String group, final Command command, final KeyStroke key) {
-            return add(new Shortcut(group, command, null, key, describe(key, false), Scope.GLOBAL,
+            return add(new Shortcut(group, command, key, describe(key, false), Scope.GLOBAL,
                 actions.apply(command)));
         }
 
         public Builder keypad(final Command command, final int keyCode, final int modifiers) {
             KeyStroke key = KeyStroke.getKeyStroke(keyCode, modifiers);
-            return add(new Shortcut("Video controller", command, null, key, describe(key, true),
+            return add(new Shortcut("Video controller", command, key, describe(key, true),
                 Scope.KEYPAD, actions.apply(command)));
-        }
-
-        public Builder reference(final String group, final String name, final String keyText) {
-            return add(new Shortcut(group, null, name, null, keyText, Scope.REFERENCE, null));
         }
 
         private Builder add(final Shortcut shortcut) {
@@ -154,7 +141,7 @@ public final class Shortcuts implements KeyEventDispatcher {
                                final Runnable beforeShortcut) {
             Set<String> keys = new HashSet<>();
             for (Shortcut shortcut : shortcuts) {
-                if (shortcut.key != null && !keys.add((shortcut.scope == Scope.KEYPAD ? "keypad " : "") + shortcut.key)) {
+                if (!keys.add((shortcut.scope == Scope.KEYPAD ? "keypad " : "") + shortcut.key)) {
                     throw new IllegalStateException(shortcut.keyText + " is used by more than one shortcut");
                 }
             }
@@ -231,7 +218,7 @@ public final class Shortcuts implements KeyEventDispatcher {
             e.consume();
             return true;
         }
-        if (shortcut == null || shortcut.scope == Scope.REFERENCE) {
+        if (shortcut == null) {
             return false;
         }
         beforeShortcut.run();
@@ -257,7 +244,7 @@ public final class Shortcuts implements KeyEventDispatcher {
         }
         handledKeyCode = e.getKeyCode();
         e.consume();
-        shortcut.action.actionPerformed(new ActionEvent(e.getSource(), ActionEvent.ACTION_PERFORMED, shortcut.name));
+        shortcut.action.actionPerformed(new ActionEvent(e.getSource(), ActionEvent.ACTION_PERFORMED, shortcut.getName()));
         return true;
     }
 
@@ -283,7 +270,7 @@ public final class Shortcuts implements KeyEventDispatcher {
         Shortcut fallback = null;
         KeyStroke unmodified = KeyStroke.getKeyStroke(keyCode, 0);
         for (Shortcut shortcut : shortcuts) {
-            if (shortcut.key == null || (shortcut.scope == Scope.KEYPAD) != keypad) {
+            if ((shortcut.scope == Scope.KEYPAD) != keypad) {
                 continue;
             }
             if (shortcut.key.equals(pressed)) {

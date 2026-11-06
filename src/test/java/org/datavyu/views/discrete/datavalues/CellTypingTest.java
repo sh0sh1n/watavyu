@@ -20,11 +20,16 @@ import org.datavyu.views.discrete.datavalues.TimeStampDataValueEditor.TimeStampS
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.awt.image.BufferedImage;
+import java.awt.event.ActionEvent;
 import java.awt.event.FocusEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.util.List;
+import javax.swing.JComponent;
 import javax.swing.JTextField;
+import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
 
 /**
@@ -227,6 +232,74 @@ public class CellTypingTest {
             type("ft");
 
             assertEquals(cell.getValues(), List.of("left", "near"));
+        });
+    }
+
+    /** Sends a key press as Swing does: to the component's key listeners, then, if none took it, its key bindings. */
+    private static void press(final JComponent on, final int keyCode, final int modifiers) {
+        // The caret moves by the text's layout, which a component has once it is sized and painted, as when shown.
+        on.setSize(400, 40);
+        on.paint(new BufferedImage(400, 40, BufferedImage.TYPE_INT_RGB).createGraphics());
+        KeyEvent e = new KeyEvent(on, KeyEvent.KEY_PRESSED, 0, modifiers, keyCode, KeyEvent.CHAR_UNDEFINED);
+        for (KeyListener listener : on.getKeyListeners()) {
+            listener.keyPressed(e);
+        }
+        Object binding = on.getInputMap(JComponent.WHEN_FOCUSED).get(KeyStroke.getKeyStrokeForEvent(e));
+        if (!e.isConsumed() && binding != null) {
+            on.getActionMap().get(binding).actionPerformed(new ActionEvent(on, ActionEvent.ACTION_PERFORMED, null));
+        }
+    }
+
+    /** B27: ⇧ with an arrow grows or shrinks the selection in a value, up to the value's ends, and typing replaces it. */
+    @Test
+    public void shiftAndAnArrowSelectInAValue() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            type("smile");
+
+            press(view, KeyEvent.VK_LEFT, InputEvent.SHIFT_DOWN_MASK);
+            press(view, KeyEvent.VK_LEFT, InputEvent.SHIFT_DOWN_MASK);
+            assertEquals(view.getSelectedText(), "le");
+            press(view, KeyEvent.VK_RIGHT, InputEvent.SHIFT_DOWN_MASK);
+            assertEquals(view.getSelectedText(), "e");
+            for (int i = 0; i < 6; i++) {
+                press(view, KeyEvent.VK_LEFT, InputEvent.SHIFT_DOWN_MASK);
+            }
+            assertEquals(view.getSelectedText(), "smile", "not past the value's start into the text around it");
+
+            type("grin");
+            assertEquals(cell.getValue(0), "grin");
+        });
+    }
+
+    /** An empty value's name is not part of the value, so ⇧ with an arrow selects none of it alone. */
+    @Test
+    public void shiftAndAnArrowLeaveAnEmptyValuesNameWhole() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            view.getEdTracker().getCurrentEditor().selectAll();
+
+            press(view, KeyEvent.VK_LEFT, InputEvent.SHIFT_DOWN_MASK);
+            press(view, KeyEvent.VK_RIGHT, InputEvent.SHIFT_DOWN_MASK);
+
+            assertEquals(view.getSelectedText(), "<code01>");
+
+            // With the caret at the name's start, as after "(".
+            view.setCaretPosition(1);
+            press(view, KeyEvent.VK_RIGHT, InputEvent.SHIFT_DOWN_MASK);
+            assertEquals(view.getSelectedText(), null);
+        });
+    }
+
+    /** B27: ⇧ with an arrow selects in a time too. */
+    @Test
+    public void shiftAndAnArrowSelectInATime() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            TimeStampTextField onset = new TimeStampTextField(spreadsheet, cell, TimeStampSource.Onset);
+            onset.setCaretPosition(onset.getText().length());
+
+            press(onset, KeyEvent.VK_LEFT, InputEvent.SHIFT_DOWN_MASK);
+            press(onset, KeyEvent.VK_LEFT, InputEvent.SHIFT_DOWN_MASK);
+
+            assertEquals(onset.getSelectedText(), "00");
         });
     }
 

@@ -241,6 +241,26 @@ public class DatavyuViewTest {
         assertEquals(view.action(Command.TEMPORAL_LAYOUT).getValue(Action.SELECTED_KEY), false);
     }
 
+    /** ⌘← and ⌘→ select the column to the left and right in the selected tab. */
+    @Test
+    public void selectColumnCommandsMoveTheSelectionInTheSelectedTab() throws Exception {
+        ProjectController study = secondTab();
+        onEdt(() -> {
+            study.columns().newColumn("speech");
+            study.columns().newColumn("gesture");
+            study.getDataStore().deselectAll();
+        });
+        List<String> selected = new ArrayList<>();
+
+        for (Command command : List.of(Command.SELECT_COLUMN_RIGHT, Command.SELECT_COLUMN_RIGHT,
+                Command.SELECT_COLUMN_LEFT)) {
+            run(command);
+            selected.add(view.getSpreadsheetPanel().getSelectedColumn().getVariable().getName());
+        }
+
+        assertEquals(selected, List.of("gaze", "speech", "gaze"));
+    }
+
     /** Undo names the selected tab's last edit, and is disabled in a tab with none. */
     @Test
     public void undoNamesTheSelectedTabsEdit() throws Exception {

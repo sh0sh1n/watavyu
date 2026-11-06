@@ -14,9 +14,6 @@ import org.datavyu.models.db.Variable;
 import org.testng.annotations.Test;
 
 import java.awt.Component;
-import java.awt.KeyEventDispatcher;
-import java.awt.KeyboardFocusManager;
-import java.awt.Toolkit;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -33,34 +30,28 @@ import javax.swing.SwingUtilities;
  */
 public class SpreadSheetPanelTest {
 
+    /** In quick-key mode a key typed makes a cell in the selected column, but only in the spreadsheet on screen. */
     @Test
     public void aSpreadsheetNotOnScreenTakesNoKeys() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
         Variable notes = dataStore.createVariable("notes");
-        AtomicReference<SpreadSheetPanel> panel = new AtomicReference<>();
-        AtomicBoolean passedOn = new AtomicBoolean();
-        KeyboardFocusManager focus = KeyboardFocusManager.getCurrentKeyboardFocusManager();
-        KeyEventDispatcher probe = event -> {
-            passedOn.set(true);
-            return false;
-        };
+        AtomicBoolean taken = new AtomicBoolean();
         SwingUtilities.invokeAndWait(() -> {
-            panel.set(new SpreadSheetPanel(TestSpreadsheets.withPlayback(dataStore), null));
-            panel.get().registerListeners();
-            focus.addKeyEventDispatcher(probe);
-            // ⌘→ selects the next column in the spreadsheet on screen.
-            focus.dispatchEvent(new KeyEvent(new JTextField(), KeyEvent.KEY_PRESSED, 0,
-                Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx(), KeyEvent.VK_RIGHT, KeyEvent.CHAR_UNDEFINED));
+            ProjectController spreadsheet = TestSpreadsheets.withPlayback(dataStore);
+            spreadsheet.setQuickKeyMode(() -> true);
+            SpreadSheetPanel panel = new SpreadSheetPanel(spreadsheet, null);
+            panel.registerListeners();
+            notes.setSelected(true);
+            try {
+                taken.set(panel.dispatchKeyEvent(new KeyEvent(new JTextField(), KeyEvent.KEY_PRESSED, 0, 0,
+                    KeyEvent.VK_A, 'a')));
+            } finally {
+                panel.close();
+            }
         });
-        try {
-            assertTrue(passedOn.get(), "the key reached the dispatchers");
-            assertFalse(notes.isSelected());
-        } finally {
-            SwingUtilities.invokeAndWait(() -> {
-                focus.removeKeyEventDispatcher(probe);
-                panel.get().close();
-            });
-        }
+
+        assertFalse(taken.get(), "the key was left to the spreadsheet on screen");
+        assertTrue(notes.getCells().isEmpty());
     }
 
     @Test

@@ -415,9 +415,11 @@ public class SpreadsheetCell extends JPanel
 
     @Override
     public void mousePressed(final MouseEvent me) {
-        // A right-click adds to the selection as ⌘ does, as it did when both had one bit in the old modifier masks.
-        int addMask = Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx() | InputEvent.BUTTON3_DOWN_MASK;
-        boolean groupSel = (me.getModifiersEx() & addMask) != 0;
+        // A right-click, or ⌃-click, leaves the selection alone, as on a column's header.
+        if (me.isPopupTrigger() || SwingUtilities.isRightMouseButton(me) || me.isControlDown()) {
+            return;
+        }
+        boolean groupSel = (me.getModifiersEx() & Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()) != 0;
         boolean contSel = me.isShiftDown();
 
         Class source = me.getSource().getClass();

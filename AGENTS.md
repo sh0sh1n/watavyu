@@ -33,6 +33,8 @@ The aim is a smaller app whose every feature was chosen on purpose, with a moder
 
 Newest first. (owner) marks product decisions; the rest are engineering choices that can be revisited with reason.
 
+- **2026-11-06 (owner): the Code Editor has no keys of its own.** Escape, ⌃M, ⌃A and ⌃⌦ (close, add a column, add a code, delete) were a dispatcher outside `Shortcuts`; they are gone as bloat and may come back as named commands. Its buttons do the same.
+- **2026-11-06 (owner): a right-click or ⌃-click in a cell leaves the selection alone**, as on a column's header. Datavyu treated it as a ⌘-click because its old modifier masks gave ⌘ and the right button one bit.
 - **2026-11-04 (owner): hidden columns take no new cells** (B22). The cell commands act only on shown columns, however a column was hidden (its header, the Column List, closing its media window): hiding deselects a column and its cells, a hidden column takes no new cell though it was the one last given a cell, and the cells last selected in it are not closed or timed. New Cell from the menu, like a deleted column, then has nowhere to go and is greyed; New Cell and Set Offset goes on to the first shown annotation column.
 - **2026-11-04 (owner): the Code Editor has no Apply.** Its changes apply as they are typed, so ⌃S "Apply changes" is gone.
 - **2026-10-30 (owner): a tail in temporal layout grows with its duration** (F15). Temporal layout spaces times by the cells that start at them, not by duration, so the stretch after the last onset (a clip running on past every annotation) was a 15-pixel sliver. That tail now gets a pixel for each 10 seconds, at least 60 and at most 600 pixels, so it can be seen and scrubbed through. Gaps between annotations keep the fixed spacing.
@@ -94,8 +96,6 @@ Ask the owner before acting on these.
 - The defaults for the values font (sans or mono) and for dimming past cells, once both have been tried (U5).
 - Whether quick-key mode stays.
 - Whether one user action is one undo step, such as Add Media with several files or Set Onset on several cells (deferred by the owner, 2026-11-04). Until then each file and each cell is a step of its own.
-- Whether the Code Editor's keys (Escape closes it, ⌃M adds a column, ⌃A adds a code, ⌃⌦ deletes) become named commands in `Shortcuts` and the Keyboard Shortcuts list, and whether ⌃A keeps moving a text field's caret to the start of its line as well (R4).
-- Whether a right-click in a cell adds it to the selection, or takes it out, as a ⌘-click does. Datavyu did so because its old modifier masks gave ⌘ and the right button one bit; the click is kept as it was until this is answered.
 - Whether a scripting shell returns, and in what form. It would start from a clean slate.
 
 ## Keeping TODO.md and AGENTS.md
