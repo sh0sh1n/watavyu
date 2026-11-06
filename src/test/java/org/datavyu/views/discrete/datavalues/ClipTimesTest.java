@@ -1,11 +1,15 @@
 package org.datavyu.views.discrete.datavalues;
 
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
 import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.Cell;
+import org.datavyu.models.db.Cell.ClipFile;
+import org.datavyu.models.db.CellListener;
 import org.datavyu.models.db.DataStoreFactory;
 import org.datavyu.models.db.MediaClip;
 import org.datavyu.models.db.Variable;
@@ -14,8 +18,8 @@ import org.datavyu.views.discrete.datavalues.TimeStampDataValueEditor.TimeStampS
 import org.testng.annotations.Test;
 
 import java.awt.event.KeyEvent;
-import java.nio.file.Path;
 import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
 
 /**
  * In the spreadsheet, a clip's offset cannot be typed, as it follows from its onset and length, and neither can the
@@ -102,24 +106,40 @@ public class ClipTimesTest {
     }
 
     /**
-     * A clip cell names its file, its frame rate once known for video, and whether the file is missing or could not be
-     * opened.
+     * A clip cell names its file, its frame rate once known for video, and whether the player found the file missing
+     * or could not open it.
      */
     @Test
-    public void aClipShowsItsFileFrameRateAndWhetherItIsMissing() {
-        String present = System.getProperty("java.home");
-        String name = Path.of(present).getFileName().toString();
-
-        assertEquals(CellValuesView.clipLabel(CAM, false), "cam.mp4 \u00b7 30 fps (missing)");
-        assertEquals(CellValuesView.clipLabel(MediaClip.of(present), false), name);
-        assertEquals(CellValuesView.clipLabel(MediaClip.of(present).withDetails(60_000, 29.97, 1920, 1080), false),
-            name + " \u00b7 29.97 fps");
-        assertEquals(CellValuesView.clipLabel(MediaClip.of(present).withDetails(60_000, 23.976023976, 1920,
-            1080), false), name + " \u00b7 23.976 fps");
-        // A file there that could not be opened says so; a missing one says only that.
-        assertEquals(CellValuesView.clipLabel(MediaClip.of(present), true), name + " (could not open)");
-        assertEquals(CellValuesView.clipLabel(CAM, true), "cam.mp4 \u00b7 30 fps (missing)");
+    public void aClipShowsItsFileFrameRateAndWhatThePlayerFound() {
+        assertEquals(CellValuesView.clipLabel(CAM, ClipFile.FOUND), "cam.mp4 \u00b7 30 fps");
+        assertEquals(CellValuesView.clipLabel(MediaClip.of("/study/cam.mp4"), ClipFile.FOUND), "cam.mp4");
+        assertEquals(CellValuesView.clipLabel(MediaClip.of("/study/cam.mp4").withDetails(60_000, 23.976023976, 1920,
+            1080), ClipFile.FOUND), "cam.mp4 \u00b7 23.976 fps");
+        assertEquals(CellValuesView.clipLabel(CAM, ClipFile.MISSING), "cam.mp4 \u00b7 30 fps (missing)");
+        assertEquals(CellValuesView.clipLabel(MediaClip.of("/study/cam.mp4"), ClipFile.FAILED),
+            "cam.mp4 (could not open)");
         // Audio has no frame rate.
-        assertEquals(CellValuesView.clipLabel(MediaClip.of(present).withDetails(60_000, 0, 0, 0), false), name);
+        assertEquals(CellValuesView.clipLabel(MediaClip.of("/study/cam.mp4").withDetails(60_000, 0, 0, 0),
+            ClipFile.FOUND), "cam.mp4");
+    }
+
+    /** The cell's text follows what the player finds, and does not look for the file itself. */
+    @Test
+    public void aClipCellsTextFollowsWhatThePlayerFound() throws Exception {
+        Cell clip = DataStoreFactory.newDataStore().createMediaVariable("media_1").createClip(0, CAM);
+        SwingUtilities.invokeAndWait(() -> {
+            CellValuesView view = new CellValuesView(new ProjectController(), clip);
+            // As the cell's SpreadsheetCell does.
+            CellListener follower = mock(CellListener.class);
+            doAnswer(call -> {
+                view.showValues();
+                return null;
+            }).when(follower).contentChanged();
+            clip.addListener(follower);
+            assertEquals(view.getText(), "cam.mp4 \u00b7 30 fps", "a file not yet looked for is not called missing");
+
+            clip.setClipFile(ClipFile.MISSING);
+            assertEquals(view.getText(), "cam.mp4 \u00b7 30 fps (missing)");
+        });
     }
 }

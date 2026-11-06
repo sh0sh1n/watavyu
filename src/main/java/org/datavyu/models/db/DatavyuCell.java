@@ -34,8 +34,8 @@ public class DatavyuCell implements Cell {
     /** What a media column's cell plays; null in an annotation column. */
     private MediaClip clip;
 
-    /** Whether the clip's file is there but could not be opened; not saved. */
-    private boolean clipFailed;
+    /** What the player last found of the clip's file; not saved. */
+    private ClipFile clipFile = ClipFile.FOUND;
 
     /**
      * An annotation column's cell, with an empty value for each of its codes.
@@ -154,17 +154,17 @@ public class DatavyuCell implements Cell {
     }
 
     @Override
-    public boolean isClipFailed() {
-        return clipFailed;
+    public ClipFile getClipFile() {
+        return clipFile;
     }
 
     @Override
-    public void setClipFailed(final boolean failed) {
+    public void setClipFile(final ClipFile found) {
         if (clip == null) {
             throw new IllegalStateException("An annotation cell has no clip");
         }
-        if (failed != clipFailed) {
-            clipFailed = failed;
+        if (found != clipFile) {
+            clipFile = Objects.requireNonNull(found);
             for (CellListener cl : listeners) {
                 cl.contentChanged();
             }

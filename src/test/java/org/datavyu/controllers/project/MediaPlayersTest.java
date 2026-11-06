@@ -9,12 +9,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertSame;
 import static org.testng.Assert.assertTrue;
 
 import org.datavyu.models.Identifier;
 import org.datavyu.models.db.Cell;
+import org.datavyu.models.db.Cell.ClipFile;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.DataStoreFactory;
 import org.datavyu.models.db.MediaClip;
@@ -188,7 +190,7 @@ public class MediaPlayersTest {
         Variable column = players.addMedia(new File(file("broken.mp4")));
 
         assertEquals(dataStore.getAllVariables(), List.of(column));
-        assertTrue(column.getCells().get(0).isClipFailed());
+        assertEquals(column.getCells().get(0).getClipFile(), ClipFile.FAILED);
     }
 
     /** Missing media keeps its column, its clip without a player, as a missing file in a project does. */
@@ -198,7 +200,7 @@ public class MediaPlayersTest {
 
         assertEquals(dataStore.getAllVariables(), List.of(column));
         assertNull(players.getPlayer(column.getCells().get(0)));
-        assertFalse(column.getCells().get(0).isClipFailed(), "missing, rather than there but unopenable");
+        assertEquals(column.getCells().get(0).getClipFile(), ClipFile.MISSING, "missing, rather than there but unopenable");
     }
 
     /** The file says how long it is, so the clip's offset follows. */
@@ -223,6 +225,7 @@ public class MediaPlayersTest {
         assertEquals(players.openAll(), List.of(missing));
 
         assertNull(players.getPlayer(clip));
+        assertEquals(clip.getClipFile(), ClipFile.MISSING);
         assertEquals(clip.getOnset(), 2_000L);
         assertEquals(dataStore.getAllVariables().size(), 1);
     }
@@ -576,11 +579,11 @@ public class MediaPlayersTest {
 
         spreadsheet.media().addMedia(List.of(new File(file("bad.mp4"))), 5_000, column -> false);
         Cell clip = media.getCells().get(0);
-        assertFalse(clip.isClipFailed());
+        assertEquals(clip.getClipFile(), ClipFile.FOUND);
         pending.forEach(opening -> opening.<Runnable>getArgument(4).run());
 
         assertEquals(media.getCells(), List.of(clip));
-        assertTrue(clip.isClipFailed());
+        assertEquals(clip.getClipFile(), ClipFile.FAILED);
         assertNull(players.getPlayer(clip));
         assertEquals(spreadsheet.getUndoManager().getUndoPresentationName(), "Undo Add Media bad.mp4");
         spreadsheet.undo();
@@ -594,7 +597,7 @@ public class MediaPlayersTest {
 
         spreadsheet.media().addMedia(List.of(new File(file("bad.mp4"))), 0, column -> false);
         Variable column = dataStore.getVariable("media_1");
-        assertTrue(column.getCells().get(0).isClipFailed());
+        assertEquals(column.getCells().get(0).getClipFile(), ClipFile.FAILED);
         assertEquals(spreadsheet.getUndoManager().getUndoPresentationName(), "Undo Add Media bad.mp4");
 
         spreadsheet.undo();
@@ -619,6 +622,25 @@ public class MediaPlayersTest {
         assertFalse(media.isSelected());
     }
 
+    /** A missing file is looked for again when its clip comes back, not each time the clip is drawn. */
+    @Test
+    public void aMissingFileIsLookedForWhenItsClipComesBack() throws Exception {
+        Variable media = dataStore.createMediaVariable("media_1");
+        dataStore.deselectAll();
+        media.setSelected(true);
+        spreadsheet.media().addMedia(List.of(folder.resolve("late.mp4").toFile()), 0, column -> false);
+        Cell clip = media.getCells().get(0);
+        assertEquals(clip.getClipFile(), ClipFile.MISSING);
+
+        file("late.mp4");
+        assertEquals(clip.getClipFile(), ClipFile.MISSING, "not looked for until the clip is opened again");
+        spreadsheet.undo();
+        spreadsheet.redo();
+
+        assertEquals(clip.getClipFile(), ClipFile.FOUND);
+        assertNotNull(players.getPlayer(clip));
+    }
+
     /** A file that could not be opened is tried again when its clip comes back, and marked by how that goes. */
     @Test
     public void aClipThatComesBackIsTriedAgain() throws Exception {
@@ -628,13 +650,13 @@ public class MediaPlayersTest {
         failToOpen = true;
         spreadsheet.media().addMedia(List.of(new File(file("b.mp4"))), 2_000, column -> false);
         Cell clip = media.getCells().get(0);
-        assertTrue(clip.isClipFailed());
+        assertEquals(clip.getClipFile(), ClipFile.FAILED);
 
         spreadsheet.undo();
         failToOpen = false;
         spreadsheet.redo();
 
-        assertFalse(clip.isClipFailed());
+        assertEquals(clip.getClipFile(), ClipFile.FOUND);
         assertTrue(players.getPlayer(clip) != null);
     }
 
@@ -647,8 +669,8 @@ public class MediaPlayersTest {
         Cell broken = players.addClip(media, new File(file("broken.mp4")), 5_000);
 
         assertEquals(media.getCells(), List.of(kept, broken));
-        assertTrue(broken.isClipFailed());
-        assertFalse(kept.isClipFailed());
+        assertEquals(broken.getClipFile(), ClipFile.FAILED);
+        assertEquals(kept.getClipFile(), ClipFile.FOUND);
         assertEquals(dataStore.getAllVariables(), List.of(media));
     }
 

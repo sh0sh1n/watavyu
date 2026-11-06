@@ -2,6 +2,7 @@ package org.datavyu.controllers.project;
 
 import org.datavyu.models.Identifier;
 import org.datavyu.models.db.Cell;
+import org.datavyu.models.db.Cell.ClipFile;
 import org.datavyu.models.db.CellListener;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.DataStoreListener;
@@ -34,7 +35,7 @@ import java.util.function.Predicate;
  * Plays the spreadsheet's media columns. The spreadsheet holds each column and its clips; this opens a player for each
  * clip whose file exists, and keeps the players and the spreadsheet in step: a clip added, moved or removed in the
  * spreadsheet (by editing, undo or opening a project) opens, moves or closes its player. A clip whose file is missing,
- * or there but cannot be opened ({@link Cell#isClipFailed}), keeps its place and what is known about it, and has no
+ * or there but cannot be opened ({@link Cell#getClipFile}), keeps its place and what is known about it, and has no
  * player; nothing here takes a clip or column out of the spreadsheet.
  *
  * <p>Each media column has one window. At any time it shows the clip in play: of the clips whose span holds the time,
@@ -310,22 +311,23 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
     }
 
     /**
-     * Opens a clip's player, unless it has one or is opening.
+     * Opens a clip's player, unless it has one or is opening, looking for its file first.
      *
      * @return false if the clip's file is missing
      */
     private boolean open(final Cell clip) {
-        File file = new File(clip.getClip().file());
-        if (!file.exists()) {
-            return false;
-        }
         if (players.containsKey(clip) || opening.containsKey(clip)) {
             return true;
+        }
+        File file = new File(clip.getClip().file());
+        if (!file.exists()) {
+            clip.setClipFile(ClipFile.MISSING);
+            return false;
         }
         Object token = new Object();
         opening.put(clip, token);
         // Tried again, as when the clip comes back: it is marked only if this try fails too.
-        clip.setClipFailed(false);
+        clip.setClipFile(ClipFile.FOUND);
         Variable column = clip.getVariable();
         videoController.openStream(Identifier.generateIdentifier(), file, player -> {
             player.setWindowListener(showing -> setWindowShowing(column, showing));
@@ -344,7 +346,6 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
                 return;
             }
             players.put(clip, player);
-            clip.setClipFailed(false);
             windows.computeIfAbsent(column, this::newWindow).addClip(clip, player.getVideoComponent());
             // Media without video has no size or frame rate.
             Dimension size = player.getVideoSize();
@@ -358,7 +359,7 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
                 return;
             }
             opening.remove(clip);
-            clip.setClipFailed(true);
+            clip.setClipFile(ClipFile.FAILED);
         });
         return true;
     }

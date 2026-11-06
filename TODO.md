@@ -16,7 +16,7 @@ Updated 2026-11-04. Re-measure with the commands in [BUILDING.md › Analysis Re
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
 | Java source (main) | 242 files, 42.5k lines | 142 files, 24.9k lines |
-| Tests / line coverage | 113 / 9.9% | 704 / 67.4%; views 60%, undo edits 93% |
+| Tests / line coverage | 113 / 9.9% | 706 / 67.5%; views 60%, undo edits 93% |
 | Runtime dependencies / with known vulnerabilities | 28 / 8 | 13 / 0 |
 | Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 432 |
 | PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 298 / 51 (none on thread safety, now gated); 14 |
@@ -26,8 +26,6 @@ Updated 2026-11-04. Re-measure with the commands in [BUILDING.md › Analysis Re
 ## Bugs
 
 **B26. A malformed Datavyu JSON file can crash its import or import part of it.** ready, *from reading*. The importer (`OpenDataStoreFileController.importPasses`) refuses an unreadable time, value or code and takes out what it added, but other faults escape that path: a pass whose `name` is `null` or not text, or a code whose type is `null`, an object or an array, ends in a `NullPointerException` (`createVariable`, `getVarType`); a name a column cannot take ends in a `UserWarningException` that leaves the passes before it imported; and a code of an unknown type is logged and leaves its column half read. Each should refuse the whole file, saying where, as an unreadable time does.
-
-**B25. A media cell checks its file on every redraw.** ready, *from reading*. A media cell's text says whether its file is missing by asking the file system each time the cell's values are drawn (`CellValuesView.clipLabel`, `Files.exists`), on the Swing thread, and cells redraw on every change to their column, its codes or its lock. Media on a slow or unreachable network volume would stall the window. Check when the clip is opened or the file is looked for, and keep the answer on the cell, as `isClipFailed` is.
 
 **B24. A playback integration test fails now and then.** ready, *verified* once. On 2026-11-04 `PlaybackIntegrationTest.playsForwardFromAnOnset` failed "the paused position follows playback": after a second of play, pausing reported a frame (`currentFrame`) more than 2 frames behind the last one the probe saw shown. Two reruns passed. It ran straight after a full build, so load may be the trigger; whether the pause lands behind the picture or the test's bound is too tight is not known.
 
