@@ -24,6 +24,8 @@ public enum Command {
     NEW_CELL_LEFT(menu("newCellLeftMenuItem.text")),
     NEW_CELL_RIGHT(menu("newCellRightMenuItem.text")),
     DELETE_CELLS(menu("deleteCellMenuItem.text")),
+    SELECT_COLUMN_LEFT("Select column to left"),
+    SELECT_COLUMN_RIGHT("Select column to right"),
     UNDO("Undo"),
     REDO("Redo"),
     EXPORT_JSON(menu("exportJSONMenuItem.text")),

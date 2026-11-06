@@ -11,21 +11,21 @@ Items are in priority order within each section.
 
 ## Measures
 
-Updated 2026-11-04. Re-measure with the commands in [BUILDING.md › Analysis Reports](BUILDING.md#analysis-reports).
+Updated 2026-11-06. Re-measure with the commands in [BUILDING.md › Analysis Reports](BUILDING.md#analysis-reports).
 
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
-| Java source (main) | 242 files, 42.5k lines | 142 files, 24.9k lines |
-| Tests / line coverage | 113 / 9.9% | 713 / 68.2%; views 60%, undo edits 93% |
+| Java source (main) | 242 files, 42.5k lines | 143 files, 24.9k lines |
+| Tests / line coverage | 113 / 9.9% | 721 / 70.4%; views 61%, undo edits 93% |
 | Runtime dependencies / with known vulnerabilities | 28 / 8 | 13 / 0 |
-| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 413 |
-| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 298 / 51 (none on thread safety, now gated); 14 |
+| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 407 |
+| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 291 / 49 (none on thread safety, now gated); 14 |
 | Never-invoked methods (`dead-code.py`) | 109+ | 27: test-only accessors, unused settings setters, and Swing overrides the script cannot see |
 | Static global access (`grep -rohP 'Datavyu\.(get\|set)\w*\(' src/main/java \| wc -l`) | about 330 call sites | 0: each tab's `ProjectController` is passed to what it owns |
 
 ## Bugs
 
-**B27. ⇧ with an arrow selects nothing in a value or a time.** ready, *verified* in a value, *from reading* in a time. The editors move the caret themselves and then select with positions counted within the value, where `EditorComponent.select` counts them in the whole cell, and with a backward selection that `JTextComponent.select` cannot hold (`CodeValueEditor.keyPressed` and `TimeStampDataValueEditor.keyPressed`, the `VK_LEFT` and `VK_RIGHT` cases). So the selection comes out empty. Goes with R4's editors, which should leave caret movement and selection to the text component.
+**B28. A cell's editors move the caret by hand, unlike a text field.** ready, *from reading*. After ⇧ with an arrow selects part of a value, ← and → move one character from the caret rather than to the selection's start or end, and with the whole value selected ← goes to the previous value, a rule written for Tab's select-all (`EditorTracker.keyPressed`, `VK_LEFT` and `VK_RIGHT`). ⌥ and ⇧⌥ with an arrow move one character rather than a word, and drop the selection (`CodeValueEditor.keyPressed`, `TimeStampDataValueEditor.keyPressed`). Leaving plain movement to the text component, as ⇧ with an arrow now is, would fix both; a time's colons still need skipping.
 
 **B26. A malformed Datavyu JSON file can crash its import or import part of it.** ready, *from reading*. The importer (`OpenDataStoreFileController.importPasses`) refuses an unreadable time, value or code and takes out what it added, but other faults escape that path: a pass whose `name` is `null` or not text, or a code whose type is `null`, an object or an array, ends in a `NullPointerException` (`createVariable`, `getVarType`); a name a column cannot take ends in a `UserWarningException` that leaves the passes before it imported; and a code of an unknown type is logged and leaves its column half read. Each should refuse the whole file, saying where, as an unreadable time does.
 
@@ -72,8 +72,6 @@ None open.
 ## Refactors
 
 Tech debt is paid down in the Java app rather than left for the C++ rewrite (AGENTS.md › North Star, 2026-11-03). The items run in this order, each behaviour-preserving unless it says otherwise, and each pins the behaviour it touches with tests, since most views and undo have none.
-
-**R4. Per-editor key handling.** ready (owner: whether the Code Editor's keys become commands, AGENTS.md › Undecided). The modifier API is modern and gated (no deprecated API), and Delete Cells (`⌘\`) runs through `Shortcuts` rather than from inside a cell. Left: the Code Editor handles its own keys (`VocabEditorV`'s key dispatcher: Escape closes it, ⌃M adds a column, ⌃A adds a code, ⌃⌦ deletes), outside `Shortcuts` and the Keyboard Shortcuts list, and ⌃A also moves a text field's caret to the start of its line. Making them named commands is a product choice. Do before F7.
 
 **R7. Threading.** Make the boundary between the clock thread, the JavaFX thread and the EDT explicit, as `JavaFxPlayback` already does for the player. `ClockTimer` notifies its listeners on its own pool threads, most of them while holding its lock, so a listener that waits on another thread can deadlock it; the playhead (`PlayheadCarriage.show`) and `MediaPlayers` hand their work to the EDT. Cells still restyle for the needle on the clock thread (`SpreadsheetCell`'s clock listener, through `CellLook`), as they did before U5. SpotBugs's thread-safety findings are at zero and gated.
 

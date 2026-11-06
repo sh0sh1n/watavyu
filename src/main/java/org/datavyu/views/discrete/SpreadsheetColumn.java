@@ -638,7 +638,7 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
 
     @Override
     public void mouseClicked(final MouseEvent me) {
-        if (me.isPopupTrigger() || SwingUtilities.isRightMouseButton(me) || me.isControlDown()) {
+        if (SecondaryClick.is(me)) {
             me.consume();
             return;
         }

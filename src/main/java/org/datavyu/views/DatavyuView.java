@@ -1114,6 +1114,10 @@ public final class DatavyuView implements FileDropEventListener {
         commands.define(Command.DELETE_CELLS, this::deleteCells)
                 .labelled(() -> countedLabel("deleteCellMenuItem", selection.cells()))
                 .enabledWhen(() -> selection.cells() > 0);
+        commands.define(Command.SELECT_COLUMN_LEFT, () -> getSpreadsheetPanel().selectNextColumn(-1))
+                .enabledWhen(() -> getSpreadsheetPanel() != null);
+        commands.define(Command.SELECT_COLUMN_RIGHT, () -> getSpreadsheetPanel().selectNextColumn(1))
+                .enabledWhen(() -> getSpreadsheetPanel() != null);
         commands.define(Command.UNDO, this::undo)
                 .labelled(() -> history() == null ? Command.UNDO.label() : history().getUndoPresentationName())
                 .enabledWhen(() -> history() != null && history().canUndo());
@@ -1230,8 +1234,8 @@ public final class DatavyuView implements FileDropEventListener {
                 .menu("Spreadsheet", Command.RESET_ZOOM, KeyStroke.getKeyStroke(KeyEvent.VK_0, cmd))
                 .menu("Spreadsheet", Command.QUICK_KEYS, KeyStroke.getKeyStroke(KeyEvent.VK_K, cmd | shift))
                 .menu("Spreadsheet", Command.HIGHLIGHT_AND_FOCUS, KeyStroke.getKeyStroke(KeyEvent.VK_F, cmd | shift))
-                .reference("Spreadsheet", "Select column to left", "⌘←")
-                .reference("Spreadsheet", "Select column to right", "⌘→")
+                .global("Spreadsheet", Command.SELECT_COLUMN_LEFT, KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, cmd))
+                .global("Spreadsheet", Command.SELECT_COLUMN_RIGHT, KeyStroke.getKeyStroke(KeyEvent.VK_RIGHT, cmd))
                 .keypad(Command.SHOW_CONTROLS, KeyEvent.VK_MULTIPLY, 0)
                 .keypad(Command.SET_ONSET, KeyEvent.VK_NUMPAD7, 0)
                 .keypad(Command.PLAY, KeyEvent.VK_NUMPAD8, 0)
@@ -1248,10 +1252,6 @@ public final class DatavyuView implements FileDropEventListener {
                 .keypad(Command.FIND_ONSET, KeyEvent.VK_ADD, 0)
                 .keypad(Command.FIND_OFFSET, KeyEvent.VK_ADD, shift)
                 .keypad(Command.NEW_CELL_IN_SELECTED_COLUMN, KeyEvent.VK_ENTER, 0)
-                .reference("Code editor", "Add column", "⌃M")
-                .reference("Code editor", "Add code to the selected column", "⌃A")
-                .reference("Code editor", "Delete", "⌃⌦")
-                .reference("Code editor", "Close", "Esc")
                 .build(() -> frame.isFocused(), held -> {
                     if (controller() != null) {
                         controller().setShiftMask(held);
@@ -1271,7 +1271,7 @@ public final class DatavyuView implements FileDropEventListener {
 
     private <T extends JMenuItem> T withAccelerator(final T item, final Command command) {
         for (Shortcuts.Shortcut shortcut : shortcuts.all()) {
-            if (shortcut.getKey() != null && shortcut.getScope() != Shortcuts.Scope.KEYPAD
+            if (shortcut.getScope() != Shortcuts.Scope.KEYPAD
                     && shortcut.getCommand() == command) {
                 item.setAccelerator(shortcut.getKey());
             }

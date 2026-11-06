@@ -68,7 +68,6 @@ public class ShortcutsTest {
             .keypad(Command.PLAY, KeyEvent.VK_NUMPAD8, 0)
             .keypad(Command.JUMP_BACK, KeyEvent.VK_SUBTRACT, 0)
             .keypad(Command.JUMP_FORWARD, KeyEvent.VK_SUBTRACT, InputEvent.SHIFT_DOWN_MASK)
-            .reference("Spreadsheet", "Select column to left", "⌘←")
             .build(() -> mainWindowFocused, shift::add, () -> refreshed++);
     }
 
@@ -222,11 +221,6 @@ public class ShortcutsTest {
     public void keypadShortcutsIgnoreTheMainKeyboard() {
         assertFalse(shortcuts.dispatchKeyEvent(press(KeyEvent.VK_SUBTRACT, 0, STANDARD)));
         assertTrue(ran.isEmpty());
-    }
-
-    @Test
-    public void referenceShortcutsAreLeftToTheirComponent() {
-        assertFalse(shortcuts.dispatchKeyEvent(press(KeyEvent.VK_LEFT, Shortcuts.COMMAND, STANDARD)));
     }
 
     @Test

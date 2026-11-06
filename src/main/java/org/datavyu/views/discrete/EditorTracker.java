@@ -417,6 +417,13 @@ public final class EditorTracker
                 break;
 
             case KeyEvent.VK_LEFT:
+                if (EditorComponent.onlyShift(e)) {
+                    // The selection stays in the value, and an empty value's name is selected whole.
+                    if (currentEditor.getCaretPosition() == 0 || !currentEditor.canSubSelect()) {
+                        e.consume();
+                    }
+                    break;
+                }
                 if ((currentEditor.getCaretPosition() == 0) || (currentEditor.getSelectionEnd() - currentEditor.getSelectionStart() == currentEditor.getText().length())) {
                     setEditor(prevEditor(), Integer.MAX_VALUE,
                             Integer.MAX_VALUE);
@@ -430,6 +437,13 @@ public final class EditorTracker
                 break;
 
             case KeyEvent.VK_RIGHT:
+                if (EditorComponent.onlyShift(e)) {
+                    if (currentEditor.getCaretPosition() == currentEditor.getText().length()
+                            || !currentEditor.canSubSelect()) {
+                        e.consume();
+                    }
+                    break;
+                }
                 if (currentEditor.getCaretPosition() == currentEditor.getText().length()) {
                     setEditor(nextEditor(), 0, 0);
                     if (currentEditor == NO_EDITOR) {

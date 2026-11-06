@@ -108,8 +108,10 @@ public final class CodeValueEditor extends EditorComponent {
                 break;
 
             case KeyEvent.VK_LEFT:
-                int selectStart = getSelectionStart();
-                int selectEnd = getSelectionEnd();
+                if (onlyShift(e)) {
+                    // The text component grows or shrinks the selection.
+                    break;
+                }
 
                 // Move caret to the left.
                 int c = Math.max(0, getCaretPosition() - 1);
@@ -127,26 +129,13 @@ public final class CodeValueEditor extends EditorComponent {
                 }
                 e.consume();
 
-                // If the user is holding down shift - alter the selection as
-                // well as the caret position.
-                if (onlyShift(e)) {
-                    // Shrink selection left - removed entire selection.
-                    if (getCaretPosition() == selectStart) {
-                        select(selectStart, selectStart);
-                        // Grow selection left.
-                    } else if (getCaretPosition() < selectStart) {
-                        select(selectEnd, getCaretPosition());
-                        // Shrink selection left.
-                    } else {
-                        select(selectStart, getCaretPosition());
-                    }
-                }
-
                 break;
 
             case KeyEvent.VK_RIGHT:
-                selectStart = getSelectionStart();
-                selectEnd = getSelectionEnd();
+                if (onlyShift(e)) {
+                    // The text component grows or shrinks the selection.
+                    break;
+                }
 
                 // Move caret to the right.
                 c = Math.min(getText().length(), getCaretPosition() + 1);
@@ -165,21 +154,6 @@ public final class CodeValueEditor extends EditorComponent {
                             getCaretPosition() + 1));
                 }
                 e.consume();
-
-                // If the user is holding down shift - alter the selection as
-                // well as the caret position.
-                if (onlyShift(e)) {
-                    // Shrink selection right - removed entire selection.
-                    if (getCaretPosition() == selectEnd) {
-                        select(selectEnd, selectEnd);
-                        // Grow selection right.
-                    } else if (getCaretPosition() > selectEnd) {
-                        select(selectStart, getCaretPosition());
-                        // Shrink select right.
-                    } else {
-                        select(getCaretPosition(), selectEnd);
-                    }
-                }
 
                 break;
 

@@ -20,12 +20,21 @@ import org.datavyu.views.discrete.datavalues.TimeStampDataValueEditor.TimeStampS
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.awt.image.BufferedImage;
+import java.awt.event.ActionEvent;
 import java.awt.event.FocusEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import java.awt.event.MouseEvent;
+import java.util.ArrayList;
 import java.util.List;
+import javax.swing.JComponent;
 import javax.swing.JTextField;
+import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
+import javax.swing.text.DefaultCaret;
+import javax.swing.text.JTextComponent;
 
 /**
  * Typing into a cell's value goes through the spreadsheet's command, so it is an edit in the undo history: one edit
@@ -227,6 +236,160 @@ public class CellTypingTest {
             type("ft");
 
             assertEquals(cell.getValues(), List.of("left", "near"));
+        });
+    }
+
+    /** Sends a key press as Swing does: to the component's key listeners, then, if none took it, its key bindings. */
+    private static void press(final JComponent on, final int keyCode, final int modifiers) {
+        // The caret moves by the text's layout, which a component has once it is sized and painted, as when shown.
+        on.setSize(400, 40);
+        on.paint(new BufferedImage(400, 40, BufferedImage.TYPE_INT_RGB).createGraphics());
+        KeyEvent e = new KeyEvent(on, KeyEvent.KEY_PRESSED, 0, modifiers, keyCode, KeyEvent.CHAR_UNDEFINED);
+        for (KeyListener listener : on.getKeyListeners()) {
+            listener.keyPressed(e);
+        }
+        Object binding = on.getInputMap(JComponent.WHEN_FOCUSED).get(KeyStroke.getKeyStrokeForEvent(e));
+        if (!e.isConsumed() && binding != null) {
+            on.getActionMap().get(binding).actionPerformed(new ActionEvent(on, ActionEvent.ACTION_PERFORMED, null));
+        }
+    }
+
+    /** B27: ⇧ with an arrow grows or shrinks the selection in a value, up to the value's ends, and typing replaces it. */
+    @Test
+    public void shiftAndAnArrowSelectInAValue() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            type("smile");
+
+            press(view, KeyEvent.VK_LEFT, InputEvent.SHIFT_DOWN_MASK);
+            press(view, KeyEvent.VK_LEFT, InputEvent.SHIFT_DOWN_MASK);
+            assertEquals(view.getSelectedText(), "le");
+            press(view, KeyEvent.VK_RIGHT, InputEvent.SHIFT_DOWN_MASK);
+            assertEquals(view.getSelectedText(), "e");
+            for (int i = 0; i < 6; i++) {
+                press(view, KeyEvent.VK_LEFT, InputEvent.SHIFT_DOWN_MASK);
+            }
+            assertEquals(view.getSelectedText(), "smile", "not past the value's start into the text around it");
+
+            type("grin");
+            assertEquals(cell.getValue(0), "grin");
+        });
+    }
+
+    /** An empty value's name is not part of the value, so ⇧ with an arrow selects none of it alone. */
+    @Test
+    public void shiftAndAnArrowLeaveAnEmptyValuesNameWhole() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            view.getEdTracker().getCurrentEditor().selectAll();
+
+            press(view, KeyEvent.VK_LEFT, InputEvent.SHIFT_DOWN_MASK);
+            press(view, KeyEvent.VK_RIGHT, InputEvent.SHIFT_DOWN_MASK);
+
+            assertEquals(view.getSelectedText(), "<code01>");
+
+            // With the caret at the name's start, as after "(".
+            view.setCaretPosition(1);
+            press(view, KeyEvent.VK_RIGHT, InputEvent.SHIFT_DOWN_MASK);
+            assertEquals(view.getSelectedText(), null);
+        });
+    }
+
+    /** B27: ⇧ with an arrow selects in a time too. */
+    @Test
+    public void shiftAndAnArrowSelectInATime() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            TimeStampTextField onset = new TimeStampTextField(spreadsheet, cell, TimeStampSource.Onset);
+            onset.setCaretPosition(onset.getText().length());
+
+            press(onset, KeyEvent.VK_LEFT, InputEvent.SHIFT_DOWN_MASK);
+            press(onset, KeyEvent.VK_LEFT, InputEvent.SHIFT_DOWN_MASK);
+
+            assertEquals(onset.getSelectedText(), "00");
+        });
+    }
+
+    /** Sends a typed key as Swing does, to the component's key listeners. */
+    private static void typeInto(final JComponent on, final char key) {
+        KeyEvent e = new KeyEvent(on, KeyEvent.KEY_TYPED, 0, 0, KeyEvent.VK_UNDEFINED, key);
+        for (KeyListener listener : on.getKeyListeners()) {
+            listener.keyTyped(e);
+        }
+    }
+
+    /** A digit typed over a selection that starts on a colon goes after the colon, which stays. */
+    @Test
+    public void aDigitTypedOverAColonKeepsIt() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            TimeStampTextField onset = new TimeStampTextField(spreadsheet, cell, TimeStampSource.Onset);
+            onset.setCaretPosition(3);
+            press(onset, KeyEvent.VK_LEFT, InputEvent.SHIFT_DOWN_MASK);
+            assertEquals(onset.getSelectedText(), ":");
+
+            typeInto(onset, '5');
+
+            assertEquals(cell.getOnset(), 50 * 60_000 + 1_000);
+        });
+    }
+
+    /** A time takes only the digits 0 to 9, and at its end there is no digit for one typed to take the place of. */
+    @Test
+    public void aTimeTakesOnlyDigitsAndNoneAtItsEnd() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            TimeStampTextField onset = new TimeStampTextField(spreadsheet, cell, TimeStampSource.Onset);
+            onset.setCaretPosition(onset.getText().length());
+
+            typeInto(onset, '5');
+            onset.setCaretPosition(0);
+            typeInto(onset, 'x');
+            typeInto(onset, '\uFF15');
+
+            assertEquals(onset.getText(), "00:00:01:000");
+            assertEquals(cell.getOnset(), 1_000);
+            assertFalse(spreadsheet.getUndoManager().canUndo());
+        });
+    }
+
+    /** Sends the press, release and click of a click with the button and modifiers given. */
+    private static void click(final JComponent on, final int button, final int modifiers) {
+        for (int id : new int[] {MouseEvent.MOUSE_PRESSED, MouseEvent.MOUSE_RELEASED, MouseEvent.MOUSE_CLICKED}) {
+            on.dispatchEvent(new MouseEvent(on, id, 0, modifiers, 5, 5, 1, false, button));
+        }
+    }
+
+    /**
+     * A right-click or ⌃-click in a value or a time does not reach its caret, which would take the focus and so select
+     * the cell, or its other mouse listeners.
+     */
+    @Test
+    public void aRightOrControlClickInACellsTextDoesNotReachIt() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            TimeStampTextField onset = new TimeStampTextField(spreadsheet, cell, TimeStampSource.Onset);
+            for (JTextComponent text : List.<JTextComponent>of(view, onset)) {
+                List<Integer> seen = new ArrayList<>();
+                text.setCaret(new DefaultCaret() {
+                    @Override
+                    public void mousePressed(final MouseEvent e) {
+                        seen.add(e.getID());
+                    }
+
+                    @Override
+                    public void mouseReleased(final MouseEvent e) {
+                        seen.add(e.getID());
+                    }
+
+                    @Override
+                    public void mouseClicked(final MouseEvent e) {
+                        seen.add(e.getID());
+                    }
+                });
+
+                click(text, MouseEvent.BUTTON1, InputEvent.BUTTON1_DOWN_MASK | InputEvent.CTRL_DOWN_MASK);
+                click(text, MouseEvent.BUTTON3, InputEvent.BUTTON3_DOWN_MASK);
+                assertEquals(seen, List.of(), text.getClass().getSimpleName());
+
+                click(text, MouseEvent.BUTTON1, InputEvent.BUTTON1_DOWN_MASK);
+                assertEquals(seen, List.of(MouseEvent.MOUSE_PRESSED, MouseEvent.MOUSE_RELEASED,
+                    MouseEvent.MOUSE_CLICKED), "a click reaches the caret");
+            }
         });
     }
 

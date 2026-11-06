@@ -3,6 +3,7 @@ package org.datavyu.views.discrete;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import org.datavyu.TestSpreadsheets;
@@ -19,7 +20,7 @@ import javax.swing.SwingUtilities;
 
 /**
  * A click selects a cell or a column alone; with ⌘ it adds to the selection, and with ⇧ it adds the cells between, or
- * the column, to the selection.
+ * the column, to the selection. A right-click leaves the selection alone.
  */
 public class ModifierClickTest {
 
@@ -76,6 +77,18 @@ public class ModifierClickTest {
         verify(cells).addCellToContinousSelection(cell);
     }
 
+    /** A right-click, or a ⌃-click, which macOS takes for one, leaves the selection alone, as on a column's header. */
+    @Test
+    public void aRightClickLeavesTheCellSelectionAlone() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            cell.mousePressed(new MouseEvent(cell, MouseEvent.MOUSE_PRESSED, 0, InputEvent.BUTTON3_DOWN_MASK, 5, 5, 1,
+                true, MouseEvent.BUTTON3));
+            cell.mousePressed(mouse(cell, MouseEvent.MOUSE_PRESSED, InputEvent.CTRL_DOWN_MASK));
+        });
+
+        verifyNoInteractions(cells);
+    }
+
     @Test
     public void aClickSelectsAColumnAlone() throws Exception {
         SwingUtilities.invokeAndWait(() -> header.mouseClicked(mouse(header, MouseEvent.MOUSE_CLICKED, 0)));
@@ -92,5 +105,16 @@ public class ModifierClickTest {
         });
 
         verify(columns, never()).clearColumnSelection();
+    }
+
+    @Test
+    public void aRightClickLeavesTheColumnSelectionAlone() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            header.mouseClicked(new MouseEvent(header, MouseEvent.MOUSE_CLICKED, 0, InputEvent.BUTTON3_DOWN_MASK, 5, 5,
+                1, true, MouseEvent.BUTTON3));
+            header.mouseClicked(mouse(header, MouseEvent.MOUSE_CLICKED, InputEvent.CTRL_DOWN_MASK));
+        });
+
+        verifyNoInteractions(columns);
     }
 }

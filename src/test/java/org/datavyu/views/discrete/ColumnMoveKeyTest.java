@@ -1,39 +1,106 @@
 package org.datavyu.views.discrete;
 
-import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
+import org.datavyu.TestSpreadsheets;
+import org.datavyu.controllers.project.ProjectController;
+import org.datavyu.models.db.Cell;
+import org.datavyu.models.db.DataStoreFactory;
+import org.datavyu.models.db.UserWarningException;
+import org.datavyu.models.db.Variable;
 import org.testng.annotations.Test;
 
-import java.awt.event.InputEvent;
-import java.awt.event.KeyEvent;
-import javax.swing.JPanel;
+import java.awt.Component;
+import java.awt.Container;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
+import javax.swing.SwingUtilities;
 
-/** B5: plain arrow keys belong to the cell being edited; only ⌘← and ⌘→ select another column. */
+/**
+ * Select Column to Left and Right (⌘←, ⌘→) select the shown column beside the selected one, coming round from the end;
+ * with none selected, the last or the first.
+ */
 public class ColumnMoveKeyTest {
 
-    private static final int COMMAND = InputEvent.META_DOWN_MASK;
+    private static void layOut(final Container container) {
+        container.doLayout();
+        for (Component child : container.getComponents()) {
+            if (child instanceof Container inner) {
+                layOut(inner);
+            }
+        }
+    }
 
-    private static KeyEvent press(final int key, final int modifiers) {
-        return new KeyEvent(new JPanel(), KeyEvent.KEY_PRESSED, 0, modifiers, key, KeyEvent.CHAR_UNDEFINED);
+    /** Something done to a spreadsheet's view, laid out as it is once shown, that may throw. */
+    private interface SheetStep {
+        void run(ProjectController spreadsheet, SpreadSheetPanel panel) throws UserWarningException;
+    }
+
+    private static void onSheet(final SheetStep step) throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            ProjectController spreadsheet = TestSpreadsheets.withPlayback(DataStoreFactory.newDataStore());
+            SpreadSheetPanel panel = new SpreadSheetPanel(spreadsheet, null);
+            spreadsheet.setSpreadSheetPanel(panel);
+            panel.registerListeners();
+            try {
+                // Selecting a column scrolls to it, in a sheet laid out as it is once shown.
+                panel.setSize(800, 600);
+                layOut(panel);
+                step.run(spreadsheet, panel);
+            } catch (UserWarningException e) {
+                throw new IllegalStateException(e);
+            } finally {
+                panel.close();
+            }
+        });
     }
 
     @Test
-    public void plainArrowsAreNotColumnMoves() {
-        assertFalse(SpreadSheetPanel.isColumnMove(press(KeyEvent.VK_LEFT, 0), COMMAND));
-        assertFalse(SpreadSheetPanel.isColumnMove(press(KeyEvent.VK_RIGHT, 0), COMMAND));
+    public void selectingTheNextColumnComesRoundAndSkipsHiddenColumns() throws Exception {
+        List<String> selected = new ArrayList<>();
+        onSheet((spreadsheet, panel) -> {
+            // With no column shown, there is none to select.
+            panel.selectNextColumn(1);
+            selected.add(String.valueOf(panel.getSelectedColumn()));
+
+            spreadsheet.columns().newColumn("gaze");
+            Variable speech = spreadsheet.columns().newColumn("speech");
+            spreadsheet.columns().newColumn("gesture");
+            spreadsheet.columns().hide(List.of(speech));
+            spreadsheet.getDataStore().deselectAll();
+            layOut(panel);
+
+            for (int direction : new int[] {1, 1, 1}) {
+                panel.selectNextColumn(direction);
+                selected.add(panel.getSelectedColumn().getVariable().getName());
+            }
+            spreadsheet.getDataStore().deselectAll();
+            panel.selectNextColumn(-1);
+            selected.add(panel.getSelectedColumn().getVariable().getName());
+        });
+
+        assertEquals(selected, List.of("null", "gaze", "gesture", "gaze", "gesture"));
     }
 
+    /** With no column selected, the first or last is selected, and the cells selected stay so. */
     @Test
-    public void commandArrowsAreColumnMoves() {
-        assertTrue(SpreadSheetPanel.isColumnMove(press(KeyEvent.VK_LEFT, COMMAND), COMMAND));
-        assertTrue(SpreadSheetPanel.isColumnMove(press(KeyEvent.VK_RIGHT, COMMAND), COMMAND));
-    }
+    public void selectingAColumnWithNoneSelectedLeavesTheCells() throws Exception {
+        AtomicReference<Cell> cell = new AtomicReference<>();
+        onSheet((spreadsheet, panel) -> {
+            spreadsheet.columns().newColumn("gaze");
+            Variable gesture = spreadsheet.columns().newColumn("gesture");
+            cell.set(gesture.createPointCell(1_000));
+            spreadsheet.getDataStore().deselectAll();
+            cell.get().setSelected(true);
+            layOut(panel);
 
-    @Test
-    public void otherModifiersAreNotColumnMoves() {
-        assertFalse(SpreadSheetPanel.isColumnMove(press(KeyEvent.VK_LEFT, COMMAND | InputEvent.SHIFT_DOWN_MASK),
-            COMMAND));
-        assertFalse(SpreadSheetPanel.isColumnMove(press(KeyEvent.VK_UP, COMMAND), COMMAND));
+            panel.selectNextColumn(1);
+
+            assertEquals(panel.getSelectedColumn().getVariable().getName(), "gaze");
+        });
+
+        assertTrue(cell.get().isSelected());
     }
 }

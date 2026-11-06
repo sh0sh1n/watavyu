@@ -181,8 +181,10 @@ public final class TimeStampDataValueEditor extends EditorComponent {
                 break;
 
             case KeyEvent.VK_LEFT:
-                int selectStart = getSelectionStart();
-                int selectEnd = getSelectionEnd();
+                if (onlyShift(e)) {
+                    // The text component grows or shrinks the selection.
+                    break;
+                }
 
                 // Move caret to the left.
                 c = Math.max(0, getCaretPosition() - 1);
@@ -199,26 +201,13 @@ public final class TimeStampDataValueEditor extends EditorComponent {
                 }
                 e.consume();
 
-                // If the user is holding down shift - alter the selection as
-                // well as the caret position.
-                if (onlyShift(e)) {
-                    // Shrink selection left - removed entire selection.
-                    if (getCaretPosition() == selectStart) {
-                        select(selectStart, selectStart);
-                        // Grow selection left.
-                    } else if (getCaretPosition() < selectStart) {
-                        select(selectEnd, getCaretPosition());
-                        // Shrink selection left.
-                    } else {
-                        select(selectStart, getCaretPosition());
-                    }
-                }
-
                 break;
 
             case KeyEvent.VK_RIGHT:
-                selectStart = getSelectionStart();
-                selectEnd = getSelectionEnd();
+                if (onlyShift(e)) {
+                    // The text component grows or shrinks the selection.
+                    break;
+                }
 
                 // Move caret to the right.
                 c = Math.min(getText().length(), getCaretPosition() + 1);
@@ -235,21 +224,6 @@ public final class TimeStampDataValueEditor extends EditorComponent {
                     setCaretPosition(c);
                 }
                 e.consume();
-
-                // If the user is holding down shift - alter the selection as
-                // well as the caret position.
-                if (onlyShift(e)) {
-                    // Shrink selection right - removed entire selection.
-                    if (getCaretPosition() == selectEnd) {
-                        select(selectEnd, selectEnd);
-                        // Grow selection right.
-                    } else if (getCaretPosition() > selectEnd) {
-                        select(selectStart, getCaretPosition());
-                        // Shrink select right.
-                    } else {
-                        select(getCaretPosition(), selectEnd);
-                    }
-                }
                 break;
 
             default:
@@ -271,10 +245,17 @@ public final class TimeStampDataValueEditor extends EditorComponent {
             e.consume();
             return;
         }
-        // Key stoke is number - insert stroke at current caret position
-        // but only if their is room in the editor for the new digit.
-        if (Character.isDigit(e.getKeyChar()) && getCaretPosition() <= getText().length()) {
-            removeAheadOfCaret();
+        if (e.getKeyChar() < '0' || e.getKeyChar() > '9') {
+            // Every other key stroke is ignored by the time editor, other scripts' digits too.
+            e.consume();
+            return;
+        }
+        // A digit takes the place of the one after the caret, or of the selection's first; the colons stay.
+        removeAheadOfCaret();
+        if (getCaretPosition() < getText().length() && isPreserved(getText().charAt(getCaretPosition()))) {
+            setCaretPosition(getCaretPosition() + 1);
+        }
+        if (getCaretPosition() < getText().length()) {
             StringBuilder currentValue = new StringBuilder(getText());
             currentValue.deleteCharAt(getCaretPosition());
             currentValue.insert(getCaretPosition(), e.getKeyChar());
@@ -286,15 +267,9 @@ public final class TimeStampDataValueEditor extends EditorComponent {
             }
 
             setTimeStamp(currentValue.toString());
-            e.consume();
-
-            // Every other key stroke is ignored by the float editor.
-        } else {
-            e.consume();
-
-            // Nothing has changed - skip updating the database.
-            return;
         }
+        // At the end, there is no digit left to take the place of.
+        e.consume();
     }
 
     /**
