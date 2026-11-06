@@ -330,7 +330,7 @@ public class CellTypingTest {
         });
     }
 
-    /** A time takes only digits, and at its end there is no digit for one typed to take the place of. */
+    /** A time takes only the digits 0 to 9, and at its end there is no digit for one typed to take the place of. */
     @Test
     public void aTimeTakesOnlyDigitsAndNoneAtItsEnd() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
@@ -340,6 +340,7 @@ public class CellTypingTest {
             typeInto(onset, '5');
             onset.setCaretPosition(0);
             typeInto(onset, 'x');
+            typeInto(onset, '\uFF15');
 
             assertEquals(onset.getText(), "00:00:01:000");
             assertEquals(cell.getOnset(), 1_000);

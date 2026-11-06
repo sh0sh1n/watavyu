@@ -245,8 +245,8 @@ public final class TimeStampDataValueEditor extends EditorComponent {
             e.consume();
             return;
         }
-        if (!Character.isDigit(e.getKeyChar())) {
-            // Every other key stroke is ignored by the time editor.
+        if (e.getKeyChar() < '0' || e.getKeyChar() > '9') {
+            // Every other key stroke is ignored by the time editor, other scripts' digits too.
             e.consume();
             return;
         }
