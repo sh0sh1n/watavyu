@@ -16,16 +16,14 @@ Updated 2026-11-06. Re-measure with the commands in [BUILDING.md › Analysis Re
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
 | Java source (main) | 242 files, 42.5k lines | 144 files, 24.8k lines |
-| Tests / line coverage | 113 / 9.9% | 753 / 71.1%; views 61%, undo edits 93% |
+| Tests / line coverage | 113 / 9.9% | 761 / 71.7%; views 61%, undo edits 93% |
 | Runtime dependencies / with known vulnerabilities | 28 / 8 | 13 / 0 |
-| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 405 |
+| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 403 |
 | PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 281 / 48 (none on thread safety, now gated); 13 |
 | Never-invoked methods (`dead-code.py`) | 109+ | 27: test-only accessors, unused settings setters, and Swing overrides the script cannot see |
 | Static global access (`grep -rohP 'Datavyu\.(get\|set)\w*\(' src/main/java \| wc -l`) | about 330 call sites | 0: each tab's `ProjectController` is passed to what it owns |
 
 ## Bugs
-
-**B28. A cell's editors move the caret by hand, unlike a text field.** ready, *from reading*. After ⇧ with an arrow selects part of a value, ← and → move one character from the caret rather than to the selection's start or end, and with the whole value selected ← goes to the previous value, a rule written for Tab's select-all (`EditorTracker.keyPressed`, `VK_LEFT` and `VK_RIGHT`). ⌥ and ⇧⌥ with an arrow move one character rather than a word, and drop the selection (`CodeValueEditor.keyPressed`, `TimeStampDataValueEditor.keyPressed`). Leaving plain movement to the text component, as ⇧ with an arrow now is, would fix both; a time's colons still need skipping.
 
 **B24. A playback integration test fails now and then.** ready, *verified* twice. On 2026-11-04, twice that day (each time the first run after a build, and each followed by passing reruns), `PlaybackIntegrationTest.playsForwardFromAnOnset` failed "the paused position follows playback": after a second of play, pausing reported a frame (`currentFrame`) more than 2 frames behind the last one the probe saw shown. It ran straight after a full build, so load may be the trigger; whether the pause lands behind the picture or the test's bound is too tight is not known.
 

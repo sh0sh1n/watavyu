@@ -307,6 +307,176 @@ public class CellTypingTest {
         });
     }
 
+    private static final int OPTION = InputEvent.ALT_DOWN_MASK;
+    private static final int SHIFT_OPTION = InputEvent.SHIFT_DOWN_MASK | InputEvent.ALT_DOWN_MASK;
+
+    /** An arrow leaves a selection at its start (←) or end (→), as in a text field. */
+    @Test
+    public void anArrowLeavesASelectionAtItsEdge() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            type("smile");
+            press(view, KeyEvent.VK_LEFT, InputEvent.SHIFT_DOWN_MASK);
+            press(view, KeyEvent.VK_LEFT, InputEvent.SHIFT_DOWN_MASK);
+
+            press(view, KeyEvent.VK_LEFT, 0);
+            assertEquals(view.getSelectedText(), null);
+            type("x");
+            assertEquals(cell.getValue(0), "smixle");
+
+            press(view, KeyEvent.VK_LEFT, InputEvent.SHIFT_DOWN_MASK);
+            press(view, KeyEvent.VK_LEFT, InputEvent.SHIFT_DOWN_MASK);
+            press(view, KeyEvent.VK_RIGHT, 0);
+            type("y");
+            assertEquals(cell.getValue(0), "smixyle");
+        });
+    }
+
+    /** A value selected whole, as Tab leaves it, is a selection like any other: ← goes to its start. */
+    @Test
+    public void anArrowFromAValueSelectedWholeStaysInIt() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            spreadsheet.codes().add(cell.getVariable());
+            cell.setValues(List.of("left", "near"));
+            EditorTracker tracker = view.getEdTracker();
+            tracker.setEditor(tracker.nextEditor());
+
+            press(view, KeyEvent.VK_LEFT, 0);
+            type("x");
+
+            assertEquals(cell.getValues(), List.of("left", "xnear"));
+        });
+    }
+
+    /** With nothing selected, an arrow at a value's edge goes on to the next value, and an empty value's name. */
+    @Test
+    public void anArrowAtAValuesEdgeGoesToTheNext() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            spreadsheet.codes().add(cell.getVariable());
+            cell.setValue(0, "left");
+            EditorTracker tracker = view.getEdTracker();
+            tracker.setEditor(tracker.firstEditor(), Integer.MAX_VALUE, Integer.MAX_VALUE);
+
+            press(view, KeyEvent.VK_RIGHT, 0);
+            assertSame(tracker.getCurrentEditor(), tracker.lastEditor());
+            assertEquals(view.getSelectedText(), "<code02>");
+
+            press(view, KeyEvent.VK_LEFT, 0);
+            type("x");
+            assertEquals(cell.getValues(), List.of("leftx", ""));
+        });
+    }
+
+    /** Before the first value and after the last there is no value to go to, so the caret stays. */
+    @Test
+    public void anArrowStaysAtTheFirstValuesStartAndTheLastsEnd() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            spreadsheet.codes().add(cell.getVariable());
+            cell.setValues(List.of("left", "near"));
+            EditorTracker tracker = view.getEdTracker();
+            tracker.setEditor(tracker.firstEditor(), 0, 0);
+
+            press(view, KeyEvent.VK_LEFT, 0);
+            type("x");
+            tracker.setEditor(tracker.lastEditor(), Integer.MAX_VALUE, Integer.MAX_VALUE);
+            press(view, KeyEvent.VK_RIGHT, 0);
+            type("y");
+
+            assertEquals(cell.getValues(), List.of("xleft", "neary"));
+        });
+    }
+
+    /** ⌥ with an arrow moves by a word, and with ⇧ selects one, inside the value. */
+    @Test
+    public void optionAndAnArrowMoveByAWord() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            type("big red-ball");
+
+            press(view, KeyEvent.VK_LEFT, OPTION);
+            press(view, KeyEvent.VK_LEFT, OPTION);
+            press(view, KeyEvent.VK_RIGHT, OPTION);
+            type("!");
+            assertEquals(cell.getValue(0), "big red!-ball");
+
+            press(view, KeyEvent.VK_RIGHT, SHIFT_OPTION);
+            assertEquals(view.getSelectedText(), "-ball");
+            press(view, KeyEvent.VK_LEFT, SHIFT_OPTION);
+            press(view, KeyEvent.VK_LEFT, SHIFT_OPTION);
+            press(view, KeyEvent.VK_LEFT, SHIFT_OPTION);
+            assertEquals(view.getSelectedText(), "big red!", "not past the value's start into the text around it");
+
+            press(view, KeyEvent.VK_RIGHT, OPTION);
+            type("?");
+            assertEquals(cell.getValue(0), "big red!-ball?", "a word on from the selection's end, not its caret");
+        });
+    }
+
+    /** A word move stops at the value's ends rather than going on into the text around it. */
+    @Test
+    public void aWordMoveStopsAtTheValuesStart() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            spreadsheet.codes().add(cell.getVariable());
+            cell.setValues(List.of("left", "near"));
+            EditorTracker tracker = view.getEdTracker();
+            tracker.setEditor(tracker.nextEditor(), 0, 0);
+            view.setCaretPosition(view.getText().indexOf("near") + 2);
+
+            press(view, KeyEvent.VK_LEFT, SHIFT_OPTION);
+            press(view, KeyEvent.VK_LEFT, SHIFT_OPTION);
+            assertEquals(view.getSelectedText(), "ne");
+
+            press(view, KeyEvent.VK_LEFT, OPTION);
+            type("x");
+            assertEquals(cell.getValues(), List.of("left", "xnear"));
+        });
+    }
+
+    /** ⌘ and ⌃ with an arrow are commands or nothing, never a caret move in the text. */
+    @Test
+    public void commandOrControlAndAnArrowMoveNothing() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            type("smile");
+            int caret = view.getCaretPosition();
+
+            press(view, KeyEvent.VK_LEFT, InputEvent.CTRL_DOWN_MASK);
+            press(view, KeyEvent.VK_LEFT, InputEvent.META_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK);
+
+            assertEquals(view.getCaretPosition(), caret);
+            assertEquals(view.getSelectedText(), null);
+
+            TimeStampTextField onset = new TimeStampTextField(spreadsheet, cell, TimeStampSource.Onset);
+            onset.setCaretPosition(3);
+            press(onset, KeyEvent.VK_LEFT, InputEvent.CTRL_DOWN_MASK);
+            assertEquals(onset.getCaretPosition(), 3);
+        });
+    }
+
+    /** In a time, an arrow steps over a colon, ⌥ moves by a group of digits, and the caret stops at the time's ends. */
+    @Test
+    public void anArrowInATimeStepsOverItsColons() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            TimeStampTextField onset = new TimeStampTextField(spreadsheet, cell, TimeStampSource.Onset);
+            onset.setCaretPosition(3);
+
+            press(onset, KeyEvent.VK_LEFT, 0);
+            assertEquals(onset.getCaretPosition(), 1);
+            press(onset, KeyEvent.VK_RIGHT, 0);
+            assertEquals(onset.getCaretPosition(), 3);
+            press(onset, KeyEvent.VK_LEFT, 0);
+            press(onset, KeyEvent.VK_LEFT, 0);
+            press(onset, KeyEvent.VK_LEFT, 0);
+            assertEquals(onset.getCaretPosition(), 0);
+
+            onset.setCaretPosition(onset.getText().length());
+            press(onset, KeyEvent.VK_RIGHT, 0);
+            assertEquals(onset.getCaretPosition(), onset.getText().length());
+            press(onset, KeyEvent.VK_LEFT, SHIFT_OPTION);
+            assertEquals(onset.getSelectedText(), "000");
+            press(onset, KeyEvent.VK_LEFT, 0);
+            press(onset, KeyEvent.VK_LEFT, OPTION);
+            assertEquals(onset.getCaretPosition(), 6);
+        });
+    }
+
     /** Sends a typed key as Swing does, to the component's key listeners. */
     private static void typeInto(final JComponent on, final char key) {
         KeyEvent e = new KeyEvent(on, KeyEvent.KEY_TYPED, 0, 0, KeyEvent.VK_UNDEFINED, key);

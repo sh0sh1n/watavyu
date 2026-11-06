@@ -417,41 +417,11 @@ public final class EditorTracker
                 break;
 
             case KeyEvent.VK_LEFT:
-                if (EditorComponent.onlyShift(e)) {
-                    // The selection stays in the value, and an empty value's name is selected whole.
-                    if (currentEditor.getCaretPosition() == 0 || !currentEditor.canSubSelect()) {
-                        e.consume();
-                    }
-                    break;
-                }
-                if ((currentEditor.getCaretPosition() == 0) || (currentEditor.getSelectionEnd() - currentEditor.getSelectionStart() == currentEditor.getText().length())) {
-                    setEditor(prevEditor(), Integer.MAX_VALUE,
-                            Integer.MAX_VALUE);
-                    if (currentEditor == NO_EDITOR) {
-                        // should jump to the cell above if there is one
-                        // for now leaves caret at start of first editor
-                        setEditor(firstEditor(), 0, 0);
-                    }
-                    e.consume();
-                }
-                break;
-
             case KeyEvent.VK_RIGHT:
-                if (EditorComponent.onlyShift(e)) {
-                    if (currentEditor.getCaretPosition() == currentEditor.getText().length()
-                            || !currentEditor.canSubSelect()) {
-                        e.consume();
-                    }
-                    break;
-                }
-                if (currentEditor.getCaretPosition() == currentEditor.getText().length()) {
-                    setEditor(nextEditor(), 0, 0);
-                    if (currentEditor == NO_EDITOR) {
-                        // should jump to the cell below if there is one
-                        setEditor(lastEditor(), Integer.MAX_VALUE,
-                                Integer.MAX_VALUE);
-                    }
-                    e.consume();
+                // The editors move the caret inside a value; a move off its edge goes to the next value.
+                e.consume();
+                if (EditorComponent.movesCaret(e) && !currentEditor.moveCaret(e)) {
+                    leaveEditor(e.getKeyCode() == KeyEvent.VK_LEFT);
                 }
                 break;
 
@@ -505,6 +475,24 @@ public final class EditorTracker
             currentEditor.keyPressed(e);
         }
         gotKeyUp = false;
+    }
+
+    /**
+     * Moves the caret to the end of the value before (left) or the start of the one after; past the first or last
+     * value, it goes to that value's start or end.
+     */
+    private void leaveEditor(final boolean left) {
+        if (left) {
+            setEditor(prevEditor(), Integer.MAX_VALUE, Integer.MAX_VALUE);
+            if (currentEditor == NO_EDITOR) {
+                setEditor(firstEditor(), 0, 0);
+            }
+        } else {
+            setEditor(nextEditor(), 0, 0);
+            if (currentEditor == NO_EDITOR) {
+                setEditor(lastEditor(), Integer.MAX_VALUE, Integer.MAX_VALUE);
+            }
+        }
     }
 
     // *************************************************************************
