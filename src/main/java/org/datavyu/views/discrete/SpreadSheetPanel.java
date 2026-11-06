@@ -859,12 +859,15 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
         if (visibleColumns.isEmpty()) {
             return;
         }
-        SpreadsheetColumn from = getSelectedColumn();
-        if (from == null) {
-            // With none selected, start beyond the end, so the first or the last column is selected.
-            from = visibleColumns.get(direction < 0 ? 0 : visibleColumns.size() - 1);
+        SpreadsheetColumn selectedColumn = getSelectedColumn();
+        if (selectedColumn != null) {
+            selectColumn(selectedColumn, direction);
+            return;
         }
-        selectColumn(from, direction);
+        // With none selected, the last or the first is selected, and the cells are left as they are.
+        SpreadsheetColumn column = visibleColumns.get(direction < 0 ? visibleColumns.size() - 1 : 0);
+        column.setSelected(true);
+        column.requestFocus();
     }
 
     public void selectColumn(final SpreadsheetColumn selectedColumn, final int shift) {

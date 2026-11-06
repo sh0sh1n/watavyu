@@ -416,7 +416,7 @@ public class SpreadsheetCell extends JPanel
     @Override
     public void mousePressed(final MouseEvent me) {
         // A right-click, or ⌃-click, leaves the selection alone, as on a column's header.
-        if (me.isPopupTrigger() || SwingUtilities.isRightMouseButton(me) || me.isControlDown()) {
+        if (SecondaryClick.is(me)) {
             return;
         }
         boolean groupSel = (me.getModifiersEx() & Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()) != 0;

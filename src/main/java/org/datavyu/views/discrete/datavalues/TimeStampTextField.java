@@ -19,6 +19,7 @@ import org.apache.logging.log4j.Logger;
 import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.Variable;
+import org.datavyu.views.discrete.SecondaryClick;
 import org.datavyu.views.discrete.datavalues.TimeStampDataValueEditor.TimeStampSource;
 
 import javax.swing.*;
@@ -27,6 +28,7 @@ import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.event.MouseEvent;
 
 /**
  * JTextArea view of the Matrix (database cell) data.
@@ -202,6 +204,14 @@ public final class TimeStampTextField extends JTextField
 
         if (!e.isConsumed()) {
             myEditor.keyPressed(e);
+        }
+    }
+
+    /** A right-click or ⌃-click neither moves the caret nor takes the focus, so it leaves the cell's selection alone. */
+    @Override
+    protected void processMouseEvent(final MouseEvent e) {
+        if (!SecondaryClick.isDroppedByText(e)) {
+            super.processMouseEvent(e);
         }
     }
 }

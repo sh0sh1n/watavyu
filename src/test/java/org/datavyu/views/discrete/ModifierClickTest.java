@@ -106,4 +106,15 @@ public class ModifierClickTest {
 
         verify(columns, never()).clearColumnSelection();
     }
+
+    @Test
+    public void aRightClickLeavesTheColumnSelectionAlone() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            header.mouseClicked(new MouseEvent(header, MouseEvent.MOUSE_CLICKED, 0, InputEvent.BUTTON3_DOWN_MASK, 5, 5,
+                1, true, MouseEvent.BUTTON3));
+            header.mouseClicked(mouse(header, MouseEvent.MOUSE_CLICKED, InputEvent.CTRL_DOWN_MASK));
+        });
+
+        verifyNoInteractions(columns);
+    }
 }

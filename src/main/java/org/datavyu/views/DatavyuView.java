@@ -1082,7 +1082,7 @@ public final class DatavyuView implements FileDropEventListener {
     }
 
     /** Returns the main window's shortcuts, which the menu bar's accelerators and the keypad follow. */
-    public Shortcuts getShortcuts() {
+    Shortcuts getShortcuts() {
         return shortcuts;
     }
 

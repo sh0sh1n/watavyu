@@ -245,10 +245,17 @@ public final class TimeStampDataValueEditor extends EditorComponent {
             e.consume();
             return;
         }
-        // Key stoke is number - insert stroke at current caret position
-        // but only if their is room in the editor for the new digit.
-        if (Character.isDigit(e.getKeyChar()) && getCaretPosition() <= getText().length()) {
-            removeAheadOfCaret();
+        if (!Character.isDigit(e.getKeyChar())) {
+            // Every other key stroke is ignored by the time editor.
+            e.consume();
+            return;
+        }
+        // A digit takes the place of the one after the caret, or of the selection's first; the colons stay.
+        removeAheadOfCaret();
+        if (getCaretPosition() < getText().length() && isPreserved(getText().charAt(getCaretPosition()))) {
+            setCaretPosition(getCaretPosition() + 1);
+        }
+        if (getCaretPosition() < getText().length()) {
             StringBuilder currentValue = new StringBuilder(getText());
             currentValue.deleteCharAt(getCaretPosition());
             currentValue.insert(getCaretPosition(), e.getKeyChar());
@@ -260,15 +267,9 @@ public final class TimeStampDataValueEditor extends EditorComponent {
             }
 
             setTimeStamp(currentValue.toString());
-            e.consume();
-
-            // Every other key stroke is ignored by the float editor.
-        } else {
-            e.consume();
-
-            // Nothing has changed - skip updating the database.
-            return;
         }
+        // At the end, there is no digit left to take the place of.
+        e.consume();
     }
 
     /**

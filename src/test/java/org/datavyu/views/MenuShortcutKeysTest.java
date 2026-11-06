@@ -1,5 +1,6 @@
 package org.datavyu.views;
 
+import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
 import org.datavyu.TestSpreadsheets;
@@ -8,6 +9,8 @@ import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.Action;
@@ -15,6 +18,7 @@ import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.KeyStroke;
 import javax.swing.LookAndFeel;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
@@ -68,5 +72,36 @@ public class MenuShortcutKeysTest {
             }
         });
         assertTrue(taken.isEmpty(), "menu shortcuts that text takes: " + taken);
+    }
+
+    /**
+     * B5: ⌘← and ⌘→, which text takes to go to a line's ends, select columns, so they are global; plain and other
+     * arrows are left to the cell.
+     */
+    @Test
+    public void onlyCommandArrowsSelectColumns() throws Exception {
+        List<KeyStroke> keys = List.of(
+            KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, InputEvent.META_DOWN_MASK),
+            KeyStroke.getKeyStroke(KeyEvent.VK_RIGHT, InputEvent.META_DOWN_MASK),
+            KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, 0),
+            KeyStroke.getKeyStroke(KeyEvent.VK_RIGHT, 0),
+            KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, InputEvent.META_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK),
+            KeyStroke.getKeyStroke(KeyEvent.VK_UP, InputEvent.META_DOWN_MASK));
+        List<String> runs = new ArrayList<>();
+        SwingUtilities.invokeAndWait(() -> {
+            JFrame frame = new JFrame();
+            try {
+                Shortcuts shortcuts = TestSpreadsheets.mainWindow(frame).getShortcuts();
+                for (KeyStroke key : keys) {
+                    runs.add(shortcuts.all().stream().filter(shortcut -> key.equals(shortcut.getKey()))
+                        .map(shortcut -> shortcut.getScope() + " " + shortcut.getCommand()).findFirst().orElse("none"));
+                }
+            } finally {
+                frame.dispose();
+            }
+        });
+
+        assertEquals(runs, List.of("GLOBAL SELECT_COLUMN_LEFT", "GLOBAL SELECT_COLUMN_RIGHT", "none", "none", "none",
+            "none"));
     }
 }

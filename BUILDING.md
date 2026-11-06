@@ -162,6 +162,7 @@ A project is one `<name>.watavyu.json` file: UTF-8 JSON that people and other to
   - Numeric keypad keys drive the playback and coding commands of the controls drawer from every window, whether or not the drawer shows; `*` shows or hides it. The character a keypad key would type is dropped, even for keys without a shortcut.
   - Reserved keys (`Shortcuts.RESERVED`: ⌃H, ⌃D, ⌃W, ⌥⌫, ⌥⌦), which macOS text fields delete with, are dropped with their character in every window until a shortcut uses one; they are kept for the key mapping (F7).
   - Keys outside the table belong to where they are typed: a cell's editors (moving within a value or time, ⇧ with an arrow to select, Tab to the next value), ↑ and ↓ between a column's cells (`ColumnDataPanel`), the Code Editor's name fields, and the quick keys, which in quick-key mode make a cell in the selected column of the spreadsheet on screen (`SpreadSheetPanel.dispatchKeyEvent`).
+- A click selects a cell or a column alone, a ⌘-click adds it to the selection and a ⇧-click adds the cells between, or the column. A right-click or ⌃-click (`SecondaryClick`) leaves the selection alone: a cell's values and times drop it, so their caret takes no focus, which would select the cell (`ModifierClickTest`, `CellTypingTest`).
 
 ## Video Playback
 

@@ -22,12 +22,14 @@ import org.datavyu.models.db.Cell.ClipFile;
 import org.datavyu.models.db.MediaClip;
 import org.datavyu.views.discrete.EditorComponent;
 import org.datavyu.views.discrete.EditorTracker;
+import org.datavyu.views.discrete.SecondaryClick;
 
 import javax.swing.*;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.event.MouseEvent;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
@@ -108,11 +110,12 @@ public final class CellValuesView extends JTextArea implements FocusListener {
                         if (e.getKeyCode() == KeyEvent.VK_ENTER)
                         {
                             // Verbose debug output
-                            if (!generateText().equals(getText())) {
+                            String values = valuesText();
+                            if (!values.equals(getText())) {
                                 logger.info("Cell values rebuilt after the return key");
-                                logger.info("\tGenerated contents" + generateText().length() + ": " + generateText()
+                                logger.info("\tGenerated contents" + values.length() + ": " + values
                                         + "\n\tTextbox contents " + getText().length() + " : " + getText());
-                                rebuildText();
+                                setText(values);
                             }
                         }
                    }
@@ -143,7 +146,7 @@ public final class CellValuesView extends JTextArea implements FocusListener {
 
         allEditors.clear();
         allEditors.addAll(buildEditors());
-        rebuildText();
+        setText(valuesText());
 
         edTracker.followRebuiltEditors(place, caret);
     }
@@ -204,14 +207,8 @@ public final class CellValuesView extends JTextArea implements FocusListener {
         }
     }
 
-    /**
-     * Recalculates and sets the text to display.
-     */
-    public void rebuildText() {
-        setText(generateText());
-    }
-    
-    public String generateText() {
+    /** Returns the text the editors show, one after another. */
+    private String valuesText() {
         String ans = "";
         for (EditorComponent item : allEditors) {
             ans += item.getText();
@@ -257,5 +254,13 @@ public final class CellValuesView extends JTextArea implements FocusListener {
     @Override
     public void cut() {
         edTracker.cut();
+    }
+
+    /** A right-click or ⌃-click neither moves the caret nor takes the focus, so it leaves the cell's selection alone. */
+    @Override
+    protected void processMouseEvent(final MouseEvent e) {
+        if (!SecondaryClick.isDroppedByText(e)) {
+            super.processMouseEvent(e);
+        }
     }
 }

@@ -26,11 +26,15 @@ import java.awt.event.FocusEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.event.MouseEvent;
+import java.util.ArrayList;
 import java.util.List;
 import javax.swing.JComponent;
 import javax.swing.JTextField;
 import javax.swing.KeyStroke;
 import javax.swing.SwingUtilities;
+import javax.swing.text.DefaultCaret;
+import javax.swing.text.JTextComponent;
 
 /**
  * Typing into a cell's value goes through the spreadsheet's command, so it is an edit in the undo history: one edit
@@ -300,6 +304,91 @@ public class CellTypingTest {
             press(onset, KeyEvent.VK_LEFT, InputEvent.SHIFT_DOWN_MASK);
 
             assertEquals(onset.getSelectedText(), "00");
+        });
+    }
+
+    /** Sends a typed key as Swing does, to the component's key listeners. */
+    private static void typeInto(final JComponent on, final char key) {
+        KeyEvent e = new KeyEvent(on, KeyEvent.KEY_TYPED, 0, 0, KeyEvent.VK_UNDEFINED, key);
+        for (KeyListener listener : on.getKeyListeners()) {
+            listener.keyTyped(e);
+        }
+    }
+
+    /** A digit typed over a selection that starts on a colon goes after the colon, which stays. */
+    @Test
+    public void aDigitTypedOverAColonKeepsIt() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            TimeStampTextField onset = new TimeStampTextField(spreadsheet, cell, TimeStampSource.Onset);
+            onset.setCaretPosition(3);
+            press(onset, KeyEvent.VK_LEFT, InputEvent.SHIFT_DOWN_MASK);
+            assertEquals(onset.getSelectedText(), ":");
+
+            typeInto(onset, '5');
+
+            assertEquals(cell.getOnset(), 50 * 60_000 + 1_000);
+        });
+    }
+
+    /** A time takes only digits, and at its end there is no digit for one typed to take the place of. */
+    @Test
+    public void aTimeTakesOnlyDigitsAndNoneAtItsEnd() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            TimeStampTextField onset = new TimeStampTextField(spreadsheet, cell, TimeStampSource.Onset);
+            onset.setCaretPosition(onset.getText().length());
+
+            typeInto(onset, '5');
+            onset.setCaretPosition(0);
+            typeInto(onset, 'x');
+
+            assertEquals(onset.getText(), "00:00:01:000");
+            assertEquals(cell.getOnset(), 1_000);
+            assertFalse(spreadsheet.getUndoManager().canUndo());
+        });
+    }
+
+    /** Sends the press, release and click of a click with the button and modifiers given. */
+    private static void click(final JComponent on, final int button, final int modifiers) {
+        for (int id : new int[] {MouseEvent.MOUSE_PRESSED, MouseEvent.MOUSE_RELEASED, MouseEvent.MOUSE_CLICKED}) {
+            on.dispatchEvent(new MouseEvent(on, id, 0, modifiers, 5, 5, 1, false, button));
+        }
+    }
+
+    /**
+     * A right-click or ⌃-click in a value or a time does not reach its caret, which would take the focus and so select
+     * the cell, or its other mouse listeners.
+     */
+    @Test
+    public void aRightOrControlClickInACellsTextDoesNotReachIt() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            TimeStampTextField onset = new TimeStampTextField(spreadsheet, cell, TimeStampSource.Onset);
+            for (JTextComponent text : List.<JTextComponent>of(view, onset)) {
+                List<Integer> seen = new ArrayList<>();
+                text.setCaret(new DefaultCaret() {
+                    @Override
+                    public void mousePressed(final MouseEvent e) {
+                        seen.add(e.getID());
+                    }
+
+                    @Override
+                    public void mouseReleased(final MouseEvent e) {
+                        seen.add(e.getID());
+                    }
+
+                    @Override
+                    public void mouseClicked(final MouseEvent e) {
+                        seen.add(e.getID());
+                    }
+                });
+
+                click(text, MouseEvent.BUTTON1, InputEvent.BUTTON1_DOWN_MASK | InputEvent.CTRL_DOWN_MASK);
+                click(text, MouseEvent.BUTTON3, InputEvent.BUTTON3_DOWN_MASK);
+                assertEquals(seen, List.of(), text.getClass().getSimpleName());
+
+                click(text, MouseEvent.BUTTON1, InputEvent.BUTTON1_DOWN_MASK);
+                assertEquals(seen, List.of(MouseEvent.MOUSE_PRESSED, MouseEvent.MOUSE_RELEASED,
+                    MouseEvent.MOUSE_CLICKED), "a click reaches the caret");
+            }
         });
     }
 
