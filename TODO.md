@@ -15,19 +15,19 @@ Updated 2026-11-04. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
-| Java source (main) | 242 files, 42.5k lines | 146 files, 25.2k lines |
-| Tests / line coverage | 113 / 9.9% | 687 / 67.2%; views 60%, undo edits 93% |
+| Java source (main) | 242 files, 42.5k lines | 145 files, 25.1k lines |
+| Tests / line coverage | 113 / 9.9% | 693 / 67.2%; views 60%, undo edits 93% |
 | Runtime dependencies / with known vulnerabilities | 28 / 8 | 13 / 0 |
-| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 444 |
-| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 303 / 54 (none on thread safety, now gated); 15 |
-| Never-invoked methods (`dead-code.py`) | 109+ | 21: test-only accessors, unused settings setters, and Swing overrides the script cannot see |
+| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 439 |
+| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 303 / 52 (none on thread safety, now gated); 14 |
+| Never-invoked methods (`dead-code.py`) | 109+ | 27: test-only accessors, unused settings setters, and Swing overrides the script cannot see |
 | Static global access (`grep -rohP 'Datavyu\.(get\|set)\w*\(' src/main/java \| wc -l`) | about 330 call sites | 0: each tab's `ProjectController` is passed to what it owns |
 
 ## Bugs
 
 **B24. A playback integration test fails now and then.** ready, *verified* once. On 2026-11-04 `PlaybackIntegrationTest.playsForwardFromAnOnset` failed "the paused position follows playback": after a second of play, pausing reported a frame (`currentFrame`) more than 2 frames behind the last one the probe saw shown. Two reruns passed. It ran straight after a full build, so load may be the trigger; whether the pause lands behind the picture or the test's bound is too tight is not known.
 
-**B23. A Datavyu JSON import can bring code names a project file refuses.** ready, *from reading*. The importer adds a matrix column's codes from the JSON keys as they come (`OpenDataStoreFileController`, around `variableArg.childArguments.add`), so repeated or empty keys become repeated or empty code names, and saving the project then fails its own check (`ProjectRules`: "is named twice", "must not be empty"). The import should refuse such a file, saying which column and key, as it does a negative time.
+**B23. A Datavyu JSON import can bring code names a project file refuses.** ready, *from reading*. The importer adds a matrix column's codes from the JSON keys as they come (`OpenDataStoreFileController`, where it builds the `codes` list for `setCodes`), so repeated or empty keys become repeated or empty code names, and saving the project then fails its own check (`ProjectRules`: "is named twice", "must not be empty"). The import should refuse such a file, saying which column and key, as it does a negative time.
 
 **B2. The app changes a global macOS setting.** ready (owner: scope it to the app), *from reading*. At startup `Datavyu` runs `defaults write -g ApplePressAndHoldEnabled -bool false` for every application on the Mac, and restores it only on a clean shutdown; a crash or force-quit leaves it changed. (It used to run when the class loaded, so every test run turned the setting off and never restored it.) The intent is key repeat instead of the accent popup while holding keys. Scope it to the app: in-app key repeat, or a per-app defaults domain once there is an app bundle; then delete the global write.
 
@@ -71,7 +71,7 @@ None open.
 
 Tech debt is paid down in the Java app rather than left for the C++ rewrite (AGENTS.md › North Star, 2026-11-03). The items run in this order, each behaviour-preserving unless it says otherwise, and each pins the behaviour it touches with tests, since most views and undo have none.
 
-**R11. One cell value model.** ready. A cell holds its values as text, one for each code (`Cell.getValues`, `setValue`). Left: a column's codes are still Datavyu's `Argument` tree (`Variable.getRootNode().childArguments`), which the Code Editor, the project file and the commands reach into, and the value editors still mirror Datavyu's layers (`MatrixRootView`, `DataValueEditor`, `NominalDataValueEditor`, `DataValueEditorFactory`). Since 2026-10-14 the app has one kind of column, a list of codes: make a column's codes its list of names, and collapse the editors to one view of a cell's values with one editor per code. The project file format is unchanged.
+**R11. One cell value model.** ready. A cell holds its values as text, one for each code (`Cell.getValues`, `setValue`), and a column its codes as names (`Variable.getCodes`). Left: the value editors still mirror Datavyu's layers (`MatrixRootView`, `DataValueEditor`, `NominalDataValueEditor`, `DataValueEditorFactory`). Since 2026-10-14 the app has one kind of column, a list of codes: collapse the editors to one view of a cell's values with one editor per code.
 
 **R4. Per-editor key handling.** after R11 (owner, 2026-11-04: R11 first, as both rework the value editors). `EditorTracker` and the value editors handle keys per editor, with 21 uses of the deprecated modifier API (`getModifiers`, `*_MASK`, `getMenuShortcutKeyMask`). Keys that are commands go through `Shortcuts` to the commands (`Command`); editors keep only text editing. Do before F7.
 

@@ -20,7 +20,6 @@ import org.datavyu.views.discrete.SpreadsheetTheme;
 import org.datavyu.util.Resources;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.datavyu.models.db.Argument;
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.Variable;
 import org.datavyu.models.db.VariableListener;
@@ -116,7 +115,7 @@ public class VocabElementV extends JPanel {
         @Override public void editRefused() { lockMark.shake(); }
     };
 
-    public VocabElementV(Argument vocabArgument, Variable var, VocabEditorV vev) {
+    public VocabElementV(Variable var, VocabEditorV vev) {
 
         Resources rMap = Resources.of(VocabElementV.class);
 
@@ -248,7 +247,7 @@ public class VocabElementV extends JPanel {
     }
 
     private List<String> codeNames() {
-        return varModel.getRootNode().childArguments.stream().map(code -> code.name).toList();
+        return varModel.getCodes();
     }
 
     private void refreshRefused(final boolean typed) {
@@ -276,40 +275,18 @@ public class VocabElementV extends JPanel {
     }
 
     /**
-     * Gets a view for the supplied formal argument.
+     * Finds the editor of a code's name.
      *
-     * @param fa The argument that we want a view for.
-     * @return The view for the supplied formal argument if it exists, null
-     * otherwise.
+     * @param index the code's place among the column's codes
+     * @return its editor, or null if there is none
      */
-    public final FormalArgEditor getArgumentView(final Argument fa) {
+    public final FormalArgEditor getArgumentView(final int index) {
         for (EditorComponent ed : veRootView.getEditors()) {
-            if (ed.getClass() == FormalArgEditor.class) {
-                FormalArgEditor fArgEd = (FormalArgEditor) ed;
-
-                if (fArgEd.getModel().equals(fa)) {
-                    return fArgEd;
-                }
+            if (ed instanceof FormalArgEditor code && code.getArgPos() == index) {
+                return code;
             }
         }
         return null;
-    }
-
-    /**
-     * @return The model (VocabElement) that this view represents.
-     */
-    public final Argument getModel() {
-        return varModel.getRootNode();
-    }
-
-    /**
-     * Replaces the model used for this vocab element view.
-     *
-     * @param vocabArgument The new model to use with this view.
-     */
-    public final void setModel(final Argument vocabArgument) {
-        varModel.setRootNode(vocabArgument);
-        this.rebuildContents();
     }
 
     public final Variable getVariable() {

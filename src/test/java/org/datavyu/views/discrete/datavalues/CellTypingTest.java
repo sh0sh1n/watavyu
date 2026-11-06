@@ -97,7 +97,7 @@ public class CellTypingTest {
     public void anEmptiedValueShowsItsCodesNameNow() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
             type("smile");
-            cell.getVariable().renameArgument(0, "face");
+            cell.getVariable().renameCode(0, "face");
             EditorComponent editor = view.getEdTracker().firstEditor();
 
             editor.setText("");

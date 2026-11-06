@@ -11,7 +11,6 @@ import static org.testng.Assert.assertSame;
 import static org.testng.Assert.assertThrows;
 import static org.testng.Assert.assertTrue;
 
-import org.datavyu.models.db.Argument;
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.DataStoreFactory;
@@ -44,8 +43,8 @@ public class CodeCommandsTest {
         spreadsheet = new ProjectController(new Project(), dataStore);
         codes = spreadsheet.codes();
         gaze = dataStore.createVariable("gaze");
-        gaze.addArgument();
-        gaze.addArgument();
+        gaze.addCode();
+        gaze.addCode();
         first = gaze.createPointCell(1_000);
         second = gaze.createPointCell(2_000);
         first.setValue(0, "left");
@@ -56,7 +55,7 @@ public class CodeCommandsTest {
     }
 
     private List<String> names() {
-        return gaze.getRootNode().childArguments.stream().map(code -> code.name).toList();
+        return gaze.getCodes();
     }
 
     private static String values(final Cell cell) {
@@ -71,24 +70,23 @@ public class CodeCommandsTest {
 
     @Test
     public void aNewCodeGoesLastWithAnEmptyValueInEachCell() {
-        Argument code = codes.add(gaze);
+        assertEquals(codes.add(gaze), 3);
 
         assertEquals(names(), List.of("code01", "code02", "code03", "code04"));
-        assertSame(gaze.getRootNode().childArguments.get(3), code);
         assertEquals(values(first), "(left,up,near,)");
         assertEquals(undoName(), "Undo New Code code04");
     }
 
     @Test
-    public void undoTakesANewCodeOutAndRedoPutsTheSameCodeBack() {
-        Argument code = codes.add(gaze);
+    public void undoTakesANewCodeOutAndRedoPutsItBack() {
+        codes.add(gaze);
 
         spreadsheet.undo();
         assertEquals(names(), List.of("code01", "code02", "code03"));
         assertEquals(values(first), "(left,up,near)");
 
         spreadsheet.redo();
-        assertSame(gaze.getRootNode().childArguments.get(3), code);
+        assertEquals(names(), List.of("code01", "code02", "code03", "code04"));
         assertEquals(values(second), "(right,,far,)");
     }
 
@@ -96,8 +94,6 @@ public class CodeCommandsTest {
 
     @Test
     public void undoPutsADeletedCodeBackInItsPlaceWithItsValues() {
-        Argument code = gaze.getRootNode().childArguments.get(1);
-
         assertTrue(codes.delete(gaze, 1));
         assertEquals(names(), List.of("code01", "code03"));
         assertEquals(values(first), "(left,near)");
@@ -105,7 +101,6 @@ public class CodeCommandsTest {
 
         spreadsheet.undo();
         assertEquals(names(), List.of("code01", "code02", "code03"));
-        assertSame(gaze.getRootNode().childArguments.get(1), code);
         assertEquals(values(first), "(left,up,near)");
         assertEquals(values(second), "(right,,far)");
 
@@ -133,7 +128,7 @@ public class CodeCommandsTest {
         cell.setValue(0, "only");
 
         codes.delete(timing, 0);
-        assertTrue(timing.getRootNode().childArguments.isEmpty());
+        assertTrue(timing.getCodes().isEmpty());
 
         spreadsheet.undo();
         assertEquals(cell.getValue(0), "only");
@@ -220,7 +215,7 @@ public class CodeCommandsTest {
     /** A name a project file refuses, which a Datavyu import can bring, comes back on undo. */
     @Test
     public void undoPutsBackANameKeptFromAnImport() {
-        gaze.getRootNode().childArguments.get(1).name = "code01";
+        gaze.renameCode(1, "code01");
 
         codes.rename(gaze, 1, "side", false);
         spreadsheet.undo();
@@ -269,7 +264,7 @@ public class CodeCommandsTest {
         gaze.addListener(listener);
         gaze.setLocked(true);
 
-        assertNull(codes.add(gaze));
+        assertEquals(codes.add(gaze), -1);
         assertFalse(codes.delete(gaze, 0));
         assertFalse(codes.move(gaze, 0, 1));
         assertFalse(codes.rename(gaze, 0, "look", false));
@@ -300,10 +295,12 @@ public class CodeCommandsTest {
     /** A column read from a file holds codes it did not number, and its next code takes a free name. */
     @Test
     public void aNewCodeTakesANameNoCodeHas() {
-        gaze.renameArgument(2, "code05");
-        gaze.insertArgument(new Argument("code04"), 3);
+        gaze.renameCode(2, "code05");
+        gaze.insertCode(3, "code04");
 
-        assertEquals(codes.add(gaze).name, "code06");
+        int added = codes.add(gaze);
+
+        assertEquals(gaze.getCodes().get(added), "code06");
     }
 
     // Rename a column

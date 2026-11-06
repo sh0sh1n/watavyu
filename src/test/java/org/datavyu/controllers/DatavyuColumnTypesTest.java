@@ -58,7 +58,7 @@ public class DatavyuColumnTypesTest {
     public void exportedJsonImportsUnchanged() throws Exception {
         DataStore original = DataStoreFactory.newDataStore();
         Variable mother = original.createVariable("mother");
-        mother.addArgument();
+        mother.addCode();
         var cell = mother.createCell();
         cell.setOnset(4_000);
         cell.setOffset(5_000);

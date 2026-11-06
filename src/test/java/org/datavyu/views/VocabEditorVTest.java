@@ -135,7 +135,7 @@ public class VocabEditorVTest {
         SwingUtilities.invokeAndWait(() -> {
             editor.set(new VocabEditorV(null, false, spreadsheet));
             VocabElementV column = editor.get().getVocabElements().get(0);
-            type(column, column.getArgumentView(gaze.getRootNode().childArguments.get(0)), "side");
+            type(column, column.getArgumentView(0), "side");
             spreadsheet.codes().delete(gaze, 0);
         });
         try {
@@ -157,20 +157,20 @@ public class VocabEditorVTest {
     public void aRefusedNameIsShownAsRefused() throws Exception {
         ProjectController spreadsheet = spreadsheet();
         Variable gaze = spreadsheet.getDataStore().createVariable("gaze");
-        gaze.addArgument();
+        gaze.addCode();
         AtomicReference<VocabEditorV> editor = new AtomicReference<>();
         AtomicReference<List<String>> refused = new AtomicReference<>();
         SwingUtilities.invokeAndWait(() -> {
             editor.set(new VocabEditorV(null, false, spreadsheet));
             VocabElementV column = editor.get().getVocabElements().get(0);
             type(column, column.getNameComponent(), "1st");
-            type(column, column.getArgumentView(gaze.getRootNode().childArguments.get(0)), "code02");
+            type(column, column.getArgumentView(0), "code02");
             refused.set(column.refusedNames());
         });
         try {
             assertEquals(refused.get(), List.of("1st", "code02"));
             assertEquals(gaze.getName(), "gaze");
-            assertEquals(gaze.getRootNode().childArguments.get(0).name, "code0");
+            assertEquals(gaze.getCodes().get(0), "code0");
         } finally {
             SwingUtilities.invokeAndWait(() -> editor.get().dispose());
         }
@@ -184,14 +184,14 @@ public class VocabEditorVTest {
     public void aSelectedCodeIsForgottenWhenAnUndoRebuildsItsColumn() throws Exception {
         ProjectController spreadsheet = spreadsheet();
         Variable gaze = spreadsheet.getDataStore().createVariable("gaze");
-        gaze.addArgument();
+        gaze.addCode();
         AtomicReference<VocabEditorV> editor = new AtomicReference<>();
         AtomicReference<FormalArgEditor> before = new AtomicReference<>();
         AtomicReference<FormalArgEditor> after = new AtomicReference<>();
         SwingUtilities.invokeAndWait(() -> {
             editor.set(new VocabEditorV(null, false, spreadsheet));
             VocabElementV column = editor.get().getVocabElements().get(0);
-            type(column, column.getArgumentView(gaze.getRootNode().childArguments.get(1)), "side");
+            type(column, column.getArgumentView(1), "side");
             before.set(column.getArgWithFocus());
             spreadsheet.undo();
             after.set(column.getArgWithFocus());

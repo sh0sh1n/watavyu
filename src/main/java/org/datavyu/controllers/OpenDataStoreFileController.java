@@ -195,10 +195,9 @@ public final class OpenDataStoreFileController {
 
                                                 Variable newColumn = dataStore.createVariable(columnName, true);
                                                 added.add(newColumn);
-                                                Argument variableArg = newColumn.getRootNode();
-                                                variableArg.clearChildArguments();
+                                                List<String> codes = new ArrayList<>();
                                                 if (variableType != ColumnKind.MATRIX) {
-                                                    variableArg.childArguments.add(new Argument(VALUE_CODE));
+                                                    codes.add(VALUE_CODE);
                                                 }
 
                                                 while (!JsonToken.END_OBJECT.equals(token)) {
@@ -212,8 +211,7 @@ public final class OpenDataStoreFileController {
                                                     token = parser.nextToken();
                                                     if (variableType == ColumnKind.MATRIX) {
                                                         if (getVarType(parser.getValueAsString()) != null) {
-                                                            variableArg.childArguments.add(new Argument(parser
-                                                                    .currentName()));
+                                                            codes.add(parser.currentName());
                                                         } else {
                                                             logger.warn("Unknown argument ('" + parser.currentName
                                                                     () + "' line " + parser.currentLocation()
@@ -223,7 +221,7 @@ public final class OpenDataStoreFileController {
                                                         }
                                                     }
                                                 }
-                                                newColumn.setRootNode(variableArg);
+                                                newColumn.setCodes(codes);
 
                                                 token = parser.nextToken();
                                                 if (JsonToken.FIELD_NAME.equals(token) && "cells".equals(parser

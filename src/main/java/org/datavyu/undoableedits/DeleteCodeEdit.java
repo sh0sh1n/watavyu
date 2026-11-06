@@ -1,6 +1,5 @@
 package org.datavyu.undoableedits;
 
-import org.datavyu.models.db.Argument;
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.Variable;
 
@@ -17,7 +16,7 @@ import java.util.Map;
 public final class DeleteCodeEdit extends AbstractUndoableEdit {
 
     private final Variable column;
-    private final Argument code;
+    private final String code;
     private final int index;
 
     /** Each cell's value for the code, where it had one. */
@@ -32,7 +31,7 @@ public final class DeleteCodeEdit extends AbstractUndoableEdit {
     public DeleteCodeEdit(final Variable column, final int index) {
         this.column = column;
         this.index = index;
-        this.code = column.getRootNode().childArguments.get(index);
+        this.code = column.getCodes().get(index);
         this.values = column.getCells().stream()
             .filter(cell -> !cell.getValue(index).isEmpty())
             .map(cell -> Map.entry(cell, cell.getValue(index)))
@@ -41,13 +40,13 @@ public final class DeleteCodeEdit extends AbstractUndoableEdit {
 
     @Override
     public String getPresentationName() {
-        return "Delete Code " + code.name;
+        return "Delete Code " + code;
     }
 
     @Override
     public void undo() throws CannotUndoException {
         super.undo();
-        column.insertArgument(code, index);
+        column.insertCode(index, code);
         for (Map.Entry<Cell, String> value : values) {
             value.getKey().setValue(index, value.getValue());
         }
@@ -56,6 +55,6 @@ public final class DeleteCodeEdit extends AbstractUndoableEdit {
     @Override
     public void redo() throws CannotRedoException {
         super.redo();
-        column.removeArgument(index);
+        column.removeCode(index);
     }
 }

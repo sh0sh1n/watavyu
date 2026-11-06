@@ -26,7 +26,7 @@ public class SpreadsheetColumnsTest {
         DataStore dataStore = DataStoreFactory.newDataStore();
 
         Variable text = dataStore.createVariable("Notes");
-        text.getRootNode().childArguments.get(0).name = "note";
+        text.renameCode(0, "note");
         Cell later = text.createCell();
         later.setOnset(5_000);
         later.setOffset(6_000);
@@ -37,7 +37,7 @@ public class SpreadsheetColumnsTest {
         earlier.setValue(0, "first, (with) \"quotes\"");
 
         Variable matrix = dataStore.createVariable("Mother");
-        matrix.addArgument();
+        matrix.addCode();
         Cell cell = matrix.createCell();
         cell.setOnset(2_000);
         cell.setOffset(3_000);
@@ -75,7 +75,7 @@ public class SpreadsheetColumnsTest {
     public void aColumnWithNoCodesKeepsItsTiming() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
         Variable timing = dataStore.createVariable("Timing");
-        timing.removeArgument(0);
+        timing.removeCode(0);
         Cell cell = timing.createCell();
         cell.setOnset(10);
         cell.setOffset(20);

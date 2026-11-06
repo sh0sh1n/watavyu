@@ -86,16 +86,16 @@ public class LockedColumnTest {
 
     @Test
     public void aLockedColumnKeepsItsCodesAndName() {
-        List<Argument> codes = List.copyOf(notes.getRootNode().childArguments);
-        assertThrows(IllegalStateException.class, notes::addArgument);
-        assertThrows(IllegalStateException.class, () -> notes.insertArgument(new Argument("new"), 0));
-        notes.removeArgument(0);
-        notes.moveArgument(0, 0);
-        notes.renameArgument(0, "renamed");
+        List<String> codes = notes.getCodes();
+        assertThrows(IllegalStateException.class, notes::addCode);
+        assertThrows(IllegalStateException.class, () -> notes.insertCode(0, "new"));
+        notes.removeCode(0);
+        notes.moveCode(0, 0);
+        notes.renameCode(0, "renamed");
         assertThrows(UserWarningException.class, () -> notes.setName("renamed"));
 
-        assertEquals(notes.getRootNode().childArguments, codes);
-        assertEquals(codes.get(0).name, "code01");
+        assertEquals(notes.getCodes(), codes);
+        assertEquals(codes.get(0), "code01");
         assertEquals(cell.getValue(0), "smile");
         assertEquals(notes.getName(), "notes");
         assertEquals(refusals, 6);

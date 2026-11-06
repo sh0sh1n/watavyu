@@ -1,6 +1,5 @@
 package org.datavyu.projectfile;
 
-import org.datavyu.models.db.Argument;
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.MediaClip;
@@ -71,8 +70,7 @@ public final class SpreadsheetColumns {
     }
 
     private static AnnotationColumn annotation(final Variable variable) {
-        List<String> codes = new ArrayList<>();
-        variable.getRootNode().childArguments.forEach(code -> codes.add(code.name));
+        List<String> codes = variable.getCodes();
         List<AnnotationCell> cells = new ArrayList<>();
         for (Cell cell : variable.getCellsTemporally()) {
             cells.add(new AnnotationCell(cell.getOnset(), cell.getOffset(), cell.getValues()));
@@ -119,12 +117,7 @@ public final class SpreadsheetColumns {
         for (AnnotationColumn column : columns) {
             Variable variable = dataStore.createVariable(column.name(), true);
             variable.setHidden(column.hidden());
-            Argument root = variable.getRootNode();
-            root.clearChildArguments();
-            for (String code : column.codes()) {
-                root.childArguments.add(new Argument(code));
-            }
-            variable.setRootNode(root);
+            variable.setCodes(column.codes());
             for (AnnotationCell annotated : column.cells()) {
                 Cell cell = variable.createCell();
                 cell.setOnset(annotated.onset());

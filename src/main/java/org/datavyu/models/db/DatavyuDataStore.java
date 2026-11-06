@@ -152,15 +152,15 @@ public class DatavyuDataStore implements DataStore {
     @Override
     public Variable createVariable(final String name, boolean grandfathered)
             throws UserWarningException {
-        return addNewVariable(name, Argument.column(name + name.hashCode()), grandfathered, false);
+        return addNewVariable(name, grandfathered, false);
     }
 
     @Override
     public Variable createMediaVariable(final String name) throws UserWarningException {
-        return addNewVariable(name, new Argument(name + name.hashCode()), true, true);
+        return addNewVariable(name, true, true);
     }
 
-    private Variable addNewVariable(final String name, final Argument rootNode, final boolean grandfathered,
+    private Variable addNewVariable(final String name, final boolean grandfathered,
                                     final boolean media) throws UserWarningException {
         // Check to make sure the variable name is not already in use:
         Variable varTest = getVariable(name);
@@ -169,7 +169,7 @@ public class DatavyuDataStore implements DataStore {
                     + "', one with the same name already exists.");
         }
 
-        Variable v = new DatavyuVariable(name, rootNode, grandfathered, this, media);
+        Variable v = new DatavyuVariable(name, grandfathered, this, media);
         addVariable(v, order.size());
         return v;
     }

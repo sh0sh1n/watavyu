@@ -17,7 +17,7 @@ public final class RenameCodeEdit extends TypedRenameEdit {
      * @param continuing whether the rename continues the last one, which it then joins
      */
     public RenameCodeEdit(final Variable column, final int index, final String from, final boolean continuing) {
-        super(from, column.getRootNode().childArguments.get(index).name, continuing);
+        super(from, column.getCodes().get(index), continuing);
         this.column = column;
         this.index = index;
     }
@@ -30,7 +30,7 @@ public final class RenameCodeEdit extends TypedRenameEdit {
 
     @Override
     void apply(final String name) {
-        column.renameArgument(index, name);
+        column.renameCode(index, name);
     }
 
     @Override

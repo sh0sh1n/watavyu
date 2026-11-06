@@ -76,16 +76,18 @@ public interface Variable {
     Cell getCellTemporally(final int index);
 
     /**
-     * @return The type of the variable.
+     * @return the names of the column's codes, in order; each cell has a value for each. A media column has none.
      */
-    Argument getRootNode();
+    List<String> getCodes();
 
     /**
-     * Sets the variable type.
+     * Gives a column without cells its codes, as reading a project file does, and numbers its next new code from
+     * {@code code01} again. It is not an edit.
      *
-     * @param newType The new argument to use with this variable.
+     * @param codes the codes' names, in order
+     * @throws IllegalStateException if the column has cells, or is a media column or locked
      */
-    void setRootNode(final Argument newType);
+    void setCodes(List<String> codes);
 
     /**
      * @return All the cells stored in the variable using a temporal alignment.
@@ -145,38 +147,39 @@ public interface Variable {
     void setName(final String newName, final boolean grandfathered) throws UserWarningException;
 
     /**
-     * Adds a code after the others, named {@code codeNN} after the codes added before it, with an empty value in each
-     * cell.
+     * Adds a code after the others, with an empty value in each cell. It is named {@code codeNN}, numbered after the
+     * last code added (from {@code code01} for a column given its codes) and skipping names a code has.
      *
-     * @return the new code
-     * @throws IllegalStateException if the column is locked
+     * @return the new code's place among the column's codes, the last
+     * @throws IllegalStateException if the column is a media column or locked
      */
-    Argument addArgument();
+    int addCode();
 
     /**
      * Puts a code back at a place among the others, with an empty value in each cell, as undoing its deletion does.
      *
-     * @param code  the code
      * @param index its place, from 0 to the number of codes
+     * @param name  the code's name
      * @throws IllegalStateException if the column is locked
+     * @throws IndexOutOfBoundsException if the place is out of range
      */
-    void insertArgument(Argument code, int index);
+    void insertCode(int index, String name);
 
     /**
      * Moves a code and each cell's value for it to another place, shifting those between. A place out of range, or a
      * locked column, leaves the codes as they are.
      *
-     * @param oldIndex the code's place
-     * @param newIndex its new place
+     * @param from the code's place
+     * @param to   its new place
      */
-    void moveArgument(int oldIndex, int newIndex);
+    void moveCode(int from, int to);
 
     /**
      * Deletes a code and each cell's value for it, unless the column is locked.
      *
      * @param index the code's place
      */
-    void removeArgument(int index);
+    void removeCode(int index);
 
     /**
      * Renames a code, unless the column is locked. Any name is taken, as undo puts back the names a code has had, which
@@ -185,13 +188,7 @@ public interface Variable {
      * @param index the code's place
      * @param name  its new name
      */
-    void renameArgument(int index, String name);
-
-    /**
-     * @param name a code's name
-     * @return the place of the first code of that name, or -1 if there is none
-     */
-    int getArgumentIndex(String name);
+    void renameCode(int index, String name);
 
     /**
      * Adds a listener that needs to be notified when the variable changes.

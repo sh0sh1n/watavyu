@@ -40,7 +40,10 @@ public final class DatavyuVariable implements Variable {
     private static CellComparator CellComparator = new CellComparator();
     final private UUID variableId = UUID.randomUUID();
     private List<Cell> cells = new CopyOnWriteArrayList<>();
-    private Argument rootNodeArgument = null;
+    /** The codes' names, in order; each cell has a value for each. */
+    private final List<String> codes = new ArrayList<>();
+    /** The number in the name of the last {@code codeNN} code added, which a new code's number follows. */
+    private int lastCodeNumber;
     private Boolean selected;
     private Boolean hidden;
     private String name;
@@ -49,24 +52,21 @@ public final class DatavyuVariable implements Variable {
     private boolean locked;
 
     /**
-     * Default constructor.
-     */
-    public DatavyuVariable() {}
-
-    /**
      * Constructor.
      * @param name          The name to use for the variable being constructed.
-     * @param type          The codes of the variable; a media column has none.
      * @param grandfathered Flag to exempt variable from naming rules.
      * @param dds           The datastore to which this variable belongs
      * @param media         Whether this is a media column
      */
-    DatavyuVariable(String name, Argument type, boolean grandfathered, DatavyuDataStore dds, boolean media)
+    DatavyuVariable(String name, boolean grandfathered, DatavyuDataStore dds, boolean media)
             throws UserWarningException {
         this.media = media;
         owningDatastore = dds;
         this.setName(name, grandfathered);
-        this.setRootNode(type);
+        // An annotation column starts with one code; a media column has none.
+        if (!media) {
+            codes.add(nextCodeName());
+        }
         this.setHidden(false);
         this.setSelected(true);
         owningDatastore.markAsChanged();
@@ -112,7 +112,7 @@ public final class DatavyuVariable implements Variable {
             throw new IllegalStateException("The cells of media column " + name + " are clips");
         }
         requireUnlocked();
-        Cell c = new DatavyuCell(this, this.getRootNode());
+        Cell c = new DatavyuCell(this, codes.size());
 
         cells.add(c);
 
@@ -130,7 +130,7 @@ public final class DatavyuVariable implements Variable {
             throw new IllegalStateException("Annotation column " + name + " has no clips");
         }
         requireUnlocked();
-        Cell c = new DatavyuCell(this, this.getRootNode(), onset, clip);
+        Cell c = new DatavyuCell(this, onset, clip);
         cells.add(c);
         for (VariableListener vl : listeners) {
             vl.cellInserted(c);
@@ -212,17 +212,21 @@ public final class DatavyuVariable implements Variable {
     }
 
     @Override
-    public Argument getRootNode() {
-        return rootNodeArgument;
+    public List<String> getCodes() {
+        return List.copyOf(codes);
     }
 
     @Override
-    public void setRootNode(final Argument a) {
-        if (refusesEdits()) {
-            return;
+    public void setCodes(final List<String> newCodes) {
+        if (!cells.isEmpty() || media) {
+            throw new IllegalStateException("Column " + name + " cannot be given codes: it has cells, or is media");
         }
-        owningDatastore.markAsChanged();
-        rootNodeArgument = a;
+        requireUnlocked();
+        codes.clear();
+        codes.addAll(newCodes);
+        // A new code is numbered from code01 again, skipping the names given.
+        lastCodeNumber = 0;
+        codesChanged();
     }
 
     @Override
@@ -317,54 +321,62 @@ public final class DatavyuVariable implements Variable {
     }
 
     @Override
-    public Argument addArgument() {
+    public int addCode() {
+        if (media) {
+            throw new IllegalStateException("Media column " + name + " has no codes");
+        }
         requireUnlocked();
-        Argument child = getRootNode().addChildArgument();
-        int index = getRootNode().childArguments.size() - 1;
+        codes.add(nextCodeName());
+        int index = codes.size() - 1;
         ownCells().forEach(cell -> cell.insertValue(index));
         codesChanged();
-        return child;
+        return index;
+    }
+
+    /** Names a new code {@code codeNN}, numbered after the last added, skipping names taken, as one read from a file. */
+    private String nextCodeName() {
+        String code;
+        do {
+            lastCodeNumber++;
+            code = String.format("code%02d", lastCodeNumber);
+        } while (codes.contains(code));
+        return code;
     }
 
     @Override
-    public void insertArgument(final Argument code, final int index) {
+    public void insertCode(final int index, final String code) {
         requireUnlocked();
-        List<Argument> codes = getRootNode().childArguments;
-        if (index < 0 || index > codes.size()) {
-            throw new IndexOutOfBoundsException("Column " + name + " has no place " + index + " for a code");
-        }
         codes.add(index, code);
         ownCells().forEach(cell -> cell.insertValue(index));
         codesChanged();
     }
 
     @Override
-    public void moveArgument(final int oldIndex, final int newIndex) {
-        List<Argument> codes = getRootNode().childArguments;
-        if (refusesEdits() || oldIndex < 0 || oldIndex >= codes.size() || newIndex < 0 || newIndex >= codes.size()) {
+    public void moveCode(final int from, final int to) {
+        if (refusesEdits() || from < 0 || from >= codes.size() || to < 0 || to >= codes.size()) {
             return;
         }
-        codes.add(newIndex, codes.remove(oldIndex));
-        ownCells().forEach(cell -> cell.moveValue(oldIndex, newIndex));
+        codes.add(to, codes.remove(from));
+        ownCells().forEach(cell -> cell.moveValue(from, to));
         codesChanged();
     }
 
     @Override
-    public void removeArgument(final int index) {
+    public void removeCode(final int index) {
         if (refusesEdits()) {
             return;
         }
-        getRootNode().childArguments.remove(index);
+        codes.remove(index);
         ownCells().forEach(cell -> cell.removeValue(index));
         codesChanged();
     }
 
     @Override
-    public void renameArgument(final int index, final String newName) {
+    public void renameCode(final int index, final String newName) {
         if (refusesEdits()) {
             return;
         }
-        getRootNode().childArguments.get(index).name = newName;
+        codes.set(index, newName);
         owningDatastore.markAsChanged();
         for (VariableListener vl : listeners) {
             vl.codeRenamed(index);
@@ -382,17 +394,6 @@ public final class DatavyuVariable implements Variable {
         for (VariableListener vl : listeners) {
             vl.codesChanged();
         }
-    }
-
-    @Override
-    public int getArgumentIndex(final String name) {
-        Argument arg = getRootNode();
-        for (int i = 0; i < arg.childArguments.size(); i++) {
-            if (arg.childArguments.get(i).name.equals(name)) {
-                return i;
-            }
-        }
-        return -1;
     }
 
     @Override
