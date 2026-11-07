@@ -1,0 +1,59 @@
+/*
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+package com.sh0sh1n.watavyu.views.spreadsheet.layouts;
+
+import com.sh0sh1n.watavyu.util.Constants;
+
+/**
+ * Factory for SheetLayouts.
+ */
+public final class SheetLayoutFactory {
+
+    /** Types of SheetLayouts for a spreadsheet. */
+    public enum SheetLayoutType {
+        /**
+         * Ordinal style layout. Cells stack underneath each other with
+         * no temporal relation to each other across the spreadsheet.
+         */
+        Ordinal,
+        /** Weak temporal alignment layout.  Cells distribute down and across
+         * the spreadsheet preserving their temporal alignment but in the
+         * least space required to show this.
+         */
+        WeakTemporal
+    }
+
+    /** How a spreadsheet is laid out until the user changes it: in time, so clips line up with what they show. */
+    public static final SheetLayoutType DEFAULT_LAYOUT = SheetLayoutType.WeakTemporal;
+
+    /**
+     * Creates the SheetLayout requested by type.
+     * @param type Type of layout to create.
+     * 
+     * @return SheetLayout to use.
+     */
+    public static SheetLayout createLayout(final SheetLayoutType type) {
+        return switch (type) {
+            case Ordinal -> new SheetLayoutOrdinal(Constants.BORDER_SIZE);
+            case WeakTemporal -> new SheetLayoutWeakTemporal(Constants.BORDER_SIZE);
+        };
+    }
+
+    /**
+     * Private constructor.
+     */
+    private SheetLayoutFactory() {
+    }
+}

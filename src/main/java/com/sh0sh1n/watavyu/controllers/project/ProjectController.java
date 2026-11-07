@@ -28,7 +28,7 @@ import com.sh0sh1n.watavyu.projectfile.ProjectDocument;
 import com.sh0sh1n.watavyu.projectfile.SpreadsheetColumns;
 import com.sh0sh1n.watavyu.undoableedits.SpreadsheetUndoManager;
 import com.sh0sh1n.watavyu.views.VideoController;
-import com.sh0sh1n.watavyu.views.discrete.SpreadSheetPanel;
+import com.sh0sh1n.watavyu.views.spreadsheet.SpreadSheetPanel;
 
 import javax.swing.*;
 import javax.swing.event.UndoableEditListener;

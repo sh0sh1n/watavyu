@@ -22,8 +22,8 @@ import com.sh0sh1n.watavyu.util.Settings;
 import com.sh0sh1n.watavyu.views.AboutV;
 import com.sh0sh1n.watavyu.views.MainWindow;
 import com.sh0sh1n.watavyu.views.WindowPlacement;
-import com.sh0sh1n.watavyu.views.discrete.SpreadSheetPanel;
-import com.sh0sh1n.watavyu.views.discrete.SpreadsheetTheme;
+import com.sh0sh1n.watavyu.views.spreadsheet.SpreadSheetPanel;
+import com.sh0sh1n.watavyu.views.spreadsheet.SpreadsheetTheme;
 import com.sh0sh1n.watavyu.util.Dialogs;
 
 import javax.swing.*;

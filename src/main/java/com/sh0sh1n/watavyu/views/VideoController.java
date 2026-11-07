@@ -14,7 +14,7 @@
  */
 package com.sh0sh1n.watavyu.views;
 
-import com.sh0sh1n.watavyu.views.discrete.SpreadsheetTheme;
+import com.sh0sh1n.watavyu.views.spreadsheet.SpreadsheetTheme;
 import com.sh0sh1n.watavyu.controllers.project.MediaPlayers;
 import com.sh0sh1n.watavyu.controllers.project.ProjectController;
 import com.sh0sh1n.watavyu.util.Settings;
@@ -22,8 +22,8 @@ import net.miginfocom.swing.MigLayout;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import com.sh0sh1n.watavyu.models.Identifier;
-import com.sh0sh1n.watavyu.plugins.StreamViewer;
-import com.sh0sh1n.watavyu.plugins.javafx.JavaFxVideoPlugin;
+import com.sh0sh1n.watavyu.playback.StreamViewer;
+import com.sh0sh1n.watavyu.playback.javafx.JavaFxVideoPlugin;
 import com.sh0sh1n.watavyu.util.*;
 import com.sh0sh1n.watavyu.util.ClockTimer.ClockListener;
 import com.sh0sh1n.watavyu.util.Resources;

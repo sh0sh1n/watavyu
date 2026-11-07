@@ -246,7 +246,7 @@ tasks.named<com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask>("
 tasks.register<JavaExec>("playbackBenchmark") {
     description = "Measures seek latency, frame accuracy, stepping and playback CPU for one video."
     group = "verification"
-    mainClass.set("com.sh0sh1n.watavyu.plugins.javafx.PlaybackBenchmark")
+    mainClass.set("com.sh0sh1n.watavyu.playback.javafx.PlaybackBenchmark")
     classpath = useJavafxModules(sourceSets["integrationTest"].runtimeClasspath)
     args(providers.gradleProperty("media").orElse("").get(), providers.gradleProperty("seeks").orElse("200").get())
 }

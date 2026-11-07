@@ -31,7 +31,7 @@ package com.sh0sh1n.watavyu.views;
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-import com.sh0sh1n.watavyu.views.discrete.SpreadsheetTheme;
+import com.sh0sh1n.watavyu.views.spreadsheet.SpreadsheetTheme;
 
 import javax.swing.*;
 import javax.swing.plaf.basic.BasicButtonUI;

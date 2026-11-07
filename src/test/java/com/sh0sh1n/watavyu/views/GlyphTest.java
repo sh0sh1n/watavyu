@@ -4,7 +4,7 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
-import com.sh0sh1n.watavyu.views.discrete.SpreadsheetTheme;
+import com.sh0sh1n.watavyu.views.spreadsheet.SpreadsheetTheme;
 import org.testng.annotations.Test;
 
 import javax.swing.JButton;

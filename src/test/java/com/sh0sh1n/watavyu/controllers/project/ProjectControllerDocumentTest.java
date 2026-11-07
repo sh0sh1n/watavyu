@@ -13,14 +13,14 @@ import com.sh0sh1n.watavyu.models.DataStoreFactory;
 import com.sh0sh1n.watavyu.models.MediaClip;
 import com.sh0sh1n.watavyu.models.Column;
 import com.sh0sh1n.watavyu.models.Project;
-import com.sh0sh1n.watavyu.plugins.StreamViewer;
+import com.sh0sh1n.watavyu.playback.StreamViewer;
 import com.sh0sh1n.watavyu.projectfile.ProjectDocument;
 import com.sh0sh1n.watavyu.projectfile.ProjectDocument.AnnotationColumn;
 import com.sh0sh1n.watavyu.projectfile.ProjectDocument.Clip;
 import com.sh0sh1n.watavyu.projectfile.ProjectDocument.MediaColumn;
 import com.sh0sh1n.watavyu.projectfile.ProjectDocument.Source;
 import com.sh0sh1n.watavyu.views.VideoController;
-import com.sh0sh1n.watavyu.views.discrete.SpreadSheetPanel;
+import com.sh0sh1n.watavyu.views.spreadsheet.SpreadSheetPanel;
 import org.testng.annotations.Test;
 
 import java.awt.Dimension;

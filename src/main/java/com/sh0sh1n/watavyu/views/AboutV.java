@@ -15,7 +15,7 @@
 package com.sh0sh1n.watavyu.views;
 
 import com.sh0sh1n.watavyu.util.AppVersion;
-import com.sh0sh1n.watavyu.views.discrete.SpreadsheetTheme;
+import com.sh0sh1n.watavyu.views.spreadsheet.SpreadsheetTheme;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
