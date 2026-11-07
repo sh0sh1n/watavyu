@@ -1,4 +1,4 @@
-/**
+/*
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -32,7 +32,7 @@ public final class MediaOpenException extends RuntimeException {
         super(message, cause);
     }
 
-    /** @return An exception describing why the player rejected the file. */
+    /** Returns an exception describing why the player rejected the file. */
     static MediaOpenException from(final File file, final Throwable error) {
         if (error instanceof MediaException) {
             MediaException media = (MediaException) error;

@@ -1,4 +1,4 @@
-/**
+/*
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -110,14 +110,14 @@ public final class VocabElementRootView extends JTextArea {
     }
 
     /**
-     * @return The editor tracker for this VocabElementRootView.
+     * Returns the editor tracker for this VocabElementRootView.
      */
     public EditorTracker getEdTracker() {
         return edTracker;
     }
 
     /**
-     * @return The editors used for this root view.
+     * Returns the editors used for this root view.
      */
     public List<EditorComponent> getEditors() {
         return editors;

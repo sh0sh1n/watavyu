@@ -1,4 +1,4 @@
-/**
+/*
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -114,8 +114,8 @@ public final class VENameEditor extends EditorComponent {
 
 
     /**
+     * Returns true if the character is a reserved character.
      * @param aChar Character to test
-     * @return true if the character is a reserved character.
      */
     public boolean isReserved(final char aChar) {
         return (RESERVED_CHARS.indexOf(aChar) >= 0);

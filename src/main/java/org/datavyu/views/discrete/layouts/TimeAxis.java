@@ -58,8 +58,8 @@ public final class TimeAxis {
     }
 
     /**
+     * Returns its height in the sheet, in pixels from the top: the top of its span when cells start or end then.
      * @param time a time in milliseconds
-     * @return its height in the sheet, in pixels from the top: the top of its span when cells start or end then
      */
     public int y(final long time) {
         Map.Entry<Long, Span> before = spans.floorEntry(time);
@@ -79,9 +79,9 @@ public final class TimeAxis {
     }
 
     /**
+     * Returns the time at that height, in milliseconds: a time over the whole of its span, above the first time the
+     * first, and below the last the last.
      * @param y a height in the sheet, in pixels from the top
-     * @return the time at that height, in milliseconds: a time over the whole of its span, above the first time the
-     *         first, and below the last the last
      */
     public long time(final int y) {
         Map.Entry<Integer, Long> above = times.floorEntry(y);
@@ -98,7 +98,7 @@ public final class TimeAxis {
         return time + Math.round(fraction * (next.getKey() - time));
     }
 
-    /** @return whether the axis has no times, so every time is at the top */
+    /** Returns whether the axis has no times, so every time is at the top. */
     public boolean isEmpty() {
         return spans.isEmpty();
     }

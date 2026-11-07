@@ -1,4 +1,4 @@
-/**
+/*
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -36,6 +36,8 @@ public final class Mp4FrameTable {
     }
 
     /**
+     * Reads the frame times of an MP4 file's first enabled video track.
+     *
      * @return Frame times of the first enabled video track.
      * @throws IOException If the file is not readable or has no usable video sample table.
      */

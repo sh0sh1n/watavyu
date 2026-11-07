@@ -212,7 +212,7 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
         players.forEach((clip, player) -> player.setViewerVisible(showing && !clip.getVariable().isHidden()));
     }
 
-    /** @return the player of a clip, or null if it has none */
+    /** Returns the player of a clip, or null if it has none. */
     public StreamViewer getPlayer(final Cell clip) {
         return players.get(clip);
     }
@@ -582,7 +582,7 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
     public void clockRate(final float rate) {
     }
 
-    /** @return the float as written in decimal, so that 0.7f is saved as 0.7 rather than 0.699999988079071 */
+    /** Returns the float as written in decimal, so that 0.7f is saved as 0.7 rather than 0.699999988079071. */
     static double exact(final float value) {
         return Double.parseDouble(Float.toString(value));
     }

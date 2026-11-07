@@ -22,17 +22,17 @@ public final class Resources {
     }
 
     /**
+     * Returns its resources.
      * @param owner The class whose resources to read.
-     * @return Its resources.
      */
     public static Resources of(final Class<?> owner) {
         return new Resources(owner);
     }
 
     /**
+     * Returns the text, formatted when arguments are given, or null if neither file has the key.
      * @param key  The key.
      * @param args Values for {@link String#format} placeholders in the text, if any.
-     * @return The text, formatted when arguments are given, or null if neither file has the key.
      */
     public String getString(final String key, final Object... args) {
         String text = lookup(key);

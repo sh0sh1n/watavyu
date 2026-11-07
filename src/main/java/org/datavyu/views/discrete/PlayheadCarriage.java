@@ -134,12 +134,12 @@ public final class PlayheadCarriage extends JComponent implements VideoControlle
         }
     }
 
-    /** @return the time the playhead shows */
+    /** Returns the time the playhead shows. */
     long getTime() {
         return reading.time();
     }
 
-    /** @return the rate the playhead shows */
+    /** Returns the rate the playhead shows. */
     String getRate() {
         return reading.rate();
     }
@@ -170,7 +170,7 @@ public final class PlayheadCarriage extends JComponent implements VideoControlle
     }
 
     /**
-     * @return the needle's height in this strip, or empty if the sheet is not laid out in time
+     * Returns the needle's height in this strip, or empty if the sheet is not laid out in time.
      */
     Optional<Integer> needleY() {
         long time = reading.time();

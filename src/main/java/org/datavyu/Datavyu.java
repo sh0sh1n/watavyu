@@ -1,4 +1,4 @@
-/**
+/*
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -91,7 +91,7 @@ public final class Datavyu {
         SwingUtilities.invokeLater(() -> new Datavyu().start(args));
     }
 
-    /** @return the main window's contents */
+    /** Returns the main window's contents. */
     public DatavyuView getView() {
         return datavyuView;
     }
@@ -102,7 +102,7 @@ public final class Datavyu {
     }
 
     /**
-     * @return The main window.
+     * Returns the main window.
      */
     public JFrame getMainFrame() {
         return mainFrame;

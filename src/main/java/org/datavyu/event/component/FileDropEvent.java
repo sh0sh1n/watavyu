@@ -1,4 +1,4 @@
-/**
+/*
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -45,7 +45,7 @@ public final class FileDropEvent extends EventObject {
     }
 
     /**
-     * @return The files involved in the drop event.
+     * Returns the files involved in the drop event.
      */
     public Iterable<File> getFiles() {
         return files;

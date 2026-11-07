@@ -1,4 +1,4 @@
-/**
+/*
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -55,6 +55,8 @@ public final class FrameIndex {
     }
 
     /**
+     * Returns an index of frames whose times were measured from the file.
+     *
      * @param startMillis Presentation start of each frame, strictly increasing.
      * @param endMillis End of the last frame.
      */
@@ -77,7 +79,7 @@ public final class FrameIndex {
         return new FrameIndex(starts, Math.max(durationMillis, starts[count - 1] + frameMillis), false);
     }
 
-    /** @return True when frame times were read from the file rather than assumed. */
+    /** Returns true when frame times were read from the file rather than assumed. */
     public boolean isMeasured() {
         return measured;
     }
@@ -86,12 +88,12 @@ public final class FrameIndex {
         return startMillis.length;
     }
 
-    /** @return End of the last frame, which is the stream duration. */
+    /** Returns end of the last frame, which is the stream duration. */
     public double endMillis() {
         return endMillis;
     }
 
-    /** @return The nominal frame rate: the inverse of the median frame duration. */
+    /** Returns the nominal frame rate: the inverse of the median frame duration. */
     public double framesPerSecond() {
         double[] durations = new double[startMillis.length];
         for (int i = 0; i < durations.length; i++) {
@@ -104,7 +106,7 @@ public final class FrameIndex {
     }
 
     /**
-     * @return True when every frame lasts the same time, within a millisecond. Encoders often
+     * Returns true when every frame lasts the same time, within a millisecond. Encoders often
      * leave an odd duration on the first frame or the last two (OBS recordings hold the
      * second-to-last frame for two frame times), so those are ignored when there are enough frames.
      */
@@ -122,8 +124,8 @@ public final class FrameIndex {
     }
 
     /**
+     * Returns the frame on screen at that time, clamped to the first and last frame.
      * @param millis A stream time.
-     * @return The frame on screen at that time, clamped to the first and last frame.
      */
     public int frameAt(final double millis) {
         int i = Arrays.binarySearch(startMillis, millis);
@@ -135,12 +137,12 @@ public final class FrameIndex {
         return startMillis[frame];
     }
 
-    /** @return The frame start rounded up to a whole millisecond, which still maps back to this frame. */
+    /** Returns the frame start rounded up to a whole millisecond, which still maps back to this frame. */
     public long reportedMillis(final int frame) {
         return (long) Math.ceil(startMillis[frame]);
     }
 
-    /** @return The middle of the frame, where an exact seek reliably shows this frame. */
+    /** Returns the middle of the frame, where an exact seek reliably shows this frame. */
     public double seekTargetMillis(final int frame) {
         return startMillis[frame] + frameDurationMillis(frame) / 2;
     }

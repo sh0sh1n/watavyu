@@ -1,4 +1,4 @@
-/**
+/*
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -15,12 +15,12 @@
 package org.datavyu.views.discrete;
 
 /**
- * A listener for listening to column visiblity changes
+ * Listens for columns being shown or hidden.
  */
 public interface ColumnVisibilityListener {
     
     /**
-     * Notifiers the listener to perform updates in response to visibility change
+     * Tells the listener that a column was shown or hidden.
      */
     void columnVisibilityChanged();
     

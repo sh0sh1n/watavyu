@@ -1,4 +1,4 @@
-/**
+/*
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -239,13 +239,15 @@ public abstract class EditorComponent implements ClipboardOwner {
     }
 
     /**
-     * @return is the editorcomponent "editable".
+     * Returns whether the editor can be edited.
      */
     public final boolean isEditable() {
         return editable;
     }
 
     /**
+     * Sets whether the editor can be edited.
+     *
      * @param canEdit set true if the editorcomponent is editable.
      */
     public final void setEditable(final boolean canEdit) {
@@ -253,20 +255,22 @@ public abstract class EditorComponent implements ClipboardOwner {
     }
 
     /**
+     * Sets whether the editor takes the Return key.
+     *
      * @param canAccept set true if the editorcomponent uses return character.
      */
     public final void setAcceptReturnKey(final boolean canAccept) {
         acceptsReturnKey = canAccept;
     }
 
-    /**
-     * @return is the return character used by this editor.
-     */
+    /** Returns whether this editor takes the Return key. */
     public final boolean isReturnKeyAccepted() {
         return acceptsReturnKey;
     }
 
     /**
+     * Sets where this editor starts in its text component.
+     *
      * @param pos the start location in the JTextComponent for this editor.
      */
     public final void setStartPos(final int pos) {
@@ -274,7 +278,7 @@ public abstract class EditorComponent implements ClipboardOwner {
     }
 
     /**
-     * @return the current text of this editor.
+     * Returns the current text of this editor.
      */
     public final String getText() {
         return editorText;
@@ -319,14 +323,14 @@ public abstract class EditorComponent implements ClipboardOwner {
     }
 
     /**
-     * @return The parent Swing component for this EditorComponent.
+     * Returns the parent Swing component for this EditorComponent.
      */
     public final JTextComponent getParentComponent() {
         return this.parentComp;
     }
 
     /**
-     * @return The caret location within the text segment, relative to the this
+     * Returns the caret location within the text segment, relative to the this
      * editor component.
      */
     public final int getCaretPosition() {
@@ -356,7 +360,7 @@ public abstract class EditorComponent implements ClipboardOwner {
     }
 
     /**
-     * @return the selection start within the segment as a local value.
+     * Returns the selection start within the segment as a local value.
      */
     public final int getSelectionStart() {
         int pos = 0;
@@ -369,7 +373,7 @@ public abstract class EditorComponent implements ClipboardOwner {
     }
 
     /**
-     * @return the selection end within the segment as a local value.
+     * Returns the selection end within the segment as a local value.
      */
     public final int getSelectionEnd() {
         int pos = 0;
@@ -490,8 +494,8 @@ public abstract class EditorComponent implements ClipboardOwner {
     }
 
     /**
+     * Returns true if the character is a reserved character.
      * @param aChar Character to test
-     * @return true if the character is a reserved character.
      */
     public final boolean isPreserved(final char aChar) {
         return (preservedChars.indexOf(aChar) >= 0);
@@ -624,7 +628,7 @@ public abstract class EditorComponent implements ClipboardOwner {
     }
 
     /**
-     * @return true if this editor has the focus.
+     * Returns true if this editor has the focus.
      */
     public final boolean hasFocus() {
         return parentComp.hasFocus();

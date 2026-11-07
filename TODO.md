@@ -18,7 +18,7 @@ Updated 2026-11-06. Re-measure with the commands in [BUILDING.md › Analysis Re
 | Java source (main) | 242 files, 42.5k lines | 144 files, 24.8k lines |
 | Tests / line coverage | 113 / 9.9% | 761 / 71.7%; views 61%, undo edits 93% |
 | Runtime dependencies / with known vulnerabilities | 28 / 8 | 13 / 0 |
-| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 403 |
+| Error Prone + javac lint warnings (`-PallWarnings`) | 1,227 | 111 |
 | PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 281 / 48 (none on thread safety, now gated); 13 |
 | Never-invoked methods (`dead-code.py`) | 109+ | 27: test-only accessors, unused settings setters, and Swing overrides the script cannot see |
 | Static global access (`grep -rohP 'Datavyu\.(get\|set)\w*\(' src/main/java \| wc -l`) | about 330 call sites | 0: each tab's `ProjectController` is passed to what it owns |
@@ -73,7 +73,7 @@ Tech debt is paid down in the Java app rather than left for the C++ rewrite (AGE
 
 **R9. Autosave and crash recovery.** ready. `AutoSaveController` saves a `~<name>_*.watavyu.json` project file for each tab with unsaved changes to the temporary folder every minute; at launch, `DatavyuView.checkForAutosavedFile` offers to recover any left in the temporary folder and opens one as an unsaved project; that flow is checked only by reading, as its dialogs need clicks. The temporary folder is shared with other apps and cleared by macOS. Settle this together with B11.
 
-**R12. Warnings and findings to zero, in modern Java.** ready, alongside the others. Measures counts the Error Prone and javac lint warnings (`-PallWarnings`; about half are Javadoc summaries), PMD findings and SpotBugs findings. Clear them category by category and make each one that reaches zero fail the build (AGENTS.md › How to Work Here), so the gates grow until every check is one. Modernise as code is touched: records for plain data, pattern matching and switch expressions (Error Prone suggests both), `java.time` instead of `Date` and `SimpleDateFormat`, and no raw types.
+**R12. Warnings and findings to zero, in modern Java.** ready, alongside the others. Measures counts the Error Prone and javac lint warnings (`-PallWarnings`), PMD findings and SpotBugs findings. Clear them category by category and make each one that reaches zero fail the build (AGENTS.md › How to Work Here), so the gates grow until every check is one. Modernise as code is touched: records for plain data, pattern matching and switch expressions (Error Prone suggests both), `java.time` instead of `Date` and `SimpleDateFormat`, and no raw types.
 
 **R13. Watavyu names.** ready, last. Packages are `org.datavyu` and many classes are `Datavyu*` (`DatavyuView`, `DatavyuVariable`, `DatavyuCell`). Rename to `org.watavyu` and names that say what a class is. It touches every file, so it goes after the structural items. The GPL notices stay.
 

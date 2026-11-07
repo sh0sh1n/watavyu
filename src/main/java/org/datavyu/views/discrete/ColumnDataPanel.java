@@ -1,4 +1,4 @@
-/**
+/*
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -176,8 +176,7 @@ public final class ColumnDataPanel extends JPanel implements KeyEventDispatcher 
     /**
      * Insert a new SpreadsheetCell for a given cell.
      *
-     * @param ds       The database holding the cell that is being inserted into this
-     *                 column data panel.
+     * 
      * @param cell     The cell to create and insert into this column data panel.
      * @param cellSelL SpreadsheetCellSelectionListener to notify of changes in
      *                 selection.
@@ -231,7 +230,7 @@ public final class ColumnDataPanel extends JPanel implements KeyEventDispatcher 
     }
 
     /**
-     * @return The SpreadsheetCells in this column temporally.
+     * Returns the SpreadsheetCells in this column temporally.
      */
     public List<SpreadsheetCell> getCellsTemporally() {
         ArrayList<SpreadsheetCell> result = new ArrayList<>();
@@ -248,14 +247,14 @@ public final class ColumnDataPanel extends JPanel implements KeyEventDispatcher 
     }
 
     /**
-     * @return The SpreadsheetCells in this column.
+     * Returns the SpreadsheetCells in this column.
      */
     public List<SpreadsheetCell> getCells() {
         return cells;
     }
 
     /**
-     * @return The selected spreadsheet cells in this column.
+     * Returns the selected spreadsheet cells in this column.
      */
     public AbstractList<SpreadsheetCell> getSelectedCells() {
         AbstractList<SpreadsheetCell> selectedCells = new ArrayList<SpreadsheetCell>();

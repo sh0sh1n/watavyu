@@ -1,4 +1,4 @@
-/**
+/*
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -69,20 +69,20 @@ public final class OpenController {
         }
     }
 
-    /** @return why the last project file could not be opened, or null if it opened */
+    /** Returns why the last project file could not be opened, or null if it opened. */
     public String getError() {
         return error;
     }
 
     /**
-     * @return The instance of the data store that was opened by this controller, returns null if no dataStore opened.
+     * Returns the instance of the data store that was opened by this controller, returns null if no dataStore opened.
      */
     public DataStore getDataStore() {
         return dataStore;
     }
 
     /**
-     * @return The instance of the project
+     * Returns the instance of the project.
      */
     public Project getProject() {
         return project;

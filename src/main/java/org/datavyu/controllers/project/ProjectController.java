@@ -1,4 +1,4 @@
-/**
+/*
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -167,7 +167,7 @@ public final class ProjectController {
         undoSupport.addUndoableEditListener(listener);
     }
 
-    /** @return this spreadsheet's undo history */
+    /** Returns this spreadsheet's undo history. */
     public SpreadsheetUndoManager getUndoManager() {
         return undoManager;
     }
@@ -219,7 +219,7 @@ public final class ProjectController {
         autoSave.start();
     }
 
-    /** @return this spreadsheet's autosave, or null until it is started */
+    /** Returns this spreadsheet's autosave, or null until it is started. */
     public AutoSaveController getAutoSave() {
         return autoSave;
     }
@@ -241,13 +241,15 @@ public final class ProjectController {
     }
 
     /**
+     * Sets where this spreadsheet learns whether quick-key mode is on.
+     *
      * @param quickKeyMode tells whether quick-key mode is on
      */
     public void setQuickKeyMode(final BooleanSupplier quickKeyMode) {
         this.quickKeyMode = quickKeyMode;
     }
 
-    /** @return whether quick-key mode is on, in which typing in a selected column makes a cell */
+    /** Returns whether quick-key mode is on, in which typing in a selected column makes a cell. */
     public boolean isQuickKeyMode() {
         return quickKeyMode.getAsBoolean();
     }
@@ -300,7 +302,7 @@ public final class ProjectController {
         }
     }
 
-    /** @return this spreadsheet's clock, players and playback commands; null until set */
+    /** Returns this spreadsheet's clock, players and playback commands; null until set. */
     public VideoController getVideoController() {
         return videoController;
     }
@@ -325,7 +327,7 @@ public final class ProjectController {
 
     /**
      *
-     * @return The last "saved" option used when saving.
+     * Returns the last "saved" option used when saving.
      */
     public FileFilter getLastSaveOption() {
         return lastSaveOption;
@@ -379,7 +381,7 @@ public final class ProjectController {
     }
 
     /**
-     * @return The last selected cell.
+     * Returns the last selected cell.
      */
     public Cell getLastSelectedCell() {
         return lastSelectedCell;
@@ -412,7 +414,7 @@ public final class ProjectController {
     }
 
     /**
-     * @return The last variable created for the datastore.
+     * Returns the last variable created for the datastore.
      */
     public Variable getLastCreatedVariable() {
         return lastCreatedVariable;
@@ -428,28 +430,28 @@ public final class ProjectController {
     }
 
     /**
-     * @return the changed
+     * Returns whether the project has changes not yet saved.
      */
     public boolean isChanged() {
         return (changed || ((dataStore != null) && dataStore.isChanged()));
     }
 
     /**
-     * @return the newProject
+     * Returns the newProject.
      */
     public boolean isNewProject() {
         return newProject;
     }
 
     /**
-     * @return the project name
+     * Returns the project name.
      */
     public String getProjectName() {
         return project.getProjectName();
     }
     
    /**
-     * @return the project name for purposes for display. returns "(untitled)" instead of null
+     * Returns the project name for purposes for display. returns "(untitled)" instead of null.
      */
     public String getProjectNamePretty() {
         if (project.getProjectName() != null) {
@@ -462,14 +464,14 @@ public final class ProjectController {
     /**
      * Set the database file name, directory not included.
      *
-     * @param fileName
+     * @param fileName the file's name
      */
     public void setDatabaseFileName(final String fileName) {
         project.setDatabaseFileName(fileName);
     }
 
     /**
-     * @return the database file name, directory not included.
+     * Returns the database file name, directory not included.
      */
     public String getDatabaseFileName() {
         return project.getDatabaseFileName();
@@ -559,7 +561,7 @@ public final class ProjectController {
     }
 
     /**
-     * @return the current project model.
+     * Returns the current project model.
      */
     public Project getProject() {
         return project;
@@ -567,7 +569,7 @@ public final class ProjectController {
 
     /**
      *
-     * @return the spreadsheet panel.
+     * Returns the spreadsheet panel.
      */
     public SpreadSheetPanel getSpreadSheetPanel() {
         return spreadSheetPanel;
@@ -576,7 +578,7 @@ public final class ProjectController {
     /**
      * Sets the spreadsheet panel.
      *
-     * @param spreadSheetPanel
+     * @param spreadSheetPanel the panel showing this spreadsheet
      */
     public void setSpreadSheetPanel(SpreadSheetPanel spreadSheetPanel) {
         this.spreadSheetPanel = spreadSheetPanel;

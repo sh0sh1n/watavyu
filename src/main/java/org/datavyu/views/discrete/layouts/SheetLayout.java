@@ -1,4 +1,4 @@
-/**
+/*
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -71,6 +71,8 @@ public abstract class SheetLayout extends ScrollPaneLayout {
     public abstract void reorientView(SpreadsheetColumn column);
 
     /**
+     * Sets what runs after each layout of the sheet.
+     *
      * @param afterLayout runs after each layout of the sheet, to follow where its cells now are
      */
     public void setAfterLayout(final Runnable afterLayout) {
@@ -83,7 +85,7 @@ public abstract class SheetLayout extends ScrollPaneLayout {
     }
 
     /**
-     * @return where times fall down the sheet as last laid out, or empty if this layout does not place cells in time
+     * Returns where times fall down the sheet as last laid out, or empty if this layout does not place cells in time.
      */
     public Optional<TimeAxis> timeAxis() {
         return Optional.empty();

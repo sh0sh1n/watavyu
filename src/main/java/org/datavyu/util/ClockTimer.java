@@ -1,4 +1,4 @@
-/**
+/*
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -143,7 +143,7 @@ public final class ClockTimer {
     }
 
     /**
-     * @return Current clock rate.
+     * Returns current clock rate.
      */
     public synchronized float getRate() {
         return rate;
@@ -251,14 +251,14 @@ public final class ClockTimer {
     }
 
     /**
-     * @return True if clock is Paused.
+     * Returns true if clock is Paused.
      */
     public boolean isPaused() {
         return isStopped;
     }
 
     /**
-     * @return True if clock is stopped.
+     * Returns true if clock is stopped.
      */
     public boolean isStopped() {
         return getRate() == 0f;
@@ -291,7 +291,7 @@ public final class ClockTimer {
         }
     }
 
-    /** @return whether {@link #close()} has stopped the clock's threads */
+    /** Returns whether {@link #close()} has stopped the clock's threads. */
     public boolean isClosed() {
         return execService.isShutdown();
     }
@@ -412,50 +412,69 @@ public final class ClockTimer {
         }
     }
     /**
-     * Listener interface for clock 'ticks'.
+     * Listener for the clock's ticks and changes. Ticks come every 100 ms on the clock's pool
+     * threads, whether or not it is running.
      */
     public interface ClockListener {
         /**
+         * Called on each tick, for players that are moved by seeking rather than played.
+         *
          * @param clockTime Current time in milliseconds
          */
         void clockSeekPlayback(double clockTime);
 
         /**
+         * Called on each tick, to check whether the clock has passed the end of the timeline.
+         *
          * @param clockTime Current time in milliseconds
          */
         void clockBoundaryCheck(double clockTime);
 
         /**
+         * Called on each tick, to check whether the clock has entered or left a clip.
+         *
          * @param clockTime Current time in milliseconds
          */
         void streamsBoundaryCheck(double clockTime);
 
         /**
+         * Called when the time is set, as by a jump or a stop, which listeners must follow at once.
+         *
          * @param clockTime Current time in milliseconds
          */
         void clockForceSync(double clockTime);
 
         /**
+         * Called on each tick, which listeners may follow if they have drifted.
+         *
          * @param clockTime Current time in milliseconds
          */
         void clockPeriodicSync(double clockTime);
 
         /**
+         * Called when the clock starts running.
+         *
          * @param clockTime Current time in milliseconds
          */
         void clockStart(double clockTime);
 
         /**
+         * Called when the clock stops.
+         *
          * @param clockTime Current time in milliseconds
          */
         void clockStop(double clockTime);
 
         /**
+         * Called when the clock pauses.
+         *
          * @param clockTime Current time in milliseconds
          */
         void clockPause(double clockTime);
 
         /**
+         * Called when the clock's rate changes.
+         *
          * @param rate Current (updated) rate.
          */
         void clockRate(float rate);

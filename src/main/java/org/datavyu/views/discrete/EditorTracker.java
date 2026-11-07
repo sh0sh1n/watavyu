@@ -1,4 +1,4 @@
-/**
+/*
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -247,7 +247,7 @@ public final class EditorTracker
     }
 
     /**
-     * @return the first editor if found or NO_EDITOR
+     * Returns the first editor if found or NO_EDITOR.
      */
     public EditorComponent firstEditor() {
         EditorComponent foundEd = NO_EDITOR;
@@ -261,7 +261,7 @@ public final class EditorTracker
     }
 
     /**
-     * @return the next editor to the currentEditor if found or NO_EDITOR.
+     * Returns the next editor to the currentEditor if found or NO_EDITOR.
      */
     public EditorComponent nextEditor() {
         EditorComponent nextEd = NO_EDITOR;
@@ -278,7 +278,7 @@ public final class EditorTracker
     }
 
     /**
-     * @return the previous editor to the currentEditor if found or NO_EDITOR.
+     * Returns the previous editor to the currentEditor if found or NO_EDITOR.
      */
     public EditorComponent prevEditor() {
         EditorComponent prevEd = NO_EDITOR;
@@ -294,7 +294,7 @@ public final class EditorTracker
     }
 
     /**
-     * @return the last editor if found or NO_EDITOR.
+     * Returns the last editor if found or NO_EDITOR.
      */
     public EditorComponent lastEditor() {
         EditorComponent lastEd = NO_EDITOR;
@@ -325,7 +325,7 @@ public final class EditorTracker
     }
 
     /**
-     * @return The current editor for this editor tracker.
+     * Returns the current editor for this editor tracker.
      */
     public EditorComponent getCurrentEditor() {
         return this.currentEditor;

@@ -1,4 +1,4 @@
-/**
+/*
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -207,22 +207,21 @@ public class SpreadsheetCell extends JPanel
     }
 
     /**
-     * @return The cell that this view element represents.
+     * Returns the cell that this view element represents.
      */
     public Cell getCell() {
-        model = model.getFreshCell();
         return model;
     }
 
     /**
-     * @return onset view
+     * Returns onset view.
      */
     public TimeStampTextField getOnset() {
         return onset;
     }
 
     /**
-     * @return offset view
+     * Returns offset view.
      */
     public TimeStampTextField getOffset() {
         return offset;
@@ -298,7 +297,7 @@ public class SpreadsheetCell extends JPanel
     }
 
     /**
-     * @return The CellValuesView of this cell.
+     * Returns the CellValuesView of this cell.
      */
     public final CellValuesView getDataView() {
         return dataPanel;
@@ -426,7 +425,6 @@ public class SpreadsheetCell extends JPanel
         boolean isEditorSrc = (source.equals(TimeStampTextField.class)
                 || (source.equals(CellValuesView.class)));
 
-        model = model.getFreshCell();
 
         // User has clicked in magic spot, without modifier. Clear
         // currently selected cells and select this cell.
@@ -489,7 +487,6 @@ public class SpreadsheetCell extends JPanel
     // *************************************************************************
     @Override
     public void focusGained(final FocusEvent e) {
-        model = model.getFreshCell();
 
 //        if (model.isHighlighted() && (cellPanel.getBorder().equals(NORMAL_BORDER)
 //                || cellPanel.getBorder().equals(OVERLAP_BORDER))) {

@@ -1,4 +1,4 @@
-/**
+/*
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -112,7 +112,7 @@ public final class JavaFxVideoViewer extends StreamViewerDialog {
         return new Dimension(engine.width(), engine.height());
     }
 
-    /** @return the JavaFX player's own volume and status, as {@code "1.0 PLAYING"}, for tests */
+    /** Returns the JavaFX player's own volume and status, as {@code "1.0 PLAYING"}, for tests. */
     String playerState() throws Exception {
         return JavaFxToolkit.onFx(() -> engine.player().getVolume() + " " + engine.player().getStatus()
                 + (engine.player().isMute() ? " muted" : "")).get();

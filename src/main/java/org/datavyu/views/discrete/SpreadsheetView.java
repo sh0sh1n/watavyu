@@ -1,4 +1,4 @@
-/**
+/*
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -98,7 +98,7 @@ public class SpreadsheetView extends JPanel implements Scrollable {
         }
     }
 
-    /** @return the playhead's line's height in the sheet, or -1 if there is none */
+    /** Returns the playhead's line's height in the sheet, or -1 if there is none. */
     int getPlayheadY() {
         return playheadY;
     }
@@ -130,7 +130,7 @@ public class SpreadsheetView extends JPanel implements Scrollable {
     }
 
     /**
-     * @return All the columns held in this spreadsheet view.
+     * Returns all the columns held in this spreadsheet view.
      */
     public List<SpreadsheetColumn> getColumns() {
         return columns;

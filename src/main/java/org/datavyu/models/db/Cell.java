@@ -30,14 +30,12 @@ import java.util.List;
 public interface Cell {
 
     /**
-     * @return the offset timestamp in a HH:mm:ss:SSS format, where HH is 24 hour mm is minutes in an hour, ss is
+     * Returns the offset timestamp in a HH:mm:ss:SSS format, where HH is 24 hour mm is minutes in an hour, ss is
      * seconds in a minute and SSS is milliseconds in a second.
      */
     String getOffsetString();
 
-    /**
-     * @return The offset timestamp in milliseconds. Returns -1 if the offset cannot be resolved.
-     */
+    /** Returns the offset in milliseconds. */
     long getOffset();
 
     /**
@@ -57,15 +55,7 @@ public interface Cell {
      */
     void setOffset(final String newOffset);
 
-    /**
-     * @return The onset timestamp in milliseconds. Returns -1 if the onset cannot be resolved
-     */
-    Cell getFreshCell();
-
-    /**
-     *
-     * @return
-     */
+    /** Returns the onset in milliseconds. */
     long getOnset();
 
     /**
@@ -87,19 +77,21 @@ public interface Cell {
     void setOnset(final long newOnset);
 
     /**
-     * @return the onset timestamp in a HH:mm:ss:SSS format, where HH is 24 hour
+     * Returns the onset timestamp in a HH:mm:ss:SSS format, where HH is 24 hour
      * mm is minutes in an hour, ss is seconds in a minute and SSS is
      * milliseconds in a second.
      */
     String getOnsetString();
 
     /**
-     * @return the cell's values, one for each of its column's codes in their order, {@code ""} for an empty one; a
-     *         clip has none
+     * Returns the cell's values, one for each of its column's codes in their order, {@code ""} for an empty one; a
+     * clip has none.
      */
     List<String> getValues();
 
     /**
+     * Returns the cell's value for one code.
+     *
      * @param code a code's place among the column's codes
      * @return the cell's value for the code, {@code ""} if empty
      * @throws IndexOutOfBoundsException if the column has no such code
@@ -125,14 +117,11 @@ public interface Cell {
      */
     void setValues(List<String> values);
 
-    /**
-     *
-     * @return
-     */
+    /** Returns the cell's column. */
     Variable getVariable();
 
     /**
-     * @return True if the cell is selected, false otherwise
+     * Returns true if the cell is selected, false otherwise.
      */
     boolean isSelected();
 
@@ -145,7 +134,7 @@ public interface Cell {
     void setSelected(final boolean selected);
 
     /**
-     * @return True if the cell is highlighted, false otherwise.
+     * Returns true if the cell is highlighted, false otherwise.
      */
     boolean isHighlighted();
 
@@ -156,26 +145,23 @@ public interface Cell {
      */
     void setHighlighted(final boolean highlighted);
 
-    /**
-     * Adds a cellListener that needs to be notified when the cell changes.
-     */
+    /** Adds a listener to be told when the cell changes. */
     void addListener(final CellListener cellListener);
 
-    /**
-     * Removes a cellListener from the list of things that need to be notified when
-     * the cell changes.
-     */
+    /** Removes a listener added with {@link #addListener}. */
     void removeListener(final CellListener cellListener);
 
     /**
+     * Returns whether a time falls between the cell's onset and offset, both included. A cell whose offset is before its
+     * onset holds no time.
      *
-     * @param time
-     * @return
+     * @param time a time in milliseconds
+     * @return whether the cell spans it
      */
     boolean isInTimeWindow(long time);
 
     /**
-     * @return what a media column's cell plays, or null for an annotation column's cell
+     * Returns what a media column's cell plays, or null for an annotation column's cell.
      */
     MediaClip getClip();
 

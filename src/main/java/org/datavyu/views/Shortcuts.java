@@ -84,7 +84,7 @@ public final class Shortcuts implements KeyEventDispatcher {
             return command.label();
         }
 
-        /** @return The key. */
+        /** Returns the key. */
         public KeyStroke getKey() {
             return key;
         }
@@ -93,7 +93,7 @@ public final class Shortcuts implements KeyEventDispatcher {
             return scope;
         }
 
-        /** @return The key as shown to the user, such as ⇧⌘S or Keypad 7. */
+        /** Returns the key as shown to the user, such as \u21e7\u2318S or Keypad 7. */
         public String getKeyText() {
             return keyText;
         }
@@ -130,6 +130,8 @@ public final class Shortcuts implements KeyEventDispatcher {
         }
 
         /**
+         * Returns the shortcuts, with what they need to know of the app.
+         *
          * @param mainWindowFocused Whether the main window has keyboard focus, so its menu bar handles accelerators.
          * @param shiftHeld         Told whenever the Shift key goes down or up.
          * @param beforeShortcut    Run when a key is a shortcut, before it runs, as the menu bar too sees whether its
@@ -178,7 +180,7 @@ public final class Shortcuts implements KeyEventDispatcher {
         return new Builder(actions);
     }
 
-    /** @return All shortcuts, in the order they are listed to the user. */
+    /** Returns all shortcuts, in the order they are listed to the user. */
     public List<Shortcut> all() {
         return Collections.unmodifiableList(shortcuts);
     }
@@ -284,9 +286,9 @@ public final class Shortcuts implements KeyEventDispatcher {
     }
 
     /**
+     * Returns the key as macOS menus show it, such as \u21e7\u2318S, or Keypad 7.
      * @param key    A key with modifiers.
      * @param keypad Whether the key is on the numeric keypad.
-     * @return The key as macOS menus show it, such as ⇧⌘S, or Keypad 7.
      */
     static String describe(final KeyStroke key, final boolean keypad) {
         StringBuilder text = new StringBuilder();

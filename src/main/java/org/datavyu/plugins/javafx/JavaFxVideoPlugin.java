@@ -1,4 +1,4 @@
-/**
+/*
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -93,8 +93,8 @@ public final class JavaFxVideoPlugin {
     }
 
     /**
+     * Returns whether it is media the player opens, judged by its name in any letter case.
      * @param file a file
-     * @return whether it is media the player opens, judged by its name in any letter case
      */
     public static boolean isMediaFile(final File file) {
         String name = file.getName().toLowerCase(Locale.ROOT);

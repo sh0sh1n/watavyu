@@ -86,10 +86,10 @@ public final class WindowPlacement {
     }
 
     /**
+     * Returns true if at least {@value #MINIMUM_VISIBLE} by {@value #MINIMUM_VISIBLE} pixels of the window are on one
+     * screen, so the user can see and grab it.
      * @param window  Window bounds.
      * @param screens Bounds of the screens.
-     * @return True if at least {@value #MINIMUM_VISIBLE} by {@value #MINIMUM_VISIBLE} pixels of the window are on one
-     * screen, so the user can see and grab it.
      */
     static boolean isOnScreen(final Rectangle window, final List<Rectangle> screens) {
         for (Rectangle screen : screens) {
