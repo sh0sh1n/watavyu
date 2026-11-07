@@ -22,7 +22,7 @@ import sys
 
 CLASSES = "build/classes/java/main"
 SCRIPTS = ["src/main/resources/*.rb", "src/main/resources/scripts/*.rb", "src/main/favorites/*.rb"]
-ENTRY_POINTS = {"org.datavyu.Datavyu", "org.datavyu.plugins.javafx.JavaFxVideoPlugin"}
+ENTRY_POINTS = {"com.sh0sh1n.watavyu.Datavyu", "com.sh0sh1n.watavyu.plugins.javafx.JavaFxVideoPlugin"}
 CALLBACKS = set("""
     main run call toString equals hashCode compareTo compare accept getDescription values valueOf
     actionPerformed propertyChange stateChanged valueChanged itemStateChanged adjustmentValueChanged
@@ -66,13 +66,13 @@ def script_text():
 
 def unreachable_classes(scripts):
     graph = collections.defaultdict(set)
-    output = subprocess.run([tool("jdeps"), "-verbose:class", "-e", r"org\.datavyu\..*", "-filter:none", CLASSES],
+    output = subprocess.run([tool("jdeps"), "-verbose:class", "-e", r"com\.sh0sh1n\.watavyu\..*", "-filter:none", CLASSES],
                             capture_output=True, text=True, check=True).stdout
     for line in output.splitlines():
-        match = re.match(r"\s+(org\.datavyu\.\S+)\s+->\s+(org\.datavyu\.\S+)", line)
+        match = re.match(r"\s+(com\.sh0sh1n\.watavyu\.\S+)\s+->\s+(com\.sh0sh1n\.watavyu\.\S+)", line)
         if match:
             graph[match.group(1)].add(match.group(2))
-    roots = ENTRY_POINTS | set(re.findall(r"org\.datavyu\.[\w.]+[A-Z]\w*", scripts))
+    roots = ENTRY_POINTS | set(re.findall(r"com\.sh0sh1n\.watavyu\.[\w.]+[A-Z]\w*", scripts))
     seen, stack = set(), list(roots)
     while stack:
         node = stack.pop()
@@ -90,7 +90,7 @@ def unused_methods(scripts):
     actions = set(re.findall(r"@Action[^\n]*\n\s*(?:public |protected )?[\w<>\[\], ]+ (\w+)\(", source))
     declared, used, current = [], set(), None
     for line in output.splitlines():
-        header = re.search(r"(?:class|interface|enum) (org\.datavyu\.[\w.$]+)", line)
+        header = re.search(r"(?:class|interface|enum) (com\.sh0sh1n\.watavyu\.[\w.$]+)", line)
         if header and not line.startswith(" "):
             current = header.group(1)
             continue
@@ -116,12 +116,12 @@ def main():
     classes = unreachable_classes(scripts)
     print(f"Unreachable classes ({len(classes)}):")
     for name in classes:
-        print(f"  {name.removeprefix('org.datavyu.')}")
+        print(f"  {name.removeprefix('com.sh0sh1n.watavyu.')}")
     methods = unused_methods(scripts)
     print(f"\nMethods never invoked ({sum(map(len, methods.values()))}), excluding those in unreachable classes:")
     for owner in sorted(methods):
         if owner not in classes:
-            print(f"  {owner.removeprefix('org.datavyu.')}: {', '.join(sorted(methods[owner]))}")
+            print(f"  {owner.removeprefix('com.sh0sh1n.watavyu.')}: {', '.join(sorted(methods[owner]))}")
 
 
 if __name__ == "__main__":

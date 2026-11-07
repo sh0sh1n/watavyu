@@ -9,7 +9,7 @@ plugins {
     alias(libs.plugins.versions)
 }
 
-group = "org.datavyu"
+group = "com.sh0sh1n"
 version = "0.1.0-SNAPSHOT"
 
 // OpenJFX Media is the video backend. This fork targets Apple Silicon macOS only:
@@ -92,7 +92,7 @@ java {
 }
 
 application {
-    mainClass.set("org.datavyu.Datavyu")
+    mainClass.set("com.sh0sh1n.watavyu.Datavyu")
     applicationDefaultJvmArgs = listOf("-Xmx1g")
 }
 
@@ -118,7 +118,7 @@ tasks.named<JavaExec>("run") {
 tasks.processResources {
     val version = project.version.toString()
     inputs.property("version", version)
-    filesMatching("org/datavyu/version.properties") {
+    filesMatching("com/sh0sh1n/watavyu/version.properties") {
         expand("version" to version)
     }
     // CITATION.cff at the repository root is what GitHub's "Cite this repository" reads; the app reads the same file.
@@ -246,7 +246,7 @@ tasks.named<com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask>("
 tasks.register<JavaExec>("playbackBenchmark") {
     description = "Measures seek latency, frame accuracy, stepping and playback CPU for one video."
     group = "verification"
-    mainClass.set("org.datavyu.plugins.javafx.PlaybackBenchmark")
+    mainClass.set("com.sh0sh1n.watavyu.plugins.javafx.PlaybackBenchmark")
     classpath = useJavafxModules(sourceSets["integrationTest"].runtimeClasspath)
     args(providers.gradleProperty("media").orElse("").get(), providers.gradleProperty("seeks").orElse("200").get())
 }
