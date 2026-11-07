@@ -91,8 +91,12 @@ public final class Settings {
     public static Settings load(final Path file) {
         if (Files.isRegularFile(file)) {
             try {
+                // A file holding only null reads as null.
                 Data data = MAPPER.readValue(file.toFile(), Data.class);
-                return new Settings(file, data.normalized());
+                if (data != null) {
+                    return new Settings(file, data.normalized());
+                }
+                logger.warn("No settings in " + file + "; using defaults");
             } catch (IOException e) {
                 logger.warn("Cannot read settings from " + file + "; using defaults", e);
             }

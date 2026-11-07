@@ -97,6 +97,15 @@ public class SettingsTest {
     }
 
     @Test
+    public void aFileHoldingNullGivesTheDefaults() throws IOException {
+        Files.createDirectories(file.getParent());
+        Files.write(file, "null".getBytes(StandardCharsets.UTF_8));
+        Settings settings = Settings.load(file);
+        assertNull(settings.getLastChosenDirectory());
+        assertTrue(settings.getRecentProjects().isEmpty());
+    }
+
+    @Test
     public void unknownAndMissingKeysAreTolerated() throws IOException {
         Files.createDirectories(file.getParent());
         Files.write(file, "{\"future\": 1, \"recentProjects\": null}".getBytes(StandardCharsets.UTF_8));

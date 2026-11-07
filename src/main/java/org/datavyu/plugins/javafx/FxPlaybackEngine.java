@@ -92,7 +92,7 @@ final class FxPlaybackEngine implements PlaybackEngine {
         try {
             return ready.get(timeoutSeconds, TimeUnit.SECONDS);
         } catch (TimeoutException e) {
-            // No engine is made for a player that becomes ready later.
+            // Here and when interrupted, no engine is made for a player that becomes ready later.
             whenReady.cancel(false);
             ready.cancel(false);
             disposeLater(created);
@@ -102,6 +102,7 @@ final class FxPlaybackEngine implements PlaybackEngine {
             throw MediaOpenException.from(file, e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            whenReady.cancel(false);
             ready.cancel(false);
             disposeLater(created);
             throw new MediaOpenException("Interrupted while opening " + file.getName(), e);
