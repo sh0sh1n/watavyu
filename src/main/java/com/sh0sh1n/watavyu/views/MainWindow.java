@@ -22,8 +22,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import com.sh0sh1n.watavyu.Watavyu;
 import com.sh0sh1n.watavyu.controllers.*;
-import com.sh0sh1n.watavyu.controllers.project.MediaColumns;
-import com.sh0sh1n.watavyu.controllers.project.ProjectController;
 import com.sh0sh1n.watavyu.views.spreadsheet.FileDropEvent;
 import com.sh0sh1n.watavyu.views.spreadsheet.FileDropEventListener;
 import com.sh0sh1n.watavyu.models.*;

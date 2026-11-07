@@ -14,9 +14,9 @@
  */
 package com.sh0sh1n.watavyu.views.spreadsheet;
 
-import com.sh0sh1n.watavyu.controllers.project.MediaPlayers;
+import com.sh0sh1n.watavyu.controllers.MediaPlayers;
 import com.sh0sh1n.watavyu.util.Resources;
-import com.sh0sh1n.watavyu.controllers.project.ProjectController;
+import com.sh0sh1n.watavyu.controllers.ProjectController;
 import com.sh0sh1n.watavyu.models.*;
 import com.sh0sh1n.watavyu.util.Constants;
 import com.sh0sh1n.watavyu.views.VideoController;

@@ -1,6 +1,6 @@
 package com.sh0sh1n.watavyu.views;
 
-import com.sh0sh1n.watavyu.controllers.project.MediaPlayers;
+import com.sh0sh1n.watavyu.controllers.MediaPlayers;
 
 import javax.swing.JDialog;
 import javax.swing.JLabel;

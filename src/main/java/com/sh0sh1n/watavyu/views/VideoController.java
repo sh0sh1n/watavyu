@@ -15,8 +15,8 @@
 package com.sh0sh1n.watavyu.views;
 
 import com.sh0sh1n.watavyu.views.spreadsheet.SpreadsheetTheme;
-import com.sh0sh1n.watavyu.controllers.project.MediaPlayers;
-import com.sh0sh1n.watavyu.controllers.project.ProjectController;
+import com.sh0sh1n.watavyu.controllers.MediaPlayers;
+import com.sh0sh1n.watavyu.controllers.ProjectController;
 import com.sh0sh1n.watavyu.util.Settings;
 import net.miginfocom.swing.MigLayout;
 import org.apache.logging.log4j.LogManager;

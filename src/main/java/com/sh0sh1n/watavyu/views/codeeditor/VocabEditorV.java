@@ -19,7 +19,7 @@ import com.sh0sh1n.watavyu.views.spreadsheet.SpreadsheetTheme;
 import com.sh0sh1n.watavyu.util.Resources;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import com.sh0sh1n.watavyu.controllers.project.ProjectController;
+import com.sh0sh1n.watavyu.controllers.ProjectController;
 import com.sh0sh1n.watavyu.util.Dialogs;
 import com.sh0sh1n.watavyu.models.DataStoreListener;
 import com.sh0sh1n.watavyu.models.UserWarningException;

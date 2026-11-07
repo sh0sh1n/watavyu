@@ -17,7 +17,7 @@ package com.sh0sh1n.watavyu.views.spreadsheet;
 import com.sh0sh1n.watavyu.util.Resources;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import com.sh0sh1n.watavyu.controllers.project.ProjectController;
+import com.sh0sh1n.watavyu.controllers.ProjectController;
 import com.sh0sh1n.watavyu.models.Cell;
 import com.sh0sh1n.watavyu.models.CellListener;
 import com.sh0sh1n.watavyu.util.ClockTimer;

@@ -15,7 +15,7 @@
 package com.sh0sh1n.watavyu.undoableedits;
 
 
-import com.sh0sh1n.watavyu.controllers.project.ProjectController;
+import com.sh0sh1n.watavyu.controllers.ProjectController;
 import com.sh0sh1n.watavyu.models.DataStore;
 import com.sh0sh1n.watavyu.views.spreadsheet.SpreadSheetPanel;
 

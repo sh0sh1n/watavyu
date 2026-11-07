@@ -6,7 +6,7 @@ import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.assertThrows;
 
 import com.sh0sh1n.watavyu.TestSpreadsheets;
-import com.sh0sh1n.watavyu.controllers.project.ProjectController;
+import com.sh0sh1n.watavyu.controllers.ProjectController;
 import com.sh0sh1n.watavyu.models.DataStoreFactory;
 import com.sh0sh1n.watavyu.models.Column;
 import org.testng.annotations.BeforeMethod;

@@ -16,7 +16,6 @@ package com.sh0sh1n.watavyu.controllers;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import com.sh0sh1n.watavyu.controllers.project.ProjectController;
 import com.sh0sh1n.watavyu.models.UserWarningException;
 import com.sh0sh1n.watavyu.projectfile.ProjectDocument;
 

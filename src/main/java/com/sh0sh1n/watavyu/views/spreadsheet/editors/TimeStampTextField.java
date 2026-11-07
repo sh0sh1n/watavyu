@@ -14,7 +14,7 @@
  */
 package com.sh0sh1n.watavyu.views.spreadsheet.editors;
 
-import com.sh0sh1n.watavyu.controllers.project.ProjectController;
+import com.sh0sh1n.watavyu.controllers.ProjectController;
 import com.sh0sh1n.watavyu.models.Cell;
 import com.sh0sh1n.watavyu.models.Column;
 import com.sh0sh1n.watavyu.views.spreadsheet.SecondaryClick;
