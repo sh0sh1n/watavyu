@@ -56,7 +56,7 @@ public class VideoControllerTimeTest {
     /** Only a clip that plays at the clock's time steps by frame when jogging, so the clock stays with it. */
     @Test
     public void onlyAClipPlayingNowStepsByFrame() {
-        com.sh0sh1n.watavyu.plugins.StreamViewer clip = org.mockito.Mockito.mock(com.sh0sh1n.watavyu.plugins.StreamViewer.class);
+        com.sh0sh1n.watavyu.playback.StreamViewer clip = org.mockito.Mockito.mock(com.sh0sh1n.watavyu.playback.StreamViewer.class);
         org.mockito.Mockito.when(clip.getOffset()).thenReturn(60_000L);
         org.mockito.Mockito.when(clip.getDuration()).thenReturn(60_000L);
 
