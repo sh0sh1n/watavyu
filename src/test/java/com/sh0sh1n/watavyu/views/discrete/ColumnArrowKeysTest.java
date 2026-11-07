@@ -10,7 +10,7 @@ import com.sh0sh1n.watavyu.controllers.project.ProjectController;
 import com.sh0sh1n.watavyu.models.db.Cell;
 import com.sh0sh1n.watavyu.models.db.DataStore;
 import com.sh0sh1n.watavyu.models.db.DataStoreFactory;
-import com.sh0sh1n.watavyu.models.db.Variable;
+import com.sh0sh1n.watavyu.models.db.Column;
 import com.sh0sh1n.watavyu.models.project.Project;
 import com.sh0sh1n.watavyu.util.ClockTimer;
 import com.sh0sh1n.watavyu.views.VideoController;
@@ -24,7 +24,7 @@ import javax.swing.SwingUtilities;
 /** ↑ and ↓ move the selection to the cell before or after the selected one in time, in the same column. */
 public class ColumnArrowKeysTest {
 
-    private Variable notes;
+    private Column notes;
     private Cell first;
     private Cell second;
     private Cell third;
@@ -32,7 +32,7 @@ public class ColumnArrowKeysTest {
     /** Builds a column of three cells, in time order, and runs the test with its cells' panel on the EDT. */
     private void withColumn(final Consumer<ColumnDataPanel> test) throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
-        notes = dataStore.createVariable("notes");
+        notes = dataStore.createColumn("notes");
         // Made out of time order, so the keys follow time rather than the order cells were made.
         third = notes.createPointCell(3_000);
         first = notes.createPointCell(1_000);

@@ -23,7 +23,7 @@ import java.awt.*;
 /**
  * A file chooser that opens in the folder last chosen, and remembers the folder chosen.
  */
-public final class WatavyuFileChooser extends JFileChooser {
+public final class RememberingFileChooser extends JFileChooser {
 
     /**
      * Pops up an "Open File" file chooser dialog. Note that the text that

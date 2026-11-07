@@ -20,7 +20,7 @@ import com.sh0sh1n.watavyu.util.MacOS;
 import com.sh0sh1n.watavyu.util.Resources;
 import com.sh0sh1n.watavyu.util.Settings;
 import com.sh0sh1n.watavyu.views.AboutV;
-import com.sh0sh1n.watavyu.views.WatavyuWindow;
+import com.sh0sh1n.watavyu.views.MainWindow;
 import com.sh0sh1n.watavyu.views.WindowPlacement;
 import com.sh0sh1n.watavyu.views.discrete.SpreadSheetPanel;
 import com.sh0sh1n.watavyu.views.discrete.SpreadsheetTheme;
@@ -71,7 +71,7 @@ public final class Watavyu {
     private JFrame mainFrame;
 
     /** The main window: its tabs, menus and shortcuts. */
-    private WatavyuWindow window;
+    private MainWindow window;
 
     /** This application is ready to open a file; macOS asks it to open files from its own thread. */
     private volatile boolean readyToOpenFile;
@@ -92,7 +92,7 @@ public final class Watavyu {
     }
 
     /** Returns the main window. */
-    public WatavyuWindow getWindow() {
+    public MainWindow getWindow() {
         return window;
     }
 
@@ -188,7 +188,7 @@ public final class Watavyu {
             commandLineFile = args[0];
         }
 
-        window = new WatavyuWindow(this, mainFrame);
+        window = new MainWindow(this, mainFrame);
         if (!WindowPlacement.restoreAndTrack(mainFrame, MAIN_WINDOW, true)) {
             mainFrame.pack();
             mainFrame.setSize(Math.max(mainFrame.getWidth(), INIT_MIN_X), Math.max(mainFrame.getHeight(), INIT_MIN_Y));

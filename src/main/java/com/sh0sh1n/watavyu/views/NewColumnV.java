@@ -24,14 +24,14 @@ import com.sh0sh1n.watavyu.models.db.UserWarningException;
 import javax.swing.JDialog;
 
 /**
- * The dialog for users to add new variables to the spreadsheet.
+ * The dialog for users to add new columns to the spreadsheet.
  */
-public final class NewVariableV extends JDialog {
+public final class NewColumnV extends JDialog {
 
     /**
      * The logger for this class.
      */
-    private static final Logger logger = LogManager.getLogger(NewVariableV.class);
+    private static final Logger logger = LogManager.getLogger(NewColumnV.class);
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton cancelButton;
     private javax.swing.JLabel jLabel1;
@@ -42,13 +42,13 @@ public final class NewVariableV extends JDialog {
     private javax.swing.JButton okButton;
 
     /**
-     * Constructor, creates a new form to create a new variable.
+     * Constructor, creates a new form to create a new column.
      *
      * @param parent     The parent of this form.
      * @param modal      Should the dialog be modal or not?
      * @param controller the spreadsheet the column is added to
      */
-    public NewVariableV(final java.awt.Frame parent, final boolean modal, final ProjectController controller) {
+    public NewColumnV(final java.awt.Frame parent, final boolean modal, final ProjectController controller) {
         super(parent, modal);
         this.controller = controller;
         logger.info("newVar - show");
@@ -74,14 +74,14 @@ public final class NewVariableV extends JDialog {
         jLabel1 = new javax.swing.JLabel();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
-        java.util.ResourceBundle bundle = java.util.ResourceBundle.getBundle("com/sh0sh1n/watavyu/views/resources/NewVariableV");
+        java.util.ResourceBundle bundle = java.util.ResourceBundle.getBundle("com/sh0sh1n/watavyu/views/resources/NewColumnV");
         setTitle(bundle.getString("title.text"));
         setName("Form");
         setResizable(false);
 
         nameField.setName("nameField");
 
-        Resources resourceMap = Resources.of(NewVariableV.class);
+        Resources resourceMap = Resources.of(NewColumnV.class);
         okButton.setText(resourceMap.getString("okButton.text"));
         okButton.setName("okButton");
         okButton.setPreferredSize(new java.awt.Dimension(65, 23));
@@ -143,8 +143,8 @@ public final class NewVariableV extends JDialog {
      */
     private void okButtonActionPerformed() {// GEN-FIRST:event_okButtonActionPerformed
         try {
-            logger.info("newVar - create column:" + getVariableName());
-            controller.columns().newColumn(getVariableName());
+            logger.info("newVar - create column:" + getColumnName());
+            controller.columns().newColumn(getColumnName());
             dispose();
 
             // Whoops, user has done something strange - show warning dialog.
@@ -164,9 +164,9 @@ public final class NewVariableV extends JDialog {
     }// GEN-LAST:event_cancelButtonActionPerformed
 
     /**
-     * Returns the name of the new variable the user has specified.
+     * Returns the name of the new column the user has specified.
      */
-    public String getVariableName() {
+    public String getColumnName() {
         return nameField.getText();
     }
 

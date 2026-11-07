@@ -87,7 +87,7 @@ public final class CellValuesView extends JTextArea implements FocusListener {
 
         parentCell = cell;
         allEditors = new ArrayList<>();
-        edTracker = new EditorTracker(this, allEditors, cell.getVariable());
+        edTracker = new EditorTracker(this, allEditors, cell.getColumn());
 
         showValues();
 
@@ -159,7 +159,7 @@ public final class CellValuesView extends JTextArea implements FocusListener {
             editors.add(new FixedText(this, clipLabel(clip, parentCell.getClipFile())));
             return editors;
         }
-        int codes = parentCell.getVariable().getCodes().size();
+        int codes = parentCell.getColumn().getCodes().size();
         editors.add(new FixedText(this, "("));
         for (int i = 0; i < codes; i++) {
             int code = i;
@@ -233,7 +233,7 @@ public final class CellValuesView extends JTextArea implements FocusListener {
         // Typing after the cell takes the focus again is an edit of its own.
         typing = false;
         // New Cell from the menu goes to the column of the cell last in focus.
-        controller.setLastCreatedVariable(parentCell.getVariable());
+        controller.setLastCreatedColumn(parentCell.getColumn());
         controller.setLastSelectedCell(parentCell);
         parentCell.setSelected(true);
     }

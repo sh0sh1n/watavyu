@@ -35,9 +35,9 @@ public class CellTest {
     private DataStore ds;
 
     /**
-     * The parent variable for the cell we are testing.
+     * The parent column for the cell we are testing.
      */
-    private Variable var;
+    private Column var;
 
     /**
      * The model we are testing.
@@ -52,7 +52,7 @@ public class CellTest {
     @BeforeMethod
     public void setUp() throws UserWarningException {
         ds = DataStoreFactory.newDataStore();
-        var = ds.createVariable("test");
+        var = ds.createColumn("test");
         model = var.createCell();
 
         modelListener = mock(CellListener.class);
@@ -175,7 +175,7 @@ public class CellTest {
     /** What the player finds of a clip's file is told to its views, once, so its text says so. */
     @Test
     public void whatThePlayerFindsOfAClipsFileTellsTheCellsListeners() throws Exception {
-        Cell clip = ds.createMediaVariable("media_1").createClip(0, MediaClip.of("/study/cam.mp4"));
+        Cell clip = ds.createMediaColumn("media_1").createClip(0, MediaClip.of("/study/cam.mp4"));
         CellListener listener = mock(CellListener.class);
         clip.addListener(listener);
 

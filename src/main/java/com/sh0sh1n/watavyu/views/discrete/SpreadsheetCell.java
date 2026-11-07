@@ -343,7 +343,7 @@ public final class SpreadsheetCell extends JPanel
     }
 
     // *************************************************************************
-    // VariableListener Overrides
+    // ColumnListener Overrides
     // *************************************************************************
     @Override
     public void offsetChanged(final long newOffset) {

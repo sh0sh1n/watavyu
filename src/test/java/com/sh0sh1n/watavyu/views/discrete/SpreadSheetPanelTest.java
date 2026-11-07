@@ -10,7 +10,7 @@ import com.sh0sh1n.watavyu.models.db.Cell;
 import com.sh0sh1n.watavyu.models.db.DataStore;
 import com.sh0sh1n.watavyu.models.db.DataStoreFactory;
 import com.sh0sh1n.watavyu.models.db.UserWarningException;
-import com.sh0sh1n.watavyu.models.db.Variable;
+import com.sh0sh1n.watavyu.models.db.Column;
 import org.testng.annotations.Test;
 
 import java.awt.Component;
@@ -34,7 +34,7 @@ public class SpreadSheetPanelTest {
     @Test
     public void aSpreadsheetNotOnScreenTakesNoKeys() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
-        Variable notes = dataStore.createVariable("notes");
+        Column notes = dataStore.createColumn("notes");
         AtomicBoolean taken = new AtomicBoolean();
         SwingUtilities.invokeAndWait(() -> {
             ProjectController spreadsheet = TestSpreadsheets.withPlayback(dataStore);
@@ -79,9 +79,9 @@ public class SpreadSheetPanelTest {
             spreadsheet.setSpreadSheetPanel(panel);
             panel.registerListeners();
             try {
-                Variable gaze = spreadsheet.columns().newColumn("gaze");
+                Column gaze = spreadsheet.columns().newColumn("gaze");
                 spreadsheet.columns().newColumn("speech");
-                Variable gesture = spreadsheet.columns().newColumn("gesture");
+                Column gesture = spreadsheet.columns().newColumn("gesture");
 
                 spreadsheet.columns().move(gesture, gaze);
                 afterMove.set(names(panel.getColumns()));
@@ -91,12 +91,12 @@ public class SpreadSheetPanelTest {
                 afterUndo.set(names(panel.getColumns()));
                 headers.set(Arrays.stream(panel.getColumns().get(0).getParent().getComponents())
                     .filter(SpreadsheetColumn.class::isInstance)
-                    .map(header -> ((SpreadsheetColumn) header).getVariable().getName()).toList());
+                    .map(header -> ((SpreadsheetColumn) header).getColumn().getName()).toList());
                 // Each column's cells sit under its header: the sheet's data panels are in the same order.
                 List<Component> sheet = Arrays.asList(panel.getColumns().get(0).getDataPanel().getParent().getComponents());
                 dataPanels.set(panel.getColumns().stream()
                     .sorted(Comparator.comparingInt(column -> sheet.indexOf(column.getDataPanel())))
-                    .map(column -> column.getVariable().getName()).toList());
+                    .map(column -> column.getColumn().getName()).toList());
             } catch (UserWarningException e) {
                 throw new AssertionError(e);
             } finally {
@@ -111,14 +111,14 @@ public class SpreadSheetPanelTest {
     }
 
     private static List<String> names(final List<SpreadsheetColumn> columns) {
-        return columns.stream().map(column -> column.getVariable().getName()).toList();
+        return columns.stream().map(column -> column.getColumn().getName()).toList();
     }
 
     /** A column's cells redraw when its codes change, undo included, as the Code Editor no longer redraws them. */
     @Test
     public void cellsShowTheirColumnsCodesAfterEachChange() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
-        Variable gaze = dataStore.createVariable("gaze");
+        Column gaze = dataStore.createColumn("gaze");
         gaze.addCode();
         Cell cell = gaze.createPointCell(0);
         cell.setValue(0, "left");

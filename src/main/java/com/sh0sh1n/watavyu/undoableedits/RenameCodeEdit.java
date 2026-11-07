@@ -1,11 +1,11 @@
 package com.sh0sh1n.watavyu.undoableedits;
 
-import com.sh0sh1n.watavyu.models.db.Variable;
+import com.sh0sh1n.watavyu.models.db.Column;
 
 /** Renaming a code, from the Code Editor, typed a key at a time. */
 public final class RenameCodeEdit extends TypedRenameEdit {
 
-    private final Variable column;
+    private final Column column;
     private final int index;
 
     /**
@@ -16,7 +16,7 @@ public final class RenameCodeEdit extends TypedRenameEdit {
      * @param from       its name before
      * @param continuing whether the rename continues the last one, which it then joins
      */
-    public RenameCodeEdit(final Variable column, final int index, final String from, final boolean continuing) {
+    public RenameCodeEdit(final Column column, final int index, final String from, final boolean continuing) {
         super(from, column.getCodes().get(index), continuing);
         this.column = column;
         this.index = index;

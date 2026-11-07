@@ -8,7 +8,7 @@ import static org.testng.Assert.expectThrows;
 import com.sh0sh1n.watavyu.models.db.DataStore;
 import com.sh0sh1n.watavyu.models.db.DataStoreFactory;
 import com.sh0sh1n.watavyu.models.db.UserWarningException;
-import com.sh0sh1n.watavyu.models.db.Variable;
+import com.sh0sh1n.watavyu.models.db.Column;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
@@ -50,7 +50,7 @@ public class JsonImportRefusalTest {
         UserWarningException e = expectThrows(UserWarningException.class,
             () -> importJson(passes("\"-00:00:01:000\"", "\"00:00:04:000\""), dataStore));
 
-        assertTrue(dataStore.getAllVariables().isEmpty(), "the pass read before the bad time is removed too");
+        assertTrue(dataStore.getAllColumns().isEmpty(), "the pass read before the bad time is removed too");
         assertTrue(e.getMessage().matches("Cannot import import\\d+\\.json: cell 2 of column \"mother\" has the onset "
             + "\"-00:00:01:000\" \\(line 6\\), which is not a time\\. Times are HH:MM:SS:mmm and never negative\\. "
             + "Nothing was imported\\."), e.getMessage());
@@ -63,7 +63,7 @@ public class JsonImportRefusalTest {
         UserWarningException e = expectThrows(UserWarningException.class,
             () -> importJson(passes("\"00:00:04:000\"", "\"soon\""), dataStore));
 
-        assertTrue(dataStore.getAllVariables().isEmpty());
+        assertTrue(dataStore.getAllColumns().isEmpty());
         assertTrue(e.getMessage().contains("cell 2 of column \"mother\" has the offset \"soon\""), e.getMessage());
     }
 
@@ -74,7 +74,7 @@ public class JsonImportRefusalTest {
         UserWarningException e = expectThrows(UserWarningException.class,
             () -> importJson(passes("null", "\"00:00:04:000\""), dataStore));
 
-        assertTrue(dataStore.getAllVariables().isEmpty());
+        assertTrue(dataStore.getAllColumns().isEmpty());
         assertTrue(e.getMessage().contains("has the onset null"), e.getMessage());
     }
 
@@ -85,7 +85,7 @@ public class JsonImportRefusalTest {
         UserWarningException e = expectThrows(UserWarningException.class,
             () -> importJson(passes("\"00:00:03:000\"", "\"00:00:04:000\"", "null"), dataStore));
 
-        assertTrue(dataStore.getAllVariables().isEmpty());
+        assertTrue(dataStore.getAllColumns().isEmpty());
         assertTrue(e.getMessage().endsWith("cell 2 of column \"mother\" has a value that is not text or a number (line 6). "
             + "Nothing was imported."), e.getMessage());
     }
@@ -96,7 +96,7 @@ public class JsonImportRefusalTest {
 
         importJson(passes("\"00:00:03:000\"", "\"00:00:04:000\"", "3"), dataStore);
 
-        assertEquals(dataStore.getVariable("mother").getCells().get(1).getValues(), List.of("3"));
+        assertEquals(dataStore.getColumn("mother").getCells().get(1).getValues(), List.of("3"));
     }
 
     @Test
@@ -106,7 +106,7 @@ public class JsonImportRefusalTest {
         UserWarningException e = expectThrows(UserWarningException.class,
             () -> importJson(passes("\"00:00:03:000\"", "\"00:00:04:000\"", "\"cross\", \"loud\""), dataStore));
 
-        assertTrue(dataStore.getAllVariables().isEmpty());
+        assertTrue(dataStore.getAllColumns().isEmpty());
         assertTrue(e.getMessage().contains("cell 2 of column \"mother\" has more values than its column has codes"),
             e.getMessage());
     }
@@ -119,7 +119,7 @@ public class JsonImportRefusalTest {
         UserWarningException e = expectThrows(UserWarningException.class,
             () -> importJson(withCodes("{\"mood\": \"NOMINAL\", \"\": \"NOMINAL\"}"), dataStore));
 
-        assertTrue(dataStore.getAllVariables().isEmpty());
+        assertTrue(dataStore.getAllColumns().isEmpty());
         assertTrue(e.getMessage().endsWith("column \"mother\" has a code with no name (line 4). Nothing was imported."),
             e.getMessage());
     }
@@ -131,7 +131,7 @@ public class JsonImportRefusalTest {
         UserWarningException e = expectThrows(UserWarningException.class,
             () -> importJson(withCodes("{\"mood\": \"NOMINAL\", \"mood\": \"NOMINAL\"}"), dataStore));
 
-        assertTrue(dataStore.getAllVariables().isEmpty(), "the pass read before is removed too");
+        assertTrue(dataStore.getAllColumns().isEmpty(), "the pass read before is removed too");
         assertTrue(e.getMessage().contains("column \"mother\" has two codes named \"mood\""), e.getMessage());
     }
 
@@ -144,14 +144,14 @@ public class JsonImportRefusalTest {
     @Test
     public void aRefusedFileLeavesTheSpreadsheetAsItWas() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
-        Variable notes = dataStore.createVariable("notes");
+        Column notes = dataStore.createColumn("notes");
         notes.createCell().setOnset(1_000);
         dataStore.markAsUnchanged();
 
         expectThrows(UserWarningException.class,
             () -> importJson(passes("\"-00:00:01:000\"", "\"00:00:04:000\""), dataStore));
 
-        assertEquals(dataStore.getAllVariables(), List.of(notes));
+        assertEquals(dataStore.getAllColumns(), List.of(notes));
         assertEquals(notes.getCells().size(), 1);
         assertFalse(dataStore.isChanged(), "an import that added nothing leaves no unsaved changes");
     }
@@ -159,7 +159,7 @@ public class JsonImportRefusalTest {
     @Test
     public void aSpreadsheetWithUnsavedChangesKeepsThem() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
-        dataStore.createVariable("notes");
+        dataStore.createColumn("notes");
         dataStore.markAsChanged();
 
         expectThrows(UserWarningException.class,
@@ -174,7 +174,7 @@ public class JsonImportRefusalTest {
 
         importJson(passes("\"4000\"", "\"00:00:05:000\""), dataStore);
 
-        assertEquals(dataStore.getVariable("mother").getCells().get(1).getOnset(), 4_000);
+        assertEquals(dataStore.getColumn("mother").getCells().get(1).getOnset(), 4_000);
     }
 
     /** A file whose second pass, after one that reads, is given. */
@@ -246,7 +246,7 @@ public class JsonImportRefusalTest {
 
         UserWarningException e = expectThrows(UserWarningException.class, () -> importJson(json, dataStore));
 
-        assertTrue(dataStore.getAllVariables().isEmpty(), "the pass read before is not added");
+        assertTrue(dataStore.getAllColumns().isEmpty(), "the pass read before is not added");
         assertTrue(e.getMessage().matches("Cannot import import\\d+\\.json: " + Pattern.quote(problem)
             + " \\(line \\d\\)\\. Nothing was imported\\."), e.getMessage());
     }
@@ -266,7 +266,7 @@ public class JsonImportRefusalTest {
         expectThrows(IOException.class, () -> importJson(withPass("{\"name\": \"mother\""), dataStore));
         expectThrows(IOException.class, () -> importJson(withPass("{\"name\": mother}"), dataStore));
 
-        assertTrue(dataStore.getAllVariables().isEmpty());
+        assertTrue(dataStore.getAllColumns().isEmpty());
     }
 
     @Test
@@ -276,7 +276,7 @@ public class JsonImportRefusalTest {
         importJson(withPass(mother("\"MATRIX\"", "{\"mood\": \"NOMINAL\", \"gaze\": \"TEXT\"}", "[" + CELL + "]")),
             dataStore);
 
-        assertEquals(dataStore.getVariable("mother").getCells().get(0).getValues(), List.of("calm", ""));
+        assertEquals(dataStore.getColumn("mother").getCells().get(0).getValues(), List.of("calm", ""));
     }
 
     /** Datavyu reads its types in any case, and a cell's id, which Watavyu does not keep, in any form. */
@@ -287,23 +287,23 @@ public class JsonImportRefusalTest {
         importJson(withPass(mother("\"matrix\"", "{\"mood\": \"Nominal\"}",
             "[" + CELL.replace("\"id\": 1", "\"id\": {\"n\": [1]}") + "]")), dataStore);
 
-        assertEquals(dataStore.getVariable("mother").getCodes(), List.of("mood"));
-        assertEquals(dataStore.getVariable("mother").getCells().get(0).getValues(), List.of("calm"));
+        assertEquals(dataStore.getColumn("mother").getCodes(), List.of("mood"));
+        assertEquals(dataStore.getColumn("mother").getCells().get(0).getValues(), List.of("calm"));
     }
 
     /** A pass whose name the spreadsheet has, as it was or from earlier in the file, is left out, and the rest read. */
     @Test
     public void aPassWhoseNameTheSpreadsheetHasIsLeftOut() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
-        Variable kind = dataStore.createVariable("kind");
+        Column kind = dataStore.createColumn("kind");
         List<String> warnings = new ArrayList<>();
 
         importJson("{\"passes\": [\n" + READABLE_PASS + ",\n" + mother("\"MATRIX\"", "{}", "[]") + ",\n"
             + mother("\"NOMINAL\"", "{}", "[]") + "\n]}", dataStore, warnings::add);
 
-        assertEquals(dataStore.getAllVariables().stream().map(Variable::getName).toList(), List.of("kind", "mother"));
+        assertEquals(dataStore.getAllColumns().stream().map(Column::getName).toList(), List.of("kind", "mother"));
         assertTrue(kind.getCells().isEmpty(), "the spreadsheet's own column is left as it was");
-        assertEquals(dataStore.getVariable("mother").getCodes(), List.of());
+        assertEquals(dataStore.getColumn("mother").getCodes(), List.of());
         assertEquals(warnings, List.of("Left out the columns the spreadsheet already has: \"kind\", \"mother\"."));
     }
 

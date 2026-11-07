@@ -14,7 +14,7 @@
  */
 package com.sh0sh1n.watavyu.views.discrete;
 
-import com.sh0sh1n.watavyu.models.db.Variable;
+import com.sh0sh1n.watavyu.models.db.Column;
 import com.sh0sh1n.watavyu.views.discrete.datavalues.NoEditor;
 
 import javax.swing.text.JTextComponent;
@@ -64,7 +64,7 @@ public final class EditorTracker
     /**
      * The column the editors belong to, whose lock refuses edits; null when they belong to none.
      */
-    private final Variable column;
+    private final Column column;
 
     /**
      * Constructor for editors of a column's cell or of its name and codes, which a locked column refuses.
@@ -73,7 +73,7 @@ public final class EditorTracker
      * @param eds    Vector of the EditorComponents.
      * @param column The column they belong to.
      */
-    public EditorTracker(final JTextComponent ta, final List<EditorComponent> eds, final Variable column) {
+    public EditorTracker(final JTextComponent ta, final List<EditorComponent> eds, final Column column) {
         textArea = ta;
         editors = eds;
         this.column = column;

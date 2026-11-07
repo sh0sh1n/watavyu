@@ -11,7 +11,7 @@ import com.sh0sh1n.watavyu.controllers.project.ProjectController;
 import com.sh0sh1n.watavyu.models.db.Cell;
 import com.sh0sh1n.watavyu.models.db.DataStore;
 import com.sh0sh1n.watavyu.models.db.DataStoreFactory;
-import com.sh0sh1n.watavyu.models.db.Variable;
+import com.sh0sh1n.watavyu.models.db.Column;
 import com.sh0sh1n.watavyu.views.discrete.datavalues.CellValuesView;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -26,7 +26,7 @@ import javax.swing.SwingUtilities;
  */
 public class LockedColumnViewTest {
 
-    private Variable notes;
+    private Column notes;
     private Cell cell;
     private SpreadsheetColumn header;
     private ProjectController spreadsheet;
@@ -34,7 +34,7 @@ public class LockedColumnViewTest {
     @BeforeMethod
     public void setUp() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
-        notes = dataStore.createVariable("notes");
+        notes = dataStore.createColumn("notes");
         cell = notes.createPointCell(1_000);
         cell.setValue(0, "smile");
         SwingUtilities.invokeAndWait(() -> {

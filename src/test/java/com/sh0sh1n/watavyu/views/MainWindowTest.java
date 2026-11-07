@@ -12,7 +12,7 @@ import com.sh0sh1n.watavyu.controllers.SaveController;
 import com.sh0sh1n.watavyu.controllers.project.ProjectController;
 import com.sh0sh1n.watavyu.models.db.Cell;
 import com.sh0sh1n.watavyu.models.db.DataStoreFactory;
-import com.sh0sh1n.watavyu.models.db.Variable;
+import com.sh0sh1n.watavyu.models.db.Column;
 import com.sh0sh1n.watavyu.models.project.Project;
 import com.sh0sh1n.watavyu.views.discrete.SpreadSheetPanel;
 import com.sh0sh1n.watavyu.views.discrete.layouts.SheetLayoutFactory;
@@ -36,10 +36,10 @@ import javax.swing.SwingUtilities;
  * spreadsheet with no changes gives way to a project opened, once it has opened, and each tab's title shows its own
  * project, the window's the selected one's.
  */
-public class WatavyuWindowTest {
+public class MainWindowTest {
 
     private JFrame frame;
-    private WatavyuWindow view;
+    private MainWindow view;
     private Path folder;
 
     @BeforeMethod
@@ -65,7 +65,7 @@ public class WatavyuWindowTest {
     /** Writes a project file holding one column. */
     private File projectFile(final String name, final String column) throws Exception {
         ProjectController spreadsheet = new ProjectController(new Project(), DataStoreFactory.newDataStore());
-        spreadsheet.getDataStore().createVariable(column);
+        spreadsheet.getDataStore().createColumn(column);
         File file = folder.resolve(name + ".watavyu.json").toFile();
         new SaveController().saveProject(file, spreadsheet.toDocument(folder), false);
         return file;
@@ -96,20 +96,20 @@ public class WatavyuWindowTest {
 
     @Test
     public void theTitleNamesTheApplicationAndTheProject() {
-        assertEquals(WatavyuWindow.windowTitle("Watavyu", "study.watavyu.json  *", false), "Watavyu - study.watavyu.json  *");
+        assertEquals(MainWindow.windowTitle("Watavyu", "study.watavyu.json  *", false), "Watavyu - study.watavyu.json  *");
     }
 
     @Test
     public void theTitleShowsQuickKeyMode() {
-        assertEquals(WatavyuWindow.windowTitle("Watavyu", "study.watavyu.json  ", true), "Watavyu - study.watavyu.json   <QUICK KEY MODE>");
+        assertEquals(MainWindow.windowTitle("Watavyu", "study.watavyu.json  ", true), "Watavyu - study.watavyu.json   <QUICK KEY MODE>");
     }
 
     /** B8: a recovered project is named after the project that was autosaved. */
     @Test
     public void aRecoveredProjectIsNamedAfterTheOriginal() {
-        assertEquals(WatavyuWindow.recoveredName("~study_12005522346316252883.watavyu.json"), "study");
-        assertEquals(WatavyuWindow.recoveredName("~session_04_5415962468724307690.watavyu.json"), "session_04");
-        assertEquals(WatavyuWindow.recoveredName("~noname_42.watavyu.json"), "noname");
+        assertEquals(MainWindow.recoveredName("~study_12005522346316252883.watavyu.json"), "study");
+        assertEquals(MainWindow.recoveredName("~session_04_5415962468724307690.watavyu.json"), "session_04");
+        assertEquals(MainWindow.recoveredName("~noname_42.watavyu.json"), "noname");
     }
 
     /** It has its empty media columns but no unsaved changes, so it is not autosaved and gives way to a project. */
@@ -127,7 +127,7 @@ public class WatavyuWindowTest {
         onEdt(() -> view.open(study));
 
         assertEquals(view.getTabbedPane().getTabCount(), 1);
-        assertTrue(view.selectedController().getDataStore().getVariable("gaze") != null);
+        assertTrue(view.selectedController().getDataStore().getColumn("gaze") != null);
     }
 
     @Test
@@ -136,7 +136,7 @@ public class WatavyuWindowTest {
         ProjectController untitled = view.selectedController();
 
         onEdt(() -> {
-            untitled.getDataStore().createVariable("notes");
+            untitled.getDataStore().createColumn("notes");
             view.open(study);
         });
 
@@ -158,7 +158,7 @@ public class WatavyuWindowTest {
     public void eachTabIsTitledWithItsOwnProjectAndTheWindowWithTheSelectedOne() throws Exception {
         ProjectController untitled = view.selectedController();
         onEdt(() -> {
-            untitled.getDataStore().createVariable("notes");
+            untitled.getDataStore().createColumn("notes");
             view.open(projectFile("study", "gaze"));
         });
         ProjectController study = view.selectedController();
@@ -169,21 +169,21 @@ public class WatavyuWindowTest {
 
         // A change in the tab behind marks that tab, not the window.
         String windowTitle = frame.getTitle();
-        onEdt(() -> untitled.getDataStore().createVariable("speech"));
+        onEdt(() -> untitled.getDataStore().createColumn("speech"));
         assertTrue(tabs.getTitleAt(0).endsWith("*"), tabs.getTitleAt(0));
         assertFalse(tabs.getTitleAt(1).endsWith("*"), tabs.getTitleAt(1));
         assertEquals(frame.getTitle(), windowTitle);
 
         onEdt(() -> tabs.setSelectedIndex(0));
         assertTrue(frame.getTitle().contains("untitled"), frame.getTitle());
-        assertNull(study.getDataStore().getVariable("speech"));
+        assertNull(study.getDataStore().getColumn("speech"));
     }
 
     /** Opens a second tab, after the untitled one, which has a change so it stays. */
     private ProjectController secondTab() throws Exception {
         ProjectController untitled = view.selectedController();
         onEdt(() -> {
-            untitled.getDataStore().createVariable("notes");
+            untitled.getDataStore().createColumn("notes");
             view.open(projectFile("study", "gaze"));
         });
         return view.selectedController();
@@ -255,7 +255,7 @@ public class WatavyuWindowTest {
         for (Command command : List.of(Command.SELECT_COLUMN_RIGHT, Command.SELECT_COLUMN_RIGHT,
                 Command.SELECT_COLUMN_LEFT)) {
             run(command);
-            selected.add(view.getSpreadsheetPanel().getSelectedColumn().getVariable().getName());
+            selected.add(view.getSpreadsheetPanel().getSelectedColumn().getColumn().getName());
         }
 
         assertEquals(selected, List.of("gaze", "speech", "gaze"));
@@ -284,8 +284,8 @@ public class WatavyuWindowTest {
         Action right = view.action(Command.NEW_CELL_RIGHT);
         List<Cell> cells = new ArrayList<>();
         onEdt(() -> {
-            Variable gaze = study.getDataStore().getVariable("gaze");
-            Variable speech = study.getDataStore().createVariable("speech");
+            Column gaze = study.getDataStore().getColumn("gaze");
+            Column speech = study.getDataStore().createColumn("speech");
             cells.add(gaze.createPointCell(1_000));
             cells.add(gaze.createPointCell(2_000));
             cells.add(speech.createPointCell(1_000));
@@ -329,13 +329,13 @@ public class WatavyuWindowTest {
         assertTrue(export.isEnabled());
 
         onEdt(() -> {
-            study.getDataStore().getVariable("gaze").setSelected(true);
+            study.getDataStore().getColumn("gaze").setSelected(true);
             assertNotNull(study.cells().newCellInSelectedColumn(1_000));
         });
         assertTrue(newCell.isEnabled(), "the new cell's edit refreshed the commands");
 
         onEdt(() -> {
-            study.columns().hide(study.getDataStore().getAllVariables());
+            study.columns().hide(study.getDataStore().getAllColumns());
             view.refreshCommands();
         });
         assertFalse(newCell.isEnabled());
@@ -349,10 +349,10 @@ public class WatavyuWindowTest {
         Action left = view.action(Command.NEW_CELL_LEFT);
         Action right = view.action(Command.NEW_CELL_RIGHT);
         onEdt(() -> {
-            Variable speech = study.getDataStore().createVariable("speech");
-            Variable notes = study.getDataStore().createVariable("notes");
+            Column speech = study.getDataStore().createColumn("speech");
+            Column notes = study.getDataStore().createColumn("notes");
             Cell cell = speech.createPointCell(1_000);
-            study.columns().hide(List.of(study.getDataStore().getVariable("gaze"), notes));
+            study.columns().hide(List.of(study.getDataStore().getColumn("gaze"), notes));
             study.getDataStore().getSelectedCells().forEach(selected -> selected.setSelected(false));
             cell.setSelected(true);
             view.refreshCommands();

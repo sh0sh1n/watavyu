@@ -58,7 +58,7 @@ import java.util.concurrent.ExecutionException;
 /**
  * The main window: a tab per open spreadsheet, the menu bar, and the keyboard shortcuts.
  */
-public final class WatavyuWindow implements FileDropEventListener {
+public final class MainWindow implements FileDropEventListener {
 
     // Variable for the amount to raise the font size by when zooming.
     public static final int ZOOM_INTERVAL = 2;
@@ -68,7 +68,7 @@ public final class WatavyuWindow implements FileDropEventListener {
     public static final int ZOOM_MIN_SIZE = 8;
 
     /** The logger instance for this class */
-    private static final Logger logger = LogManager.getLogger(WatavyuWindow.class);
+    private static final Logger logger = LogManager.getLogger(MainWindow.class);
 
     /** How often each spreadsheet is autosaved, in minutes */
     private static final int AUTOSAVE_MINUTES = 1;
@@ -86,7 +86,7 @@ public final class WatavyuWindow implements FileDropEventListener {
     private final JFrame frame;
 
     /** Text of this view's menus and dialogs */
-    private final Resources resources = Resources.of(WatavyuWindow.class);
+    private final Resources resources = Resources.of(MainWindow.class);
 
     /** Every command's action, which its menu item and shortcut share */
     private final CommandTable commands = new CommandTable(this::countSelection);
@@ -108,7 +108,7 @@ public final class WatavyuWindow implements FileDropEventListener {
      * @param app   The running application.
      * @param frame The main window.
      */
-    public WatavyuWindow(final Watavyu app, final JFrame frame) {
+    public MainWindow(final Watavyu app, final JFrame frame) {
         this.app = app;
         this.frame = frame;
         frame.setName("mainFrame");
@@ -392,7 +392,7 @@ public final class WatavyuWindow implements FileDropEventListener {
      * @return whether the project was saved
      */
     public boolean saveAs() {
-        WatavyuFileChooser fileChooser = new WatavyuFileChooser();
+        RememberingFileChooser fileChooser = new RememberingFileChooser();
 
         fileChooser.addChoosableFileFilter(ProjectFileFilter.INSTANCE);
 
@@ -464,7 +464,7 @@ public final class WatavyuWindow implements FileDropEventListener {
      * Action for exporting the current SpreadSheet as a JSON File
      */
     public void exportToJSON(){
-        WatavyuFileChooser fileChooser = new WatavyuFileChooser();
+        RememberingFileChooser fileChooser = new RememberingFileChooser();
 
         fileChooser.addChoosableFileFilter(JSONFilter.INSTANCE);
         fileChooser.setFileFilter(JSONFilter.INSTANCE);
@@ -476,7 +476,7 @@ public final class WatavyuWindow implements FileDropEventListener {
         }
     }
 
-    private void exportJSON(WatavyuFileChooser fc){
+    private void exportJSON(RememberingFileChooser fc){
         ProjectController projectController = selectedController();
 
         try{
@@ -505,7 +505,7 @@ public final class WatavyuWindow implements FileDropEventListener {
      * Action for exposing the current SpreadSheet as a JSON File
      */
     public void importJSONToSpreadsheet(){
-        WatavyuFileChooser fileChooser = new WatavyuFileChooser();
+        RememberingFileChooser fileChooser = new RememberingFileChooser();
 
         fileChooser.addChoosableFileFilter(JSONFilter.INSTANCE);
         fileChooser.setFileFilter(JSONFilter.INSTANCE);
@@ -519,7 +519,7 @@ public final class WatavyuWindow implements FileDropEventListener {
         getSpreadsheetPanel().redrawCells();
     }
 
-    private void importJSON(WatavyuFileChooser fc){
+    private void importJSON(RememberingFileChooser fc){
         try {
             new OpenDataStoreFileController(this::warn)
                     .importJSONToSpreadsheet(fc.getSelectedFile(), getSpreadsheetPanel().getDataStore());
@@ -552,7 +552,7 @@ public final class WatavyuWindow implements FileDropEventListener {
      */
     public void open() {
 
-        WatavyuFileChooser fileChooser = new WatavyuFileChooser();
+        RememberingFileChooser fileChooser = new RememberingFileChooser();
 
         fileChooser.addChoosableFileFilter(ProjectFileFilter.INSTANCE);
 
@@ -569,7 +569,7 @@ public final class WatavyuWindow implements FileDropEventListener {
      */
     public void open(final File file) {
         logger.info("Opening " + file.getAbsolutePath());
-        WatavyuFileChooser fc = new WatavyuFileChooser();
+        RememberingFileChooser fc = new RememberingFileChooser();
         fc.setVisible(false);
         fc.setSelectedFile(file);
 
@@ -607,7 +607,7 @@ public final class WatavyuWindow implements FileDropEventListener {
      *
      * @param fileChooser The file chooser to use.
      */
-    private void open(final WatavyuFileChooser fileChooser) {
+    private void open(final RememberingFileChooser fileChooser) {
         // An untitled spreadsheet with no changes gives way to the project opened.
         ProjectController selected = selectedController();
         SpreadSheetPanel replaced = tabbedPane.getTabCount() == 1 && selected != null
@@ -652,7 +652,7 @@ public final class WatavyuWindow implements FileDropEventListener {
     }
 
     public void openExternalFile(final File f) {
-        WatavyuFileChooser fileChooser = new WatavyuFileChooser();
+        RememberingFileChooser fileChooser = new RememberingFileChooser();
         fileChooser.setSelectedFile(f);
         FileFilter filter = filterFor(f);
         fileChooser.setFileFilter(filter != null ? filter : ProjectFileFilter.INSTANCE);
@@ -716,7 +716,7 @@ public final class WatavyuWindow implements FileDropEventListener {
             return;
         }
 
-        WatavyuFileChooser fileChooser = new WatavyuFileChooser();
+        RememberingFileChooser fileChooser = new RememberingFileChooser();
         fileChooser.setVisible(false);
 
         for (File file : projects) {
@@ -730,7 +730,7 @@ public final class WatavyuWindow implements FileDropEventListener {
      * is selected, or each as a new media column.
      */
     public void addMedia() {
-        WatavyuFileChooser chooser = new WatavyuFileChooser();
+        RememberingFileChooser chooser = new RememberingFileChooser();
         chooser.setMultiSelectionEnabled(true);
         chooser.addChoosableFileFilter(JavaFxVideoPlugin.VIDEO_FILE_FILTER);
         chooser.setFileFilter(JavaFxVideoPlugin.VIDEO_FILE_FILTER);
@@ -768,10 +768,10 @@ public final class WatavyuWindow implements FileDropEventListener {
     }
 
     /**
-     * Action for showing the variable list.
+     * Action for showing the column list.
      */
-    public void showVariableList() {
-        VariableListV list = new VariableListV(frame, false, selectedController());
+    public void showColumnList() {
+        ColumnListV list = new ColumnListV(frame, false, selectedController());
         list.registerListeners();
         WindowPlacement.show(list);
     }
@@ -1063,7 +1063,7 @@ public final class WatavyuWindow implements FileDropEventListener {
 
         commands.define(Command.NEW_MEDIA_COLUMN, this::newMediaColumn);
         commands.define(Command.ADD_MEDIA, this::addMedia);
-        commands.define(Command.COLUMN_LIST, this::showVariableList);
+        commands.define(Command.COLUMN_LIST, this::showColumnList);
         commands.define(Command.CODE_EDITOR, this::showVocabEditor);
         commands.define(Command.NEW_CELL, this::newCell).enabledWhen(() -> {
             ProjectController selected = selectedController();
@@ -1149,11 +1149,11 @@ public final class WatavyuWindow implements FileDropEventListener {
             selection = Selection.NONE;
             return;
         }
-        List<Variable> shown = panel.getDataStore().getVisibleVariables();
+        List<Column> shown = panel.getDataStore().getVisibleColumns();
         int cells = 0;
         int left = 0;
         int right = 0;
-        for (Variable column : panel.getDataStore().getAllVariables()) {
+        for (Column column : panel.getDataStore().getAllColumns()) {
             int place = shown.indexOf(column);
             int selected = (int) column.getCells().stream().filter(Cell::isSelected).count();
             cells += selected;
@@ -1382,9 +1382,9 @@ public final class WatavyuWindow implements FileDropEventListener {
     }
 
     class OpenTask extends SwingWorker<ProjectController, Void> {
-        private WatavyuFileChooser fileChooser;
+        private RememberingFileChooser fileChooser;
 
-        public OpenTask(final WatavyuFileChooser fileChooser) { this.fileChooser = fileChooser; }
+        public OpenTask(final RememberingFileChooser fileChooser) { this.fileChooser = fileChooser; }
 
         @Override
         public ProjectController doInBackground() {

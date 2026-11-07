@@ -1,7 +1,7 @@
 package com.sh0sh1n.watavyu.undoableedits;
 
 import com.sh0sh1n.watavyu.models.db.UserWarningException;
-import com.sh0sh1n.watavyu.models.db.Variable;
+import com.sh0sh1n.watavyu.models.db.Column;
 
 import javax.swing.undo.CannotRedoException;
 import javax.swing.undo.CannotUndoException;
@@ -9,7 +9,7 @@ import javax.swing.undo.CannotUndoException;
 /** Renaming a column, from the Code Editor, typed a key at a time. */
 public final class RenameColumnEdit extends TypedRenameEdit implements GuardedEdit {
 
-    private final Variable column;
+    private final Column column;
 
     /**
      * Records a column that has just been renamed.
@@ -18,7 +18,7 @@ public final class RenameColumnEdit extends TypedRenameEdit implements GuardedEd
      * @param from       its name before
      * @param continuing whether the rename continues the last one, which it then joins
      */
-    public RenameColumnEdit(final Variable column, final String from, final boolean continuing) {
+    public RenameColumnEdit(final Column column, final String from, final boolean continuing) {
         super(from, column.getName(), continuing);
         this.column = column;
     }
@@ -44,7 +44,7 @@ public final class RenameColumnEdit extends TypedRenameEdit implements GuardedEd
     }
 
     private String refusal(final String name, final String action) {
-        Variable named = column.getOwningDatastore().getVariable(name);
+        Column named = column.getOwningDatastore().getColumn(name);
         return named == null || named.equals(column) ? null
             : "Another column is named " + name + ". Rename or delete it to " + action + " this.";
     }

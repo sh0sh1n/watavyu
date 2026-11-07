@@ -1,6 +1,6 @@
 package com.sh0sh1n.watavyu.controllers.project;
 
-import com.sh0sh1n.watavyu.models.db.Variable;
+import com.sh0sh1n.watavyu.models.db.Column;
 import com.sh0sh1n.watavyu.undoableedits.AddCodeEdit;
 import com.sh0sh1n.watavyu.undoableedits.DeleteCodeEdit;
 import com.sh0sh1n.watavyu.undoableedits.MoveCodeEdit;
@@ -30,7 +30,7 @@ public final class CodeCommands {
      * @param column the column
      * @return the new code's place among the column's codes, or -1 if the column is locked
      */
-    public int add(final Variable column) {
+    public int add(final Column column) {
         if (column.refusesEdits()) {
             return -1;
         }
@@ -46,7 +46,7 @@ public final class CodeCommands {
      * @param index  the code's place among the column's codes
      * @return whether it was deleted: a place out of range or a locked column leaves it
      */
-    public boolean delete(final Variable column, final int index) {
+    public boolean delete(final Column column, final int index) {
         if (!inRange(column, index) || column.refusesEdits()) {
             return false;
         }
@@ -64,7 +64,7 @@ public final class CodeCommands {
      * @param to     its new place
      * @return whether it moved: a place out of range or a locked column leaves it
      */
-    public boolean move(final Variable column, final int from, final int to) {
+    public boolean move(final Column column, final int from, final int to) {
         if (from == to || !inRange(column, from) || !inRange(column, to) || column.refusesEdits()) {
             return false;
         }
@@ -85,7 +85,7 @@ public final class CodeCommands {
      * @return whether it was renamed: the same name is no change, and a place out of range, an empty name, another
      *     code's name and a locked column are refused
      */
-    public boolean rename(final Variable column, final int index, final String name, final boolean continuing) {
+    public boolean rename(final Column column, final int index, final String name, final boolean continuing) {
         if (!inRange(column, index)) {
             return false;
         }
@@ -100,7 +100,7 @@ public final class CodeCommands {
         return true;
     }
 
-    private static boolean inRange(final Variable column, final int index) {
+    private static boolean inRange(final Column column, final int index) {
         return index >= 0 && index < column.getCodes().size();
     }
 }

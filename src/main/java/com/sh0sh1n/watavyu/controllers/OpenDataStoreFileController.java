@@ -21,7 +21,7 @@ import org.apache.logging.log4j.Logger;
 import com.sh0sh1n.watavyu.models.db.Cell;
 import com.sh0sh1n.watavyu.models.db.DataStore;
 import com.sh0sh1n.watavyu.models.db.UserWarningException;
-import com.sh0sh1n.watavyu.models.db.Variable;
+import com.sh0sh1n.watavyu.models.db.Column;
 
 import java.io.File;
 import java.io.IOException;
@@ -72,7 +72,7 @@ public final class OpenDataStoreFileController {
 
         List<String> leftOut = new ArrayList<>();
         for (DatavyuJsonReader.Pass pass : passes) {
-            if (dataStore.getVariable(pass.name()) == null) {
+            if (dataStore.getColumn(pass.name()) == null) {
                 add(pass, dataStore);
             } else {
                 leftOut.add("\"" + pass.name() + "\"");
@@ -84,7 +84,7 @@ public final class OpenDataStoreFileController {
     }
 
     private static void add(final DatavyuJsonReader.Pass pass, final DataStore dataStore) throws UserWarningException {
-        Variable column = dataStore.createVariable(pass.name(), true);
+        Column column = dataStore.createColumn(pass.name(), true);
         column.setCodes(pass.codes());
         for (DatavyuJsonReader.PassCell passCell : pass.cells()) {
             Cell cell = column.createCell();

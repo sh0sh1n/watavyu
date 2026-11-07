@@ -7,7 +7,7 @@ import static org.testng.Assert.assertTrue;
 import com.sh0sh1n.watavyu.controllers.project.ProjectController;
 import com.sh0sh1n.watavyu.models.db.DataStore;
 import com.sh0sh1n.watavyu.models.db.DataStoreFactory;
-import com.sh0sh1n.watavyu.models.db.Variable;
+import com.sh0sh1n.watavyu.models.db.Column;
 import com.sh0sh1n.watavyu.models.project.Project;
 import org.testng.annotations.Test;
 
@@ -19,7 +19,7 @@ import java.awt.Container;
 import java.util.concurrent.atomic.AtomicReference;
 
 /** The Column List shows and hides columns, and shows them all; columns are renamed only in the Code Editor. */
-public class VariableListVTest {
+public class ColumnListVTest {
 
     static <T extends Component> T find(final Container in, final Class<T> type, final String name) {
         for (Component child : in.getComponents()) {
@@ -39,12 +39,12 @@ public class VariableListVTest {
     @Test
     public void namesCannotBeEditedButVisibilityCan() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
-        dataStore.createVariable("notes");
+        dataStore.createColumn("notes");
         AtomicReference<JTable> table = new AtomicReference<>();
-        AtomicReference<VariableListV> list = new AtomicReference<>();
+        AtomicReference<ColumnListV> list = new AtomicReference<>();
         SwingUtilities.invokeAndWait(() -> {
-            list.set(new VariableListV(null, false, new ProjectController(new Project(), dataStore)));
-            table.set(find(list.get().getContentPane(), JTable.class, "variableList"));
+            list.set(new ColumnListV(null, false, new ProjectController(new Project(), dataStore)));
+            table.set(find(list.get().getContentPane(), JTable.class, "columnList"));
         });
         try {
             JTable rows = table.get();
@@ -61,14 +61,14 @@ public class VariableListVTest {
     @Test
     public void showAllColumnsShowsEveryHiddenColumn() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
-        Variable notes = dataStore.createVariable("notes");
-        Variable media = dataStore.createMediaVariable("media_1");
-        Variable shown = dataStore.createVariable("shown");
+        Column notes = dataStore.createColumn("notes");
+        Column media = dataStore.createMediaColumn("media_1");
+        Column shown = dataStore.createColumn("shown");
         notes.setHidden(true);
         media.setHidden(true);
-        AtomicReference<VariableListV> list = new AtomicReference<>();
+        AtomicReference<ColumnListV> list = new AtomicReference<>();
         SwingUtilities.invokeAndWait(() -> {
-            list.set(new VariableListV(null, false, new ProjectController(new Project(), dataStore)));
+            list.set(new ColumnListV(null, false, new ProjectController(new Project(), dataStore)));
             JButton showAll = find(list.get().getContentPane(), JButton.class, "showAllColumns");
             assertEquals(showAll.getText(), "Show All Columns");
             showAll.doClick();

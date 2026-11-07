@@ -50,7 +50,7 @@ public class CellTypingTest {
     @BeforeMethod
     public void setUp() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
-        cell = dataStore.createVariable("notes").createPointCell(1_000);
+        cell = dataStore.createColumn("notes").createPointCell(1_000);
         SwingUtilities.invokeAndWait(() -> {
             spreadsheet = TestSpreadsheets.withPlayback(dataStore);
             view = new CellValuesView(spreadsheet, cell);
@@ -110,7 +110,7 @@ public class CellTypingTest {
     public void anEmptiedValueShowsItsCodesNameNow() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
             type("smile");
-            cell.getVariable().renameCode(0, "face");
+            cell.getColumn().renameCode(0, "face");
             EditorComponent editor = view.getEdTracker().firstEditor();
 
             editor.setText("");
@@ -137,7 +137,7 @@ public class CellTypingTest {
     @Test
     public void typingIntoACodesEditorChangesThatCode() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
-            spreadsheet.codes().add(cell.getVariable());
+            spreadsheet.codes().add(cell.getColumn());
             // As the cell's SpreadsheetColumn does when its codes change.
             view.showValues();
             view.getEdTracker().setEditor(view.getEdTracker().getEditorAtArgIndex(1));
@@ -156,7 +156,7 @@ public class CellTypingTest {
     @Test
     public void typingContinuesInItsCodeAfterTheValuesAreRedrawn() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
-            spreadsheet.codes().add(cell.getVariable());
+            spreadsheet.codes().add(cell.getColumn());
             view.showValues();
             view.getEdTracker().setEditor(view.getEdTracker().getEditorAtArgIndex(1));
             type("ne");
@@ -186,7 +186,7 @@ public class CellTypingTest {
     @Test
     public void typingGoesOnInTheLastCodeWhenItsCodeIsTakenAway() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
-            spreadsheet.codes().add(cell.getVariable());
+            spreadsheet.codes().add(cell.getColumn());
             view.showValues();
             view.getEdTracker().setEditor(view.getEdTracker().getEditorAtArgIndex(1));
 
@@ -213,7 +213,7 @@ public class CellTypingTest {
     @Test
     public void aRedrawnCellStartsInItsFirstCode() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
-            spreadsheet.codes().add(cell.getVariable());
+            spreadsheet.codes().add(cell.getColumn());
             CellValuesView fresh = new CellValuesView(spreadsheet, cell);
             fresh.showValues();
             fresh.setCaretPosition(fresh.getText().length());
@@ -228,7 +228,7 @@ public class CellTypingTest {
     @Test
     public void typingStaysInTheFirstCodeWhenAnotherChanges() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
-            spreadsheet.codes().add(cell.getVariable());
+            spreadsheet.codes().add(cell.getColumn());
             view.showValues();
             view.getEdTracker().setEditor(view.getEdTracker().firstEditor());
             type("le");
@@ -336,7 +336,7 @@ public class CellTypingTest {
     @Test
     public void anArrowFromAValueSelectedWholeStaysInIt() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
-            spreadsheet.codes().add(cell.getVariable());
+            spreadsheet.codes().add(cell.getColumn());
             cell.setValues(List.of("left", "near"));
             EditorTracker tracker = view.getEdTracker();
             tracker.setEditor(tracker.nextEditor());
@@ -352,7 +352,7 @@ public class CellTypingTest {
     @Test
     public void anArrowAtAValuesEdgeGoesToTheNext() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
-            spreadsheet.codes().add(cell.getVariable());
+            spreadsheet.codes().add(cell.getColumn());
             cell.setValue(0, "left");
             EditorTracker tracker = view.getEdTracker();
             tracker.setEditor(tracker.firstEditor(), Integer.MAX_VALUE, Integer.MAX_VALUE);
@@ -371,7 +371,7 @@ public class CellTypingTest {
     @Test
     public void anArrowStaysAtTheFirstValuesStartAndTheLastsEnd() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
-            spreadsheet.codes().add(cell.getVariable());
+            spreadsheet.codes().add(cell.getColumn());
             cell.setValues(List.of("left", "near"));
             EditorTracker tracker = view.getEdTracker();
             tracker.setEditor(tracker.firstEditor(), 0, 0);
@@ -415,7 +415,7 @@ public class CellTypingTest {
     @Test
     public void aWordMoveStopsAtTheValuesStart() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
-            spreadsheet.codes().add(cell.getVariable());
+            spreadsheet.codes().add(cell.getColumn());
             cell.setValues(List.of("left", "near"));
             EditorTracker tracker = view.getEdTracker();
             tracker.setEditor(tracker.nextEditor(), 0, 0);
@@ -568,8 +568,8 @@ public class CellTypingTest {
     @Test
     public void tabAndShiftTabGoFromCodeToCode() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
-            spreadsheet.codes().add(cell.getVariable());
-            spreadsheet.codes().add(cell.getVariable());
+            spreadsheet.codes().add(cell.getColumn());
+            spreadsheet.codes().add(cell.getColumn());
             view.showValues();
             EditorTracker tracker = view.getEdTracker();
             KeyEvent tab = new KeyEvent(view, KeyEvent.KEY_PRESSED, 0, 0, KeyEvent.VK_TAB, '\t');

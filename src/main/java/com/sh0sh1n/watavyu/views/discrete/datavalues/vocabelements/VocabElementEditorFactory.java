@@ -14,7 +14,7 @@
  */
 package com.sh0sh1n.watavyu.views.discrete.datavalues.vocabelements;
 
-import com.sh0sh1n.watavyu.models.db.Variable;
+import com.sh0sh1n.watavyu.models.db.Column;
 import com.sh0sh1n.watavyu.views.discrete.EditorComponent;
 import com.sh0sh1n.watavyu.views.discrete.datavalues.FixedText;
 
@@ -43,7 +43,7 @@ public class VocabElementEditorFactory {
      * @return A vector of editor components to represent the element.
      */
     public static List<EditorComponent> buildVocabElement(final JTextComponent ta,
-                                                          final Variable var,
+                                                          final Column var,
                                                           final VocabElementV pv) {
 
         List<EditorComponent> eds = new ArrayList<>();
@@ -74,7 +74,7 @@ public class VocabElementEditorFactory {
      * @return A vector of editor components to represent the argument.
      */
     public static List<EditorComponent> buildFormalArg(JTextComponent ta,
-                                                       Variable var,
+                                                       Column var,
                                                        int i,
                                                        VocabElementV pv) {
         List<EditorComponent> eds = new ArrayList<>();

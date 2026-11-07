@@ -11,7 +11,7 @@ import com.sh0sh1n.watavyu.models.db.Cell;
 import com.sh0sh1n.watavyu.models.db.DataStore;
 import com.sh0sh1n.watavyu.models.db.DataStoreFactory;
 import com.sh0sh1n.watavyu.models.db.MediaClip;
-import com.sh0sh1n.watavyu.models.db.Variable;
+import com.sh0sh1n.watavyu.models.db.Column;
 import com.sh0sh1n.watavyu.models.project.Project;
 import com.sh0sh1n.watavyu.plugins.StreamViewer;
 import com.sh0sh1n.watavyu.projectfile.ProjectDocument;
@@ -38,8 +38,8 @@ public class ProjectControllerDocumentTest {
         Path folder = Files.createTempDirectory("study");
         File cam = Files.createFile(folder.resolve("cam.mp4")).toFile();
         DataStore dataStore = DataStoreFactory.newDataStore();
-        dataStore.createVariable("notes");
-        Variable media = dataStore.createMediaVariable("media_1");
+        dataStore.createColumn("notes");
+        Column media = dataStore.createMediaColumn("media_1");
         Cell clip = media.createClip(2_500, MediaClip.of(cam.getAbsolutePath()));
 
         // The player opens at once and reports the file; the clip's volume and the column's lock then change.

@@ -6,7 +6,7 @@ import static org.testng.Assert.assertTrue;
 
 import com.sh0sh1n.watavyu.models.db.DataStore;
 import com.sh0sh1n.watavyu.models.db.DataStoreFactory;
-import com.sh0sh1n.watavyu.models.db.Variable;
+import com.sh0sh1n.watavyu.models.db.Column;
 import org.testng.annotations.Test;
 
 
@@ -18,15 +18,15 @@ public class MediaColumnsTest {
     @Test
     public void aNewMediaColumnIsEmptyLastAndNamedAfterTheOthers() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
-        dataStore.createVariable("codes");
+        dataStore.createColumn("codes");
         MediaColumns.add(dataStore);
 
-        Variable column = MediaColumns.add(dataStore);
+        Column column = MediaColumns.add(dataStore);
 
         assertEquals(column.getName(), "media_2");
         assertTrue(column.isMedia());
         assertEquals(column.getCells(), List.of());
-        assertEquals(dataStore.getAllVariables().get(2), column);
+        assertEquals(dataStore.getAllColumns().get(2), column);
         assertTrue(column.isSelected());
     }
 
@@ -37,11 +37,11 @@ public class MediaColumnsTest {
 
         MediaColumns.startNewSpreadsheet(dataStore, 2);
 
-        List<Variable> columns = dataStore.getAllVariables();
-        assertEquals(columns.stream().map(Variable::getName).toList(), List.of("media_1", "media_2"));
+        List<Column> columns = dataStore.getAllColumns();
+        assertEquals(columns.stream().map(Column::getName).toList(), List.of("media_1", "media_2"));
         assertTrue(columns.get(0).isSelected());
         assertFalse(columns.get(1).isSelected());
-        assertEquals(dataStore.getSelectedVariables(), List.of(columns.get(0)));
+        assertEquals(dataStore.getSelectedColumns(), List.of(columns.get(0)));
         assertFalse(dataStore.isChanged());
     }
 
@@ -51,18 +51,18 @@ public class MediaColumnsTest {
 
         MediaColumns.startNewSpreadsheet(dataStore, 0);
 
-        assertEquals(dataStore.getAllVariables(), List.of());
+        assertEquals(dataStore.getAllColumns(), List.of());
     }
 
     /** New Media Column makes the new column the only one selected, so media added next goes into it. */
     @Test
     public void newMediaColumnIsTheOnlyColumnSelected() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
-        Variable codes = dataStore.createVariable("codes");
+        Column codes = dataStore.createColumn("codes");
         codes.setSelected(true);
 
-        Variable column = MediaColumns.addSelected(dataStore);
+        Column column = MediaColumns.addSelected(dataStore);
 
-        assertEquals(dataStore.getSelectedVariables(), List.of(column));
+        assertEquals(dataStore.getSelectedColumns(), List.of(column));
     }
 }

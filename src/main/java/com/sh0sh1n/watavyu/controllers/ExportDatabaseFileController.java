@@ -40,9 +40,9 @@ public final class ExportDatabaseFileController {
     private static Logger logger = LogManager.getLogger(ExportDatabaseFileController.class);
 
     /** @return the spreadsheet's annotation columns, which are what is exported; media columns are not */
-    private static List<Variable> annotationColumns(final DataStore dataStore) {
-        List<Variable> columns = new ArrayList<>(dataStore.getAllVariables());
-        columns.removeIf(Variable::isMedia);
+    private static List<Column> annotationColumns(final DataStore dataStore) {
+        List<Column> columns = new ArrayList<>(dataStore.getAllColumns());
+        columns.removeIf(Column::isMedia);
         return columns;
     }
 
@@ -64,12 +64,12 @@ public final class ExportDatabaseFileController {
             //Spreadsheet name Field
 //            g.writeStringField("name", dataStore.getName());
 
-            //Start an Array of Passes (Column(Spreadsheet)/Variable(DataStore))
+            //Start an Array of Passes (Column(Spreadsheet)/Column(DataStore))
             g.writeArrayFieldStart("passes");
-            for (Variable column : annotationColumns(dataStore)) {
-                // Start an Object for each Pass(Column/Variable)
+            for (Column column : annotationColumns(dataStore)) {
+                // Start an Object for each Pass(Column/Column)
                 g.writeStartObject();
-                // Pass(Column/Variable) name
+                // Pass(Column/Column) name
                 g.writeStringField("name", column.getName());
 
                 // Datavyu's names: every column is a matrix of nominal codes.

@@ -4,7 +4,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import com.sh0sh1n.watavyu.models.db.DataStore;
 import com.sh0sh1n.watavyu.models.db.UserWarningException;
-import com.sh0sh1n.watavyu.models.db.Variable;
+import com.sh0sh1n.watavyu.models.db.Column;
 import com.sh0sh1n.watavyu.undoableedits.AddColumnEdit;
 import com.sh0sh1n.watavyu.undoableedits.LockColumnEdit;
 import com.sh0sh1n.watavyu.undoableedits.RemoveColumnEdit;
@@ -42,12 +42,12 @@ public final class ColumnCommands {
      * @return the new column
      * @throws UserWarningException if the name is taken or not allowed
      */
-    public Variable newColumn(final String name) throws UserWarningException {
+    public Column newColumn(final String name) throws UserWarningException {
         logger.info("New column " + name);
-        Variable column = dataStore().createVariable(name);
+        Column column = dataStore().createColumn(name);
         dataStore().deselectAll();
         column.setSelected(true);
-        spreadsheet.setLastCreatedVariable(column);
+        spreadsheet.setLastCreatedColumn(column);
         spreadsheet.postEdit(new AddColumnEdit(dataStore(), column));
         return column;
     }
@@ -59,8 +59,8 @@ public final class ColumnCommands {
      * @return the new column
      * @throws UserWarningException if the column cannot be added
      */
-    public Variable newMediaColumn() throws UserWarningException {
-        Variable column = MediaColumns.addSelected(dataStore());
+    public Column newMediaColumn() throws UserWarningException {
+        Column column = MediaColumns.addSelected(dataStore());
         logger.info("New media column " + column.getName());
         spreadsheet.postEdit(new AddColumnEdit(dataStore(), column));
         return column;
@@ -73,16 +73,16 @@ public final class ColumnCommands {
      * @param columns the columns to delete
      * @return whether they were deleted
      */
-    public boolean delete(final List<Variable> columns) {
-        List<Variable> deleted = columns.stream().filter(dataStore()::contains).distinct().toList();
+    public boolean delete(final List<Column> columns) {
+        List<Column> deleted = columns.stream().filter(dataStore()::contains).distinct().toList();
         // Every locked column shakes its padlock, not just the first.
-        if (deleted.isEmpty() || deleted.stream().filter(Variable::refusesEdits).count() > 0) {
+        if (deleted.isEmpty() || deleted.stream().filter(Column::refusesEdits).count() > 0) {
             return false;
         }
-        logger.info("Delete columns " + deleted.stream().map(Variable::getName).toList());
+        logger.info("Delete columns " + deleted.stream().map(Column::getName).toList());
         RemoveColumnEdit edit = new RemoveColumnEdit(dataStore(), deleted);
         dataStore().deselectAll();
-        deleted.forEach(dataStore()::removeVariable);
+        deleted.forEach(dataStore()::removeColumn);
         spreadsheet.postEdit(edit);
         return true;
     }
@@ -98,7 +98,7 @@ public final class ColumnCommands {
      * @return whether it was renamed: its own name, or a column not in the spreadsheet, is no change
      * @throws UserWarningException if the column is a media column or locked, or the name is taken or not allowed
      */
-    public boolean rename(final Variable column, final String name, final boolean continuing)
+    public boolean rename(final Column column, final String name, final boolean continuing)
         throws UserWarningException {
         if (column.getName().equals(name) || !dataStore().contains(column)) {
             return false;
@@ -106,7 +106,7 @@ public final class ColumnCommands {
         if (column.isMedia()) {
             throw new UserWarningException("Media column " + column.getName() + " keeps the name it was given.");
         }
-        if (dataStore().getVariable(name) != null) {
+        if (dataStore().getColumn(name) != null) {
             throw new UserWarningException("Another column is named " + name + ".");
         }
         String from = column.getName();
@@ -121,7 +121,7 @@ public final class ColumnCommands {
      * @param column the column
      * @param locked whether it is to be locked
      */
-    public void setLocked(final Variable column, final boolean locked) {
+    public void setLocked(final Column column, final boolean locked) {
         if (column.isLocked() == locked || !dataStore().contains(column)) {
             return;
         }
@@ -131,11 +131,11 @@ public final class ColumnCommands {
 
     /**
      * Hide Column, from a column's header and the Column List: hides columns, which silences a media column's window
-     * and deselects them and their cells ({@link Variable#setHidden}). Hiding is not an edit.
+     * and deselects them and their cells ({@link Column#setHidden}). Hiding is not an edit.
      *
      * @param columns the columns to hide
      */
-    public void hide(final List<Variable> columns) {
+    public void hide(final List<Column> columns) {
         columns.forEach(column -> column.setHidden(true));
     }
 
@@ -144,13 +144,13 @@ public final class ColumnCommands {
      *
      * @param column the column
      */
-    public void show(final Variable column) {
+    public void show(final Column column) {
         column.setHidden(false);
     }
 
     /** Show All Columns, from the Column List. */
     public void showAll() {
-        dataStore().getAllVariables().forEach(this::show);
+        dataStore().getAllColumns().forEach(this::show);
     }
 
     /**
@@ -160,10 +160,10 @@ public final class ColumnCommands {
      * @param column the column to move
      * @param to     the column whose place it takes
      */
-    public void move(final Variable column, final Variable to) {
+    public void move(final Column column, final Column to) {
         int index = dataStore().indexOf(to);
         if (index >= 0 && dataStore().contains(column)) {
-            dataStore().moveVariable(column, index);
+            dataStore().moveColumn(column, index);
         }
     }
 }

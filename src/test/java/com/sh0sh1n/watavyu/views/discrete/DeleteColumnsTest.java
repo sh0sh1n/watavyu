@@ -11,7 +11,7 @@ import com.sh0sh1n.watavyu.controllers.project.ProjectController;
 import com.sh0sh1n.watavyu.models.db.Cell;
 import com.sh0sh1n.watavyu.models.db.DataStore;
 import com.sh0sh1n.watavyu.models.db.DataStoreFactory;
-import com.sh0sh1n.watavyu.models.db.Variable;
+import com.sh0sh1n.watavyu.models.db.Column;
 import com.sh0sh1n.watavyu.models.project.Project;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -23,18 +23,18 @@ import java.util.List;
 public class DeleteColumnsTest {
 
     private DataStore dataStore;
-    private Variable first;
-    private Variable second;
-    private Variable media;
+    private Column first;
+    private Column second;
+    private Column media;
     private ProjectController spreadsheet;
     private ColumnCommands columns;
 
     @BeforeMethod
     public void setUp() throws Exception {
         dataStore = DataStoreFactory.newDataStore();
-        first = dataStore.createVariable("first");
-        second = dataStore.createVariable("second");
-        media = dataStore.createMediaVariable("media_1");
+        first = dataStore.createColumn("first");
+        second = dataStore.createColumn("second");
+        media = dataStore.createMediaColumn("media_1");
         first.setSelected(true);
         second.setSelected(true);
         media.setSelected(false);
@@ -49,9 +49,9 @@ public class DeleteColumnsTest {
 
         item.doClick();
 
-        assertNull(dataStore.getVariable("media_1"));
-        assertNotNull(dataStore.getVariable("first"));
-        assertNotNull(dataStore.getVariable("second"));
+        assertNull(dataStore.getColumn("media_1"));
+        assertNotNull(dataStore.getColumn("first"));
+        assertNotNull(dataStore.getColumn("second"));
         assertEquals(spreadsheet.getUndoManager().getUndoPresentationName(), "Undo Delete Column media_1");
     }
 
@@ -62,9 +62,9 @@ public class DeleteColumnsTest {
 
         item.doClick();
 
-        assertNull(dataStore.getVariable("first"));
-        assertNull(dataStore.getVariable("second"));
-        assertNotNull(dataStore.getVariable("media_1"));
+        assertNull(dataStore.getColumn("first"));
+        assertNull(dataStore.getColumn("second"));
+        assertNotNull(dataStore.getColumn("media_1"));
         assertEquals(spreadsheet.getUndoManager().getUndoPresentationName(), "Undo Delete 2 Columns");
     }
 
@@ -76,8 +76,8 @@ public class DeleteColumnsTest {
         assertEquals(item.getText(), "Delete Column");
         item.doClick();
 
-        assertNull(dataStore.getVariable("first"));
-        assertNotNull(dataStore.getVariable("second"));
+        assertNull(dataStore.getColumn("first"));
+        assertNotNull(dataStore.getColumn("second"));
     }
 
     /** A locked column is deleted only once it is unlocked, alone or among the selected columns. */
@@ -100,12 +100,12 @@ public class DeleteColumnsTest {
         SpreadsheetColumn.deleteItem(columns, dataStore, first).doClick();
         spreadsheet.undo();
 
-        assertEquals(dataStore.getVariable("first"), first);
-        assertEquals(dataStore.getVariable("second"), second);
+        assertEquals(dataStore.getColumn("first"), first);
+        assertEquals(dataStore.getColumn("second"), second);
         assertEquals(first.getCells(), List.of(cell));
 
         spreadsheet.redo();
-        assertNull(dataStore.getVariable("first"));
-        assertNull(dataStore.getVariable("second"));
+        assertNull(dataStore.getColumn("first"));
+        assertNull(dataStore.getColumn("second"));
     }
 }

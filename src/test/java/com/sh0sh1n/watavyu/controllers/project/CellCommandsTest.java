@@ -12,8 +12,8 @@ import com.sh0sh1n.watavyu.models.db.Cell;
 import com.sh0sh1n.watavyu.models.db.DataStore;
 import com.sh0sh1n.watavyu.models.db.DataStoreFactory;
 import com.sh0sh1n.watavyu.models.db.MediaClip;
-import com.sh0sh1n.watavyu.models.db.Variable;
-import com.sh0sh1n.watavyu.models.db.VariableListener;
+import com.sh0sh1n.watavyu.models.db.Column;
+import com.sh0sh1n.watavyu.models.db.ColumnListener;
 import com.sh0sh1n.watavyu.models.project.Project;
 import com.sh0sh1n.watavyu.util.ArrayDirection;
 import org.testng.annotations.BeforeMethod;
@@ -32,16 +32,16 @@ public class CellCommandsTest {
     private DataStore dataStore;
     private ProjectController spreadsheet;
     private CellCommands cells;
-    private Variable gaze;
-    private Variable speech;
+    private Column gaze;
+    private Column speech;
 
     @BeforeMethod
     public void setUp() throws Exception {
         dataStore = DataStoreFactory.newDataStore();
         spreadsheet = new ProjectController(new Project(), dataStore);
         cells = spreadsheet.cells();
-        gaze = dataStore.createVariable("gaze");
-        speech = dataStore.createVariable("speech");
+        gaze = dataStore.createColumn("gaze");
+        speech = dataStore.createColumn("speech");
         // A new column is selected; each test selects what it needs.
         dataStore.deselectAll();
     }
@@ -54,12 +54,12 @@ public class CellCommandsTest {
 
     @Test
     public void newCellGoesInTheColumnLastGivenACell() {
-        spreadsheet.setLastCreatedVariable(speech);
+        spreadsheet.setLastCreatedColumn(speech);
         gaze.setSelected(true);
 
         Cell cell = cells.newCell(2_500);
 
-        assertSame(cell.getVariable(), speech);
+        assertSame(cell.getColumn(), speech);
         assertEquals(cell.getOnset(), 2_500);
         assertEquals(cell.getOffset(), 2_500);
         assertTrue(cell.isHighlighted());
@@ -78,7 +78,7 @@ public class CellCommandsTest {
 
     @Test
     public void aLockedColumnRefusesANewCellAndRecordsNothing() {
-        spreadsheet.setLastCreatedVariable(speech);
+        spreadsheet.setLastCreatedColumn(speech);
         speech.setLocked(true);
 
         assertNull(cells.newCell(2_500));
@@ -89,7 +89,7 @@ public class CellCommandsTest {
     /** B22: a hidden column takes no new cell, though it was the one last given a cell. */
     @Test
     public void aHiddenColumnTakesNoNewCell() {
-        spreadsheet.setLastCreatedVariable(speech);
+        spreadsheet.setLastCreatedColumn(speech);
         spreadsheet.columns().hide(List.of(speech));
 
         assertNull(cells.newCell(2_500));
@@ -103,7 +103,7 @@ public class CellCommandsTest {
     @Test
     public void newCellHasAColumnOnlyWhileTheLastGivenACellIsShown() throws Exception {
         assertFalse(cells.hasColumnForNewCell());
-        spreadsheet.setLastCreatedVariable(speech);
+        spreadsheet.setLastCreatedColumn(speech);
         assertTrue(cells.hasColumnForNewCell());
         speech.setLocked(true);
         assertTrue(cells.hasColumnForNewCell(), "a locked column shows its lock");
@@ -111,9 +111,9 @@ public class CellCommandsTest {
         spreadsheet.columns().hide(List.of(speech));
         assertFalse(cells.hasColumnForNewCell());
         spreadsheet.columns().show(speech);
-        dataStore.removeVariable(speech);
+        dataStore.removeColumn(speech);
         assertFalse(cells.hasColumnForNewCell());
-        spreadsheet.setLastCreatedVariable(dataStore.createMediaVariable("media_1"));
+        spreadsheet.setLastCreatedColumn(dataStore.createMediaColumn("media_1"));
         assertFalse(cells.hasColumnForNewCell());
     }
 
@@ -124,46 +124,46 @@ public class CellCommandsTest {
         speech.setSelected(true);
         gaze.setHidden(true);
 
-        assertSame(cells.newCellInSelectedColumn(1_000).getVariable(), speech);
+        assertSame(cells.newCellInSelectedColumn(1_000).getColumn(), speech);
     }
 
     // New Cell, from the keypad and drawer
 
     @Test
     public void theKeypadsNewCellPrefersTheSelectedColumn() {
-        spreadsheet.setLastCreatedVariable(speech);
+        spreadsheet.setLastCreatedColumn(speech);
         gaze.setSelected(true);
 
-        assertSame(cells.newCellInSelectedColumn(1_000).getVariable(), gaze);
+        assertSame(cells.newCellInSelectedColumn(1_000).getColumn(), gaze);
         // With no column selected, it goes where New Cell would.
-        assertSame(cells.newCellInSelectedColumn(2_000).getVariable(), gaze);
+        assertSame(cells.newCellInSelectedColumn(2_000).getColumn(), gaze);
     }
 
     @Test
     public void theFirstSelectedColumnIsTheLeftmost() {
         gaze.setSelected(true);
         speech.setSelected(true);
-        assertSame(cells.newCellInSelectedColumn(1_000).getVariable(), gaze);
+        assertSame(cells.newCellInSelectedColumn(1_000).getColumn(), gaze);
 
-        dataStore.moveVariable(speech, 0);
+        dataStore.moveColumn(speech, 0);
         gaze.setSelected(true);
         speech.setSelected(true);
-        assertSame(cells.newCellInSelectedColumn(2_000).getVariable(), speech);
+        assertSame(cells.newCellInSelectedColumn(2_000).getColumn(), speech);
     }
 
     /** A deleted column is forgotten as the one last given a cell. */
     @Test
     public void aDeletedColumnTakesNoNewCell() {
-        spreadsheet.setLastCreatedVariable(speech);
-        dataStore.removeVariable(speech);
+        spreadsheet.setLastCreatedColumn(speech);
+        dataStore.removeColumn(speech);
 
         assertNull(cells.newCell(1_000));
-        assertSame(cells.newCellClosingPrevious(2_000).getVariable(), gaze, "the first annotation column instead");
+        assertSame(cells.newCellClosingPrevious(2_000).getColumn(), gaze, "the first annotation column instead");
     }
 
     @Test
     public void undoingANewCellKeepsTheSelectionAndRedoingMakesItTheLastCreatedAgain() {
-        spreadsheet.setLastCreatedVariable(gaze);
+        spreadsheet.setLastCreatedColumn(gaze);
         Cell cell = cells.newCell(1_000);
         speech.setSelected(true);
 
@@ -181,7 +181,7 @@ public class CellCommandsTest {
         Cell gone = speech.createPointCell(1_000);
         spreadsheet.setLastSelectedCell(gone);
         spreadsheet.setLastSelectedCells(List.of(gone));
-        dataStore.removeVariable(speech);
+        dataStore.removeColumn(speech);
         dataStore.deselectAll();
 
         cells.setOnsets(3_000);
@@ -193,7 +193,7 @@ public class CellCommandsTest {
 
     @Test
     public void undoingANewCellForgetsIt() {
-        spreadsheet.setLastCreatedVariable(gaze);
+        spreadsheet.setLastCreatedColumn(gaze);
         Cell cell = cells.newCell(1_000);
         spreadsheet.setLastSelectedCell(cell);
         spreadsheet.setLastSelectedCells(List.of(cell));
@@ -207,10 +207,10 @@ public class CellCommandsTest {
 
     @Test
     public void aSelectedMediaColumnTakesNoNewCell() throws Exception {
-        Variable media = dataStore.createMediaVariable("media_1");
+        Column media = dataStore.createMediaColumn("media_1");
         dataStore.deselectAll();
         media.setSelected(true);
-        spreadsheet.setLastCreatedVariable(speech);
+        spreadsheet.setLastCreatedColumn(speech);
 
         assertNull(cells.newCellInSelectedColumn(1_000));
         assertTrue(media.getCells().isEmpty());
@@ -230,7 +230,7 @@ public class CellCommandsTest {
         assertEquals(previous.getOffset(), 4_999);
         assertEquals(earlier.getOffset(), 1_000);
         assertEquals(later.getOffset(), 9_000);
-        assertSame(cell.getVariable(), gaze);
+        assertSame(cell.getColumn(), gaze);
         assertEquals(cell.getOnset(), 5_000);
 
         // The new cell and the closing are undone one at a time.
@@ -287,7 +287,7 @@ public class CellCommandsTest {
         Cell cell = cells.newCellClosingPrevious(5_000);
 
         assertEquals(previous.getOffset(), 4_999);
-        assertSame(cell.getVariable(), speech, "the new cell goes in the selected cell's column");
+        assertSame(cell.getColumn(), speech, "the new cell goes in the selected cell's column");
     }
 
     @Test
@@ -307,13 +307,13 @@ public class CellCommandsTest {
     public void aHiddenColumnIsNotClosedAndTakesNoNewCell() {
         Cell previous = gaze.createPointCell(3_000);
         spreadsheet.setLastSelectedCell(previous);
-        spreadsheet.setLastCreatedVariable(gaze);
+        spreadsheet.setLastCreatedColumn(gaze);
         spreadsheet.columns().hide(List.of(gaze));
 
         Cell cell = cells.newCellClosingPrevious(5_000);
 
         assertEquals(previous.getOffset(), 3_000);
-        assertSame(cell.getVariable(), speech, "the first shown annotation column");
+        assertSame(cell.getColumn(), speech, "the first shown annotation column");
     }
 
     @Test
@@ -326,7 +326,7 @@ public class CellCommandsTest {
 
     @Test
     public void aClipIsNotClosedAndTheNewCellGoesInTheFirstAnnotationColumn() throws Exception {
-        Variable media = dataStore.createMediaVariable("media_1");
+        Column media = dataStore.createMediaColumn("media_1");
         Cell clip = media.createClip(0, CAM);
         dataStore.deselectAll();
         media.setSelected(true);
@@ -334,7 +334,7 @@ public class CellCommandsTest {
         Cell cell = cells.newCellClosingPrevious(5_000);
 
         assertEquals(clip.getOffset(), 10_000);
-        assertSame(cell.getVariable(), gaze);
+        assertSame(cell.getColumn(), gaze);
     }
 
     // New Cell to Left and Right
@@ -350,7 +350,7 @@ public class CellCommandsTest {
 
         assertEquals(made.size(), 1);
         Cell cell = made.get(0);
-        assertSame(cell.getVariable(), speech);
+        assertSame(cell.getColumn(), speech);
         assertEquals(cell.getOnset(), 1_000);
         assertEquals(cell.getOffset(), 2_000);
         assertTrue(cell.isHighlighted());
@@ -368,8 +368,8 @@ public class CellCommandsTest {
         speech.setLocked(true);
         assertTrue(cells.newCellsBeside(ArrayDirection.RIGHT).isEmpty());
 
-        Variable media = dataStore.createMediaVariable("media_1");
-        dataStore.moveVariable(media, 0);
+        Column media = dataStore.createMediaColumn("media_1");
+        dataStore.moveColumn(media, 0);
         assertTrue(cells.newCellsBeside(ArrayDirection.LEFT).isEmpty());
         assertTrue(media.getCells().isEmpty());
     }
@@ -382,7 +382,7 @@ public class CellCommandsTest {
 
         assertEquals(cell.getOnset(), 4_000);
         assertEquals(cell.getValue(0), "k");
-        assertSame(spreadsheet.getLastCreatedVariable(), gaze);
+        assertSame(spreadsheet.getLastCreatedColumn(), gaze);
 
         undo();
         assertTrue(gaze.getCells().isEmpty());
@@ -400,7 +400,7 @@ public class CellCommandsTest {
 
     @Test
     public void aLockedColumnWithNoCodesStillShowsItRefusesATypedKey() {
-        VariableListener header = mock(VariableListener.class);
+        ColumnListener header = mock(ColumnListener.class);
         gaze.addListener(header);
         gaze.removeCode(0);
         gaze.setLocked(true);
@@ -521,13 +521,13 @@ public class CellCommandsTest {
     /** Redoing a new column puts it back selected; hidden since, it is not where the keypad's New Cell goes. */
     @Test
     public void aColumnPutBackHiddenAndSelectedIsPassedOver() throws Exception {
-        Variable notes = spreadsheet.columns().newColumn("notes");
+        Column notes = spreadsheet.columns().newColumn("notes");
         spreadsheet.columns().hide(List.of(notes));
         undo();
         spreadsheet.redo();
-        spreadsheet.setLastCreatedVariable(speech);
+        spreadsheet.setLastCreatedColumn(speech);
 
-        assertSame(cells.newCellInSelectedColumn(1_000).getVariable(), speech);
+        assertSame(cells.newCellInSelectedColumn(1_000).getColumn(), speech);
         spreadsheet.columns().show(notes);
         assertFalse(notes.isSelected(), "nor is it selected once shown");
     }
@@ -546,7 +546,7 @@ public class CellCommandsTest {
 
     @Test
     public void aClipsOffsetFollowsItsLengthNotSetOffset() throws Exception {
-        Cell clip = dataStore.createMediaVariable("media_1").createClip(0, CAM);
+        Cell clip = dataStore.createMediaColumn("media_1").createClip(0, CAM);
         clip.setSelected(true);
 
         cells.setOffsets(4_000);

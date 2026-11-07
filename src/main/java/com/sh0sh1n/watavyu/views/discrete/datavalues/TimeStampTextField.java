@@ -16,7 +16,7 @@ package com.sh0sh1n.watavyu.views.discrete.datavalues;
 
 import com.sh0sh1n.watavyu.controllers.project.ProjectController;
 import com.sh0sh1n.watavyu.models.db.Cell;
-import com.sh0sh1n.watavyu.models.db.Variable;
+import com.sh0sh1n.watavyu.models.db.Column;
 import com.sh0sh1n.watavyu.views.discrete.SecondaryClick;
 import com.sh0sh1n.watavyu.views.discrete.datavalues.TimeStampDataValueEditor.TimeStampSource;
 
@@ -137,9 +137,9 @@ public final class TimeStampTextField extends JTextField
         if (parentCell != null) {
             // method names don't reflect usage - we didn't really create this
             // cell just now.
-            Variable var = controller.getDataStore().getVariable(parentCell);
+            Column var = controller.getDataStore().getColumn(parentCell);
 
-            controller.setLastCreatedVariable(var);
+            controller.setLastCreatedColumn(var);
             controller.setLastSelectedCell(parentCell);
         }
 

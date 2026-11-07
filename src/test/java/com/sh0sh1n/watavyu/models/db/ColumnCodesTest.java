@@ -20,18 +20,18 @@ import java.util.function.Consumer;
 public class ColumnCodesTest {
 
     private DataStore dataStore;
-    private Variable column;
+    private Column column;
 
     @BeforeMethod
     public void setUp() throws UserWarningException {
         dataStore = DataStoreFactory.newDataStore();
-        column = dataStore.createVariable("gaze");
+        column = dataStore.createColumn("gaze");
     }
 
     @Test
     public void aNewColumnHasOneCode() throws UserWarningException {
         assertEquals(column.getCodes(), List.of("code01"));
-        assertEquals(dataStore.createMediaVariable("media_1").getCodes(), List.of());
+        assertEquals(dataStore.createMediaColumn("media_1").getCodes(), List.of());
     }
 
     @Test
@@ -65,7 +65,7 @@ public class ColumnCodesTest {
     /** The Code Editor, open as a file is imported, shows the codes the column is given. */
     @Test
     public void listenersHearOfTheCodesGiven() {
-        VariableListener listener = mock(VariableListener.class);
+        ColumnListener listener = mock(ColumnListener.class);
         column.addListener(listener);
 
         column.setCodes(List.of("direction"));
@@ -84,7 +84,7 @@ public class ColumnCodesTest {
 
     @Test
     public void aMediaOrLockedColumnTakesNoCodes() throws UserWarningException {
-        Variable media = dataStore.createMediaVariable("media_1");
+        Column media = dataStore.createMediaColumn("media_1");
         assertThrows(IllegalStateException.class, () -> media.setCodes(List.of("direction")));
         assertEquals(media.getCodes(), List.of());
 
@@ -99,14 +99,14 @@ public class ColumnCodesTest {
     @Test
     public void eachChangeToTheCodesIsAChangeToSave() {
         column.addCode();
-        List<Consumer<Variable>> changes = List.of(
-            Variable::addCode,
+        List<Consumer<Column>> changes = List.of(
+            Column::addCode,
             changed -> changed.renameCode(0, "direction"),
             changed -> changed.moveCode(0, 1),
             changed -> changed.removeCode(0),
             changed -> changed.insertCode(0, "distance"));
 
-        for (Consumer<Variable> change : changes) {
+        for (Consumer<Column> change : changes) {
             dataStore.markAsUnchanged();
             change.accept(column);
             assertTrue(dataStore.isChanged());

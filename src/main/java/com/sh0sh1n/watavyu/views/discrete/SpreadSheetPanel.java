@@ -23,7 +23,7 @@ import com.sh0sh1n.watavyu.models.db.*;
 import com.sh0sh1n.watavyu.util.Constants;
 import com.sh0sh1n.watavyu.views.VideoController;
 import com.sh0sh1n.watavyu.views.WindowPlacement;
-import com.sh0sh1n.watavyu.views.NewVariableV;
+import com.sh0sh1n.watavyu.views.NewColumnV;
 import com.sh0sh1n.watavyu.views.discrete.layouts.SheetLayout;
 import com.sh0sh1n.watavyu.views.discrete.layouts.SheetLayoutFactory;
 import com.sh0sh1n.watavyu.views.discrete.layouts.SheetLayoutFactory.SheetLayoutType;
@@ -91,16 +91,16 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
     /** Reference to the scrollPane */
     private JScrollPane scrollPane;
 
-    /** New variable button to be added to the column header panel */
-    private JButton newVariableButton = new JButton();
+    /** New column button to be added to the column header panel */
+    private JButton newColumnButton = new JButton();
 
     /** New spacer variable */
-    private JLabel newVariableSpacerButton = new JLabel();
+    private JLabel newColumnSpacerButton = new JLabel();
 
-    /** Hidden variables button to be added to the column header panel */
-    private JButton hiddenVariablesButton;
+    /** Hidden columns button to be added to the column header panel */
+    private JButton hiddenColumnsButton;
 
-    private JLabel hiddenVariablesSpacerLabel = new JLabel();
+    private JLabel hiddenColumnsSpacerLabel = new JLabel();
 
     /** Highlighted cell */
     private SpreadsheetCell highlightedCell;
@@ -162,36 +162,36 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
         Resources rMap = Resources.of(SpreadSheetPanel.class);
 
         
-        // Set up the add new variable button
-        newVariableButton.setBorder(BorderFactory.createMatteBorder(0, 0, 0, Constants.BORDER_SIZE, SpreadsheetTheme.PALETTE.rule()));
-        newVariableButton.setName("newVarPlusButton");
-        newVariableButton.setToolTipText(rMap.getString("add.tooltip"));
+        // Set up the add new column button
+        newColumnButton.setBorder(BorderFactory.createMatteBorder(0, 0, 0, Constants.BORDER_SIZE, SpreadsheetTheme.PALETTE.rule()));
+        newColumnButton.setName("newVarPlusButton");
+        newColumnButton.setToolTipText(rMap.getString("add.tooltip"));
         
-        newVariableButton.addActionListener(e -> openNewVarMenu());
-        newVariableButton.setText(" + ");
-        headerView.add(newVariableButton);
+        newColumnButton.addActionListener(e -> openNewVarMenu());
+        newColumnButton.setText(" + ");
+        headerView.add(newColumnButton);
 
 
         // set the database and layout the columns
         if (projectController.getDataStore() == null) {
-            projectController.setDataStore(new WatavyuDataStore());
+            projectController.setDataStore(new DefaultDataStore());
         }
         setDatabase(projectController.getDataStore());
-        newVariableSpacerButton.setText(" + ");
-        newVariableSpacerButton.setForeground(newVariableSpacerButton.getBackground());
-        mainView.add(newVariableSpacerButton);
+        newColumnSpacerButton.setText(" + ");
+        newColumnSpacerButton.setForeground(newColumnSpacerButton.getBackground());
+        mainView.add(newColumnSpacerButton);
 
-        hiddenVariablesButton = makeHiddenVarsButton();
+        hiddenColumnsButton = makeHiddenVarsButton();
         updateHiddenVars();
-        hiddenVariablesButton.addMouseListener(new MouseAdapter() {
+        hiddenColumnsButton.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
                 dropdown.show(e.getComponent(), e.getX(), e.getY());
             }
         });
-        headerView.add(hiddenVariablesButton);
-        hiddenVariablesSpacerLabel.setForeground(hiddenVariablesSpacerLabel.getBackground());
-        mainView.add(hiddenVariablesSpacerLabel);
+        headerView.add(hiddenColumnsButton);
+        hiddenColumnsSpacerLabel.setForeground(hiddenColumnsSpacerLabel.getBackground());
+        mainView.add(hiddenColumnsSpacerLabel);
 
 
         //layout the columns
@@ -206,7 +206,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
         lastSelectedCell = null;
 
         updateHiddenVars();
-        headerView.add(hiddenVariablesButton);
+        headerView.add(hiddenColumnsButton);
 
         attachVideoController(owner);
         this.projectController.getDataStore().markAsUnchanged();
@@ -221,10 +221,10 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
     }
 
     private void updateHiddenVars() {
-        List<Variable> allVars = dataStore.getAllVariables();
-        List<Variable> hiddensOnly = new ArrayList<>();
+        List<Column> allVars = dataStore.getAllColumns();
+        List<Column> hiddensOnly = new ArrayList<>();
         dropdown.removeAll();
-        for(final Variable v: allVars)
+        for(final Column v: allVars)
         {
             if(v.isHidden()) 
             {
@@ -241,13 +241,13 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
         }
         
         
-        hiddenVariablesButton.setText("  " +  hiddensOnly.size() + " Hidden Column");
-        if(hiddensOnly.size() != 1) hiddenVariablesButton.setText(hiddenVariablesButton.getText() + "s");
-        hiddenVariablesButton.setText(hiddenVariablesButton.getText() + "  "); //cheating: easier than resizing the button
+        hiddenColumnsButton.setText("  " +  hiddensOnly.size() + " Hidden Column");
+        if(hiddensOnly.size() != 1) hiddenColumnsButton.setText(hiddenColumnsButton.getText() + "s");
+        hiddenColumnsButton.setText(hiddenColumnsButton.getText() + "  "); //cheating: easier than resizing the button
         
-        hiddenVariablesButton.setEnabled(hiddensOnly.size() != 0);
+        hiddenColumnsButton.setEnabled(hiddensOnly.size() != 0);
 
-        hiddenVariablesSpacerLabel.setText(hiddenVariablesButton.getText());
+        hiddenColumnsSpacerLabel.setText(hiddenColumnsButton.getText());
     }
 
     /** Shows every cell's colours again, after the past-cell dimming changes. */
@@ -395,7 +395,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
      * Populate from the database.
      */
     private void buildColumns() {
-        for (Variable v : getDataStore().getAllVariables()) {
+        for (Column v : getDataStore().getAllColumns()) {
             addColumn(v);
         }
     }
@@ -403,14 +403,14 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
     /**
      * Add a column panel to the scroll panel.
      *
-     * @param var The variable that this column represents.
+     * @param var The column that this column represents.
      */
-    private void addColumn(final Variable var) {
-        // Remove previous instance of newVariableButton from the header.
-        headerView.remove(newVariableButton);
-        headerView.remove(hiddenVariablesButton);
-        mainView.remove(newVariableSpacerButton);
-        mainView.remove(hiddenVariablesSpacerLabel);
+    private void addColumn(final Column var) {
+        // Remove previous instance of newColumnButton from the header.
+        headerView.remove(newColumnButton);
+        headerView.remove(hiddenColumnsButton);
+        mainView.remove(newColumnSpacerButton);
+        mainView.remove(hiddenColumnsSpacerLabel);
 
         // Create the spreadsheet column and register it.
         SpreadsheetColumn col = new SpreadsheetColumn(projectController, var, this, this, this);
@@ -422,12 +422,12 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
         // add the headerpanel to the scrollpane headerviewport
         headerView.add(col);
 
-        // add the new variable '+' button to the header.
-        headerView.add(newVariableButton);
+        // add the new column '+' button to the header.
+        headerView.add(newColumnButton);
         updateHiddenVars();
-        headerView.add(hiddenVariablesButton);
-        mainView.add(newVariableSpacerButton);
-        mainView.add(hiddenVariablesSpacerLabel);
+        headerView.add(hiddenColumnsButton);
+        mainView.add(newColumnSpacerButton);
+        mainView.add(hiddenColumnsSpacerLabel);
 
         // and add it to our maintained ref collection
         columns.add(col);
@@ -454,9 +454,9 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
      *
      * @param var the column whose panel goes
      */
-    private void removeColumn(final Variable var) {
+    private void removeColumn(final Column var) {
         for (SpreadsheetColumn col : columns) {
-            if (col.getVariable().equals(var)) {
+            if (col.getColumn().equals(var)) {
                 mainView.removeColumn(col);
                 headerView.remove(col);
                 columns.remove(col);
@@ -491,7 +491,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
      */
     public void deselectAll() {
         dataStore.clearCellSelection();
-        dataStore.clearVariableSelection();
+        dataStore.clearColumnSelection();
     }
 
     /**
@@ -523,38 +523,38 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
     }
 
     @Override
-    public void variableAdded(final Variable newVariable) {
-        addColumn(newVariable);
+    public void columnAdded(final Column newColumn) {
+        addColumn(newColumn);
         // Undo puts a deleted column back in its place, not always last.
         arrangeColumns();
         revalidate();
         repaint();
-        variableVisible(newVariable);
+        columnVisible(newColumn);
     }
 
     @Override
-    public void variableRemoved(final Variable deletedVariable) {
-        removeColumn(deletedVariable);
+    public void columnRemoved(final Column deletedColumn) {
+        removeColumn(deletedColumn);
         revalidate();
         repaint();
-        variableHidden(deletedVariable);
+        columnHidden(deletedColumn);
     }
 
     @Override
-    public void variableOrderChanged() {
+    public void columnOrderChanged() {
         arrangeColumns();
     }
 
     @Override
-    public void variableHidden(final Variable hiddenVariable) {
+    public void columnHidden(final Column hiddenColumn) {
     }
 
     @Override
-    public void variableVisible(final Variable visibleVariable) {
+    public void columnVisible(final Column visibleColumn) {
     }
 
     @Override
-    public void variableNameChange(final Variable editedVariable) {
+    public void columnNameChange(final Column editedColumn) {
         // Do nothing.
     }
 
@@ -577,8 +577,8 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
         if (e.getID() == KeyEvent.KEY_PRESSED && !e.isMetaDown() && !e.isControlDown()
                 && projectController.isQuickKeyMode()
                 && (Character.isAlphabetic(e.getKeyChar()) || Character.isDigit(e.getKeyChar()))
-                && selectedColumn != null && !selectedColumn.getVariable().isMedia()) {
-            projectController.cells().newCellTyped(selectedColumn.getVariable(), e.getKeyChar(),
+                && selectedColumn != null && !selectedColumn.getColumn().isMedia()) {
+            projectController.cells().newCellTyped(selectedColumn.getColumn(), e.getKeyChar(),
                 videoController.getCurrentTime());
             e.consume();
             return true;
@@ -609,7 +609,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
      * header.
      */
     public void openNewVarMenu() {
-        WindowPlacement.show(new NewVariableV((Frame) SwingUtilities.getWindowAncestor(this), false,
+        WindowPlacement.show(new NewColumnV((Frame) SwingUtilities.getWindowAncestor(this), false,
             projectController));
     }
 
@@ -619,7 +619,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
      */
     private void arrangeColumns() {
         List<SpreadsheetColumn> arranged = new ArrayList<>(columns);
-        arranged.sort(Comparator.comparingInt(col -> dataStore.indexOf(col.getVariable())));
+        arranged.sort(Comparator.comparingInt(col -> dataStore.indexOf(col.getColumn())));
         if (arranged.equals(columns)) {
             return;
         }
@@ -660,10 +660,10 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
     public void addCellToContinousSelection(final SpreadsheetCell cell) {
         if (lastSelectedCell != null) {
             Cell c1 = lastSelectedCell.getCell();
-            Variable v1 = dataStore.getVariable(c1);
+            Column v1 = dataStore.getColumn(c1);
 
             Cell c2 = cell.getCell();
-            Variable v2 = dataStore.getVariable(c2);
+            Column v2 = dataStore.getColumn(c2);
 
             // We can only do continuous selections in a single column at
             // at the moment.
@@ -678,7 +678,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
 
                 for (SpreadsheetColumn col : getColumns()) {
 
-                    if (v1.equals(col.getVariable())) {
+                    if (v1.equals(col.getColumn())) {
 
                         // Perform continuous selection.
                         boolean addToSelection = false;

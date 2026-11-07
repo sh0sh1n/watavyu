@@ -59,8 +59,8 @@ public class FrameIndexTest {
     public void detectsVariableFrameRate() {
         assertTrue(thirtyFps().isConstantRate());
 
-        FrameIndex variable = FrameIndex.measured(new double[]{0, 33.3, 66.7, 166.7}, 200);
-        assertFalse(variable.isConstantRate());
+        FrameIndex column = FrameIndex.measured(new double[]{0, 33.3, 66.7, 166.7}, 200);
+        assertFalse(column.isConstantRate());
     }
 
     @Test

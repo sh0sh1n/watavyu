@@ -14,7 +14,7 @@
  */
 package com.sh0sh1n.watavyu.views.discrete.datavalues.vocabelements;
 
-import com.sh0sh1n.watavyu.models.db.Variable;
+import com.sh0sh1n.watavyu.models.db.Column;
 import com.sh0sh1n.watavyu.views.discrete.EditorComponent;
 
 import javax.swing.text.JTextComponent;
@@ -31,9 +31,9 @@ public final class FormalArgEditor extends EditorComponent {
      */
     private static final String RESERVED_CHARS = ")(<>|,;\t\r\n";
     /**
-     * Parent Vocab Variable.
+     * Parent Vocab Column.
      */
-    private Variable parentVariable;
+    private Column parentColumn;
     /**
      * Index of the formal arg.
      */
@@ -56,14 +56,14 @@ public final class FormalArgEditor extends EditorComponent {
      * @param pv    The parent vocab element view that this editor belongs too.
      */
     public FormalArgEditor(final JTextComponent ta,
-                           final Variable var,
+                           final Column var,
                            final int index,
                            final VocabElementV pv) {
         super(ta);
         setEditable(true);
         argIndex = index;
         parentView = pv;
-        parentVariable = var;
+        parentColumn = var;
         defaultVal = true;
         resetValue();
     }
@@ -72,7 +72,7 @@ public final class FormalArgEditor extends EditorComponent {
      * Resets the text value of this editor.
      */
     public void resetValue() {
-        setText(parentVariable.getCodes().get(argIndex));
+        setText(parentColumn.getCodes().get(argIndex));
     }
 
     /**
@@ -91,7 +91,7 @@ public final class FormalArgEditor extends EditorComponent {
     public void updateArgName(String newValue) {
         parentView.applyTyped(() -> {
             if (parentView.getParentDialog().getProjectController().codes()
-                    .rename(parentVariable, argIndex, newValue, renaming)) {
+                    .rename(parentColumn, argIndex, newValue, renaming)) {
                 renaming = true;
             }
         });

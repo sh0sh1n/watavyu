@@ -14,7 +14,7 @@
  */
 package com.sh0sh1n.watavyu.views.discrete.datavalues.vocabelements;
 
-import com.sh0sh1n.watavyu.models.db.Variable;
+import com.sh0sh1n.watavyu.models.db.Column;
 import com.sh0sh1n.watavyu.views.discrete.EditorComponent;
 import com.sh0sh1n.watavyu.views.discrete.EditorTracker;
 
@@ -44,10 +44,10 @@ public final class VocabElementRootView extends JTextArea {
     /**
      * Constructor
      *
-     * @param vocabVariable The vocab element that this root view is representing.
+     * @param vocabColumn The vocab element that this root view is representing.
      * @param pv           The parent view that this root view belongs too.
      */
-    public VocabElementRootView(final Variable vocabVariable,
+    public VocabElementRootView(final Column vocabColumn,
                                 final VocabElementV pv) {
         super();
         setLineWrap(true);
@@ -57,9 +57,9 @@ public final class VocabElementRootView extends JTextArea {
 
 
         editors = new ArrayList<>();
-        edTracker = new EditorTracker(this, editors, vocabVariable);
+        edTracker = new EditorTracker(this, editors, vocabColumn);
 
-        setVocabElement(vocabVariable, pv);
+        setVocabElement(vocabColumn, pv);
 
         this.addFocusListener(edTracker);
         this.addKeyListener(edTracker);
@@ -81,7 +81,7 @@ public final class VocabElementRootView extends JTextArea {
      * @param var The new vocab element that his root view will represent.
      * @param pv The parent view for this root view.
      */
-    public void setVocabElement(final Variable var, VocabElementV pv) {
+    public void setVocabElement(final Column var, VocabElementV pv) {
         editors.clear();
         if (editors.isEmpty()) {
             editors.addAll(VocabElementEditorFactory.buildVocabElement(this, var, pv));

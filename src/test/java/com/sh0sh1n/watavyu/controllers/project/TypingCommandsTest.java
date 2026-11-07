@@ -11,8 +11,8 @@ import com.sh0sh1n.watavyu.models.db.CellListener;
 import com.sh0sh1n.watavyu.models.db.DataStore;
 import com.sh0sh1n.watavyu.models.db.DataStoreFactory;
 import com.sh0sh1n.watavyu.models.db.MediaClip;
-import com.sh0sh1n.watavyu.models.db.Variable;
-import com.sh0sh1n.watavyu.models.db.VariableListener;
+import com.sh0sh1n.watavyu.models.db.Column;
+import com.sh0sh1n.watavyu.models.db.ColumnListener;
 import com.sh0sh1n.watavyu.models.project.Project;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -31,16 +31,16 @@ public class TypingCommandsTest {
     private DataStore dataStore;
     private ProjectController spreadsheet;
     private TypingCommands typing;
-    private Variable gaze;
-    private Variable speech;
+    private Column gaze;
+    private Column speech;
 
     @BeforeMethod
     public void setUp() throws Exception {
         dataStore = DataStoreFactory.newDataStore();
         spreadsheet = new ProjectController(new Project(), dataStore);
         typing = spreadsheet.typing();
-        gaze = dataStore.createVariable("gaze");
-        speech = dataStore.createVariable("speech");
+        gaze = dataStore.createColumn("gaze");
+        speech = dataStore.createColumn("speech");
         dataStore.deselectAll();
     }
 
@@ -50,7 +50,7 @@ public class TypingCommandsTest {
 
     private List<String> values(final Cell cell) {
         List<String> values = new ArrayList<>();
-        for (int i = 0; i < cell.getVariable().getCodes().size(); i++) {
+        for (int i = 0; i < cell.getColumn().getCodes().size(); i++) {
             values.add(cell.getValue(i));
         }
         return values;
@@ -195,7 +195,7 @@ public class TypingCommandsTest {
         Cell deleted = gaze.createPointCell(1_000);
         Cell gone = speech.createPointCell(1_000);
         spreadsheet.removeCells(List.of(deleted));
-        dataStore.removeVariable(speech);
+        dataStore.removeColumn(speech);
 
         for (Cell cell : List.of(deleted, gone)) {
             assertFalse(typing.typeValue(cell, 0, "x", false));
@@ -231,8 +231,8 @@ public class TypingCommandsTest {
     public void typingThatChangesNothingOrIsRefusedIsNoEdit() throws Exception {
         Cell cell = gaze.createPointCell(1_000);
         cell.setValue(0, "smile");
-        Cell clip = dataStore.createMediaVariable("media_1").createClip(0, CAM);
-        VariableListener lock = mock(VariableListener.class);
+        Cell clip = dataStore.createMediaColumn("media_1").createClip(0, CAM);
+        ColumnListener lock = mock(ColumnListener.class);
         speech.addListener(lock);
         Cell locked = speech.createPointCell(1_000);
         speech.setLocked(true);
@@ -265,7 +265,7 @@ public class TypingCommandsTest {
 
     @Test
     public void aTypedTimeIsRefusedInALockedColumnAndAsAClipsOffset() throws Exception {
-        Cell clip = dataStore.createMediaVariable("media_1").createClip(0, CAM);
+        Cell clip = dataStore.createMediaColumn("media_1").createClip(0, CAM);
         Cell cell = gaze.createPointCell(1_000);
         gaze.setLocked(true);
 

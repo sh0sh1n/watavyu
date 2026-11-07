@@ -73,7 +73,7 @@ public final class CodeValueEditor extends EditorComponent {
 
     /** Returns what an empty value shows: the code's name as it is now. */
     private String placeholder() {
-        return "<" + cell.getVariable().getCodes().get(code) + ">";
+        return "<" + cell.getColumn().getCodes().get(code) + ">";
     }
 
     private static boolean isReserved(final char key) {

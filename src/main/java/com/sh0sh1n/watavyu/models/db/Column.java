@@ -27,7 +27,7 @@ import java.util.List;
 /**
  * Just a collection of cells, relates to a DataColumn.
  */
-public interface Variable {
+public interface Column {
 
     /**
      * Puts a cell back into the column, as undo does.
@@ -53,19 +53,19 @@ public interface Variable {
     Cell createPointCell(long time);
 
     /**
-     * Removes a cell from the variable.
+     * Removes a cell from the column.
      *
-     * @param cell to remove from the variable.
+     * @param cell to remove from the column.
      */
     void removeCell(final Cell cell);
 
     /**
-     * Returns all the cells stored in the variable.
+     * Returns all the cells stored in the column.
      */
     List<Cell> getCells();
 
     /**
-     * Gets the 'index' cell from the variable that has been sorted temporally.
+     * Gets the 'index' cell from the column that has been sorted temporally.
      *
      * @param index The index (from first onset to last offset) of the cell.
      * @return The cell.
@@ -87,31 +87,31 @@ public interface Variable {
     void setCodes(List<String> codes);
 
     /**
-     * Returns all the cells stored in the variable using a temporal alignment.
+     * Returns all the cells stored in the column using a temporal alignment.
      */
     List<Cell> getCellsTemporally();
 
     /**
-     * Returns true if this variable contains the supplied cell, false otherwise.
-     * @param c The cell to check if it exists in this variable.
+     * Returns true if this column contains the supplied cell, false otherwise.
+     * @param c The cell to check if it exists in this column.
      */
     boolean contains(final Cell c);
 
     /**
-     * Returns true if the variable is currently selected or not.
+     * Returns true if the column is currently selected or not.
      */
     boolean isSelected();
 
     /**
-     * Selects the variable in the datastore. A hidden column is never selected, whatever asks: the selection is always
+     * Selects the column in the datastore. A hidden column is never selected, whatever asks: the selection is always
      * of what can be seen.
      *
-     * @param selected True if the variable is selected, false otherwise.
+     * @param selected True if the column is selected, false otherwise.
      */
     void setSelected(final boolean selected);
 
     /**
-     * Returns true if the variable is currently hidden or not.
+     * Returns true if the column is currently hidden or not.
      */
     boolean isHidden();
 
@@ -119,27 +119,27 @@ public interface Variable {
      * Hides or shows the column. Hiding deselects it and its cells and unhighlights them, however it is hidden (its
      * header, the Column List, closing its media window), so commands on the selection leave what cannot be seen alone.
      *
-     * @param hidden True if the variable is hidden, false otherwise.
+     * @param hidden True if the column is hidden, false otherwise.
      */
     void setHidden(final boolean hidden);
 
     /**
-     * Returns the name of the variable as a string.
+     * Returns the name of the column as a string.
      */
     String getName();
 
     /**
-     * Sets the name of the variable.
+     * Sets the name of the column.
      *
      * @param newName to set with this database.
      */
     void setName(final String newName) throws UserWarningException;
 
     /**
-     * Sets the name of the variable.
+     * Sets the name of the column.
      *
      * @param newName       the new name to set with this database.
-     * @param grandfathered flag to exempt variable from naming rules
+     * @param grandfathered flag to exempt column from naming rules
      */
     void setName(final String newName, final boolean grandfathered) throws UserWarningException;
 
@@ -188,15 +188,15 @@ public interface Variable {
     void renameCode(int index, String name);
 
     /**
-     * Adds a listener that needs to be notified when the variable changes.
+     * Adds a listener that needs to be notified when the column changes.
      */
-    void addListener(final VariableListener listener);
+    void addListener(final ColumnListener listener);
 
     /**
      * Removes a listener from the list of things that need to be notified when
-     * the variable changes.
+     * the column changes.
      */
-    void removeListener(final VariableListener listener);
+    void removeListener(final ColumnListener listener);
 
     DataStore getOwningDatastore();
 
@@ -209,7 +209,7 @@ public interface Variable {
     /**
      * A locked column refuses every change to its cells, its codes and its name, so a finished coding pass cannot be
      * changed by accident. A refused change does nothing, or throws {@link IllegalStateException} from a method that
-     * would return what it made, and the column's listeners hear of it ({@link VariableListener#editRefused}).
+     * would return what it made, and the column's listeners hear of it ({@link ColumnListener#editRefused}).
      * Hiding, selecting, reordering and unlocking the column are not changes to it.
      *
      * @return whether the column is locked

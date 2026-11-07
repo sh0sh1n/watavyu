@@ -37,7 +37,7 @@ public class SpreadsheetCellTimeTest {
     @BeforeMethod
     public void setUp() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
-        model = dataStore.createVariable("column").createPointCell(1_000);
+        model = dataStore.createColumn("column").createPointCell(1_000);
         SwingUtilities.invokeAndWait(() -> {
             SpreadsheetColumn column = mock(SpreadsheetColumn.class);
             when(column.getProjectController()).thenReturn(TestSpreadsheets.withPlayback(dataStore));

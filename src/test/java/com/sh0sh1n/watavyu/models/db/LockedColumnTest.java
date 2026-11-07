@@ -21,11 +21,11 @@ public class LockedColumnTest {
     private static final MediaClip CAM = new MediaClip("/study/cam.mp4", 10_000, 30, 1280, 720, 1);
 
     private DataStore dataStore;
-    private Variable notes;
+    private Column notes;
     private Cell cell;
     private int refusals;
     private final List<Boolean> lockChanges = new ArrayList<>();
-    private final VariableListener listener = new VariableListener() {
+    private final ColumnListener listener = new ColumnListener() {
         @Override public void nameChanged(final String newName) { }
         @Override public void visibilityChanged(final boolean isHidden) { }
         @Override public void cellInserted(final Cell newCell) { }
@@ -37,7 +37,7 @@ public class LockedColumnTest {
     @BeforeMethod
     public void setUp() throws Exception {
         dataStore = DataStoreFactory.newDataStore();
-        notes = dataStore.createVariable("notes");
+        notes = dataStore.createColumn("notes");
         cell = notes.createPointCell(1_000);
         cell.setValue(0, "smile");
         notes.addListener(listener);
@@ -103,10 +103,10 @@ public class LockedColumnTest {
 
     @Test
     public void hidingSelectingAndReorderingAreNotChanges() throws Exception {
-        dataStore.createVariable("other");
+        dataStore.createColumn("other");
         notes.setHidden(true);
         notes.setSelected(false);
-        dataStore.moveVariable(notes, 1);
+        dataStore.moveColumn(notes, 1);
         cell.setSelected(true);
 
         assertTrue(notes.isHidden());
@@ -144,7 +144,7 @@ public class LockedColumnTest {
     /** A locked media column refuses new clips and keeps its clips, while what the file says of a clip still applies. */
     @Test
     public void aLockedMediaColumnKeepsItsClips() throws Exception {
-        Variable media = dataStore.createMediaVariable("media_1");
+        Column media = dataStore.createMediaColumn("media_1");
         Cell clip = media.createClip(2_000, CAM);
         media.setLocked(true);
 

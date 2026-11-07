@@ -22,7 +22,7 @@ public class AutoSaveControllerTest {
     private static ProjectController spreadsheet(final String name, final String column) throws Exception {
         ProjectController spreadsheet = new ProjectController(new Project(), DataStoreFactory.newDataStore());
         spreadsheet.setProjectName(name);
-        spreadsheet.getDataStore().createVariable(column);
+        spreadsheet.getDataStore().createColumn(column);
         return spreadsheet;
     }
 

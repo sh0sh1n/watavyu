@@ -41,7 +41,7 @@ public final class NewProjectV extends JDialog {
     // End of variables declaration//GEN-END:variables
 
     /** The main window, which makes the new spreadsheet */
-    private final WatavyuWindow view;
+    private final MainWindow view;
 
     /**
      * Creates new form NewDatabaseView.
@@ -50,7 +50,7 @@ public final class NewProjectV extends JDialog {
      * @param modal  Is this dialog modal or not?
      * @param view   The main window, which makes the new spreadsheet.
      */
-    public NewProjectV(final Frame parent, final boolean modal, final WatavyuWindow view) {
+    public NewProjectV(final Frame parent, final boolean modal, final MainWindow view) {
         super(parent, modal);
         this.view = view;
         LOGGER.info("newProj - show");

@@ -66,7 +66,7 @@ public class RemoveCellEdit extends SpreadSheetEdit {
         super.undo();
         LOGGER.info("Undoing remove cells");
         for (Cell cell : cells) {
-            cell.getVariable().addCell(cell);
+            cell.getColumn().addCell(cell);
         }
     }
 }

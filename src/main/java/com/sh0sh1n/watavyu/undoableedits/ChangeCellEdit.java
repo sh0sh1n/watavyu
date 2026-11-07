@@ -35,7 +35,7 @@ abstract public class ChangeCellEdit extends SpreadSheetEdit {
     protected ChangeCellEdit(final ProjectController controller, final Cell c) {
         super(controller);
         cell = c;
-        columnName = c.getVariable().getName();
+        columnName = c.getColumn().getName();
     }
 
     @Override

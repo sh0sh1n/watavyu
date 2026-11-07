@@ -15,7 +15,7 @@
 package com.sh0sh1n.watavyu.undoableedits;
 
 import com.sh0sh1n.watavyu.models.db.DataStore;
-import com.sh0sh1n.watavyu.models.db.Variable;
+import com.sh0sh1n.watavyu.models.db.Column;
 
 import javax.swing.undo.AbstractUndoableEdit;
 import javax.swing.undo.CannotRedoException;
@@ -34,7 +34,7 @@ public final class RemoveColumnEdit extends AbstractUndoableEdit implements Guar
     private final DataStore dataStore;
 
     /** The columns deleted, by their place in the spreadsheet order before they were deleted. */
-    private final SortedMap<Integer, Variable> deleted = new TreeMap<>();
+    private final SortedMap<Integer, Column> deleted = new TreeMap<>();
 
     /**
      * Records the deletion of columns that are about to be deleted.
@@ -43,9 +43,9 @@ public final class RemoveColumnEdit extends AbstractUndoableEdit implements Guar
      * @param columns   the columns, still in the spreadsheet
      * @throws IllegalArgumentException if a column is not in the spreadsheet
      */
-    public RemoveColumnEdit(final DataStore dataStore, final List<Variable> columns) {
+    public RemoveColumnEdit(final DataStore dataStore, final List<Column> columns) {
         this.dataStore = dataStore;
-        for (Variable column : columns) {
+        for (Column column : columns) {
             int index = dataStore.indexOf(column);
             if (index < 0) {
                 throw new IllegalArgumentException("Column " + column.getName() + " is not in the spreadsheet");
@@ -64,7 +64,7 @@ public final class RemoveColumnEdit extends AbstractUndoableEdit implements Guar
 
     @Override
     public String undoRefusal() {
-        return deleted.values().stream().map(Variable::getName).filter(name -> dataStore.getVariable(name) != null)
+        return deleted.values().stream().map(Column::getName).filter(name -> dataStore.getColumn(name) != null)
             .findFirst().map(name -> "Another column is named " + name + ". Rename or delete it to undo this.")
             .orElse(null);
     }
@@ -88,13 +88,13 @@ public final class RemoveColumnEdit extends AbstractUndoableEdit implements Guar
         // From the first place to the last, so each column goes back between those it was between.
         // A place past the end, which only a column taken out without an edit could leave, puts the column last.
         deleted.forEach((index, column) ->
-            dataStore.addVariable(column, Math.min(index, dataStore.getAllVariables().size())));
+            dataStore.addColumn(column, Math.min(index, dataStore.getAllColumns().size())));
     }
 
     @Override
     public void redo() throws CannotRedoException {
         super.redo();
         dataStore.deselectAll();
-        deleted.values().forEach(dataStore::removeVariable);
+        deleted.values().forEach(dataStore::removeColumn);
     }
 }

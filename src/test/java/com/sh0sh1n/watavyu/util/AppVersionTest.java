@@ -5,12 +5,12 @@ import static org.testng.Assert.assertNotNull;
 
 import org.testng.annotations.Test;
 
-public class WatavyuVersionTest {
+public class AppVersionTest {
 
     @Test
     public void versionIsTheGradleProjectVersion() {
         String expected = System.getProperty("expectedVersion");
         assertNotNull(expected, "the Gradle test task supplies expectedVersion");
-        assertEquals(WatavyuVersion.getVersion(), expected);
+        assertEquals(AppVersion.getVersion(), expected);
     }
 }

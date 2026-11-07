@@ -9,8 +9,8 @@ import com.sh0sh1n.watavyu.models.db.Cell;
 import com.sh0sh1n.watavyu.models.db.DataStore;
 import com.sh0sh1n.watavyu.models.db.DataStoreFactory;
 import com.sh0sh1n.watavyu.models.db.MediaClip;
-import com.sh0sh1n.watavyu.models.db.Variable;
-import com.sh0sh1n.watavyu.models.db.VariableListener;
+import com.sh0sh1n.watavyu.models.db.Column;
+import com.sh0sh1n.watavyu.models.db.ColumnListener;
 import com.sh0sh1n.watavyu.models.project.Project;
 import org.testng.annotations.Test;
 
@@ -26,7 +26,7 @@ public class LockColumnTest {
     @Test
     public void lockColumnTogglesTheColumnsLock() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
-        for (Variable column : List.of(dataStore.createMediaVariable("media_1"), dataStore.createVariable("notes"))) {
+        for (Column column : List.of(dataStore.createMediaColumn("media_1"), dataStore.createColumn("notes"))) {
             ProjectController spreadsheet = new ProjectController(new Project(), dataStore);
 
             JCheckBoxMenuItem item = SpreadsheetColumn.lockItem(spreadsheet.columns(), column);
@@ -47,7 +47,7 @@ public class LockColumnTest {
     @Test
     public void undoingALockLetsAnAnnotationColumnChangeAgain() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
-        Variable notes = dataStore.createVariable("notes");
+        Column notes = dataStore.createColumn("notes");
         Cell cell = notes.createPointCell(1_000);
         ProjectController spreadsheet = new ProjectController(new Project(), dataStore);
         SpreadsheetColumn.lockItem(spreadsheet.columns(), notes).doClick();
@@ -66,7 +66,7 @@ public class LockColumnTest {
     @Test
     public void undoingALockUnlocksTheColumnAndRedoLocksItAgain() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
-        Variable media = dataStore.createMediaVariable("media_1");
+        Column media = dataStore.createMediaColumn("media_1");
         Cell clip = media.createClip(2_000, CAM);
         ProjectController spreadsheet = new ProjectController(new Project(), dataStore);
         SpreadsheetColumn.lockItem(spreadsheet.columns(), media).doClick();
@@ -87,10 +87,10 @@ public class LockColumnTest {
     @Test
     public void listenersHearOfLockChanges() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
-        Variable media = dataStore.createMediaVariable("media_1");
+        Column media = dataStore.createMediaColumn("media_1");
         ProjectController spreadsheet = new ProjectController(new Project(), dataStore);
         List<Boolean> heard = new ArrayList<>();
-        VariableListener listener = new VariableListener() {
+        ColumnListener listener = new ColumnListener() {
             @Override public void nameChanged(final String newName) { }
             @Override public void visibilityChanged(final boolean isHidden) { }
             @Override public void cellInserted(final Cell newCell) { }
@@ -111,7 +111,7 @@ public class LockColumnTest {
     @Test
     public void aRenamedColumnsLockCanBeUndone() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
-        Variable notes = dataStore.createVariable("notes");
+        Column notes = dataStore.createColumn("notes");
         ProjectController spreadsheet = new ProjectController(new Project(), dataStore);
         spreadsheet.columns().setLocked(notes, true);
         notes.setLocked(false);

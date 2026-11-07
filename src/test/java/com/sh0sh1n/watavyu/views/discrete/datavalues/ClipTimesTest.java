@@ -12,8 +12,8 @@ import com.sh0sh1n.watavyu.models.db.Cell.ClipFile;
 import com.sh0sh1n.watavyu.models.db.CellListener;
 import com.sh0sh1n.watavyu.models.db.DataStoreFactory;
 import com.sh0sh1n.watavyu.models.db.MediaClip;
-import com.sh0sh1n.watavyu.models.db.Variable;
-import com.sh0sh1n.watavyu.models.db.VariableListener;
+import com.sh0sh1n.watavyu.models.db.Column;
+import com.sh0sh1n.watavyu.models.db.ColumnListener;
 import com.sh0sh1n.watavyu.views.discrete.datavalues.TimeStampDataValueEditor.TimeStampSource;
 import org.testng.annotations.Test;
 
@@ -46,7 +46,7 @@ public class ClipTimesTest {
 
     @Test
     public void aClipsOnsetCanBeTypedButNotItsOffset() throws Exception {
-        Cell clip = DataStoreFactory.newDataStore().createMediaVariable("media_1").createClip(0, CAM);
+        Cell clip = DataStoreFactory.newDataStore().createMediaColumn("media_1").createClip(0, CAM);
 
         assertTrue(typingAllowed(clip, TimeStampSource.Onset));
         assertFalse(typingAllowed(clip, TimeStampSource.Offset));
@@ -54,7 +54,7 @@ public class ClipTimesTest {
 
     @Test
     public void aLockedClipsOnsetCannotBeTyped() throws Exception {
-        Variable media = DataStoreFactory.newDataStore().createMediaVariable("media_1");
+        Column media = DataStoreFactory.newDataStore().createMediaColumn("media_1");
         Cell clip = media.createClip(0, CAM);
         media.setLocked(true);
 
@@ -63,7 +63,7 @@ public class ClipTimesTest {
 
     @Test
     public void anAnnotationCellsTimesCanBeTyped() throws Exception {
-        Cell cell = DataStoreFactory.newDataStore().createVariable("notes").createCell();
+        Cell cell = DataStoreFactory.newDataStore().createColumn("notes").createCell();
 
         assertTrue(typingAllowed(cell, TimeStampSource.Onset));
         assertTrue(typingAllowed(cell, TimeStampSource.Offset));
@@ -71,7 +71,7 @@ public class ClipTimesTest {
 
     @Test
     public void aLockedAnnotationCellsTimesCannotBeTyped() throws Exception {
-        Variable notes = DataStoreFactory.newDataStore().createVariable("notes");
+        Column notes = DataStoreFactory.newDataStore().createColumn("notes");
         Cell cell = notes.createPointCell(1_000);
         notes.setLocked(true);
 
@@ -82,10 +82,10 @@ public class ClipTimesTest {
     /** Typing a time in a locked column tells the column, so its padlock shakes; a clip's offset does not. */
     @Test
     public void typingInALockedColumnIsHeardAsRefused() throws Exception {
-        Variable media = DataStoreFactory.newDataStore().createMediaVariable("media_1");
+        Column media = DataStoreFactory.newDataStore().createMediaColumn("media_1");
         Cell clip = media.createClip(0, CAM);
         int[] refusals = {0};
-        VariableListener listener = new VariableListener() {
+        ColumnListener listener = new ColumnListener() {
             @Override public void nameChanged(final String newName) { }
             @Override public void visibilityChanged(final boolean isHidden) { }
             @Override public void cellInserted(final Cell newCell) { }
@@ -126,7 +126,7 @@ public class ClipTimesTest {
     /** The cell's text follows what the player finds, and does not look for the file itself. */
     @Test
     public void aClipCellsTextFollowsWhatThePlayerFound() throws Exception {
-        Cell clip = DataStoreFactory.newDataStore().createMediaVariable("media_1").createClip(0, CAM);
+        Cell clip = DataStoreFactory.newDataStore().createMediaColumn("media_1").createClip(0, CAM);
         SwingUtilities.invokeAndWait(() -> {
             CellValuesView view = new CellValuesView(new ProjectController(), clip);
             // As the cell's SpreadsheetCell does.

@@ -15,8 +15,8 @@ import com.sh0sh1n.watavyu.models.db.Cell;
 import com.sh0sh1n.watavyu.models.db.DataStore;
 import com.sh0sh1n.watavyu.models.db.DataStoreFactory;
 import com.sh0sh1n.watavyu.models.db.UserWarningException;
-import com.sh0sh1n.watavyu.models.db.Variable;
-import com.sh0sh1n.watavyu.models.db.VariableListener;
+import com.sh0sh1n.watavyu.models.db.Column;
+import com.sh0sh1n.watavyu.models.db.ColumnListener;
 import com.sh0sh1n.watavyu.models.project.Project;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -33,7 +33,7 @@ public class CodeCommandsTest {
     private DataStore dataStore;
     private ProjectController spreadsheet;
     private CodeCommands codes;
-    private Variable gaze;
+    private Column gaze;
     private Cell first;
     private Cell second;
 
@@ -42,7 +42,7 @@ public class CodeCommandsTest {
         dataStore = DataStoreFactory.newDataStore();
         spreadsheet = new ProjectController(new Project(), dataStore);
         codes = spreadsheet.codes();
-        gaze = dataStore.createVariable("gaze");
+        gaze = dataStore.createColumn("gaze");
         gaze.addCode();
         gaze.addCode();
         first = gaze.createPointCell(1_000);
@@ -123,7 +123,7 @@ public class CodeCommandsTest {
 
     @Test
     public void theLastCodeCanBeDeletedAndPutBack() throws Exception {
-        Variable timing = dataStore.createVariable("timing");
+        Column timing = dataStore.createColumn("timing");
         Cell cell = timing.createPointCell(0);
         cell.setValue(0, "only");
 
@@ -260,7 +260,7 @@ public class CodeCommandsTest {
 
     @Test
     public void aLockedColumnRefusesEachCodeCommandAndShowsIt() {
-        VariableListener listener = mock(VariableListener.class);
+        ColumnListener listener = mock(ColumnListener.class);
         gaze.addListener(listener);
         gaze.setLocked(true);
 
@@ -279,7 +279,7 @@ public class CodeCommandsTest {
     /** The spreadsheet and the Code Editor redraw on each change, undo included. */
     @Test
     public void listenersHearOfEachChangeToTheCodes() {
-        VariableListener listener = mock(VariableListener.class);
+        ColumnListener listener = mock(ColumnListener.class);
         gaze.addListener(listener);
 
         codes.add(gaze);
@@ -313,19 +313,19 @@ public class CodeCommandsTest {
         assertEquals(undoName(), "Undo Rename Column gaze to gazest");
 
         spreadsheet.undo();
-        assertSame(dataStore.getVariable("gaze"), gaze);
-        assertNull(dataStore.getVariable("gazest"));
+        assertSame(dataStore.getColumn("gaze"), gaze);
+        assertNull(dataStore.getColumn("gazest"));
         assertFalse(spreadsheet.getUndoManager().canUndo());
 
         spreadsheet.redo();
-        assertSame(dataStore.getVariable("gazest"), gaze);
+        assertSame(dataStore.getColumn("gazest"), gaze);
     }
 
     @Test
     public void aTakenOrMediaOrUnchangedNameIsNoEdit() throws Exception {
         ColumnCommands columns = spreadsheet.columns();
-        dataStore.createVariable("speech");
-        Variable media = dataStore.createMediaVariable("media_1");
+        dataStore.createColumn("speech");
+        Column media = dataStore.createMediaColumn("media_1");
 
         assertThrows(UserWarningException.class, () -> columns.rename(gaze, "speech", false));
         assertThrows(UserWarningException.class, () -> columns.rename(gaze, "1st", false));
@@ -359,13 +359,13 @@ public class CodeCommandsTest {
     @Test
     public void undoingARenameWhoseOldNameIsTakenIsRefused() throws Exception {
         spreadsheet.columns().rename(gaze, "look", false);
-        Variable taken = dataStore.createVariable("gaze");
+        Column taken = dataStore.createColumn("gaze");
 
         assertEquals(spreadsheet.undo(), "Another column is named gaze. Rename or delete it to undo this.");
         assertEquals(gaze.getName(), "look");
 
-        dataStore.removeVariable(taken);
+        dataStore.removeColumn(taken);
         assertNull(spreadsheet.undo());
-        assertSame(dataStore.getVariable("gaze"), gaze);
+        assertSame(dataStore.getColumn("gaze"), gaze);
     }
 }

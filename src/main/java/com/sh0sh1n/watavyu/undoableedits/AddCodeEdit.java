@@ -1,6 +1,6 @@
 package com.sh0sh1n.watavyu.undoableedits;
 
-import com.sh0sh1n.watavyu.models.db.Variable;
+import com.sh0sh1n.watavyu.models.db.Column;
 
 import javax.swing.undo.AbstractUndoableEdit;
 import javax.swing.undo.CannotRedoException;
@@ -12,7 +12,7 @@ import javax.swing.undo.CannotUndoException;
  */
 public final class AddCodeEdit extends AbstractUndoableEdit {
 
-    private final Variable column;
+    private final Column column;
     private final String code;
     private final int index;
 
@@ -22,7 +22,7 @@ public final class AddCodeEdit extends AbstractUndoableEdit {
      * @param column the column
      * @param index  the new code's place among the column's codes
      */
-    public AddCodeEdit(final Variable column, final int index) {
+    public AddCodeEdit(final Column column, final int index) {
         this.column = column;
         this.code = column.getCodes().get(index);
         this.index = index;
