@@ -34,7 +34,9 @@ public final class DatavyuVariable implements Variable {
 
     /** Told of changes to this column. */
     private final List<VariableListener> listeners = new CopyOnWriteArrayList<>();
-    private static final CellComparator CELL_ORDER = new CellComparator();
+    /** Cells in time order: by onset, then by offset. */
+    private static final Comparator<Cell> CELL_ORDER =
+        Comparator.comparingLong(Cell::getOnset).thenComparingLong(Cell::getOffset);
     final private UUID variableId = UUID.randomUUID();
     private List<Cell> cells = new CopyOnWriteArrayList<>();
     /** The codes' names, in order; each cell has a value for each. */

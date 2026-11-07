@@ -284,4 +284,19 @@ public class VariableTest {
     public void startsWithNumber() throws UserWarningException {
         ds.createVariable("1acdc");
     }
+
+    /** Cells in time order are ordered by onset, and cells with the same onset by offset. */
+    @Test
+    public void cellsInTimeOrderGoByOnsetThenOffset() {
+        Cell late = model.createPointCell(3_000);
+        Cell longer = model.createPointCell(1_000);
+        longer.setOffset(5_000);
+        Cell shorter = model.createPointCell(1_000);
+        shorter.setOffset(2_000);
+
+        // Each sorts the cells, so the one asked first sees them in the order they were made.
+        assertEquals(model.getCellTemporally(0), shorter);
+        assertEquals(model.getCellTemporally(2), late);
+        assertEquals(model.getCellsTemporally(), List.of(shorter, longer, late));
+    }
 }
