@@ -9,7 +9,7 @@ import static org.testng.Assert.assertNotSame;
 import static org.testng.Assert.assertSame;
 
 import com.sh0sh1n.watavyu.TestSpreadsheets;
-import com.sh0sh1n.watavyu.controllers.project.ProjectController;
+import com.sh0sh1n.watavyu.controllers.ProjectController;
 import com.sh0sh1n.watavyu.models.Cell;
 import com.sh0sh1n.watavyu.models.CellListener;
 import com.sh0sh1n.watavyu.models.DataStore;

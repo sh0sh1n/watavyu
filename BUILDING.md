@@ -144,7 +144,7 @@ The packages under `com.sh0sh1n.watavyu`, by what they hold:
 
 - `models`: the spreadsheet's data (`DataStore`, `Column`, `Cell`, `MediaClip`), with no Swing.
 - `projectfile`: the project file format, read and written.
-- `controllers` and `controllers.project`: each spreadsheet (`ProjectController`), its commands, saving and autosave.
+- `controllers`: each spreadsheet (`ProjectController`), its commands, saving and autosave.
 - `undoableedits`: one undo edit per kind of change.
 - `playback`: the player interface the app plays through (`StreamViewer`); `playback.javafx`, the OpenJFX player behind it.
 - `views`: the main window, menus and shortcuts, the controls drawer and dialogs; `views.spreadsheet`, the spreadsheet itself, with `layouts` (ordinal and temporal) and `editors` (a cell's value and time editors); `views.codeeditor`, the Code Editor.
