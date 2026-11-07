@@ -36,7 +36,7 @@ import java.util.Map;
 /**
  * The dialog to list database variables.
  */
-public final class VariableListV extends DatavyuDialog
+public final class VariableListV extends JDialog
         implements TableModelListener, DataStoreListener {
 
     /**

@@ -20,7 +20,6 @@ import org.datavyu.models.Identifier;
 import org.datavyu.util.ClockTimer;
 import org.datavyu.util.ClockTimer.ClockListener;
 import org.datavyu.views.WindowPlacement;
-import org.datavyu.views.DatavyuDialog;
 
 import javax.swing.*;
 import java.awt.*;
@@ -32,11 +31,14 @@ import java.util.function.Consumer;
  * What all media players have in common: a clip's place on the timeline (its offset), its volume, and following the
  * clock. A clip plays from its offset for its duration, and only while it is in play in its media column.
  */
-public abstract class StreamViewerDialog extends DatavyuDialog implements StreamViewer,
+public abstract class StreamViewerDialog extends JDialog implements StreamViewer,
     ClockListener {
 
     /** Logger for this class */
     private static Logger logger = LogManager.getLogger(StreamViewerDialog.class);
+
+    /** Keeps the clock's calls to this clip one at a time. */
+    private final Object lock = new Object();
 
     /** The clip's volume, from 0 to 1 */
     protected volatile float volume = 1f;
@@ -79,7 +81,6 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
         this.identifier = identifier;
         this.clockTimer = clockTimer;
         offset = 0;
-        initComponents();
     }
 
     /**
@@ -213,7 +214,11 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
         return getOriginalVideoSize();
     }
 
-    private void initComponents() {
+    /**
+     * Hides the window when it is closed, stopping and silencing the clip. A subclass calls this at the start of its
+     * constructor; this class's constructor does not, so that no overridable method runs before the subclass is built.
+     */
+    protected final void initComponents() {
         setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE);
         addWindowListener(new WindowAdapter() {
             @Override
@@ -294,77 +299,93 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
     public boolean isSeekPlaybackEnabled() { return false; }
 
     @Override
-    public synchronized void clockSeekPlayback(final double clockTime) {
-        if (!clockTimer.isPaused() && isSeekPlaybackEnabled()) {
-            setCurrentTime(clipTime(clockTime));
+    public void clockSeekPlayback(final double clockTime) {
+        synchronized (lock) {
+            if (!clockTimer.isPaused() && isSeekPlaybackEnabled()) {
+                setCurrentTime(clipTime(clockTime));
+            }
         }
     }
 
     @Override
-    public synchronized void clockBoundaryCheck(final double clockTime) {
+    public void clockBoundaryCheck(final double clockTime) {
         // Nothing to do here
     }
 
     @Override
-    public synchronized void streamsBoundaryCheck(final double clockTime) {
-        // The clock logs a failure here and goes on.
-        if (!clockTimer.isPaused() && getCurrentTime() != -1) {
-            if (inPlay && holds(clockTime) && !isPlaying() && !isSeekPlaybackEnabled()) {
-                logger.info("Stream Boundary Starting " + getIdentifier() + " at clock " + clockTime);
-                start();
-            }
-            if ((!inPlay || !holds(clockTime)) && isPlaying()) {
-                logger.info("Stream Boundary Stopping " + getIdentifier() + " at clock " + clockTime);
-                pause();
+    public void streamsBoundaryCheck(final double clockTime) {
+        synchronized (lock) {
+            // The clock logs a failure here and goes on.
+            if (!clockTimer.isPaused() && getCurrentTime() != -1) {
+                if (inPlay && holds(clockTime) && !isPlaying() && !isSeekPlaybackEnabled()) {
+                    logger.info("Stream Boundary Starting " + getIdentifier() + " at clock " + clockTime);
+                    start();
+                }
+                if ((!inPlay || !holds(clockTime)) && isPlaying()) {
+                    logger.info("Stream Boundary Stopping " + getIdentifier() + " at clock " + clockTime);
+                    pause();
+                }
             }
         }
     }
 
     @Override
-    public synchronized void clockForceSync(double clockTime) {
-        long clipTime = clipTime(clockTime);
-        // Force a sync only when the time is different
-        if (clipTime != getCurrentTime()) {
-            logger.info("Forced sync stream " + getIdentifier() + " to " + clipTime + " milliseconds");
-            setCurrentTime(clipTime);
-        }
-    }
-
-    @Override
-    public synchronized void clockPeriodicSync(final double clockTime) {
-        if (!isSeekPlaybackEnabled() && getCurrentTime() != -1) {
+    public void clockForceSync(double clockTime) {
+        synchronized (lock) {
             long clipTime = clipTime(clockTime);
-            if (Math.abs(clipTime - getCurrentTime()) >= ClockTimer.SYNC_THRESHOLD) {
-                logger.info("Sync stream " + getIdentifier() + " to " + clipTime + " milliseconds; it was at "
-                    + getCurrentTime());
+            // Force a sync only when the time is different
+            if (clipTime != getCurrentTime()) {
+                logger.info("Forced sync stream " + getIdentifier() + " to " + clipTime + " milliseconds");
                 setCurrentTime(clipTime);
             }
         }
     }
 
     @Override
-    public synchronized void clockStart(final double clockTime) {
-        if (inPlay && holds(clockTime)) {
-            logger.info("Clock Start Starts " + getIdentifier() + " at clock " + clockTime);
-            start();
+    public void clockPeriodicSync(final double clockTime) {
+        synchronized (lock) {
+            if (!isSeekPlaybackEnabled() && getCurrentTime() != -1) {
+                long clipTime = clipTime(clockTime);
+                if (Math.abs(clipTime - getCurrentTime()) >= ClockTimer.SYNC_THRESHOLD) {
+                    logger.info("Sync stream " + getIdentifier() + " to " + clipTime + " milliseconds; it was at "
+                        + getCurrentTime());
+                    setCurrentTime(clipTime);
+                }
+            }
         }
     }
 
     @Override
-    public synchronized void clockStop(double clockTime) {
-        logger.debug("Clock stop Stops track: " + getIdentifier() + " at time: " + clockTime);
-        stop();
+    public void clockStart(final double clockTime) {
+        synchronized (lock) {
+            if (inPlay && holds(clockTime)) {
+                logger.info("Clock Start Starts " + getIdentifier() + " at clock " + clockTime);
+                start();
+            }
+        }
     }
 
     @Override
-    public synchronized void clockPause(double clockTime) {
-        logger.debug("Clock pause Pauses track: " + getIdentifier() + " at time: " + clockTime);
-        pause();
+    public void clockStop(double clockTime) {
+        synchronized (lock) {
+            logger.debug("Clock stop Stops track: " + getIdentifier() + " at time: " + clockTime);
+            stop();
+        }
     }
 
     @Override
-    public synchronized void clockRate(final float rate) {
-        logger.debug("Clock setting rate of track: " + getIdentifier() + " to " + rate + "X");
-        setRate(rate);
+    public void clockPause(double clockTime) {
+        synchronized (lock) {
+            logger.debug("Clock pause Pauses track: " + getIdentifier() + " at time: " + clockTime);
+            pause();
+        }
+    }
+
+    @Override
+    public void clockRate(final float rate) {
+        synchronized (lock) {
+            logger.debug("Clock setting rate of track: " + getIdentifier() + " to " + rate + "X");
+            setRate(rate);
+        }
     }
 }

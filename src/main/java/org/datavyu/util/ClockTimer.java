@@ -46,6 +46,9 @@ public final class ClockTimer {
     /** Convert nanoseconds to milliseconds */
     private static final long NANO_IN_MILLI = 1000000L;
 
+    /** Guards the clock's times and rate, which its ticks and its callers' threads share. */
+    private final Object lock = new Object();
+
     /** Minimum time for the clock in milliseconds */
     private long minTime;
 
@@ -110,9 +113,11 @@ public final class ClockTimer {
      *
      * @param minTime The minimum stream time
      */
-    public synchronized void setMinTime(long minTime) {
-        logger.debug("Setting Clock minimum time");
-        this.minTime = minTime;
+    public void setMinTime(long minTime) {
+        synchronized (lock) {
+            logger.debug("Setting Clock minimum time");
+            this.minTime = minTime;
+        }
     }
 
     /**
@@ -120,9 +125,11 @@ public final class ClockTimer {
      *
      * @param maxTime The maximum stream time
      */
-    public synchronized void setMaxTime(long maxTime) {
-        logger.debug("Setting Clock maximum time");
-        this.maxTime = maxTime;
+    public void setMaxTime(long maxTime) {
+        synchronized (lock) {
+            logger.debug("Setting Clock maximum time");
+            this.maxTime = maxTime;
+        }
     }
 
     /**
@@ -132,8 +139,10 @@ public final class ClockTimer {
      *
      * @return Clock time in range for this clock timer
      */
-    public synchronized long toRange(long clockTime) {
-        return Math.min(Math.max(clockTime, minTime), maxTime);
+    public long toRange(long clockTime) {
+        synchronized (lock) {
+            return Math.min(Math.max(clockTime, minTime), maxTime);
+        }
     }
 
 
@@ -142,8 +151,10 @@ public final class ClockTimer {
      *
      * @return Current stream time
      */
-    public synchronized double getStreamTime() {
-        return (long) clockTime + minTime;
+    public double getStreamTime() {
+        synchronized (lock) {
+            return (long) clockTime + minTime;
+        }
     }
 
     /**
@@ -151,15 +162,19 @@ public final class ClockTimer {
      *
      * @return Current clock time
      */
-    public synchronized double getClockTime() {
-        return clockTime;
+    public double getClockTime() {
+        synchronized (lock) {
+            return clockTime;
+        }
     }
 
     /**
      * Returns current clock rate.
      */
-    public synchronized float getRate() {
-        return rate;
+    public float getRate() {
+        synchronized (lock) {
+            return rate;
+        }
     }
 
     /**
@@ -171,12 +186,14 @@ public final class ClockTimer {
      *
      * @param time The new time
      */
-    public synchronized void setTime(long time) {
-        if (minTime <= time && time <= maxTime) {
-            logger.debug("Setting Clock time to: " + time);
-            clockTime = time;
-            // Don't notify a sync or force a sync
-            // The time will be updated by a periodic sync
+    public void setTime(long time) {
+        synchronized (lock) {
+            if (minTime <= time && time <= maxTime) {
+                logger.debug("Setting Clock time to: " + time);
+                clockTime = time;
+                // Don't notify a sync or force a sync
+                // The time will be updated by a periodic sync
+            }
         }
     }
 
@@ -187,15 +204,17 @@ public final class ClockTimer {
      *
      * @param time The new time
      */
-    public synchronized void setForceTime(long time) {
-        if (minTime <= time && time <= maxTime) {
-            clockTime = time;
-            // Notify a force sync
-            notifyForceSync();
-        }else if (time < minTime){
-            clockTime = minTime;
-            // Notify a force sync
-            notifyForceSync();
+    public void setForceTime(long time) {
+        synchronized (lock) {
+            if (minTime <= time && time <= maxTime) {
+                clockTime = time;
+                // Notify a force sync
+                notifyForceSync();
+            }else if (time < minTime){
+                clockTime = minTime;
+                // Notify a force sync
+                notifyForceSync();
+            }
         }
     }
 
@@ -207,41 +226,47 @@ public final class ClockTimer {
    *
    * @param newRate New update rate
    */
-  public synchronized void setRate(float newRate) {
-        logger.debug("Setting Clock Rate to " + newRate + "X");
-        updateElapsedTime();
-        rate = newRate;
-        // FIRST notify about the rate change
-        notifyRate();
-        // SECOND start or stop
-        if (Math.abs(rate) < Math.ulp(1f)) {
-            stop();
-        } else {
-            start();
-        }
+  public void setRate(float newRate) {
+      synchronized (lock) {
+            logger.debug("Setting Clock Rate to " + newRate + "X");
+            updateElapsedTime();
+            rate = newRate;
+            // FIRST notify about the rate change
+            notifyRate();
+            // SECOND start or stop
+            if (Math.abs(rate) < Math.ulp(1f)) {
+                stop();
+            } else {
+                start();
+            }
+      }
     }
 
     /**
      * If the clock is not running, then this starts the clock and fires a notify
      * start event with the current clock time
      */
-    public synchronized void start() {
-        if (stopped) {
-            logger.debug("Starting Clock");
-            stopped = false;
-            lastTime = System.nanoTime();
-            notifyStart();
+    public void start() {
+        synchronized (lock) {
+            if (stopped) {
+                logger.debug("Starting Clock");
+                stopped = false;
+                lastTime = System.nanoTime();
+                notifyStart();
+            }
         }
     }
 
-    private synchronized void stop() {
-        if (!stopped) {
-            logger.debug("Stopping Clock");
-            updateElapsedTime();
-            stopped = true;
-            notifyStop();
-            // Force sync after a stop
-            notifyForceSync();
+    private void stop() {
+        synchronized (lock) {
+            if (!stopped) {
+                logger.debug("Stopping Clock");
+                updateElapsedTime();
+                stopped = true;
+                notifyStop();
+                // Force sync after a stop
+                notifyForceSync();
+            }
         }
     }
 
@@ -252,14 +277,16 @@ public final class ClockTimer {
      * WARNING: If you want to influence the rate as well you need to set the rate to 0
      * instead of calling stop directly!
      */
-    public synchronized void pause() {
-        if (!stopped) {
-            logger.debug("Pausing Clock");
-            updateElapsedTime();
-            stopped = true;
-            notifyPause();
-            // Force sync after a stop
-            notifyForceSync();
+    public void pause() {
+        synchronized (lock) {
+            if (!stopped) {
+                logger.debug("Pausing Clock");
+                updateElapsedTime();
+                stopped = true;
+                notifyPause();
+                // Force sync after a stop
+                notifyForceSync();
+            }
         }
     }
 
@@ -282,9 +309,11 @@ public final class ClockTimer {
      *
      * @param listener Listener requiring clockTick updates
      */
-    public synchronized void registerListener(final ClockListener listener) {
-        if (!isClosed()) {
-            clockListeners.add(listener);
+    public void registerListener(final ClockListener listener) {
+        synchronized (lock) {
+            if (!isClosed()) {
+                clockListeners.add(listener);
+            }
         }
     }
 
@@ -315,36 +344,46 @@ public final class ClockTimer {
    *
    * @param listener Listener requiring clockTick updates
    */
-    public synchronized void unRegisterListener(final ClockListener listener) {
-        clockListeners.remove(listener);
+    public void unRegisterListener(final ClockListener listener) {
+        synchronized (lock) {
+            clockListeners.remove(listener);
+        }
     }
 
     /**
      * Update the clock time with the elapsed time since the last update
      */
-    private synchronized void updateElapsedTime() {
-        double newTime = (double) System.nanoTime();
-        clockTime = stopped ? clockTime : Math.min(Math.max(
-                clockTime + rate * (newTime - lastTime) / NANO_IN_MILLI, (double) minTime), (double) maxTime);
-        lastTime = newTime;
+    private void updateElapsedTime() {
+        synchronized (lock) {
+            double newTime = (double) System.nanoTime();
+            clockTime = stopped ? clockTime : Math.min(Math.max(
+                    clockTime + rate * (newTime - lastTime) / NANO_IN_MILLI, (double) minTime), (double) maxTime);
+            lastTime = newTime;
+        }
     }
 
     /**
      * The "periodicSync" of the clock - updates listeners of changes in time.
      */
-    private synchronized void periodicSync() {
-        updateElapsedTime();
-        notifyPeriodicSync();
+    private void periodicSync() {
+        synchronized (lock) {
+            updateElapsedTime();
+            notifyPeriodicSync();
+        }
     }
 
-    private synchronized void checkClockBoundary() {
-        updateElapsedTime();
-        notifyCheckClockBoundary();
+    private void checkClockBoundary() {
+        synchronized (lock) {
+            updateElapsedTime();
+            notifyCheckClockBoundary();
+        }
     }
 
-    private synchronized void checkStreamsBoundary() {
-        updateElapsedTime();
-        notifyCheckStreamsBoundary();
+    private void checkStreamsBoundary() {
+        synchronized (lock) {
+            updateElapsedTime();
+            notifyCheckStreamsBoundary();
+        }
     }
 
     // Notify seek playback could be used if a different interval is need for the
@@ -352,7 +391,7 @@ public final class ClockTimer {
     private void notifySeekPlayback() {
         // Runs on its own pool thread without the clock's lock, so it reads the time under the lock first.
         double time;
-        synchronized (this) {
+        synchronized (lock) {
             time = clockTime;
         }
         for (ClockListener clockListener : clockListeners) {

@@ -50,7 +50,8 @@ public final class Settings {
 
     private static final ObjectMapper MAPPER = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
 
-    private static Settings instance;
+    /** Guards {@link #data} and saving it, as more than one thread may use the settings. */
+    private final Object lock = new Object();
 
     private final Path file;
 
@@ -64,11 +65,13 @@ public final class Settings {
     /**
      * Returns the settings of this run, loaded on first use.
      */
-    public static synchronized Settings get() {
-        if (instance == null) {
-            instance = load(defaultFile());
-        }
-        return instance;
+    public static Settings get() {
+        return Loaded.INSTANCE;
+    }
+
+    /** Holds the settings of this run, which the JVM loads once, on the first {@link #get()}. */
+    private static final class Loaded {
+        static final Settings INSTANCE = load(defaultFile());
     }
 
     /**
@@ -108,17 +111,19 @@ public final class Settings {
      * Writes the settings to their file, creating its directory if needed. A failure is logged, not thrown: losing
      * these settings must never stop the application from closing.
      */
-    public synchronized void save() {
-        Path temporary = null;
-        try {
-            Path folder = Objects.requireNonNull(file.toAbsolutePath().getParent(), "the settings file is in a folder");
-            Files.createDirectories(folder);
-            temporary = Files.createTempFile(folder, FILE_NAME, ".tmp");
-            MAPPER.writeValue(temporary.toFile(), data);
-            Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-        } catch (IOException e) {
-            logger.error("Cannot save settings to " + file, e);
-            deleteQuietly(temporary);
+    public void save() {
+        synchronized (lock) {
+            Path temporary = null;
+            try {
+                Path folder = Objects.requireNonNull(file.toAbsolutePath().getParent(), "the settings file is in a folder");
+                Files.createDirectories(folder);
+                temporary = Files.createTempFile(folder, FILE_NAME, ".tmp");
+                MAPPER.writeValue(temporary.toFile(), data);
+                Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (IOException e) {
+                logger.error("Cannot save settings to " + file, e);
+                deleteQuietly(temporary);
+            }
         }
     }
 
@@ -135,12 +140,16 @@ public final class Settings {
     /**
      * Returns the folder last chosen in a file dialog, or null if none was.
      */
-    public synchronized String getLastChosenDirectory() {
-        return data.lastChosenDirectory;
+    public String getLastChosenDirectory() {
+        synchronized (lock) {
+            return data.lastChosenDirectory;
+        }
     }
 
-    public synchronized void setLastChosenDirectory(final String directory) {
-        data.lastChosenDirectory = directory;
+    public void setLastChosenDirectory(final String directory) {
+        synchronized (lock) {
+            data.lastChosenDirectory = directory;
+        }
     }
 
     /**
@@ -149,19 +158,23 @@ public final class Settings {
      *
      * @return An existing directory.
      */
-    public synchronized File resolveStartDirectory() {
-        return FileSystemUtils.existingDirectoryOr(data.lastChosenDirectory, new File(System.getProperty("user.home")));
+    public File resolveStartDirectory() {
+        synchronized (lock) {
+            return FileSystemUtils.existingDirectoryOr(data.lastChosenDirectory, new File(System.getProperty("user.home")));
+        }
     }
 
     /**
      * Returns recently opened or saved projects, most recent first.
      */
-    public synchronized List<File> getRecentProjects() {
-        List<File> files = new ArrayList<>();
-        for (String path : data.recentProjects) {
-            files.add(new File(path));
+    public List<File> getRecentProjects() {
+        synchronized (lock) {
+            List<File> files = new ArrayList<>();
+            for (String path : data.recentProjects) {
+                files.add(new File(path));
+            }
+            return files;
         }
-        return files;
     }
 
     /**
@@ -169,101 +182,131 @@ public final class Settings {
      *
      * @param project The project or data file opened or saved.
      */
-    public synchronized void rememberProject(final File project) {
-        String path = project.getAbsolutePath();
-        data.recentProjects.remove(path);
-        data.recentProjects.add(0, path);
-        while (data.recentProjects.size() > RECENT_PROJECT_LIMIT) {
-            data.recentProjects.remove(data.recentProjects.size() - 1);
+    public void rememberProject(final File project) {
+        synchronized (lock) {
+            String path = project.getAbsolutePath();
+            data.recentProjects.remove(path);
+            data.recentProjects.add(0, path);
+            while (data.recentProjects.size() > RECENT_PROJECT_LIMIT) {
+                data.recentProjects.remove(data.recentProjects.size() - 1);
+            }
         }
     }
 
     /**
      * Returns whether playback stops at the end of the last media clip; true unless turned off.
      */
-    public synchronized boolean isStopAtEndOfMedia() {
-        return data.stopAtEndOfMedia;
+    public boolean isStopAtEndOfMedia() {
+        synchronized (lock) {
+            return data.stopAtEndOfMedia;
+        }
     }
 
-    public synchronized void setStopAtEndOfMedia(final boolean stop) {
-        data.stopAtEndOfMedia = stop;
+    public void setStopAtEndOfMedia(final boolean stop) {
+        synchronized (lock) {
+            data.stopAtEndOfMedia = stop;
+        }
     }
 
     /**
      * Returns whether the playback controls show beside the spreadsheet; true unless hidden.
      */
-    public synchronized boolean isShowControls() {
-        return data.showControls;
+    public boolean isShowControls() {
+        synchronized (lock) {
+            return data.showControls;
+        }
     }
 
-    public synchronized void setShowControls(final boolean show) {
-        data.showControls = show;
+    public void setShowControls(final boolean show) {
+        synchronized (lock) {
+            data.showControls = show;
+        }
     }
 
     /**
      * Returns whether the playhead's line runs across the spreadsheet's columns as well as its own strip; true unless
      * turned off.
      */
-    public synchronized boolean isPlayheadAcrossColumns() {
-        return data.playheadAcrossColumns;
+    public boolean isPlayheadAcrossColumns() {
+        synchronized (lock) {
+            return data.playheadAcrossColumns;
+        }
     }
 
-    public synchronized void setPlayheadAcrossColumns(final boolean across) {
-        data.playheadAcrossColumns = across;
+    public void setPlayheadAcrossColumns(final boolean across) {
+        synchronized (lock) {
+            data.playheadAcrossColumns = across;
+        }
     }
 
     /**
      * Returns how many empty media columns a new spreadsheet starts with: 1 unless set otherwise, never below 0.
      */
-    public synchronized int getNewSpreadsheetMediaColumns() {
-        return Math.max(data.newSpreadsheetMediaColumns, 0);
+    public int getNewSpreadsheetMediaColumns() {
+        synchronized (lock) {
+            return Math.max(data.newSpreadsheetMediaColumns, 0);
+        }
     }
 
-    public synchronized void setNewSpreadsheetMediaColumns(final int columns) {
-        data.newSpreadsheetMediaColumns = columns;
+    public void setNewSpreadsheetMediaColumns(final int columns) {
+        synchronized (lock) {
+            data.newSpreadsheetMediaColumns = columns;
+        }
     }
 
     /**
      * Returns whether cell values are set in a monospaced font: true when {@code spreadsheetFont} is {@code mono},
      * false for {@code sans} or anything else.
      */
-    public synchronized boolean isMonospacedValues() {
-        return MONO.equals(data.spreadsheetFont);
+    public boolean isMonospacedValues() {
+        synchronized (lock) {
+            return MONO.equals(data.spreadsheetFont);
+        }
     }
 
-    public synchronized void setMonospacedValues(final boolean monospaced) {
-        data.spreadsheetFont = monospaced ? MONO : SANS;
+    public void setMonospacedValues(final boolean monospaced) {
+        synchronized (lock) {
+            data.spreadsheetFont = monospaced ? MONO : SANS;
+        }
     }
 
     /**
      * Returns how far the times and values of cells the needle has passed fade toward the cell colour, from 0
      * (unchanged) to 100 (hidden): {@value #DEFAULT_PAST_CELL_DIM} unless set otherwise, clamped to that range.
      */
-    public synchronized int getPastCellDim() {
-        return Math.max(0, Math.min(100, data.pastCellDim));
+    public int getPastCellDim() {
+        synchronized (lock) {
+            return Math.max(0, Math.min(100, data.pastCellDim));
+        }
     }
 
-    public synchronized void setPastCellDim(final int percent) {
-        data.pastCellDim = Math.max(0, Math.min(100, percent));
+    public void setPastCellDim(final int percent) {
+        synchronized (lock) {
+            data.pastCellDim = Math.max(0, Math.min(100, percent));
+        }
     }
 
     /**
      * Returns the window's bounds when it was last moved or resized.
      * @param window The window's key, see {@link org.datavyu.views.WindowPlacement}.
      */
-    public synchronized Optional<Rectangle> getWindowBounds(final String window) {
-        Bounds bounds = data.windows.get(window);
-        return bounds == null ? Optional.empty()
-                : Optional.of(new Rectangle(bounds.x, bounds.y, bounds.width, bounds.height));
+    public Optional<Rectangle> getWindowBounds(final String window) {
+        synchronized (lock) {
+            Bounds bounds = data.windows.get(window);
+            return bounds == null ? Optional.empty()
+                    : Optional.of(new Rectangle(bounds.x, bounds.y, bounds.width, bounds.height));
+        }
     }
 
-    public synchronized void setWindowBounds(final String window, final Rectangle rectangle) {
-        Bounds bounds = new Bounds();
-        bounds.x = rectangle.x;
-        bounds.y = rectangle.y;
-        bounds.width = rectangle.width;
-        bounds.height = rectangle.height;
-        data.windows.put(window, bounds);
+    public void setWindowBounds(final String window, final Rectangle rectangle) {
+        synchronized (lock) {
+            Bounds bounds = new Bounds();
+            bounds.x = rectangle.x;
+            bounds.y = rectangle.y;
+            bounds.width = rectangle.width;
+            bounds.height = rectangle.height;
+            data.windows.put(window, bounds);
+        }
     }
 
     /** The file's contents. Field names are the JSON keys. */

@@ -40,7 +40,7 @@ import java.util.Map;
 /**
  * A view for editing the database vocab.
  */
-public final class VocabEditorV extends DatavyuDialog {
+public final class VocabEditorV extends JDialog {
 
     /** The logger for this class */
     private static Logger LOGGER = LogManager.getLogger(VocabEditorV.class);

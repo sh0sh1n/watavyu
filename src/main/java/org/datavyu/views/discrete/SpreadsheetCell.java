@@ -37,7 +37,7 @@ import java.util.List;
 /**
  * Visual representation of a spreadsheet cell.
  */
-public class SpreadsheetCell extends JPanel
+public final class SpreadsheetCell extends JPanel
         implements MouseListener, FocusListener, CellListener, ClockTimer.ClockListener {
 
     /**

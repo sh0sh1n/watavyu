@@ -7,7 +7,7 @@ import java.awt.image.BufferedImage;
 /**
  * Transparent panel.
  */
-public class TransparentPanel extends JPanel {
+public final class TransparentPanel extends JPanel {
 
     /** Composite blend between underlying image and this super-imposed panel */
     private AlphaComposite composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.5f);
