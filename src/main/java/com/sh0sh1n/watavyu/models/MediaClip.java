@@ -1,4 +1,4 @@
-package com.sh0sh1n.watavyu.models.db;
+package com.sh0sh1n.watavyu.models;
 
 import java.nio.file.Path;
 

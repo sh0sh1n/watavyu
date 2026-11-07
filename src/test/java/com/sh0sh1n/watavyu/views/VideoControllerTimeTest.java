@@ -3,7 +3,7 @@ package com.sh0sh1n.watavyu.views;
 import static org.testng.Assert.assertEquals;
 
 import com.sh0sh1n.watavyu.TestSpreadsheets;
-import com.sh0sh1n.watavyu.models.db.DataStoreFactory;
+import com.sh0sh1n.watavyu.models.DataStoreFactory;
 import org.testng.annotations.Test;
 
 import java.util.ArrayList;

@@ -4,7 +4,7 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
 import com.sh0sh1n.watavyu.TestSpreadsheets;
-import com.sh0sh1n.watavyu.models.db.DataStoreFactory;
+import com.sh0sh1n.watavyu.models.DataStoreFactory;
 import com.sh0sh1n.watavyu.views.discrete.SpreadsheetTheme;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;

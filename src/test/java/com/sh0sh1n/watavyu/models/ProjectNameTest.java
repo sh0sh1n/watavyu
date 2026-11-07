@@ -1,4 +1,4 @@
-package com.sh0sh1n.watavyu.models.project;
+package com.sh0sh1n.watavyu.models;
 
 import static org.testng.Assert.assertEquals;
 

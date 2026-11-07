@@ -6,10 +6,10 @@ import static org.testng.Assert.assertTrue;
 
 import com.sh0sh1n.watavyu.controllers.project.ColumnCommands;
 import com.sh0sh1n.watavyu.controllers.project.ProjectController;
-import com.sh0sh1n.watavyu.models.db.DataStore;
-import com.sh0sh1n.watavyu.models.db.DataStoreFactory;
-import com.sh0sh1n.watavyu.models.db.Column;
-import com.sh0sh1n.watavyu.models.project.Project;
+import com.sh0sh1n.watavyu.models.DataStore;
+import com.sh0sh1n.watavyu.models.DataStoreFactory;
+import com.sh0sh1n.watavyu.models.Column;
+import com.sh0sh1n.watavyu.models.Project;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 

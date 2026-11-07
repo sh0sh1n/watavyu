@@ -15,8 +15,8 @@
 package com.sh0sh1n.watavyu.views.discrete.datavalues;
 
 import com.sh0sh1n.watavyu.controllers.project.ProjectController;
-import com.sh0sh1n.watavyu.models.db.Cell;
-import com.sh0sh1n.watavyu.models.db.Column;
+import com.sh0sh1n.watavyu.models.Cell;
+import com.sh0sh1n.watavyu.models.Column;
 import com.sh0sh1n.watavyu.views.discrete.SecondaryClick;
 import com.sh0sh1n.watavyu.views.discrete.datavalues.TimeStampDataValueEditor.TimeStampSource;
 

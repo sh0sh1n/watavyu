@@ -1,4 +1,4 @@
-package com.sh0sh1n.watavyu.models.db;
+package com.sh0sh1n.watavyu.models;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;

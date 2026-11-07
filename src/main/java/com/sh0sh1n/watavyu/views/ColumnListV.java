@@ -20,9 +20,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import com.sh0sh1n.watavyu.controllers.project.ColumnCommands;
 import com.sh0sh1n.watavyu.controllers.project.ProjectController;
-import com.sh0sh1n.watavyu.models.db.DataStore;
-import com.sh0sh1n.watavyu.models.db.DataStoreListener;
-import com.sh0sh1n.watavyu.models.db.Column;
+import com.sh0sh1n.watavyu.models.DataStore;
+import com.sh0sh1n.watavyu.models.DataStoreListener;
+import com.sh0sh1n.watavyu.models.Column;
 
 import javax.swing.*;
 import javax.swing.event.TableModelEvent;

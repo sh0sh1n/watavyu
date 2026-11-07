@@ -14,8 +14,8 @@
  */
 package com.sh0sh1n.watavyu.undoableedits;
 
-import com.sh0sh1n.watavyu.models.db.DataStore;
-import com.sh0sh1n.watavyu.models.db.Column;
+import com.sh0sh1n.watavyu.models.DataStore;
+import com.sh0sh1n.watavyu.models.Column;
 
 import javax.swing.undo.AbstractUndoableEdit;
 import javax.swing.undo.CannotRedoException;

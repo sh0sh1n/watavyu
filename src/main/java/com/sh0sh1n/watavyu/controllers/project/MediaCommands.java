@@ -2,9 +2,9 @@ package com.sh0sh1n.watavyu.controllers.project;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import com.sh0sh1n.watavyu.models.db.Cell;
-import com.sh0sh1n.watavyu.models.db.UserWarningException;
-import com.sh0sh1n.watavyu.models.db.Column;
+import com.sh0sh1n.watavyu.models.Cell;
+import com.sh0sh1n.watavyu.models.UserWarningException;
+import com.sh0sh1n.watavyu.models.Column;
 import com.sh0sh1n.watavyu.undoableedits.AddCellEdit;
 import com.sh0sh1n.watavyu.undoableedits.AddColumnEdit;
 

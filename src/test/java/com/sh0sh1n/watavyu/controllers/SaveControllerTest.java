@@ -18,7 +18,7 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.expectThrows;
 
-import com.sh0sh1n.watavyu.models.db.UserWarningException;
+import com.sh0sh1n.watavyu.models.UserWarningException;
 import com.sh0sh1n.watavyu.projectfile.ProjectDocument;
 import com.sh0sh1n.watavyu.projectfile.ProjectDocument.AnnotationCell;
 import com.sh0sh1n.watavyu.projectfile.ProjectDocument.AnnotationColumn;

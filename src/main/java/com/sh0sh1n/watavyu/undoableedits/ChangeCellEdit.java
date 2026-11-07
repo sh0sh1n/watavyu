@@ -15,7 +15,7 @@
 package com.sh0sh1n.watavyu.undoableedits;
 
 import com.sh0sh1n.watavyu.controllers.project.ProjectController;
-import com.sh0sh1n.watavyu.models.db.Cell;
+import com.sh0sh1n.watavyu.models.Cell;
 
 import javax.swing.undo.CannotRedoException;
 import javax.swing.undo.CannotUndoException;

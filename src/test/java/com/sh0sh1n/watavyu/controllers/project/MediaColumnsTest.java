@@ -4,9 +4,9 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
-import com.sh0sh1n.watavyu.models.db.DataStore;
-import com.sh0sh1n.watavyu.models.db.DataStoreFactory;
-import com.sh0sh1n.watavyu.models.db.Column;
+import com.sh0sh1n.watavyu.models.DataStore;
+import com.sh0sh1n.watavyu.models.DataStoreFactory;
+import com.sh0sh1n.watavyu.models.Column;
 import org.testng.annotations.Test;
 
 

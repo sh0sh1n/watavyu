@@ -6,11 +6,11 @@ import static org.testng.Assert.assertSame;
 import static org.testng.Assert.assertTrue;
 
 import com.sh0sh1n.watavyu.controllers.project.ProjectController;
-import com.sh0sh1n.watavyu.models.db.Cell;
-import com.sh0sh1n.watavyu.models.db.DataStoreFactory;
-import com.sh0sh1n.watavyu.models.db.UserWarningException;
-import com.sh0sh1n.watavyu.models.db.Column;
-import com.sh0sh1n.watavyu.models.project.Project;
+import com.sh0sh1n.watavyu.models.Cell;
+import com.sh0sh1n.watavyu.models.DataStoreFactory;
+import com.sh0sh1n.watavyu.models.UserWarningException;
+import com.sh0sh1n.watavyu.models.Column;
+import com.sh0sh1n.watavyu.models.Project;
 import com.sh0sh1n.watavyu.views.discrete.EditorComponent;
 import com.sh0sh1n.watavyu.views.discrete.datavalues.vocabelements.FormalArgEditor;
 import com.sh0sh1n.watavyu.views.discrete.datavalues.vocabelements.VocabElementV;

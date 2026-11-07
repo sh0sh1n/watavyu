@@ -1,10 +1,10 @@
 package com.sh0sh1n.watavyu.projectfile;
 
-import com.sh0sh1n.watavyu.models.db.Cell;
-import com.sh0sh1n.watavyu.models.db.DataStore;
-import com.sh0sh1n.watavyu.models.db.MediaClip;
-import com.sh0sh1n.watavyu.models.db.UserWarningException;
-import com.sh0sh1n.watavyu.models.db.Column;
+import com.sh0sh1n.watavyu.models.Cell;
+import com.sh0sh1n.watavyu.models.DataStore;
+import com.sh0sh1n.watavyu.models.MediaClip;
+import com.sh0sh1n.watavyu.models.UserWarningException;
+import com.sh0sh1n.watavyu.models.Column;
 import com.sh0sh1n.watavyu.projectfile.ProjectDocument.AnnotationCell;
 import com.sh0sh1n.watavyu.projectfile.ProjectDocument.AnnotationColumn;
 import com.sh0sh1n.watavyu.projectfile.ProjectDocument.Clip;

@@ -6,14 +6,14 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
-import com.sh0sh1n.watavyu.models.db.Cell;
-import com.sh0sh1n.watavyu.models.db.CellListener;
-import com.sh0sh1n.watavyu.models.db.DataStore;
-import com.sh0sh1n.watavyu.models.db.DataStoreFactory;
-import com.sh0sh1n.watavyu.models.db.MediaClip;
-import com.sh0sh1n.watavyu.models.db.Column;
-import com.sh0sh1n.watavyu.models.db.ColumnListener;
-import com.sh0sh1n.watavyu.models.project.Project;
+import com.sh0sh1n.watavyu.models.Cell;
+import com.sh0sh1n.watavyu.models.CellListener;
+import com.sh0sh1n.watavyu.models.DataStore;
+import com.sh0sh1n.watavyu.models.DataStoreFactory;
+import com.sh0sh1n.watavyu.models.MediaClip;
+import com.sh0sh1n.watavyu.models.Column;
+import com.sh0sh1n.watavyu.models.ColumnListener;
+import com.sh0sh1n.watavyu.models.Project;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 

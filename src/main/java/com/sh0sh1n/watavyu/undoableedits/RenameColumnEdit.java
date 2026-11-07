@@ -1,7 +1,7 @@
 package com.sh0sh1n.watavyu.undoableedits;
 
-import com.sh0sh1n.watavyu.models.db.UserWarningException;
-import com.sh0sh1n.watavyu.models.db.Column;
+import com.sh0sh1n.watavyu.models.UserWarningException;
+import com.sh0sh1n.watavyu.models.Column;
 
 import javax.swing.undo.CannotRedoException;
 import javax.swing.undo.CannotUndoException;

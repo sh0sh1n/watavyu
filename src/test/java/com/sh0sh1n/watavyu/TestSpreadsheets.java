@@ -1,8 +1,8 @@
 package com.sh0sh1n.watavyu;
 
 import com.sh0sh1n.watavyu.controllers.project.ProjectController;
-import com.sh0sh1n.watavyu.models.db.DataStore;
-import com.sh0sh1n.watavyu.models.project.Project;
+import com.sh0sh1n.watavyu.models.DataStore;
+import com.sh0sh1n.watavyu.models.Project;
 import com.sh0sh1n.watavyu.views.MainWindow;
 import com.sh0sh1n.watavyu.views.VideoController;
 

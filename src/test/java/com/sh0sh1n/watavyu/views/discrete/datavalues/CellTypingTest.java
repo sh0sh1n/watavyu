@@ -10,10 +10,10 @@ import static org.testng.Assert.assertSame;
 
 import com.sh0sh1n.watavyu.TestSpreadsheets;
 import com.sh0sh1n.watavyu.controllers.project.ProjectController;
-import com.sh0sh1n.watavyu.models.db.Cell;
-import com.sh0sh1n.watavyu.models.db.CellListener;
-import com.sh0sh1n.watavyu.models.db.DataStore;
-import com.sh0sh1n.watavyu.models.db.DataStoreFactory;
+import com.sh0sh1n.watavyu.models.Cell;
+import com.sh0sh1n.watavyu.models.CellListener;
+import com.sh0sh1n.watavyu.models.DataStore;
+import com.sh0sh1n.watavyu.models.DataStoreFactory;
 import com.sh0sh1n.watavyu.views.discrete.EditorComponent;
 import com.sh0sh1n.watavyu.views.discrete.EditorTracker;
 import com.sh0sh1n.watavyu.views.discrete.datavalues.TimeStampDataValueEditor.TimeStampSource;
