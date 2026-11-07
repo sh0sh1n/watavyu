@@ -390,62 +390,61 @@ public final class EditorTracker
     public void keyPressed(KeyEvent e) {
         switch (e.getKeyCode()) {
 
-            case KeyEvent.VK_BACK_SPACE:
+            case KeyEvent.VK_BACK_SPACE -> {
                 if (!currentEditor.isEditable() || refused()) {
                     e.consume();
-                    break;
+                } else {
+                    if (!gotKeyUp) {
+                        resetEditorText();
+                    }
+                    if (currentEditor.getCaretPosition() == 0
+                            && currentEditor.getSelectionStart() == currentEditor.getSelectionEnd()) {
+                        e.consume();
+                    }
                 }
-                if (!gotKeyUp) {
-                    resetEditorText();
-                }
-                if (currentEditor.getCaretPosition() == 0 && currentEditor.getSelectionStart() == currentEditor.getSelectionEnd()) {
-                    e.consume();
-                }
-                break;
+            }
 
-            case KeyEvent.VK_DELETE:
+            case KeyEvent.VK_DELETE -> {
                 if (!currentEditor.isEditable() || refused()) {
                     e.consume();
-                    break;
+                } else {
+                    if (!gotKeyUp) {
+                        resetEditorText();
+                    }
+                    if (currentEditor.getCaretPosition() == currentEditor.getText().length()
+                            && currentEditor.getSelectionStart() == currentEditor.getSelectionEnd()) {
+                        e.consume();
+                    }
                 }
-                if (!gotKeyUp) {
-                    resetEditorText();
-                }
-                if (currentEditor.getCaretPosition() == currentEditor.getText().length() && currentEditor.getSelectionStart() == currentEditor.getSelectionEnd()) {
-                    e.consume();
-                }
-                break;
+            }
 
-            case KeyEvent.VK_LEFT:
-            case KeyEvent.VK_RIGHT:
+            case KeyEvent.VK_LEFT, KeyEvent.VK_RIGHT -> {
                 // The editors move the caret inside a value; a move off its edge goes to the next value.
                 e.consume();
                 if (EditorComponent.movesCaret(e) && !currentEditor.moveCaret(e)) {
                     leaveEditor(e.getKeyCode() == KeyEvent.VK_LEFT);
                 }
-                break;
+            }
 
-            case KeyEvent.VK_HOME:
-            case KeyEvent.VK_PAGE_UP:
+            case KeyEvent.VK_HOME, KeyEvent.VK_PAGE_UP -> {
                 setEditor(firstEditor(), 0, 0);
                 e.consume();
-                break;
+            }
 
-            case KeyEvent.VK_END:
-            case KeyEvent.VK_PAGE_DOWN:
+            case KeyEvent.VK_END, KeyEvent.VK_PAGE_DOWN -> {
                 setEditor(lastEditor(), Integer.MAX_VALUE, Integer.MAX_VALUE);
                 e.consume();
-                break;
+            }
 
-            case KeyEvent.VK_ENTER:
+            case KeyEvent.VK_ENTER -> {
                 if (!currentEditor.isReturnKeyAccepted() || !currentEditor.canSubSelect()) {
                     // help out the editors that don't want the return key
                     if (e.getKeyLocation() == KeyEvent.KEY_LOCATION_STANDARD) {
                         e.consume();
                     }
                 }
-                break;
-            case KeyEvent.VK_TAB:
+            }
+            case KeyEvent.VK_TAB -> {
                 if (editors.size() > 1) {
                     currentEditor.selectAll();
                     if (currentEditor.getSelectionEnd() - currentEditor.getSelectionStart() != currentEditor.getText().length()) {
@@ -465,10 +464,10 @@ public final class EditorTracker
                     }
                 }
                 e.consume();
-                break;
-
-            default:
-                break;
+            }
+            default -> {
+                // Other keys need nothing here.
+            }
         }
 
         if (!e.isConsumed()) {

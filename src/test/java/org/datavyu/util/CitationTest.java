@@ -10,9 +10,11 @@ public class CitationTest {
         return Citation.fromCff(cff);
     }
 
-    private static final String BASE = "message: \"Cite me.\"\n"
-        + "title: \"Watavyu\"\n"
-        + "repository-code: \"https://github.com/sh0sh1n/watavyu\"\n";
+    private static final String BASE = """
+        message: "Cite me."
+        title: "Watavyu"
+        repository-code: "https://github.com/sh0sh1n/watavyu"
+        """;
 
     /** The bundled CITATION.cff, which GitHub's "Cite this repository" also reads. */
     @Test
@@ -23,12 +25,14 @@ public class CitationTest {
             "The Watavyu Contributors. (n.d.). Watavyu (Version 1.2.3) [Computer software]. "
                 + "https://github.com/sh0sh1n/watavyu");
         assertEquals(citation.bibtex("1.2.3"),
-            "@software{watavyu,\n"
-                + "  author = {{The Watavyu Contributors}},\n"
-                + "  title = {Watavyu},\n"
-                + "  version = {1.2.3},\n"
-                + "  url = {https://github.com/sh0sh1n/watavyu}\n"
-                + "}");
+            """
+            @software{watavyu,
+              author = {{The Watavyu Contributors}},
+              title = {Watavyu},
+              version = {1.2.3},
+              url = {https://github.com/sh0sh1n/watavyu}
+            }\
+            """);
     }
 
     @Test
@@ -45,8 +49,13 @@ public class CitationTest {
 
     @Test
     public void bibtexKeyAndSpecialCharacters() {
-        Citation citation = parse("message: \"m\"\ntitle: \"Watavyu: A Video Coding Tool\"\n"
-            + "repository-code: \"https://example.org/a_b\"\nauthors:\n  - name: \"Lab A & B\"\n");
+        Citation citation = parse("""
+            message: "m"
+            title: "Watavyu: A Video Coding Tool"
+            repository-code: "https://example.org/a_b"
+            authors:
+              - name: "Lab A & B"
+            """);
         assertEquals(citation.bibtex("1.0.0"),
             "@software{watavyu,\n  author = {{Lab A \\& B}},\n  title = {Watavyu: A Video Coding Tool},\n"
                 + "  version = {1.0.0},\n  url = {https://example.org/a_b}\n}");
@@ -71,10 +80,21 @@ public class CitationTest {
     /** Only the citation's keys are read: comments, other keys and other lists are skipped, and quotes are undone. */
     @Test
     public void readsOnlyWhatACitationNeeds() {
-        Citation citation = parse("# A comment\ncff-version: 1.2.0\nmessage: 'It''s \"cited\".'\n"
-            + "title: \"Say \\\"Watavyu\\\"\"\nkeywords:\n  - video\n  - coding\n"
-            + "repository-code: https://example.org\n"
-            + "authors:\n  # people\n  - family-names: Lovelace\n    given-names: Ada\nlicense: GPL-3.0-or-later\n");
+        Citation citation = parse("""
+            # A comment
+            cff-version: 1.2.0
+            message: 'It''s "cited".'
+            title: "Say \\"Watavyu\\""
+            keywords:
+              - video
+              - coding
+            repository-code: https://example.org
+            authors:
+              # people
+              - family-names: Lovelace
+                given-names: Ada
+            license: GPL-3.0-or-later
+            """);
         assertEquals(citation.getMessage(), "It's \"cited\".");
         assertEquals(citation.apa("1.0.0"),
             "Lovelace, A. (n.d.). Say \"Watavyu\" (Version 1.0.0) [Computer software]. https://example.org");

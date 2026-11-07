@@ -233,7 +233,7 @@ public final class ColumnDataPanel extends JPanel implements KeyEventDispatcher 
      * Returns the SpreadsheetCells in this column temporally.
      */
     public List<SpreadsheetCell> getCellsTemporally() {
-        ArrayList<SpreadsheetCell> result = new ArrayList<>();
+        List<SpreadsheetCell> result = new ArrayList<>();
 
         int ord = 1;
         for (Cell c : model.getCellsTemporally()) {
@@ -253,20 +253,7 @@ public final class ColumnDataPanel extends JPanel implements KeyEventDispatcher 
         return cells;
     }
 
-    /**
-     * Returns the selected spreadsheet cells in this column.
-     */
-    public AbstractList<SpreadsheetCell> getSelectedCells() {
-        AbstractList<SpreadsheetCell> selectedCells = new ArrayList<SpreadsheetCell>();
 
-        for (SpreadsheetCell c : selectedCells) {
-            if (c.getCell().isSelected()) {
-                selectedCells.add(c);
-            }
-        }
-
-        return selectedCells;
-    }
 
     public SpreadsheetCell getSelectedCell(){
         List<SpreadsheetCell> cells = getCellsTemporally();

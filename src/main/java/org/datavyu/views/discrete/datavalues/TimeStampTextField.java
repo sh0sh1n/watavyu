@@ -185,21 +185,19 @@ public final class TimeStampTextField extends JTextField
     @Override
     public void keyPressed(final KeyEvent e) {
         switch (e.getKeyCode()) {
-            case KeyEvent.VK_ENTER:
-                if (!myEditor.isReturnKeyAccepted()) {
-                    // help out the editors that don't want the return key
-                    if (e.getKeyLocation() == KeyEvent.KEY_LOCATION_STANDARD) {
-                        e.consume();
-                    }
+            case KeyEvent.VK_ENTER -> {
+                // help out the editors that don't want the return key
+                if (!myEditor.isReturnKeyAccepted() && e.getKeyLocation() == KeyEvent.KEY_LOCATION_STANDARD) {
+                    e.consume();
                 }
-                break;
-            case KeyEvent.VK_TAB:
+            }
+            case KeyEvent.VK_TAB -> {
                 myEditor.selectAll();
                 e.consume();
-                break;
-
-            default:
-                break;
+            }
+            default -> {
+                // Other keys need nothing here.
+            }
         }
 
         if (!e.isConsumed()) {

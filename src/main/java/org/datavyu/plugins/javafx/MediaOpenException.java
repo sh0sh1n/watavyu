@@ -17,6 +17,7 @@ package org.datavyu.plugins.javafx;
 import javafx.scene.media.MediaException;
 
 import java.io.File;
+import java.util.Locale;
 
 /**
  * A video could not be opened. The message is written for the person who chose the file.
@@ -34,8 +35,7 @@ public final class MediaOpenException extends RuntimeException {
 
     /** Returns an exception describing why the player rejected the file. */
     static MediaOpenException from(final File file, final Throwable error) {
-        if (error instanceof MediaException) {
-            MediaException media = (MediaException) error;
+        if (error instanceof MediaException media) {
             return forMediaError(file.getName(), media.getType(), media.getMessage(), error);
         }
         return new MediaOpenException("Cannot open " + file.getName() + ": " + error.getMessage(), error);
@@ -43,24 +43,22 @@ public final class MediaOpenException extends RuntimeException {
 
     static MediaOpenException forMediaError(final String name, final MediaException.Type type, final String detail,
                                             final Throwable cause) {
-        switch (type) {
-            case MEDIA_UNSUPPORTED:
-            case UNKNOWN:
-                String lower = name.toLowerCase();
-                if (!lower.endsWith(".mp4") && !lower.endsWith(".m4v")) {
-                    return new MediaOpenException("Cannot open " + name + ": this file type is not supported.\n\n"
-                            + SUPPORTED_FORMAT + "\n" + REMUX_HINT, cause);
-                }
-                return new MediaOpenException("Cannot open " + name + ": the video or audio codec is not supported.\n\n"
-                        + SUPPORTED_FORMAT, cause);
-            case MEDIA_CORRUPTED:
-            case MEDIA_INACCESSIBLE:
-            case MEDIA_UNAVAILABLE:
-                return new MediaOpenException("Cannot open " + name + ": the file could not be read (" + detail + ").",
-                        cause);
-            default:
-                return new MediaOpenException("Cannot open " + name + ": " + detail, cause);
+        return switch (type) {
+            case MEDIA_UNSUPPORTED, UNKNOWN -> unsupported(name, cause);
+            case MEDIA_CORRUPTED, MEDIA_INACCESSIBLE, MEDIA_UNAVAILABLE -> new MediaOpenException(
+                    "Cannot open " + name + ": the file could not be read (" + detail + ").", cause);
+            default -> new MediaOpenException("Cannot open " + name + ": " + detail, cause);
+        };
+    }
+
+    private static MediaOpenException unsupported(final String name, final Throwable cause) {
+        String lower = name.toLowerCase(Locale.ROOT);
+        if (!lower.endsWith(".mp4") && !lower.endsWith(".m4v")) {
+            return new MediaOpenException("Cannot open " + name + ": this file type is not supported.\n\n"
+                    + SUPPORTED_FORMAT + "\n" + REMUX_HINT, cause);
         }
+        return new MediaOpenException("Cannot open " + name + ": the video or audio codec is not supported.\n\n"
+                + SUPPORTED_FORMAT, cause);
     }
 
     static MediaOpenException timedOut(final File file, final long seconds) {

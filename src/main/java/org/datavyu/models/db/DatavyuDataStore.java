@@ -50,7 +50,7 @@ public class DatavyuDataStore implements DataStore {
     private boolean changed;
 
     /** All listeners of this data store */
-    private List<DataStoreListener> dataStoreListeners = new ArrayList<DataStoreListener>();
+    private List<DataStoreListener> dataStoreListeners = new ArrayList<>();
 
     /** The columns by name. */
     private final Map<String, Variable> variables = new HashMap<>();
@@ -85,7 +85,7 @@ public class DatavyuDataStore implements DataStore {
     @Override
     public List<Variable> getVisibleVariables() {
         List<Variable> allVariables = getAllVariables();
-        List<Variable> visibleVariables = new ArrayList<Variable>();
+        List<Variable> visibleVariables = new ArrayList<>();
         for (Variable variable : allVariables) {
             if (!variable.isHidden()) {
                 visibleVariables.add(variable);
@@ -108,7 +108,7 @@ public class DatavyuDataStore implements DataStore {
 
     @Override
     public List<Cell> getSelectedCells() {
-        List<Cell> selectedCells = new ArrayList<Cell>();
+        List<Cell> selectedCells = new ArrayList<>();
         for (Variable variable : order) {
             for (Cell cell : variable.getCells()) {
                 if (cell.isSelected()) {

@@ -190,22 +190,22 @@ public final class Shortcuts implements KeyEventDispatcher {
         if (e.getKeyCode() == KeyEvent.VK_SHIFT && e.getID() != KeyEvent.KEY_TYPED) {
             shiftHeld.accept(e.getID() == KeyEvent.KEY_PRESSED);
         }
-        switch (e.getID()) {
-            case KeyEvent.KEY_PRESSED:
-                return keyPressed(e);
-            case KeyEvent.KEY_RELEASED:
-                if (e.getKeyLocation() == KeyEvent.KEY_LOCATION_NUMPAD) {
-                    keypadKeyDown = false;
-                }
-                if (e.getKeyCode() == handledKeyCode) {
-                    handledKeyCode = KeyEvent.VK_UNDEFINED;
-                }
-                return false;
-            case KeyEvent.KEY_TYPED:
-                return keyTyped(e);
-            default:
-                return false;
+        return switch (e.getID()) {
+            case KeyEvent.KEY_PRESSED -> keyPressed(e);
+            case KeyEvent.KEY_RELEASED -> keyReleased(e);
+            case KeyEvent.KEY_TYPED -> keyTyped(e);
+            default -> false;
+        };
+    }
+
+    private boolean keyReleased(final KeyEvent e) {
+        if (e.getKeyLocation() == KeyEvent.KEY_LOCATION_NUMPAD) {
+            keypadKeyDown = false;
         }
+        if (e.getKeyCode() == handledKeyCode) {
+            handledKeyCode = KeyEvent.VK_UNDEFINED;
+        }
+        return false;
     }
 
     private boolean keyPressed(final KeyEvent e) {
@@ -240,8 +240,8 @@ public final class Shortcuts implements KeyEventDispatcher {
         }
         if (menu) {
             Object selected = shortcut.action.getValue(Action.SELECTED_KEY);
-            if (selected instanceof Boolean) {
-                shortcut.action.putValue(Action.SELECTED_KEY, !(Boolean) selected);
+            if (selected instanceof Boolean b) {
+                shortcut.action.putValue(Action.SELECTED_KEY, !b);
             }
         }
         handledKeyCode = e.getKeyCode();
@@ -315,30 +315,18 @@ public final class Shortcuts implements KeyEventDispatcher {
         if (keyCode >= KeyEvent.VK_NUMPAD0 && keyCode <= KeyEvent.VK_NUMPAD9) {
             return Integer.toString(keyCode - KeyEvent.VK_NUMPAD0);
         }
-        switch (keyCode) {
-            case KeyEvent.VK_DIVIDE:
-                return "/";
-            case KeyEvent.VK_MULTIPLY:
-                return "*";
-            case KeyEvent.VK_SUBTRACT:
-            case KeyEvent.VK_MINUS:
-                return "-";
-            case KeyEvent.VK_ADD:
-                return "+";
-            case KeyEvent.VK_DECIMAL:
-                return ".";
-            case KeyEvent.VK_ENTER:
-                return "Enter";
-            case KeyEvent.VK_EQUALS:
-                return "=";
-            case KeyEvent.VK_BACK_SLASH:
-                return "\\";
-            case KeyEvent.VK_LEFT:
-                return "←";
-            case KeyEvent.VK_RIGHT:
-                return "→";
-            default:
-                return KeyEvent.getKeyText(keyCode);
-        }
+        return switch (keyCode) {
+            case KeyEvent.VK_DIVIDE -> "/";
+            case KeyEvent.VK_MULTIPLY -> "*";
+            case KeyEvent.VK_SUBTRACT, KeyEvent.VK_MINUS -> "-";
+            case KeyEvent.VK_ADD -> "+";
+            case KeyEvent.VK_DECIMAL -> ".";
+            case KeyEvent.VK_ENTER -> "Enter";
+            case KeyEvent.VK_EQUALS -> "=";
+            case KeyEvent.VK_BACK_SLASH -> "\\";
+            case KeyEvent.VK_LEFT -> "←";
+            case KeyEvent.VK_RIGHT -> "→";
+            default -> KeyEvent.getKeyText(keyCode);
+        };
     }
 }

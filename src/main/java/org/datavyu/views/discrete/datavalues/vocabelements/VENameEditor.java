@@ -131,7 +131,7 @@ public final class VENameEditor extends EditorComponent {
     @Override
     public void keyPressed(final KeyEvent e) {
         switch (e.getKeyCode()) {
-            case KeyEvent.VK_BACK_SPACE:
+            case KeyEvent.VK_BACK_SPACE -> {
                 removeBehindCaret();
 
                 parentView.getParentDialog().updateDialogState();
@@ -139,17 +139,18 @@ public final class VENameEditor extends EditorComponent {
                 e.consume();
                  
                 attemptRename();
-                break;
-            case KeyEvent.VK_DELETE:
+            }
+            case KeyEvent.VK_DELETE -> {
                 removeAheadOfCaret();
 
                 parentView.getParentDialog().updateDialogState();
                 e.consume();
                 
                 attemptRename();
-                break;
-            default:
-                break;
+            }
+            default -> {
+                // Other keys need nothing here.
+            }
         }
     }
 

@@ -66,8 +66,9 @@ public class CellTypingTest {
     }
 
     private void type(final String keys) {
-        for (char key : keys.toCharArray()) {
-            view.getEdTracker().keyTyped(new KeyEvent(view, KeyEvent.KEY_TYPED, 0, 0, KeyEvent.VK_UNDEFINED, key));
+        for (int i = 0; i < keys.length(); i++) {
+            view.getEdTracker().keyTyped(new KeyEvent(view, KeyEvent.KEY_TYPED, 0, 0, KeyEvent.VK_UNDEFINED,
+                keys.charAt(i)));
         }
     }
 

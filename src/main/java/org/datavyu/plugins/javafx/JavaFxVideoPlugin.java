@@ -87,7 +87,7 @@ public final class JavaFxVideoPlugin {
                 engine.dispose();
                 return null;
             });
-            throw e instanceof MediaOpenException ? (MediaOpenException) e
+            throw e instanceof MediaOpenException mediaOpenException ? mediaOpenException
                     : new MediaOpenException("Cannot open " + sourceFile.getName() + ": " + e.getMessage(), e);
         }
     }

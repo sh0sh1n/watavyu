@@ -64,7 +64,7 @@ public final class VocabElementRootView extends JTextArea {
 
         this.pv = pv;
 
-        editors = new ArrayList<EditorComponent>();
+        editors = new ArrayList<>();
         edTracker = new EditorTracker(this, editors, vocabVariable);
 
         setVocabElement(vocabVariable, pv);

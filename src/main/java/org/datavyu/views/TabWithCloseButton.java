@@ -146,8 +146,7 @@ public class TabWithCloseButton extends JPanel {
         @Override
         public void mouseEntered(MouseEvent e) {
             Component component = e.getComponent();
-            if (component instanceof AbstractButton) {
-                AbstractButton button = (AbstractButton) component;
+            if (component instanceof AbstractButton button) {
                 button.setBorderPainted(true);
             }
         }
@@ -156,8 +155,7 @@ public class TabWithCloseButton extends JPanel {
 
         public void mouseExited(MouseEvent e) {
             Component component = e.getComponent();
-            if (component instanceof AbstractButton) {
-                AbstractButton button = (AbstractButton) component;
+            if (component instanceof AbstractButton button) {
                 button.setBorderPainted(false);
             }
         }

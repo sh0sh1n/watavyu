@@ -20,15 +20,19 @@ import org.datavyu.models.db.DataStore;
 import org.datavyu.views.discrete.SpreadSheetPanel;
 
 import javax.swing.undo.AbstractUndoableEdit;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 
 /**
  * An undoable edit for altering the contents of a spreadsheet.
  */
 public abstract class SpreadSheetEdit extends AbstractUndoableEdit {
 
-    private Date timestamp; // when the action was done
+    private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm:ss");
+
+    /** When the edit was made */
+    private final LocalTime timestamp = LocalTime.now(ZoneId.systemDefault());
 
     /** The spreadsheet the edit was made in, which undoing and redoing change. */
     protected final ProjectController controller;
@@ -39,7 +43,6 @@ public abstract class SpreadSheetEdit extends AbstractUndoableEdit {
      */
     protected SpreadSheetEdit(final ProjectController controller) {
         super();
-        timestamp = new Date();
         this.controller = controller;
         model = controller.getDataStore();
     }
@@ -64,11 +67,8 @@ public abstract class SpreadSheetEdit extends AbstractUndoableEdit {
 
     @Override
     public String toString() {
-        String msg;
-        SimpleDateFormat formatter = new SimpleDateFormat("HH:mm:ss");
-        msg = getPresentationName();
-        return "<html><font " + getStyle() + ">" + formatter.format(this.timestamp)
-                + "\t" + msg + "</font></html>";
+        return "<html><font " + getStyle() + ">" + TIME.format(timestamp)
+                + "\t" + getPresentationName() + "</font></html>";
     }
 
 }

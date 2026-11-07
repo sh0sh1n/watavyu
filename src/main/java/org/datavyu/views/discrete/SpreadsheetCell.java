@@ -421,9 +421,9 @@ public class SpreadsheetCell extends JPanel
         boolean groupSel = (me.getModifiersEx() & Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx()) != 0;
         boolean contSel = me.isShiftDown();
 
-        Class source = me.getSource().getClass();
+        Class<?> source = me.getSource().getClass();
         boolean isEditorSrc = (source.equals(TimeStampTextField.class)
-                || (source.equals(CellValuesView.class)));
+                || source.equals(CellValuesView.class));
 
 
         // User has clicked in magic spot, without modifier. Clear

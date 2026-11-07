@@ -94,8 +94,8 @@ public final class JavaFxToolkit {
             if (cause instanceof TaskFailed) {
                 throw (Exception) cause.getCause();
             }
-            if (cause instanceof Error) {
-                throw (Error) cause;
+            if (cause instanceof Error error) {
+                throw error;
             }
             throw (RuntimeException) cause;
         }

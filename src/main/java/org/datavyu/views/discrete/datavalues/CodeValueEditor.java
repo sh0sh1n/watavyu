@@ -92,22 +92,23 @@ public final class CodeValueEditor extends EditorComponent {
     @Override
     public void keyPressed(final KeyEvent e) {
         switch (e.getKeyCode()) {
-            case KeyEvent.VK_BACK_SPACE:
+            case KeyEvent.VK_BACK_SPACE -> {
                 if (!isEmpty()) {
                     removeBehindCaret();
                     typedText();
                 }
                 e.consume();
-                break;
-            case KeyEvent.VK_DELETE:
+            }
+            case KeyEvent.VK_DELETE -> {
                 if (!isEmpty()) {
                     removeAheadOfCaret();
                     typedText();
                 }
                 e.consume();
-                break;
-            default:
-                break;
+            }
+            default -> {
+                // Other keys need nothing here.
+            }
         }
     }
 

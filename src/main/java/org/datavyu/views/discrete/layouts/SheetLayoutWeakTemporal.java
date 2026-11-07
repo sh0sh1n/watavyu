@@ -71,13 +71,13 @@ public class SheetLayoutWeakTemporal extends SheetLayout {
         List<SpreadsheetColumn> visible_columns = getVisibleColumns(mainView);
 
         // Map columns to temporally ordered cells from column.
-        HashMap<SpreadsheetColumn, List<SpreadsheetCell>> cellMap = new HashMap<>();
+        Map<SpreadsheetColumn, List<SpreadsheetCell>> cellMap = new HashMap<>();
         for(SpreadsheetColumn col : visible_columns){
             cellMap.put(col, col.getCellsTemporally());
         }
 
-        TreeSet<Long> times = new TreeSet<Long>();
-        HashMap<Long, Integer> heightMap = new HashMap<>();
+        SortedSet<Long> times = new TreeSet<>();
+        Map<Long, Integer> heightMap = new HashMap<>();
 
         /* Go through each column and assign "height" values to onset times.
            This will determine how much space to allocate between onset times.
@@ -87,7 +87,7 @@ public class SheetLayoutWeakTemporal extends SheetLayout {
            Also accumulate all unique times.
          */
         for( SpreadsheetColumn col : visible_columns){
-            HashMap<Long, Integer> intermediateMap = new HashMap<>();
+            Map<Long, Integer> intermediateMap = new HashMap<>();
             for( SpreadsheetCell curCell : cellMap.get(col)){
                 long onset = curCell.getOnsetTicks();
                 int height = curCell.getPreferredSize().height;
@@ -109,12 +109,12 @@ public class SheetLayoutWeakTemporal extends SheetLayout {
            (starting from onset map's value and ending at the offset's value), update the local copy of
            the onset map to get positions for cells sharing onsets.
          */
-        HashMap<Long, Integer> offsetMap = new HashMap<>();
+        Map<Long, Integer> offsetMap = new HashMap<>();
         for( SpreadsheetColumn col : visible_columns){
             List<SpreadsheetCell> orderedCells = cellMap.get(col);
             int colWidth = col.getWidth();
             int colHeight = 0;
-            HashMap<Long, Integer> onsetMapLocal = new HashMap<>(onsetMap);
+            Map<Long, Integer> onsetMapLocal = new HashMap<>(onsetMap);
             SpreadsheetCell prevCell = null;
             for (int i = 0; i < orderedCells.size(); i++) {
                 SpreadsheetCell curCell = orderedCells.get(i);
@@ -188,7 +188,7 @@ public class SheetLayoutWeakTemporal extends SheetLayout {
 
         // Each time spans from where its cells start to where the cells that end then end; a cell whose offset is
         // before its onset ends at its onset.
-        HashMap<Long, Integer> bottoms = new HashMap<>();
+        Map<Long, Integer> bottoms = new HashMap<>();
         for (SpreadsheetColumn col : visible_columns) {
             for (SpreadsheetCell sc : cellMap.get(col)) {
                 long end = Math.max(sc.getOnsetTicks(), sc.getOffsetTicksActual());

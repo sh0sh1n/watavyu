@@ -158,7 +158,7 @@ public final class FormalArgEditor extends EditorComponent {
     @Override
     public void keyPressed(final KeyEvent e) {
         switch (e.getKeyCode()) {
-            case KeyEvent.VK_BACK_SPACE:
+            case KeyEvent.VK_BACK_SPACE -> {
                 removeBehindCaret();
 
                 updateArgName(getText());
@@ -166,17 +166,18 @@ public final class FormalArgEditor extends EditorComponent {
                 parentView.getParentDialog().updateDialogState();
 
                 e.consume();
-                break;
-            case KeyEvent.VK_DELETE:
+            }
+            case KeyEvent.VK_DELETE -> {
                 removeAheadOfCaret();
 
                 updateArgName(getText());
 
                 parentView.getParentDialog().updateDialogState();
                 e.consume();
-                break;
-            default:
-                break;
+            }
+            default -> {
+                // Other keys need nothing here.
+            }
         }
     }
 

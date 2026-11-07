@@ -47,7 +47,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -64,7 +63,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
     private static Logger logger = LogManager.getLogger(SpreadSheetPanel.class);
 
     /** List containing listeners interested in file drop events */
-    private final transient CopyOnWriteArrayList<FileDropEventListener> fileDropListeners;
+    private final transient List<FileDropEventListener> fileDropListeners;
 
     /** Current project controller */
     private ProjectController projectController;
@@ -206,7 +205,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
 
         // Enable drag and drop support.
         setDropTarget(new DropTarget(this, new SSDropTarget()));
-        fileDropListeners = new CopyOnWriteArrayList<FileDropEventListener>();
+        fileDropListeners = new CopyOnWriteArrayList<>();
 
         lastSelectedCell = null;
 
@@ -227,7 +226,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
 
     private void updateHiddenVars() {
         List<Variable> allVars = dataStore.getAllVariables();
-        List<Variable> hiddensOnly = new ArrayList<Variable>();
+        List<Variable> hiddensOnly = new ArrayList<>();
         dropdown.removeAll();
         for(final Variable v: allVars)
         {
@@ -528,7 +527,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
      * Returns the data store this spreadsheet shows.
      */
     public DataStore getDataStore() {
-        return (dataStore);
+        return dataStore;
     }
 
     @Override
@@ -944,21 +943,18 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
             Transferable tr = dtde.getTransferable();
             DataFlavor[] flavors = tr.getTransferDataFlavors();
 
-            for (int type = 0; type < flavors.length; type++) {
-
-                if (flavors[type].isFlavorJavaFileListType()) {
+            for (DataFlavor flavor : flavors) {
+                if (flavor.isFlavorJavaFileListType()) {
                     dtde.acceptDrop(DnDConstants.ACTION_REFERENCE);
 
-                    List fileList = new LinkedList();
-
+                    List<File> fileList = new ArrayList<>();
                     try {
-                        fileList = (List) tr.getTransferData(flavors[type]);
-
-                        // If we made it this far, everything worked.
+                        // A Java file list holds only files.
+                        for (Object file : (List<?>) tr.getTransferData(flavor)) {
+                            fileList.add((File) file);
+                        }
                         dtde.dropComplete(true);
-                    } catch (UnsupportedFlavorException e) {
-                        dtde.rejectDrop();
-                    } catch (IOException e) {
+                    } catch (UnsupportedFlavorException | IOException e) {
                         dtde.rejectDrop();
                     }
 

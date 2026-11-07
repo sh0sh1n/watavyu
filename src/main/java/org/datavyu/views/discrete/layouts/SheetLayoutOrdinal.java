@@ -33,25 +33,12 @@ public class SheetLayoutOrdinal extends SheetLayout {
     private JScrollPane pane;
 
     /**
-     * Helper class for tracking what we are ordering.
+     * A column laid out, and how tall its cells came to.
+     *
+     * @param colID     the column's place among the sheet's columns
+     * @param colHeight the height of its cells in pixels
      */
-    private class ColInfo {
-        // The Identifier of the column we are ordering.
-        public int colID;
-
-        // The height of the column in pixels.
-        public int colHeight;
-
-        /**
-         * Constructor.
-         *
-         * @param columnID     The Identifier of the column we are ordering.
-         * @param columnHeight The height of the column in pixels
-         */
-        public ColInfo(final int columnID, final int columnHeight) {
-            colID = columnID;
-            colHeight = columnHeight;
-        }
+    private record ColInfo(int colID, int colHeight) {
     }
 
     /**
@@ -73,7 +60,7 @@ public class SheetLayoutOrdinal extends SheetLayout {
         SpreadsheetView mainView = (SpreadsheetView) pane.getViewport()
                 .getView();
 
-        List<ColInfo> columnHeight = new ArrayList<ColInfo>();
+        List<ColInfo> columnHeight = new ArrayList<>();
 
         int maxHeight = 0;
         int selectedHeight = -1;
@@ -134,9 +121,9 @@ public class SheetLayoutOrdinal extends SheetLayout {
 
         // Pad the columns out at the bottom.
         maxHeight = Math.max(maxHeight, parent.getHeight());
-        for (int i = 0; i < columnHeight.size(); i++) {
-            SpreadsheetColumn col = mainView.getColumns().get(columnHeight.get(i).colID);
-            Integer colHeight = columnHeight.get(i).colHeight;
+        for (ColInfo info : columnHeight) {
+            SpreadsheetColumn col = mainView.getColumns().get(info.colID());
+            int colHeight = info.colHeight();
 
             col.getDataPanel().setHeight(maxHeight);
             col.getDataPanel().getPadding().setBounds(0,

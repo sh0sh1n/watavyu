@@ -96,7 +96,7 @@ public final class VideoController implements ClockListener {
     private volatile boolean shiftMask = false;
 
     /** The set of streamViewers associated with this controller */
-    private LinkedHashSet<StreamViewer> streamViewers = new LinkedHashSet<>();
+    private final Set<StreamViewer> streamViewers = new LinkedHashSet<>();
 
     /** Clock timer */
     private final ClockTimer clockTimer = new ClockTimer();
