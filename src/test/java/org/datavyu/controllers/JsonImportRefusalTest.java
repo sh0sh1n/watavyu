@@ -1,7 +1,5 @@
 package org.datavyu.controllers;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
@@ -11,13 +9,16 @@ import org.datavyu.models.db.DataStore;
 import org.datavyu.models.db.DataStoreFactory;
 import org.datavyu.models.db.UserWarningException;
 import org.datavyu.models.db.Variable;
-import org.datavyu.views.discrete.SpreadSheetPanel;
+import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
+import java.util.regex.Pattern;
 
 /**
  * Importing Datavyu's JSON refuses a file with a time Watavyu cannot read, such as a negative one Datavyu could
@@ -176,13 +177,155 @@ public class JsonImportRefusalTest {
         assertEquals(dataStore.getVariable("mother").getCells().get(1).getOnset(), 4_000);
     }
 
+    /** A file whose second pass, after one that reads, is given. */
+    private static String withPass(final String pass) {
+        return "{\"passes\": [\n" + READABLE_PASS + ",\n" + pass + "\n]}";
+    }
+
+    private static String mother(final String type, final String arguments, final String cells) {
+        return "{\"name\": \"mother\", \"type\": " + type + ", \"arguments\": " + arguments + ", \"cells\": " + cells
+            + "}";
+    }
+
+    private static final String NOT_A_TYPE = "column \"mother\" has a type that is not TEXT, NOMINAL or MATRIX";
+    private static final String NOT_A_CODE_TYPE =
+        "column \"mother\" has the code \"mood\" of a type that is not TEXT, NOMINAL or MATRIX";
+
+    /** A pass of the name given, as JSON. */
+    private static String named(final String name) {
+        return "{\"name\": " + name + ", \"type\": \"MATRIX\", \"arguments\": {}, \"cells\": []}";
+    }
+
+    private static final String CELL =
+        "{\"id\": 1, \"onset\": \"00:00:01:000\", \"offset\": \"00:00:02:000\", \"values\": [\"calm\"]}";
+
+    @DataProvider
+    public Object[][] unreadableFiles() {
+        return new Object[][] {
+            {withPass(named("null")), "pass 2 has no name"},
+            {withPass(named("7")), "pass 2 has no name"},
+            {withPass(named("\"\"")), "pass 2 has no name"},
+            {withPass(named("{}")), "pass 2 has no name"},
+            {withPass(mother("null", "{}", "[]")), NOT_A_TYPE},
+            {withPass(mother("{}", "{}", "[]")), NOT_A_TYPE},
+            {withPass(mother("[]", "{}", "[]")), NOT_A_TYPE},
+            {withPass(mother("\"PREDICATE\"", "{}", "[]")), NOT_A_TYPE},
+            {withPass(mother("\"MATRIX\"", "{\"mood\": null}", "[]")), NOT_A_CODE_TYPE},
+            {withPass(mother("\"MATRIX\"", "{\"mood\": {}}", "[]")), NOT_A_CODE_TYPE},
+            {withPass(mother("\"MATRIX\"", "{\"mood\": []}", "[]")), NOT_A_CODE_TYPE},
+            {withPass(mother("\"MATRIX\"", "{\"mood\": \"INTEGER\"}", "[]")), NOT_A_CODE_TYPE},
+            {withPass(mother("\"NOMINAL\"", "[]", "[]")), "column \"mother\" has arguments that are not a JSON object"},
+            {withPass(mother("\"MATRIX\"", "{\"mood\": \"NOMINAL\"}", "{}")),
+                "column \"mother\" has cells that are not a list"},
+            {withPass(mother("\"MATRIX\"", "{\"mood\": \"NOMINAL\"}", "[3]")),
+                "cell 1 of column \"mother\" is not a JSON object"},
+            {withPass(mother("\"MATRIX\"", "{\"mood\": \"NOMINAL\"}", "[" + CELL.replace("\"id\": 1, ", "") + "]")),
+                "cell 1 of column \"mother\" should have \"id\" next"},
+            {withPass(mother("\"MATRIX\"", "{\"mood\": \"NOMINAL\"}",
+                "[" + CELL.replace("[\"calm\"]", "\"calm\"") + "]")),
+                "cell 1 of column \"mother\" has values that are not a list"},
+            {withPass(mother("\"MATRIX\"", "{\"mood\": \"NOMINAL\"}", "[" + CELL.replace("]}", "], \"x\": 1}") + "]")),
+                "cell 1 of column \"mother\" should end after its values"},
+            {withPass(mother("\"MATRIX\"", "{\"mood\": \"NOMINAL\"}", "[], \"colour\": \"red\"")),
+                "column \"mother\" should end after its cells"},
+            {withPass("{\"type\": \"MATRIX\", \"name\": \"mother\", \"arguments\": {}, \"cells\": []}"),
+                "pass 2 should have \"name\" next"},
+            {withPass("3"), "pass 2 is not a JSON object"},
+            {"", "the file ends early"},
+            {"[]", "the file is not a JSON object"},
+            {"{\"columns\": []}", "the file should have \"passes\" next"},
+            {"{\"passes\": {}}", "the file's passes are not a list"},
+            {"{\"passes\": [], \"name\": \"study\"}", "the file should end after its passes"},
+        };
+    }
+
+    /** A file with any part Watavyu cannot read adds nothing, and the message says what and where. */
+    @Test(dataProvider = "unreadableFiles")
+    public void anUnreadablePartImportsNothingAndSaysWhere(final String json, final String problem) throws Exception {
+        DataStore dataStore = DataStoreFactory.newDataStore();
+
+        UserWarningException e = expectThrows(UserWarningException.class, () -> importJson(json, dataStore));
+
+        assertTrue(dataStore.getAllVariables().isEmpty(), "the pass read before is not added");
+        assertTrue(e.getMessage().matches("Cannot import import\\d+\\.json: " + Pattern.quote(problem)
+            + " \\(line \\d\\)\\. Nothing was imported\\."), e.getMessage());
+    }
+
+    @Test
+    public void theLineGivenIsTheOneWithTheFault() throws Exception {
+        UserWarningException e = expectThrows(UserWarningException.class,
+            () -> importJson(withPass(mother("\n\"PREDICATE\"", "{}", "[]")), DataStoreFactory.newDataStore()));
+
+        assertTrue(e.getMessage().endsWith("(line 5). Nothing was imported."), e.getMessage());
+    }
+
+    @Test
+    public void aFileThatIsNotJsonImportsNothing() throws Exception {
+        DataStore dataStore = DataStoreFactory.newDataStore();
+
+        expectThrows(IOException.class, () -> importJson(withPass("{\"name\": \"mother\""), dataStore));
+        expectThrows(IOException.class, () -> importJson(withPass("{\"name\": mother}"), dataStore));
+
+        assertTrue(dataStore.getAllVariables().isEmpty());
+    }
+
+    @Test
+    public void fewerValuesThanCodesLeaveTheRestEmpty() throws Exception {
+        DataStore dataStore = DataStoreFactory.newDataStore();
+
+        importJson(withPass(mother("\"MATRIX\"", "{\"mood\": \"NOMINAL\", \"gaze\": \"TEXT\"}", "[" + CELL + "]")),
+            dataStore);
+
+        assertEquals(dataStore.getVariable("mother").getCells().get(0).getValues(), List.of("calm", ""));
+    }
+
+    /** Datavyu reads its types in any case, and a cell's id, which Watavyu does not keep, in any form. */
+    @Test
+    public void typesAreReadInAnyCaseAndIdsNotAtAll() throws Exception {
+        DataStore dataStore = DataStoreFactory.newDataStore();
+
+        importJson(withPass(mother("\"matrix\"", "{\"mood\": \"Nominal\"}",
+            "[" + CELL.replace("\"id\": 1", "\"id\": {\"n\": [1]}") + "]")), dataStore);
+
+        assertEquals(dataStore.getVariable("mother").getCodes(), List.of("mood"));
+        assertEquals(dataStore.getVariable("mother").getCells().get(0).getValues(), List.of("calm"));
+    }
+
+    /** A pass whose name the spreadsheet has, as it was or from earlier in the file, is left out, and the rest read. */
+    @Test
+    public void aPassWhoseNameTheSpreadsheetHasIsLeftOut() throws Exception {
+        DataStore dataStore = DataStoreFactory.newDataStore();
+        Variable kind = dataStore.createVariable("kind");
+        List<String> warnings = new ArrayList<>();
+
+        importJson("{\"passes\": [\n" + READABLE_PASS + ",\n" + mother("\"MATRIX\"", "{}", "[]") + ",\n"
+            + mother("\"NOMINAL\"", "{}", "[]") + "\n]}", dataStore, warnings::add);
+
+        assertEquals(dataStore.getAllVariables().stream().map(Variable::getName).toList(), List.of("kind", "mother"));
+        assertTrue(kind.getCells().isEmpty(), "the spreadsheet's own column is left as it was");
+        assertEquals(dataStore.getVariable("mother").getCodes(), List.of());
+        assertEquals(warnings, List.of("Left out the columns the spreadsheet already has: \"kind\", \"mother\"."));
+    }
+
+    @Test
+    public void aFileThatImportsWholeWarnsOfNothing() throws Exception {
+        List<String> warnings = new ArrayList<>();
+
+        importJson(passes("\"00:00:03:000\"", "\"00:00:04:000\""), DataStoreFactory.newDataStore(), warnings::add);
+
+        assertEquals(warnings, List.of());
+    }
+
     private static void importJson(final String json, final DataStore dataStore) throws Exception {
-        SpreadSheetPanel spreadsheet = mock(SpreadSheetPanel.class);
-        when(spreadsheet.getDataStore()).thenReturn(dataStore);
+        importJson(json, dataStore, message -> { });
+    }
+
+    private static void importJson(final String json, final DataStore dataStore, final Consumer<String> warnings)
+            throws Exception {
         Path file = Files.createTempFile("import", ".json");
         try {
             Files.writeString(file, json);
-            new OpenDataStoreFileController(message -> { }).importJSONToSpreadsheet(new File(file.toString()), spreadsheet);
+            new OpenDataStoreFileController(warnings).importJSONToSpreadsheet(file.toFile(), dataStore);
         } finally {
             Files.delete(file);
         }

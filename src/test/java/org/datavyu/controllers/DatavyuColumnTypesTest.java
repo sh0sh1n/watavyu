@@ -1,7 +1,5 @@
 package org.datavyu.controllers;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 
 import org.datavyu.models.db.DataStore;
@@ -10,10 +8,8 @@ import org.datavyu.models.db.Variable;
 import org.datavyu.projectfile.ProjectDocument.AnnotationCell;
 import org.datavyu.projectfile.ProjectDocument.AnnotationColumn;
 import org.datavyu.projectfile.SpreadsheetColumns;
-import org.datavyu.views.discrete.SpreadSheetPanel;
 import org.testng.annotations.Test;
 
-import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
@@ -80,12 +76,10 @@ public class DatavyuColumnTypesTest {
 
     private static DataStore importJson(final String json) throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
-        SpreadSheetPanel spreadsheet = mock(SpreadSheetPanel.class);
-        when(spreadsheet.getDataStore()).thenReturn(dataStore);
         Path file = Files.createTempFile("import", ".json");
         try {
             Files.writeString(file, json);
-            new OpenDataStoreFileController(message -> { }).importJSONToSpreadsheet(new File(file.toString()), spreadsheet);
+            new OpenDataStoreFileController(message -> { }).importJSONToSpreadsheet(file.toFile(), dataStore);
         } finally {
             Files.delete(file);
         }

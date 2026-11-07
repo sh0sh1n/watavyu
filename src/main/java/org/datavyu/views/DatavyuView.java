@@ -17,7 +17,6 @@ package org.datavyu.views;
 import org.datavyu.util.Dialogs;
 import org.datavyu.util.Resources;
 import org.datavyu.util.Settings;
-import com.fasterxml.jackson.core.JsonParseException;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -524,26 +523,10 @@ public final class DatavyuView implements FileDropEventListener {
     }
 
     private void importJSON(DatavyuFileChooser fc){
-        ProjectController projectController = selectedController();
-
-        try{
-            OpenDataStoreFileController importJSON = new OpenDataStoreFileController(this::warn);
-
-            String dbFileName = fc.getSelectedFile().getPath();
-            if (!dbFileName.endsWith(".json")) {
-                logger.error("The selected file is not a JSON File.");
-            }
-
-            File file = fc.getSelectedFile();
-
-            importJSON.importJSONToSpreadsheet(file, getSpreadsheetPanel());
-        } catch (UserWarningException e) {
-            logger.error("Failed import from JSON. Error: ", e);
-            warn(e.getMessage());
-        } catch (JsonParseException e) {
-            logger.error("Failed import from JSON. Error: ", e);
-            warn(e.getMessage());
-        } catch (IOException e) {
+        try {
+            new OpenDataStoreFileController(this::warn)
+                    .importJSONToSpreadsheet(fc.getSelectedFile(), getSpreadsheetPanel().getDataStore());
+        } catch (UserWarningException | IOException e) {
             logger.error("Failed import from JSON. Error: ", e);
             warn(e.getMessage());
         }
