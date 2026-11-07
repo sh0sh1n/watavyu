@@ -58,6 +58,7 @@ public final class JavaFxVideoViewer extends StreamViewerDialog {
                       final ClockTimer clockTimer, final boolean modal, final FxPlaybackEngine engine,
                       final FrameIndex frames) {
         super(identifier, parent, clockTimer, modal);
+        initComponents();
         this.engine = engine;
         this.playback = new JavaFxPlayback(engine, frames, Platform::runLater);
         playback.setErrorHandler(error -> SwingUtilities.invokeLater(() -> showPlaybackError(error)));

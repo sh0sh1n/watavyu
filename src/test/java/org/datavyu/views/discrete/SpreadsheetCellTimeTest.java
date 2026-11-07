@@ -46,7 +46,7 @@ public class SpreadsheetCellTimeTest {
             previousManager = RepaintManager.currentManager(cell);
             RepaintManager.setCurrentManager(new RepaintManager() {
                 @Override
-                public void addInvalidComponent(final JComponent component) {
+                public synchronized void addInvalidComponent(final JComponent component) {
                     layoutRequests.add(component);
                 }
             });

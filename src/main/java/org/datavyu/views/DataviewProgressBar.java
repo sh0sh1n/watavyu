@@ -8,7 +8,7 @@ import javax.swing.*;
 import java.awt.*;
 
 // TODO: Why can we not use the progress bar that java provides?
-public class DataviewProgressBar extends JDialog {
+public final class DataviewProgressBar extends JDialog {
 
     private boolean isError;
     private boolean isCanceled;

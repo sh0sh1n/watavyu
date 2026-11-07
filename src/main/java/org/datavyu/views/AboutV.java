@@ -20,6 +20,7 @@ import org.datavyu.views.discrete.SpreadsheetTheme;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
+import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import java.awt.Color;
@@ -30,7 +31,7 @@ import java.awt.Font;
  * The About window: the application's name and version, set in the palette and fonts rather than drawn from an
  * image (U5).
  */
-public final class AboutV extends DatavyuDialog {
+public final class AboutV extends JDialog {
 
     /**
      * @param parent the main window
@@ -38,6 +39,7 @@ public final class AboutV extends DatavyuDialog {
      */
     public AboutV(final java.awt.Frame parent, final boolean modal) {
         super(parent, modal);
+        setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setName(this.getClass().getSimpleName());
         setTitle("About Watavyu");
         setResizable(false);

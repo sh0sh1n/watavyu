@@ -19,13 +19,14 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.util.Dialogs;
 
+import javax.swing.JDialog;
 import java.awt.*;
 
 
 /**
  * The dialog for users to create a new project.
  */
-public final class NewProjectV extends DatavyuDialog {
+public final class NewProjectV extends JDialog {
 
     /**
      * The logger for this class.

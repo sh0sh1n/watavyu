@@ -21,10 +21,12 @@ import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.util.Dialogs;
 import org.datavyu.models.db.UserWarningException;
 
+import javax.swing.JDialog;
+
 /**
  * The dialog for users to add new variables to the spreadsheet.
  */
-public final class NewVariableV extends DatavyuDialog {
+public final class NewVariableV extends JDialog {
 
     /**
      * The logger for this class.

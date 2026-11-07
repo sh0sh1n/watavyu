@@ -11,7 +11,9 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import javax.swing.WindowConstants;
 import java.awt.Dimension;
+import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -148,6 +150,39 @@ public class PlaybackIntegrationTest {
             });
             assertEquals(viewer.getVolumeLevel(), 0.25f);
             assertFalse(viewer.isViewerVisible());
+        } finally {
+            JavaFxToolkit.onEdtAndWait(() -> {
+                viewer.close();
+                return null;
+            });
+        }
+    }
+
+    /** Closing a video window hides it rather than disposing of it, and stops its clip. */
+    @Test
+    public void closingAVideoWindowHidesItAndStopsTheClip() throws Exception {
+        ClockTimer clock = mock(ClockTimer.class);
+        JavaFxVideoViewer viewer = (JavaFxVideoViewer) JavaFxVideoPlugin.open(Identifier.generateIdentifier(), mp4,
+            null, clock, false);
+        try {
+            viewer.start();
+            long deadline = System.nanoTime() + 2_000_000_000L;
+            while (!viewer.isPlaying() && System.nanoTime() < deadline) {
+                Thread.sleep(10);
+            }
+            assertTrue(viewer.isPlaying(), "the clip plays before the window closes");
+
+            JavaFxToolkit.onEdtAndWait(() -> {
+                viewer.dispatchEvent(new WindowEvent(viewer, WindowEvent.WINDOW_CLOSING));
+                return null;
+            });
+            assertEquals(viewer.getDefaultCloseOperation(), WindowConstants.HIDE_ON_CLOSE);
+            assertFalse(viewer.isViewerVisible());
+            deadline = System.nanoTime() + 2_000_000_000L;
+            while (viewer.isPlaying() && System.nanoTime() < deadline) {
+                Thread.sleep(10);
+            }
+            assertFalse(viewer.isPlaying(), "closing the window stops the clip");
         } finally {
             JavaFxToolkit.onEdtAndWait(() -> {
                 viewer.close();

@@ -35,7 +35,7 @@ import java.util.List;
 /**
  * A view for a vocab element.
  */
-public class VocabElementV extends JPanel {
+public final class VocabElementV extends JPanel {
 
     /**
      * The width of icon to use in the vocab element view.

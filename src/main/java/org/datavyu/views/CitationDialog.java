@@ -10,7 +10,7 @@ import java.awt.datatransfer.StringSelection;
 /**
  * Shows how to cite Watavyu, in APA and BibTeX, each with a button that copies it to the clipboard.
  */
-public class CitationDialog extends JDialog {
+public final class CitationDialog extends JDialog {
 
     public CitationDialog(Frame parent) {
         super(parent, "Cite Watavyu", true);

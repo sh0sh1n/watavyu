@@ -1,7 +1,7 @@
 package org.datavyu.views;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Maintains the highest frame rate between the tracks and one user defined entry
@@ -11,13 +11,13 @@ import java.util.Map;
 public class FrameRateController {
 
 
-    private Map<Long, Float> trackToFrameRate = new HashMap<>();
+    private final Map<Long, Float> trackToFrameRate = new ConcurrentHashMap<>();
 
-    public synchronized void addFrameRate(long id, float frameRate) {
+    public void addFrameRate(long id, float frameRate) {
         trackToFrameRate.put(id, frameRate);
     }
 
-    public synchronized void removeFrameRate(long id) {
+    public void removeFrameRate(long id) {
         trackToFrameRate.remove(id);
     }
 
@@ -29,7 +29,7 @@ public class FrameRateController {
         return highestFrameRate;
     }
 
-    public synchronized float getFrameRate() {
+    public float getFrameRate() {
         return getHighestFrameRate();
     }
 

@@ -154,69 +154,21 @@ tasks.register<Test>("integrationTest") {
 }
 
 // Analysis reports that measure the work in TODO.md. ./gradlew analyze writes all of them under build/reports.
-// ./gradlew compileJava -PallWarnings lists every javac lint and Error Prone warning (javac stops at 100).
 // Each check that reaches zero findings fails the build from then on, so it stays at zero (AGENTS.md).
 
-// Error Prone checks at zero, as errors.
-val errorproneGatedChecks = listOf(
-    "MissingOverride",
-    // Javadoc
-    "MissingSummary", "InvalidParam", "EmptyBlockTag", "NotJavadoc", "AlmostJavadoc",
-    // Modern Java
-    "StatementSwitchToExpressionSwitch", "PatternMatchingInstanceof", "UnnecessaryParentheses",
-    "StringConcatToTextBlock", "LoopOverCharArray", "JavaUtilDate", "JavaTimeDefaultTimeZone", "JdkObsolete",
-    "StringCaseLocaleUsage",
-    // Dead code
-    "UnusedVariable", "ModifiedButNotUsed", "EffectivelyPrivate", "ClassCanBeStatic", "VariableNameSameAsType",
-    "RemoveUnusedImports",
-    // Correctness
-    "ReferenceEquality", "LongFloatConversion", "LongDoubleConversion", "NarrowCalculation", "IntLongMath",
-    "NarrowingCompoundAssignment", "StringSplitter", "DefaultCharset", "EqualsGetClass", "NonOverridingEquals",
-    "HidingField", "ProtectedMembersInFinalClass", "ModifyCollectionInEnhancedForLoop", "SuperCallToObjectMethod",
-    "OperatorPrecedence", "AssignmentExpression", "ReturnFromVoid",
-    // Error handling
-    "CatchAndPrintStackTrace", "FutureReturnValueIgnored",
-)
-tasks.withType<JavaCompile>().configureEach {
-    errorproneGatedChecks.forEach { options.errorprone.error(it) }
+// Every compile fails on a warning: every javac lint category but serial, and every Error Prone check at its default
+// severity. serial is off because the views are Serializable only by inheriting from Swing and are never serialized;
+// it has about 130 warnings (TODO.md).
+val compiles = tasks.withType<JavaCompile>()
+compiles.configureEach {
+    options.compilerArgs.addAll(listOf("-Xlint:all,-serial", "-Werror"))
 }
-
-// javac lint categories at zero in every source set. Error Prone's warnings are not all at zero, so -Werror cannot go
-// on the build's own compiles: each source set is compiled again, without Error Prone or annotation processors (it has
-// none), with only these categories on and as errors.
-val javacGatedCategories = listOf(
-    "deprecation", "removal", "dangling-doc-comments", "rawtypes", "unchecked", "lossy-conversions", "try", "static",
-    "cast",
-)
-val lintGates = mutableSetOf<String>()
-sourceSets.configureEach {
-    val set = this
-    val gate = tasks.register<JavaCompile>("${set.name}LintGate") {
-        description = "Fails on any javac warning in $javacGatedCategories in the ${set.name} sources."
-        group = "verification"
-        source = set.java
-        classpath = set.compileClasspath
-        destinationDirectory.set(layout.buildDirectory.dir("lint-gate/${set.name}"))
-        options.errorprone.enabled.set(false)
-        options.compilerArgs.addAll(listOf("-proc:none", "-Xlint:none",
-            "-Xlint:" + javacGatedCategories.joinToString(","), "-Werror"))
-    }
-    lintGates += gate.name
-    tasks.check { dependsOn(gate) }
-}
-val compiles = tasks.withType<JavaCompile>().named { it !in lintGates }
 
 // ./gradlew compileJava compileTestJava -PerrorpronePatch=CheckA,CheckB rewrites the sources in place with Error
 // Prone's suggested fixes for those checks. Review the result like any other change.
 providers.gradleProperty("errorpronePatch").orNull?.let { checks ->
     compiles.configureEach {
         options.errorprone.errorproneArgs.addAll("-XepPatchChecks:$checks", "-XepPatchLocation:IN_PLACE")
-    }
-}
-
-if (providers.gradleProperty("allWarnings").isPresent) {
-    compiles.configureEach {
-        options.compilerArgs.addAll(listOf("-Xmaxwarns", "100000", "-Xlint:all,-serial,-processing"))
     }
 }
 
@@ -238,8 +190,6 @@ val pmdUngatedRules = setOf(
     // Catches at a boundary that must report or survive any failure: a clock tick (ClockTimer.every), parsing an
     // untrusted MP4 file (JavaFxVideoPlugin.readFrames) and the thread that opens media (VideoController.openStream).
     "AvoidCatchingGenericException", "AvoidCatchingThrowable",
-    // Correctness
-    "AvoidSynchronizedAtMethodLevel",
 )
 val pmdGate = tasks.register("pmdGate") {
     description = "Fails if PMD finds anything under a rule that has reached zero findings."
@@ -271,7 +221,7 @@ tasks.withType<com.github.spotbugs.snom.SpotBugsTask>().configureEach {
 
 // Every SpotBugs category fails the build except these, which are not at zero yet. A category leaves this list when it
 // reaches zero (AGENTS.md: checks only ratchet up).
-val spotbugsUngatedCategories = setOf("BAD_PRACTICE", "SECURITY")
+val spotbugsUngatedCategories = setOf("BAD_PRACTICE")
 val spotbugsGate = tasks.register("spotbugsGate") {
     description = "Fails if SpotBugs finds anything in a category that has reached zero findings."
     group = "verification"
