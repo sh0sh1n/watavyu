@@ -1,6 +1,6 @@
 # TODO
 
-Known bugs and planned work, in place of GitHub issues. Finished items are deleted, not ticked; the commit that finishes one names its ID. How to keep this file: [AGENTS.md](AGENTS.md#keeping-todomd-and-agentsmd).
+Known bugs and planned work, in place of GitHub issues. Finished items are deleted, not ticked; the pull request that finishes one names it in its description. How to keep this file: [AGENTS.md](AGENTS.md#keeping-todomd-and-agentsmd).
 
 Each item says what blocks it and how it is known:
 
