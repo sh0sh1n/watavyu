@@ -1,0 +1,180 @@
+/*
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+package com.sh0sh1n.watavyu.views.discrete.layouts;
+
+import com.sh0sh1n.watavyu.views.discrete.SpreadsheetCell;
+import com.sh0sh1n.watavyu.views.discrete.SpreadsheetColumn;
+import com.sh0sh1n.watavyu.views.discrete.SpreadsheetView;
+
+import javax.swing.*;
+import java.awt.*;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * SheetLayoutOrdinal implements the ordinal style layout of SpreadsheetCells
+ * in the spreadsheet.
+ */
+public class SheetLayoutOrdinal extends SheetLayout {
+    // The of the right hand margin.
+    private int marginSize;
+    private JScrollPane pane;
+
+    /**
+     * A column laid out, and how tall its cells came to.
+     *
+     * @param colID     the column's place among the sheet's columns
+     * @param colHeight the height of its cells in pixels
+     */
+    private record ColInfo(int colID, int colHeight) {
+    }
+
+    /**
+     * SheetLayoutOrdinal constructor.
+     */
+    public SheetLayoutOrdinal(final int margin) {
+        marginSize = margin;
+    }
+
+    /**
+     * Lays the container - positioning the cells within.
+     *
+     * @param parent The parent component for the container.
+     */
+    @Override
+    protected void layoutCells(Container parent) {
+        // This layout must be applied to a Spreadsheet panel.
+        pane = (JScrollPane) parent;
+        SpreadsheetView mainView = (SpreadsheetView) pane.getViewport()
+                .getView();
+
+        List<ColInfo> columnHeight = new ArrayList<>();
+
+        int maxHeight = 0;
+        int colID = 0;
+        SpreadsheetCell selectedCell = null;
+        for (SpreadsheetColumn col : mainView.getColumns()) {
+
+            // Only layout 'visible' columns.
+            if (col.isVisible()) {
+                int ord = 1;
+                int currentHeight = 0;
+                SpreadsheetCell prevCell = null;
+
+                for (SpreadsheetCell cell : col.getCellsTemporally()) {
+                    if (cell == null) {
+                        // We may have a race condition where a cell got deleted but
+                        // we don't know about it yet
+                        continue;
+                    }
+                    Dimension d = cell.getPreferredSize();
+                    if (cell.getCell().isSelected()) {
+                        selectedCell = cell;
+                    }
+
+                    cell.setBounds(0,
+                            currentHeight,
+                            (col.getWidth() - marginSize),
+                            (int) d.getHeight());
+                    cell.setOrdinal(ord);
+                    cell.repaint();
+                    ord++;
+                    currentHeight += d.height;
+
+                    // Determine if this cell overlaps with the previous cell.
+                    if (prevCell != null) {
+                        if (prevCell.getOffsetTicks() > cell.getOnsetTicks()) {
+                            prevCell.setOverlapBorder(true);
+                        } else {
+                            prevCell.setOverlapBorder(false);
+                        }
+                    }
+                    
+                    // Determine if this cell's onset is later than its (non-zero) offset
+                    if (cell.isUpsideDown()){
+                        cell.setOverlapBorder(true);
+                    }
+
+                    prevCell = cell;
+                }
+
+                columnHeight.add(new ColInfo(colID, currentHeight));
+                maxHeight = Math.max(maxHeight, currentHeight);
+            }
+
+            colID++;
+        }
+
+        // Pad the columns out at the bottom.
+        maxHeight = Math.max(maxHeight, parent.getHeight());
+        for (ColInfo info : columnHeight) {
+            SpreadsheetColumn col = mainView.getColumns().get(info.colID());
+            int colHeight = info.colHeight();
+
+            col.getDataPanel().setHeight(maxHeight);
+            col.getDataPanel().getPadding().setBounds(0,
+                    colHeight,
+                    col.getWidth(),
+                    (maxHeight - colHeight));
+        }
+
+        if (selectedCell != null) {
+
+
+        }
+    }
+
+    @Override
+
+    public void reorientView(SpreadsheetCell cell) {
+        // Set the new position of the scroll window.
+
+        double viewMax = pane.getViewport().getViewRect().getY() + pane.getViewport().getViewRect().getHeight();
+        double viewMin = pane.getViewport().getViewRect().getY();
+        int cellMax = cell.getY() + cell.getHeight();
+        int cellMin = cell.getY();
+
+        if (viewMax < cellMax) {
+            pane.getViewport().setViewPosition(
+                    new Point((int) pane.getViewport().getViewRect().getX(),
+                            cellMax - pane.getViewport().getHeight()));
+//                pane.getVerticalScrollBar().setValue(cellMax);
+        } else if (viewMin > cellMin) {
+            pane.getViewport().setViewPosition(
+                    new Point((int) pane.getViewport().getViewRect().getX(),
+                            cellMin));
+        }
+    }
+
+    @Override
+    public void reorientView(SpreadsheetColumn column) {
+
+        double viewMax = pane.getViewport().getViewRect().getX() + pane.getViewport().getViewRect().getWidth();
+        double viewMin = pane.getViewport().getViewRect().getX();
+        int columnMax = column.getX() + column.getWidth();
+        int columnMin = column.getX();
+
+        if (viewMax < columnMax){
+            pane.getViewport().setViewPosition(
+                    new Point(columnMax - pane.getViewport().getWidth(), (int) pane.getViewport().getViewRect().getY()));
+        }else if (viewMin > columnMin){
+            pane.getViewport().setViewPosition(
+                    new Point(columnMin, (int) pane.getViewport().getViewRect().getY()));
+        }
+
+    }
+
+
+}

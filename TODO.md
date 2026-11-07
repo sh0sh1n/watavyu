@@ -20,7 +20,7 @@ Updated 2026-11-06. Re-measure with the commands in [BUILDING.md › Analysis Re
 | Runtime dependencies / with known vulnerabilities | 28 / 8 | 13 / 0 |
 | Error Prone + javac lint warnings | 1,227 | 0: every compile fails on one, with `serial` off (about 130) |
 | PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 101 / 0 (PMD only in size and complexity and three deliberate catch-alls; the rest gated); 13 |
-| Never-invoked methods (`dead-code.py`) | 109+ | 27: test-only accessors, unused settings setters, and Swing overrides the script cannot see |
+| Never-invoked methods (`dead-code.py`) | 109+ | 28: test-only accessors, unused settings setters, and Swing overrides the script cannot see |
 | Static global access (`grep -rohP 'Datavyu\.(get\|set)\w*\(' src/main/java \| wc -l`) | about 330 call sites | 0: each tab's `ProjectController` is passed to what it owns |
 
 ## Bugs
@@ -75,6 +75,6 @@ Tech debt is paid down in the Java app rather than left for the C++ rewrite (AGE
 
 **R12. The last warnings and findings.** ready, alongside the others. Every compile, SpotBugs and all but ten PMD rules fail the build on a finding (BUILDING.md › Lint). Left: PMD's size and complexity rules (98 findings: 13 god classes, 26 classes with too many methods, 45 complex methods, and coupling, length, imports and fields), which the structural refactors such as R14 shrink better than a pass of their own; javac's `serial` lint, off with about 130 warnings from Swing views that are never serialized (clearing it means `serialVersionUID`s and `transient` fields throughout); and PMD's two catch-all rules, held above zero by three deliberate catches (`ClockTimer.every`, `JavaFxVideoPlugin.readFrames`, `VideoController.openStream`), so a new catch-all does not fail the build until those are restructured.
 
-**R13. Watavyu names.** ready, last. Packages are `org.datavyu` and many classes are `Datavyu*` (`DatavyuView`, `DatavyuVariable`, `DatavyuCell`). Rename to `org.watavyu` and names that say what a class is. It touches every file, so it goes after the structural items. The GPL notices stay.
+**R13. Watavyu names.** ready. Many classes are `Datavyu*` (`DatavyuView`, `DatavyuVariable`, `DatavyuCell`). Rename them to names that say what a class is. The GPL notices stay.
 
 **R14. A drawn spreadsheet.** ready. Each cell is a tree of Swing components (`SpreadsheetCell`, its time fields and value editors), which is what limits how large a sheet stays smooth. A sheet that paints its visible cells and puts one editor over the cell being edited, as `JTable` does, would lift that limit and move the cursor and selection into the model, which the planned interaction model wants. The largest item; it changes how much the C++ rewrite's one objective, performance, is still needed.
