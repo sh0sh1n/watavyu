@@ -45,14 +45,10 @@ public final class SheetLayoutFactory {
      * @return SheetLayout to use.
      */
     public static SheetLayout createLayout(final SheetLayoutType type) {
-        switch (type) {
-            case Ordinal:
-                return new SheetLayoutOrdinal(Constants.BORDER_SIZE);
-            case WeakTemporal:
-                return new SheetLayoutWeakTemporal(Constants.BORDER_SIZE);
-            default:
-                throw new IllegalArgumentException("Unknown layout - " + type);
-        }
+        return switch (type) {
+            case Ordinal -> new SheetLayoutOrdinal(Constants.BORDER_SIZE);
+            case WeakTemporal -> new SheetLayoutWeakTemporal(Constants.BORDER_SIZE);
+        };
     }
 
     /**

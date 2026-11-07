@@ -92,8 +92,9 @@ public class VocabEditorVTest {
     private static void type(final VocabElementV column, final EditorComponent field, final String text) {
         column.getDataView().requestFocus();
         column.getDataView().getEdTracker().setEditor(field);
-        for (char key : text.toCharArray()) {
-            field.keyTyped(new KeyEvent(column.getDataView(), KeyEvent.KEY_TYPED, 0, 0, KeyEvent.VK_UNDEFINED, key));
+        for (int i = 0; i < text.length(); i++) {
+            field.keyTyped(new KeyEvent(column.getDataView(), KeyEvent.KEY_TYPED, 0, 0, KeyEvent.VK_UNDEFINED,
+                text.charAt(i)));
         }
     }
 

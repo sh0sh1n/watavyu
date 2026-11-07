@@ -9,6 +9,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Holds any MacOS specific functions.
@@ -41,7 +42,7 @@ public class MacOS {
                     .redirectErrorStream(true)
                     .directory(new File("./"))
                     .start();
-            ArrayList<String> output = new ArrayList<String>();
+            List<String> output = new ArrayList<>();
             BufferedReader br = new BufferedReader(new InputStreamReader(process.getInputStream()));
             String line;
             while ((line = br.readLine()) != null) {

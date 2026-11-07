@@ -46,7 +46,7 @@ public class SpreadsheetView extends JPanel implements Scrollable {
      * Creates new form SpreadsheetView.
      */
     public SpreadsheetView() {
-        columns = new ArrayList<SpreadsheetColumn>();
+        columns = new ArrayList<>();
         this.setDoubleBuffered(true);
     }
 

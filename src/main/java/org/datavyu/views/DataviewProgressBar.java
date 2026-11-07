@@ -6,7 +6,6 @@ package org.datavyu.views;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.Date;
 
 // TODO: Why can we not use the progress bar that java provides?
 public class DataviewProgressBar extends JDialog {
@@ -14,7 +13,8 @@ public class DataviewProgressBar extends JDialog {
     private boolean isError;
     private boolean isCanceled;
     private int progress;
-    private long startTime; // in milliseconds
+    /** When the bar was made, from {@link System#nanoTime}. */
+    private final long startNanos = System.nanoTime();
     private JButton cancelButton;
     private JLabel messageLabel;
     private JProgressBar progressBar;
@@ -31,7 +31,6 @@ public class DataviewProgressBar extends JDialog {
         isCanceled = false;
         progress = 0;
         progressBar.setIndeterminate(true);
-        startTime = new Date().getTime();
     }
 
     public void setProgress(final int value) {
@@ -47,7 +46,7 @@ public class DataviewProgressBar extends JDialog {
                     progressBar.setIndeterminate(false);
                     progressBar.setValue(value);
                 }
-                infoTextArea.append(String.format("%5.2f - %2d%% - %s\n", (new Date().getTime() - startTime) / 1000.0,
+                infoTextArea.append(String.format("%5.2f - %2d%% - %s%n", (System.nanoTime() - startNanos) / 1e9,
                         value, update));
             }
         });

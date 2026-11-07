@@ -127,8 +127,8 @@ public final class Datavyu {
     public boolean safeQuit() {
         List<SpreadSheetPanel> spreadsheets = new ArrayList<>();
         for (Component tab : datavyuView.getTabbedPane().getComponents()) {
-            if (tab instanceof SpreadSheetPanel) {
-                spreadsheets.add((SpreadSheetPanel) tab);
+            if (tab instanceof SpreadSheetPanel spreadSheetPanel) {
+                spreadsheets.add(spreadSheetPanel);
             }
         }
         return mayClose(spreadsheets, "UnsavedDialog.message");

@@ -76,15 +76,7 @@ public final class TimeStampDataValueEditor extends EditorComponent {
      * Reset the values by retrieving from the database.
      */
     public void resetValue() {
-        // reget the parentCell in case other data items have changed
-        switch (dataSourceType) {
-            case Onset:
-                setText(parentCell.getOnsetString());
-                break;
-            default:
-                setText(parentCell.getOffsetString());
-                break;
-        }
+        setText(dataSourceType == TimeStampSource.Onset ? parentCell.getOnsetString() : parentCell.getOffsetString());
     }
 
     /** Sends the time typed to the command that sets and records it, then shows the cell's time. */
@@ -140,23 +132,23 @@ public final class TimeStampDataValueEditor extends EditorComponent {
         //TimeStampDataValue tdv = (TimeStampDataValue) getModel();
         switch (e.getKeyCode()) {
             // Force the Home key to behave correctly on OSX 10.4
-            case KeyEvent.VK_HOME:
+            case KeyEvent.VK_HOME -> {
                 setCaretPosition(0);
                 e.consume();
-                break;
+            }
 
             // Force the End key to behave correctly on OSX 10.4
-            case KeyEvent.VK_END:
+            case KeyEvent.VK_END -> {
                 setCaretPosition(getText().length());
                 e.consume();
-                break;
+            }
 
-            case KeyEvent.VK_BACK_SPACE:
+            case KeyEvent.VK_BACK_SPACE -> {
                 removeBehindCaret();
                 setTimeStamp(getText());
                 e.consume();
-                break;
-            case KeyEvent.VK_DELETE:
+            }
+            case KeyEvent.VK_DELETE -> {
                 int caret = getSelectionEnd();
                 removeAheadOfCaret();
                 setCaretPosition(caret);
@@ -173,19 +165,18 @@ public final class TimeStampDataValueEditor extends EditorComponent {
 
                 setTimeStamp(getText());
                 e.consume();
-                break;
+            }
 
-            case KeyEvent.VK_LEFT:
-            case KeyEvent.VK_RIGHT:
+            case KeyEvent.VK_LEFT, KeyEvent.VK_RIGHT -> {
                 // A time is alone in its field, so the caret stops at its ends.
                 if (movesCaret(e)) {
                     moveCaret(e);
                 }
                 e.consume();
-                break;
-
-            default:
-                break;
+            }
+            default -> {
+                // Other keys need nothing here.
+            }
         }
     }
 

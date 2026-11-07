@@ -46,7 +46,7 @@ public class VocabElementEditorFactory {
                                                           final Variable var,
                                                           final VocabElementV pv) {
 
-        List<EditorComponent> eds = new ArrayList<EditorComponent>();
+        List<EditorComponent> eds = new ArrayList<>();
         eds.add(new VENameEditor(ta, var, pv));
         eds.add(new FixedText(ta, "("));
 
@@ -77,7 +77,7 @@ public class VocabElementEditorFactory {
                                                        Variable var,
                                                        int i,
                                                        VocabElementV pv) {
-        List<EditorComponent> eds = new ArrayList<EditorComponent>();
+        List<EditorComponent> eds = new ArrayList<>();
 
         eds.add(new FixedText(ta, "<"));
         eds.add(new FormalArgEditor(ta, var, i, pv));

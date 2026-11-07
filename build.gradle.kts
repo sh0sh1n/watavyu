@@ -162,6 +162,10 @@ val errorproneGatedChecks = listOf(
     "MissingOverride",
     // Javadoc
     "MissingSummary", "InvalidParam", "EmptyBlockTag", "NotJavadoc", "AlmostJavadoc",
+    // Modern Java
+    "StatementSwitchToExpressionSwitch", "PatternMatchingInstanceof", "UnnecessaryParentheses",
+    "StringConcatToTextBlock", "LoopOverCharArray", "JavaUtilDate", "JavaTimeDefaultTimeZone", "JdkObsolete",
+    "StringCaseLocaleUsage",
 )
 tasks.withType<JavaCompile>().configureEach {
     errorproneGatedChecks.forEach { options.errorprone.error(it) }
@@ -170,7 +174,7 @@ tasks.withType<JavaCompile>().configureEach {
 // javac lint categories at zero in every source set. Error Prone's warnings are not all at zero, so -Werror cannot go
 // on the build's own compiles: each source set is compiled again, without Error Prone or annotation processors (it has
 // none), with only these categories on and as errors.
-val javacGatedCategories = listOf("deprecation", "removal", "dangling-doc-comments")
+val javacGatedCategories = listOf("deprecation", "removal", "dangling-doc-comments", "rawtypes", "unchecked")
 val lintGates = mutableSetOf<String>()
 sourceSets.configureEach {
     val set = this
@@ -226,8 +230,8 @@ val pmdUngatedRules = setOf(
     // Correctness
     "CompareObjectsWithEquals", "CloseResource", "AssignmentInOperand", "AvoidSynchronizedAtMethodLevel",
     "CollapsibleIfStatements", "SimplifyBooleanReturns",
-    // Legacy APIs and idioms
-    "UseDiamondOperator", "LooseCoupling", "ForLoopCanBeForeach", "AvoidFieldNameMatchingMethodName",
+    // Naming
+    "AvoidFieldNameMatchingMethodName",
 )
 val pmdGate = tasks.register("pmdGate") {
     description = "Fails if PMD finds anything under a rule that has reached zero findings."

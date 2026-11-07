@@ -128,8 +128,7 @@ public final class DatavyuView implements FileDropEventListener {
                 JTabbedPane tabbedPane = (JTabbedPane) e.getSource();
 
                 for (Component tab : tabbedPane.getComponents()) {
-                    if (tab instanceof SpreadSheetPanel) {
-                        SpreadSheetPanel sheet = (SpreadSheetPanel) tab;
+                    if (tab instanceof SpreadSheetPanel sheet) {
                         sheet.getVideoController().stopAction();
                         if (sheet.getMediaPlayers() != null) {
                             sheet.getMediaPlayers().setShowing(false);
@@ -261,7 +260,7 @@ public final class DatavyuView implements FileDropEventListener {
             if (listOfFiles != null) {
                 for (File f : listOfFiles) {
                     // the last time datavyu crashed
-                    if ((f.isFile()) &&
+                    if (f.isFile() &&
                             FilenameUtils.wildcardMatchOnSystem(f.getName(), "~*" + ProjectDocument.EXTENSION)) {
 
                         // The autosave is deleted once it has opened, or if the user does not want it.
@@ -623,26 +622,14 @@ public final class DatavyuView implements FileDropEventListener {
                 String test = "";
                 if ("progress".equals(evt.getPropertyName())) {
                     int val = (Integer) evt.getNewValue();
-                    String msg;
-                    switch (val) {
-                        case 0:
-                            msg = "Preparing spreadsheet";
-                            break;
-                        case 10:
-                            msg = "Opening project";
-                            break;
-                        case 40:
-                            msg = "Project opened";
-                            break;
-                        case 50:
-                            msg = "Loading project into spreadsheet";
-                            break;
-                        case 100:
-                            msg = "Completed!";
-                            break;
-                        default:
-                            msg = "Error loading project!";
-                    }
+                    String msg = switch (val) {
+                        case 0 -> "Preparing spreadsheet";
+                        case 10 -> "Opening project";
+                        case 40 -> "Project opened";
+                        case 50 -> "Loading project into spreadsheet";
+                        case 100 -> "Completed!";
+                        default -> "Error loading project!";
+                    };
 
                     progressBar.setProgress(val, msg);
                 }
@@ -796,8 +783,8 @@ public final class DatavyuView implements FileDropEventListener {
         boolean show = !Settings.get().isShowControls();
         Settings.get().setShowControls(show);
         for (Component tab : tabbedPane.getComponents()) {
-            if (tab instanceof SpreadSheetPanel) {
-                ((SpreadSheetPanel) tab).setControlsShown(show);
+            if (tab instanceof SpreadSheetPanel spreadSheetPanel) {
+                spreadSheetPanel.setControlsShown(show);
             }
         }
     }
@@ -809,8 +796,8 @@ public final class DatavyuView implements FileDropEventListener {
         boolean across = !Settings.get().isPlayheadAcrossColumns();
         Settings.get().setPlayheadAcrossColumns(across);
         for (Component tab : tabbedPane.getComponents()) {
-            if (tab instanceof SpreadSheetPanel && ((SpreadSheetPanel) tab).getPlayhead() != null) {
-                ((SpreadSheetPanel) tab).getPlayhead().refresh();
+            if (tab instanceof SpreadSheetPanel spreadSheetPanel && spreadSheetPanel.getPlayhead() != null) {
+                spreadSheetPanel.getPlayhead().refresh();
             }
         }
     }
@@ -906,8 +893,7 @@ public final class DatavyuView implements FileDropEventListener {
 
     public boolean checkIfFileAlreadyOpen(String filepath) {
         for (Component tab : tabbedPane.getComponents()) {
-            if (tab instanceof SpreadSheetPanel) {
-                SpreadSheetPanel sp = (SpreadSheetPanel) tab;
+            if (tab instanceof SpreadSheetPanel sp) {
                 if (sp.getProjectController().getFullPath() != null &&
                         sp.getProjectController().getFullPath().equals(filepath)) {
                     return true;
@@ -976,8 +962,8 @@ public final class DatavyuView implements FileDropEventListener {
     public void setPastCellDim(final int percent) {
         Settings.get().setPastCellDim(percent);
         for (Component tab : tabbedPane.getComponents()) {
-            if (tab instanceof SpreadSheetPanel) {
-                ((SpreadSheetPanel) tab).refreshCellColours();
+            if (tab instanceof SpreadSheetPanel spreadSheetPanel) {
+                spreadSheetPanel.refreshCellColours();
             }
         }
     }

@@ -452,9 +452,8 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
     private void focusNextCell() {
         long time = controller.getVideoController().getCurrentTime();
         List<SpreadsheetCell> tempCells = getCellsTemporally();
-        for(int i = 0; i < tempCells.size(); i++) {
-            SpreadsheetCell c = tempCells.get(i);
-            if(c.getCell().isInTimeWindow(time)) {
+        for (SpreadsheetCell c : tempCells) {
+            if (c.getCell().isInTimeWindow(time)) {
                 if(!c.isFocusOwner()) {
                     int firstEmpty = c.getCell().getValues().indexOf("");
                     c.requestFocus();
