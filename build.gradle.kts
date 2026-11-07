@@ -208,8 +208,9 @@ val pmdGate = tasks.register("pmdGate") {
 }
 tasks.check { dependsOn(pmdGate) }
 
+// SpotBugs fails the build on any finding: every category reached zero (AGENTS.md: checks only ratchet up).
 spotbugs {
-    ignoreFailures.set(true)
+    ignoreFailures.set(false)
     excludeFilter.set(file("config/spotbugs/exclude.xml"))
     showProgress.set(false)
 }
@@ -219,28 +220,6 @@ tasks.withType<com.github.spotbugs.snom.SpotBugsTask>().configureEach {
     reports.create("xml") { required.set(true) }
 }
 
-// Every SpotBugs category fails the build except these, which are not at zero yet. A category leaves this list when it
-// reaches zero (AGENTS.md: checks only ratchet up).
-val spotbugsUngatedCategories = setOf("BAD_PRACTICE")
-val spotbugsGate = tasks.register("spotbugsGate") {
-    description = "Fails if SpotBugs finds anything in a category that has reached zero findings."
-    group = "verification"
-    val report = layout.buildDirectory.file("reports/spotbugs/main.xml")
-    dependsOn(tasks.named("spotbugsMain"))
-    inputs.file(report)
-    doLast {
-        val xml = report.get().asFile.readText()
-        val categories = Regex("<BugPattern [^>]*type=\"([^\"]+)\"[^>]*category=\"([^\"]+)\"")
-            .findAll(xml).associate { it.groupValues[1] to it.groupValues[2] }
-        val found = Regex("<BugInstance [^>]*type=\"([^\"]+)\"").findAll(xml).map { it.groupValues[1] }
-            .filter { categories[it] !in spotbugsUngatedCategories }.toList()
-        if (found.isNotEmpty()) {
-            throw GradleException("SpotBugs found ${found.size} issue(s) in gated categories: " +
-                "${found.distinct()}; see build/reports/spotbugs/main.html")
-        }
-    }
-}
-tasks.check { dependsOn(spotbugsGate) }
 
 tasks.jacocoTestReport {
     dependsOn(tasks.test)

@@ -86,7 +86,7 @@ public final class VocabElementV extends JPanel {
     /**
      * The underlying variable model that this vocab element view represents.
      */
-    private Variable varModel;
+    private transient Variable varModel;
     /**
      * The parent editor for this vocab element view.
      */
@@ -94,12 +94,12 @@ public final class VocabElementV extends JPanel {
     /**
      * The mark beside a locked column's name, which shakes when the column refuses a change.
      */
-    private final LockMark lockMark;
+    private final transient LockMark lockMark;
     /**
      * Hears of the column being renamed or locked or its codes changing, as undo does from the spreadsheet, and of
      * changes it refuses, while this view is showing.
      */
-    private final VariableListener columnListener = new VariableListener() {
+    private final transient VariableListener columnListener = new VariableListener() {
         @Override public void nameChanged(final String newName) { showModel(); }
         @Override public void visibilityChanged(final boolean isHidden) { }
         @Override public void cellInserted(final Cell newCell) { }

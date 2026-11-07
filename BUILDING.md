@@ -78,10 +78,10 @@ Every compile, in every source set, fails on any warning (`-Werror`): every java
 
 ### Analysis Reports
 
-These fill the Measures table in [TODO.md](TODO.md). A rule moves into a gate once its count reaches zero ([AGENTS.md](AGENTS.md#how-to-work-here)); the rest are reports. Two gates read the reports, and `check` and `build` run both:
+These fill the Measures table in [TODO.md](TODO.md). A rule moves into a gate once its count reaches zero ([AGENTS.md](AGENTS.md#how-to-work-here)); the rest are reports. `check` and `build` fail on these:
 
 - `pmdGate` fails on a finding under any PMD rule except those in `pmdUngatedRules`: the size and complexity rules, not yet at zero, and the two that forbid catching every exception or `Throwable`, which three boundaries do on purpose (a clock tick, parsing an untrusted MP4 file and the thread that opens media must report or survive any failure). A rule leaves that list when it reaches zero, and a rule added to the ruleset is gated unless it is listed.
-- `spotbugsGate` fails on a finding in any SpotBugs category except those in `spotbugsUngatedCategories`, the categories not yet at zero, and works the same way.
+- SpotBugs fails the build on any finding (`ignoreFailures` is off), as every category is at zero.
 
 - `./gradlew analyze` runs the tests with JaCoCo and writes `build/reports/jacoco/test/html`, PMD (`build/reports/pmd/main.html`) and SpotBugs (`build/reports/spotbugs/main.html`) for the main source set. `./gradlew check` and `build` also run PMD and SpotBugs.
   - PMD uses `config/pmd/ruleset.xml`: dead code, size and complexity, error handling, correctness and legacy-API rules, with no formatting or naming rules.

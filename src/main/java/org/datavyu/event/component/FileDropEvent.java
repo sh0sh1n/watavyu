@@ -16,6 +16,7 @@ package org.datavyu.event.component;
 
 import java.io.File;
 import java.util.EventObject;
+import java.util.List;
 
 /**
  * Event object for file drag and drop.
@@ -30,7 +31,7 @@ public final class FileDropEvent extends EventObject {
     /**
      * The files involved in the drop event.
      */
-    private final Iterable<File> files;
+    private final List<File> files;
 
     /**
      * Creates a new FileDropEvent.
@@ -39,15 +40,15 @@ public final class FileDropEvent extends EventObject {
      * @param droppedFiles The files involved in the drop event.
      */
     public FileDropEvent(final Object source,
-            final Iterable<File> droppedFiles) {
+            final List<File> droppedFiles) {
         super(source);
-        files = droppedFiles;
+        files = List.copyOf(droppedFiles);
     }
 
     /**
      * Returns the files involved in the drop event.
      */
-    public Iterable<File> getFiles() {
+    public List<File> getFiles() {
         return files;
     }
 

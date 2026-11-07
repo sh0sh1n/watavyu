@@ -62,13 +62,13 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
     private final transient List<FileDropEventListener> fileDropListeners;
 
     /** Current project controller */
-    private ProjectController projectController;
+    private transient ProjectController projectController;
 
     /** Video controller */
     private transient VideoController videoController;
 
     /** Plays this spreadsheet's media columns; set with the video controller. */
-    private MediaPlayers mediaPlayers;
+    private transient MediaPlayers mediaPlayers;
 
     /** The video controller's buttons, in a drawer at the left; set with the video controller. */
     private JPanel controlsDrawer;
@@ -83,7 +83,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
     private JPanel headerView;
 
     /** The Database being viewed */
-    private DataStore dataStore;
+    private transient DataStore dataStore;
 
     /** Vector of the Spreadsheet columns added to the Spreadsheet */
     private List<SpreadsheetColumn> columns;
@@ -816,7 +816,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
      *
      * @param files The files that were dropped onto the spreadsheet.
      */
-    private void notifyFileDropEventListeners(final Iterable<File> files) {
+    private void notifyFileDropEventListeners(final List<File> files) {
         final FileDropEvent event = new FileDropEvent(this, files);
 
         synchronized (this) {
