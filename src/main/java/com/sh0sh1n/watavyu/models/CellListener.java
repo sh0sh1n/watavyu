@@ -20,16 +20,41 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.sh0sh1n.watavyu.models.db;
+package com.sh0sh1n.watavyu.models;
 
 /**
- * Notifier for information the User Interface when the title of the application
- * needs to be updated.
+ * Implement this interface to be notified of changes to a cell. 
  */
-public interface TitleNotifier {
+public interface CellListener {
 
     /**
-     * Called when the title of the application needs to be updated.
+     * Called when the offset of a cell changes.
+     *
+     * @param newOffset The new offset value for a cell.
      */
-    void updateTitle();
+    void offsetChanged(final long newOffset);
+
+    /**
+     * Called when the onset of a cell changes.
+     *
+     * @param newOnset The new onset value for a cell.
+     */
+    void onsetChanged(final long newOnset);
+
+    /**
+     * Called when a cell is highlighted or deselected.
+     *
+     * @param isHighlighted True if the cell is highlighted, false otherwise.
+     */
+    void highlightingChange(final boolean isHighlighted);
+
+    /**
+     * Called when a cell is selected of deselected.
+     * 
+     * @param isSelected True if the cell is selected, false otherwise.
+     */
+    void selectionChange(final boolean isSelected);
+
+    /** Called when what a cell shows changes: one of its values, or a clip's file or whether it opened. */
+    void contentChanged();
 }

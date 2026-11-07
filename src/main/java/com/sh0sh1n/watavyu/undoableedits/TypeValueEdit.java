@@ -1,6 +1,6 @@
 package com.sh0sh1n.watavyu.undoableedits;
 
-import com.sh0sh1n.watavyu.models.db.Cell;
+import com.sh0sh1n.watavyu.models.Cell;
 
 import javax.swing.undo.UndoableEdit;
 import java.util.List;

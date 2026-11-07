@@ -1,6 +1,6 @@
 package com.sh0sh1n.watavyu.controllers.project;
 
-import com.sh0sh1n.watavyu.models.db.Cell;
+import com.sh0sh1n.watavyu.models.Cell;
 import com.sh0sh1n.watavyu.undoableedits.TypeValueEdit;
 
 import java.util.List;

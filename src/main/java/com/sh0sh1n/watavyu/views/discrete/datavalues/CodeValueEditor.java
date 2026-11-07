@@ -14,7 +14,7 @@
  */
 package com.sh0sh1n.watavyu.views.discrete.datavalues;
 
-import com.sh0sh1n.watavyu.models.db.Cell;
+import com.sh0sh1n.watavyu.models.Cell;
 import com.sh0sh1n.watavyu.views.discrete.EditorComponent;
 
 import javax.swing.text.JTextComponent;

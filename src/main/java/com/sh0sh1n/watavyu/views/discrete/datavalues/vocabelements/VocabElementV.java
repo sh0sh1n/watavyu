@@ -18,9 +18,9 @@ import com.sh0sh1n.watavyu.views.Glyph;
 import com.sh0sh1n.watavyu.views.LockMark;
 import com.sh0sh1n.watavyu.views.discrete.SpreadsheetTheme;
 import com.sh0sh1n.watavyu.util.Resources;
-import com.sh0sh1n.watavyu.models.db.Cell;
-import com.sh0sh1n.watavyu.models.db.Column;
-import com.sh0sh1n.watavyu.models.db.ColumnListener;
+import com.sh0sh1n.watavyu.models.Cell;
+import com.sh0sh1n.watavyu.models.Column;
+import com.sh0sh1n.watavyu.models.ColumnListener;
 import com.sh0sh1n.watavyu.views.VocabEditorV;
 import com.sh0sh1n.watavyu.views.discrete.EditorComponent;
 

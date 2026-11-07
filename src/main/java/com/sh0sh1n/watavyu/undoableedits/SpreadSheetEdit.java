@@ -16,7 +16,7 @@ package com.sh0sh1n.watavyu.undoableedits;
 
 
 import com.sh0sh1n.watavyu.controllers.project.ProjectController;
-import com.sh0sh1n.watavyu.models.db.DataStore;
+import com.sh0sh1n.watavyu.models.DataStore;
 import com.sh0sh1n.watavyu.views.discrete.SpreadSheetPanel;
 
 import javax.swing.undo.AbstractUndoableEdit;

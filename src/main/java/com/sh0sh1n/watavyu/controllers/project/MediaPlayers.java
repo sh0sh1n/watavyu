@@ -1,15 +1,15 @@
 package com.sh0sh1n.watavyu.controllers.project;
 
 import com.sh0sh1n.watavyu.models.Identifier;
-import com.sh0sh1n.watavyu.models.db.Cell;
-import com.sh0sh1n.watavyu.models.db.Cell.ClipFile;
-import com.sh0sh1n.watavyu.models.db.CellListener;
-import com.sh0sh1n.watavyu.models.db.DataStore;
-import com.sh0sh1n.watavyu.models.db.DataStoreListener;
-import com.sh0sh1n.watavyu.models.db.MediaClip;
-import com.sh0sh1n.watavyu.models.db.UserWarningException;
-import com.sh0sh1n.watavyu.models.db.Column;
-import com.sh0sh1n.watavyu.models.db.ColumnListener;
+import com.sh0sh1n.watavyu.models.Cell;
+import com.sh0sh1n.watavyu.models.Cell.ClipFile;
+import com.sh0sh1n.watavyu.models.CellListener;
+import com.sh0sh1n.watavyu.models.DataStore;
+import com.sh0sh1n.watavyu.models.DataStoreListener;
+import com.sh0sh1n.watavyu.models.MediaClip;
+import com.sh0sh1n.watavyu.models.UserWarningException;
+import com.sh0sh1n.watavyu.models.Column;
+import com.sh0sh1n.watavyu.models.ColumnListener;
 import com.sh0sh1n.watavyu.plugins.StreamViewer;
 import com.sh0sh1n.watavyu.util.ClockTimer;
 import com.sh0sh1n.watavyu.views.MediaWindow;

@@ -7,8 +7,8 @@ import static org.testng.Assert.assertThrows;
 
 import com.sh0sh1n.watavyu.TestSpreadsheets;
 import com.sh0sh1n.watavyu.controllers.project.ProjectController;
-import com.sh0sh1n.watavyu.models.db.DataStoreFactory;
-import com.sh0sh1n.watavyu.models.db.Column;
+import com.sh0sh1n.watavyu.models.DataStoreFactory;
+import com.sh0sh1n.watavyu.models.Column;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 

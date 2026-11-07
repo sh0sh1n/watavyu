@@ -1,6 +1,6 @@
 package com.sh0sh1n.watavyu.undoableedits;
 
-import com.sh0sh1n.watavyu.models.db.Column;
+import com.sh0sh1n.watavyu.models.Column;
 
 /** Renaming a code, from the Code Editor, typed a key at a time. */
 public final class RenameCodeEdit extends TypedRenameEdit {

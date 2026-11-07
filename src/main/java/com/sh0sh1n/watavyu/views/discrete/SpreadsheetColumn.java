@@ -18,7 +18,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import com.sh0sh1n.watavyu.controllers.project.ColumnCommands;
 import com.sh0sh1n.watavyu.controllers.project.ProjectController;
-import com.sh0sh1n.watavyu.models.db.*;
+import com.sh0sh1n.watavyu.models.*;
 import com.sh0sh1n.watavyu.util.ClockTimer;
 import com.sh0sh1n.watavyu.util.Constants;
 import com.sh0sh1n.watavyu.util.DragAndDrop.TransparentPanel;

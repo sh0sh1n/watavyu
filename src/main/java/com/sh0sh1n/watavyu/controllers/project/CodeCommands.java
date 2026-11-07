@@ -1,6 +1,6 @@
 package com.sh0sh1n.watavyu.controllers.project;
 
-import com.sh0sh1n.watavyu.models.db.Column;
+import com.sh0sh1n.watavyu.models.Column;
 import com.sh0sh1n.watavyu.undoableedits.AddCodeEdit;
 import com.sh0sh1n.watavyu.undoableedits.DeleteCodeEdit;
 import com.sh0sh1n.watavyu.undoableedits.MoveCodeEdit;

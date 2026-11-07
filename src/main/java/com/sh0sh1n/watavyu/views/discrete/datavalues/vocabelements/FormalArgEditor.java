@@ -14,7 +14,7 @@
  */
 package com.sh0sh1n.watavyu.views.discrete.datavalues.vocabelements;
 
-import com.sh0sh1n.watavyu.models.db.Column;
+import com.sh0sh1n.watavyu.models.Column;
 import com.sh0sh1n.watavyu.views.discrete.EditorComponent;
 
 import javax.swing.text.JTextComponent;

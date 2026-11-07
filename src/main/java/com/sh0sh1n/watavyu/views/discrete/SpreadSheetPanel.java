@@ -19,7 +19,7 @@ import com.sh0sh1n.watavyu.util.Resources;
 import com.sh0sh1n.watavyu.controllers.project.ProjectController;
 import com.sh0sh1n.watavyu.event.component.FileDropEvent;
 import com.sh0sh1n.watavyu.event.component.FileDropEventListener;
-import com.sh0sh1n.watavyu.models.db.*;
+import com.sh0sh1n.watavyu.models.*;
 import com.sh0sh1n.watavyu.util.Constants;
 import com.sh0sh1n.watavyu.views.VideoController;
 import com.sh0sh1n.watavyu.views.WindowPlacement;

@@ -16,10 +16,10 @@ package com.sh0sh1n.watavyu.controllers;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import com.sh0sh1n.watavyu.models.db.DataStore;
-import com.sh0sh1n.watavyu.models.db.DataStoreFactory;
-import com.sh0sh1n.watavyu.models.db.UserWarningException;
-import com.sh0sh1n.watavyu.models.project.Project;
+import com.sh0sh1n.watavyu.models.DataStore;
+import com.sh0sh1n.watavyu.models.DataStoreFactory;
+import com.sh0sh1n.watavyu.models.UserWarningException;
+import com.sh0sh1n.watavyu.models.Project;
 import com.sh0sh1n.watavyu.projectfile.ProjectDocument;
 import com.sh0sh1n.watavyu.projectfile.ProjectFileException;
 import com.sh0sh1n.watavyu.projectfile.ProjectJson;

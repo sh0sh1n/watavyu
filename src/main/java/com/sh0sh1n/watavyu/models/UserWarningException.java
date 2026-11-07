@@ -1,4 +1,4 @@
-package com.sh0sh1n.watavyu.models.db;
+package com.sh0sh1n.watavyu.models;
 
 /**
  * An exception caused by the user when interacting with the database.
