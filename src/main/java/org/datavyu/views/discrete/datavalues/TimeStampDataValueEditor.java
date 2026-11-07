@@ -14,8 +14,6 @@
  */
 package org.datavyu.views.discrete.datavalues;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.Cell;
 import org.datavyu.util.Timestamp;
@@ -31,10 +29,6 @@ import java.awt.event.KeyEvent;
  */
 public final class TimeStampDataValueEditor extends EditorComponent {
 
-    /**
-     * The logger for this class.
-     */
-    private static Logger LOGGER = LogManager.getLogger(TimeStampDataValueEditor.class);
 
     /**
      * The parent datacell for the TimeStamp that this view represents.

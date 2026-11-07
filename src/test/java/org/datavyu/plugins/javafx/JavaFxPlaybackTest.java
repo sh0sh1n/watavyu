@@ -26,7 +26,6 @@ public class JavaFxPlaybackTest {
         final List<String> commands = new ArrayList<>();
         Listener listener;
         double time;
-        boolean disposed;
 
         @Override
         public void setListener(final Listener listener) {
@@ -67,7 +66,6 @@ public class JavaFxPlaybackTest {
         @Override
         public void dispose() {
             commands.add("dispose");
-            disposed = true;
         }
     }
 

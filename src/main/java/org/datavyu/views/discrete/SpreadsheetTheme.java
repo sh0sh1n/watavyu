@@ -49,14 +49,14 @@ public final class SpreadsheetTheme {
 
     private static volatile boolean monospacedValues;
 
-    private static volatile Font dataFont = SANS.deriveFont((float) DEFAULT_DATA_FONT_SIZE);
+    private static volatile Font currentDataFont = SANS.deriveFont((float) DEFAULT_DATA_FONT_SIZE);
 
     private SpreadsheetTheme() {
     }
 
     /** Returns the font of cell values. */
     public static Font dataFont() {
-        return dataFont;
+        return currentDataFont;
     }
 
     /**
@@ -65,7 +65,7 @@ public final class SpreadsheetTheme {
      * @param size New size of the font of cell values, in points.
      */
     public static void setDataFontSize(final int size) {
-        dataFont = (monospacedValues ? MONO : SANS).deriveFont((float) size);
+        currentDataFont = (monospacedValues ? MONO : SANS).deriveFont((float) size);
     }
 
     /**
@@ -75,7 +75,7 @@ public final class SpreadsheetTheme {
      */
     public static void setMonospacedValues(final boolean monospaced) {
         monospacedValues = monospaced;
-        setDataFontSize(dataFont.getSize());
+        setDataFontSize(currentDataFont.getSize());
     }
 
     /** Returns whether cell values are set in Plex Mono. */

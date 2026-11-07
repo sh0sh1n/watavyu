@@ -14,8 +14,6 @@
  */
 package org.datavyu.views.discrete.datavalues;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.Variable;
@@ -37,13 +35,9 @@ public final class TimeStampTextField extends JTextField
         implements FocusListener, KeyListener {
 
     /**
-     * The logger for this class.
-     */
-    private static Logger LOGGER = LogManager.getLogger(TimeStampTextField.class);
-    /**
      * The parent cell for this JPanel.
      */
-    private Cell parentCell = null;
+    private Cell parentCell;
     /**
      * The editors that make up the representation of the data.
      */

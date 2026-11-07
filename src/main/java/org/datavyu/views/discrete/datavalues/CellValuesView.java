@@ -56,10 +56,10 @@ public final class CellValuesView extends JTextArea implements FocusListener {
     private boolean typing;
 
     /**
-     * Whether this view's own typing is being set in the cell. The view shows it already, so it passes over the cell's
-     * news of it rather than rebuild the editor being typed in.
+     * How many of this view's own typings are being set in the cell. The view shows them already, so it passes over
+     * the cell's news of them rather than rebuild the editor being typed in.
      */
-    private boolean settingTyping;
+    private int settingTyping;
 
     /**
      * All the editors that make up the representation of the data.
@@ -137,7 +137,7 @@ public final class CellValuesView extends JTextArea implements FocusListener {
 
     /** Shows the cell's values, building an editor for each, unless it is this view's own typing being set. */
     public void showValues() {
-        if (settingTyping) {
+        if (settingTyping > 0) {
             return;
         }
         // The editor in the current one's place takes over, with the caret where it was.
@@ -197,13 +197,13 @@ public final class CellValuesView extends JTextArea implements FocusListener {
 
     /** Sends a code's value typed to the command that sets and records it. */
     private void typed(final int code, final String value) {
-        settingTyping = true;
+        settingTyping++;
         try {
             if (controller.typing().typeValue(parentCell, code, value, typing)) {
                 typing = true;
             }
         } finally {
-            settingTyping = false;
+            settingTyping--;
         }
     }
 

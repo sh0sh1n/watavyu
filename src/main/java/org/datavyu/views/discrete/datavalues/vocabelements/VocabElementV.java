@@ -18,8 +18,6 @@ import org.datavyu.views.Glyph;
 import org.datavyu.views.LockMark;
 import org.datavyu.views.discrete.SpreadsheetTheme;
 import org.datavyu.util.Resources;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.datavyu.models.db.Cell;
 import org.datavyu.models.db.Variable;
 import org.datavyu.models.db.VariableListener;
@@ -61,10 +59,6 @@ public class VocabElementV extends JPanel {
             BorderFactory.createCompoundBorder(
                     BorderFactory.createMatteBorder(0, 0, 1, 0, SpreadsheetTheme.PALETTE.rule()),
                     BorderFactory.createEmptyBorder(3, 0, 3, 0));
-    /**
-     * The logger for this class.
-     */
-    private static Logger LOGGER = LogManager.getLogger(VocabElementV.class);
     /**
      * The background of the code being edited.
      */

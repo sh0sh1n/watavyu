@@ -166,6 +166,9 @@ val errorproneGatedChecks = listOf(
     "StatementSwitchToExpressionSwitch", "PatternMatchingInstanceof", "UnnecessaryParentheses",
     "StringConcatToTextBlock", "LoopOverCharArray", "JavaUtilDate", "JavaTimeDefaultTimeZone", "JdkObsolete",
     "StringCaseLocaleUsage",
+    // Dead code
+    "UnusedVariable", "ModifiedButNotUsed", "EffectivelyPrivate", "ClassCanBeStatic", "VariableNameSameAsType",
+    "RemoveUnusedImports",
 )
 tasks.withType<JavaCompile>().configureEach {
     errorproneGatedChecks.forEach { options.errorprone.error(it) }
@@ -222,16 +225,12 @@ val pmdUngatedRules = setOf(
     // Size and complexity
     "GodClass", "TooManyMethods", "CyclomaticComplexity", "CognitiveComplexity", "CouplingBetweenObjects",
     "NcssCount", "ExcessiveImports", "TooManyFields",
-    // Dead code
-    "UnusedPrivateField", "UnusedAssignment", "UnusedFormalParameter", "UnusedLocalVariable", "UnnecessaryImport",
     // Error handling
     "AvoidCatchingGenericException", "AvoidCatchingThrowable", "PreserveStackTrace", "EmptyCatchBlock",
     "AvoidPrintStackTrace", "SystemPrintln",
     // Correctness
     "CompareObjectsWithEquals", "CloseResource", "AssignmentInOperand", "AvoidSynchronizedAtMethodLevel",
     "CollapsibleIfStatements", "SimplifyBooleanReturns",
-    // Naming
-    "AvoidFieldNameMatchingMethodName",
 )
 val pmdGate = tasks.register("pmdGate") {
     description = "Fails if PMD finds anything under a rule that has reached zero findings."

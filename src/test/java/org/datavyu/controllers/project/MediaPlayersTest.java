@@ -66,7 +66,6 @@ public class MediaPlayersTest {
         Double volume;
         DoubleConsumer volumeListener;
         Runnable closeListener;
-        boolean visible;
         boolean closed;
 
         @Override
@@ -97,7 +96,6 @@ public class MediaPlayersTest {
 
         @Override
         public void setShowing(final boolean showing) {
-            visible = showing;
         }
 
         @Override

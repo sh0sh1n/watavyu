@@ -91,7 +91,7 @@ public final class NewProjectV extends DatavyuDialog {
         cancelButton.addActionListener(new java.awt.event.ActionListener() {
             @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                cancelButtonActionPerformed(evt);
+                cancelButtonActionPerformed();
             }
         });
 
@@ -101,7 +101,7 @@ public final class NewProjectV extends DatavyuDialog {
         okButton.addActionListener(new java.awt.event.ActionListener() {
             @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                okButtonActionPerformed(evt);
+                okButtonActionPerformed();
             }
         });
 
@@ -141,19 +141,15 @@ public final class NewProjectV extends DatavyuDialog {
 
     /**
      * The action to invoke when a user clicks on the CANCEL button.
-     *
-     * @param evt The event that triggered this action
      */
-    private void cancelButtonActionPerformed(final java.awt.event.ActionEvent evt) { // GEN-FIRST:event_cancelButtonActionPerformed
+    private void cancelButtonActionPerformed() { // GEN-FIRST:event_cancelButtonActionPerformed
         dispose();
     } // GEN-LAST:event_cancelButtonActionPerformed
 
     /**
      * The action to invoke when a user clicks on the OK button.
-     *
-     * @param evt The event that triggered this action.
      */
-    private void okButtonActionPerformed(final java.awt.event.ActionEvent evt) { // GEN-FIRST:event_okButtonActionPerformed
+    private void okButtonActionPerformed() { // GEN-FIRST:event_okButtonActionPerformed
         LOGGER.info("create new project");
         Resources r = Resources.of(NewProjectV.class);
 

@@ -29,7 +29,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.DoubleConsumer;
 import java.util.function.Function;
-import java.util.function.Predicate;
 
 /**
  * Plays the spreadsheet's media columns. The spreadsheet holds each column and its clips; this opens a player for each

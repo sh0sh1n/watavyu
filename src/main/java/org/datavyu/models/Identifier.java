@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class Identifier {
 
     /** Lazily initialized hash code */
-    private volatile int hashCode;
+    private volatile int cachedHash;
 
     /** Sequence number for the identifier */
     private final long sequenceNumber;
@@ -53,10 +53,10 @@ public class Identifier {
     @Override
     public int hashCode() {
         // For implementation details see, Josh Bloch's Effective Java, 2nd edition, page 47ff.
-        if (hashCode == 0) {
-            hashCode = 31 * 17 + (int) (sequenceNumber ^ (sequenceNumber >>> 32));
+        if (cachedHash == 0) {
+            cachedHash = 31 * 17 + (int) (sequenceNumber ^ (sequenceNumber >>> 32));
         }
-        return hashCode;
+        return cachedHash;
     }
 
     @Override

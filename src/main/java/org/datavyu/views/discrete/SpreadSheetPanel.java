@@ -16,8 +16,6 @@ package org.datavyu.views.discrete;
 
 import org.datavyu.controllers.project.MediaPlayers;
 import org.datavyu.util.Resources;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.datavyu.controllers.project.ProjectController;
 import org.datavyu.event.component.FileDropEvent;
 import org.datavyu.event.component.FileDropEventListener;
@@ -59,8 +57,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public final class SpreadSheetPanel extends JPanel implements DataStoreListener, CellSelectionListener,
         ColumnSelectionListener, ColumnVisibilityListener, KeyEventDispatcher {
 
-    /** The logger for this class */
-    private static Logger logger = LogManager.getLogger(SpreadSheetPanel.class);
 
     /** List containing listeners interested in file drop events */
     private final transient List<FileDropEventListener> fileDropListeners;
@@ -403,17 +399,16 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
      */
     private void buildColumns() {
         for (Variable v : getDataStore().getAllVariables()) {
-            addColumn(getDataStore(), v);
+            addColumn(v);
         }
     }
 
     /**
      * Add a column panel to the scroll panel.
      *
-     * @param db  database.
      * @param var The variable that this column represents.
      */
-    private void addColumn(final DataStore db, final Variable var) {
+    private void addColumn(final Variable var) {
         // Remove previous instance of newVariableButton from the header.
         headerView.remove(newVariableButton);
         headerView.remove(hiddenVariablesButton);
@@ -532,7 +527,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
 
     @Override
     public void variableAdded(final Variable newVariable) {
-        addColumn(dataStore, newVariable);
+        addColumn(newVariable);
         // Undo puts a deleted column back in its place, not always last.
         arrangeColumns();
         revalidate();
@@ -872,20 +867,19 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
     public void selectColumn(final SpreadsheetColumn selectedColumn, final int shift) {
         // Find currently selected cell, if there is one
         List<SpreadsheetColumn> visibleColumns = getVisibleColumns();
-        SpreadsheetCell sc = lastSelectedCell;
         int vcIndex = visibleColumns.indexOf(selectedColumn);
         int newIndex = Math.floorMod(vcIndex+shift, visibleColumns.size()); // wrap around visible columns
         if(0 <= newIndex
                 && newIndex < visibleColumns.size()) {
 
-            sc = selectedColumn.getDataPanel().getSelectedCell();
+            SpreadsheetCell sc = selectedColumn.getDataPanel().getSelectedCell();
 
             clearCellSelection();
             clearColumnSelection();
             requestFocus();
 
             SpreadsheetColumn newColumn = visibleColumns.get(newIndex);
-            SpreadsheetCell newCell = null;
+            SpreadsheetCell newCell;
             if(!newColumn.getCells().isEmpty()) {
                 if (sc != null) {
                     if (currentLayoutType == SheetLayoutType.WeakTemporal) {
@@ -929,7 +923,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
         /**
          * Creates a new drag and drop handler.
          */
-        public SSDropTarget() {
+        SSDropTarget() {
             super();
         }
 

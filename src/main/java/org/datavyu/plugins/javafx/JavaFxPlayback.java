@@ -41,7 +41,7 @@ public final class JavaFxPlayback {
 
     private volatile boolean playing;
     private volatile boolean disposed;
-    private volatile float rate = 1F;
+    private volatile float requestedRate = 1F;
     private volatile int frame;
     private volatile Consumer<Throwable> errorHandler = error -> { };
 
@@ -103,7 +103,7 @@ public final class JavaFxPlayback {
 
     /** Returns the requested forward rate, used the next time playback starts. */
     public float rate() {
-        return rate;
+        return requestedRate;
     }
 
     /** Returns the playing position, or the start of the displayed frame while paused. */
@@ -129,7 +129,7 @@ public final class JavaFxPlayback {
             return;
         }
         playing = true;
-        float playRate = rate;
+        float playRate = requestedRate;
         // AVFoundation resets the rate to 1 when playback starts, so set it afterwards.
         onEngine(() -> {
             engine.play();
@@ -164,7 +164,7 @@ public final class JavaFxPlayback {
             pause();
             return;
         }
-        rate = newRate;
+        requestedRate = newRate;
         if (playing) {
             onEngine(() -> engine.setRate(newRate));
         }

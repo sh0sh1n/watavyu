@@ -33,9 +33,9 @@ public final class FrameIndex {
     /** Streams with more frames than this ignore edge frames when judging a constant rate. */
     private static final int EDGE_FRAMES = 10;
 
-    private final double[] startMillis;
-    private final double endMillis;
-    private final boolean measured;
+    private final double[] frameStarts;
+    private final double lastFrameEnd;
+    private final boolean timesMeasured;
 
     private FrameIndex(final double[] startMillis, final double endMillis, final boolean measured) {
         if (startMillis.length == 0) {
@@ -49,9 +49,9 @@ public final class FrameIndex {
         if (endMillis <= startMillis[startMillis.length - 1]) {
             throw new IllegalArgumentException("The stream must end after its last frame starts");
         }
-        this.startMillis = startMillis;
-        this.endMillis = endMillis;
-        this.measured = measured;
+        this.frameStarts = startMillis;
+        this.lastFrameEnd = endMillis;
+        this.timesMeasured = measured;
     }
 
     /**
@@ -81,21 +81,21 @@ public final class FrameIndex {
 
     /** Returns true when frame times were read from the file rather than assumed. */
     public boolean isMeasured() {
-        return measured;
+        return timesMeasured;
     }
 
     public int frameCount() {
-        return startMillis.length;
+        return frameStarts.length;
     }
 
     /** Returns end of the last frame, which is the stream duration. */
     public double endMillis() {
-        return endMillis;
+        return lastFrameEnd;
     }
 
     /** Returns the nominal frame rate: the inverse of the median frame duration. */
     public double framesPerSecond() {
-        double[] durations = new double[startMillis.length];
+        double[] durations = new double[frameStarts.length];
         for (int i = 0; i < durations.length; i++) {
             durations[i] = frameDurationMillis(i);
         }
@@ -111,8 +111,8 @@ public final class FrameIndex {
      * second-to-last frame for two frame times), so those are ignored when there are enough frames.
      */
     public boolean isConstantRate() {
-        int from = startMillis.length > EDGE_FRAMES ? 1 : 0;
-        int to = startMillis.length > EDGE_FRAMES ? startMillis.length - 2 : startMillis.length;
+        int from = frameStarts.length > EDGE_FRAMES ? 1 : 0;
+        int to = frameStarts.length > EDGE_FRAMES ? frameStarts.length - 2 : frameStarts.length;
         double min = Double.MAX_VALUE;
         double max = 0;
         for (int i = from; i < to; i++) {
@@ -128,27 +128,27 @@ public final class FrameIndex {
      * @param millis A stream time.
      */
     public int frameAt(final double millis) {
-        int i = Arrays.binarySearch(startMillis, millis);
+        int i = Arrays.binarySearch(frameStarts, millis);
         int frame = i >= 0 ? i : -i - 2;
-        return Math.max(0, Math.min(frame, startMillis.length - 1));
+        return Math.max(0, Math.min(frame, frameStarts.length - 1));
     }
 
     public double startMillis(final int frame) {
-        return startMillis[frame];
+        return frameStarts[frame];
     }
 
     /** Returns the frame start rounded up to a whole millisecond, which still maps back to this frame. */
     public long reportedMillis(final int frame) {
-        return (long) Math.ceil(startMillis[frame]);
+        return (long) Math.ceil(frameStarts[frame]);
     }
 
     /** Returns the middle of the frame, where an exact seek reliably shows this frame. */
     public double seekTargetMillis(final int frame) {
-        return startMillis[frame] + frameDurationMillis(frame) / 2;
+        return frameStarts[frame] + frameDurationMillis(frame) / 2;
     }
 
     private double frameDurationMillis(final int frame) {
-        double next = frame + 1 < startMillis.length ? startMillis[frame + 1] : endMillis;
-        return next - startMillis[frame];
+        double next = frame + 1 < frameStarts.length ? frameStarts[frame + 1] : lastFrameEnd;
+        return next - frameStarts[frame];
     }
 }

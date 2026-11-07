@@ -6,6 +6,7 @@ import javax.swing.JDialog;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSlider;
+import javax.swing.event.ChangeListener;
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
 import java.awt.Color;
@@ -46,10 +47,10 @@ public final class MediaWindow extends JDialog implements MediaPlayers.ColumnWin
     /** The volume of the clip in play, in percent. */
     private final JSlider volume = new JSlider(0, 100, 100);
 
-    /** Whether the volume control is being set to the clip in play's, rather than by the user. */
-    private boolean showingVolume;
-
     private DoubleConsumer volumeListener = level -> { };
+
+    /** Tells the listener of the volume the user sets; it is detached while the window shows a clip's volume. */
+    private final ChangeListener volumeChange = e -> volumeListener.accept(volume.getValue() / 100.0);
 
     private Runnable closeListener = () -> { };
 
@@ -71,11 +72,7 @@ public final class MediaWindow extends JDialog implements MediaPlayers.ColumnWin
         volume.setName("volume");
         volume.setToolTipText("Volume of the clip in play");
         volume.setEnabled(false);
-        volume.addChangeListener(e -> {
-            if (!showingVolume) {
-                volumeListener.accept(volume.getValue() / 100.0);
-            }
-        });
+        volume.addChangeListener(volumeChange);
         controls.add(volume, BorderLayout.CENTER);
         getContentPane().add(controls, BorderLayout.SOUTH);
         setDefaultCloseOperation(HIDE_ON_CLOSE);
@@ -121,14 +118,14 @@ public final class MediaWindow extends JDialog implements MediaPlayers.ColumnWin
     public void showClip(final Object clip, final Double clipVolume) {
         String name = clip == null ? null : names.get(clip);
         cards.show(content, name == null ? GAP : name);
-        showingVolume = true;
+        volume.removeChangeListener(volumeChange);
         try {
             volume.setEnabled(clipVolume != null);
             if (clipVolume != null) {
                 volume.setValue((int) Math.round(clipVolume * 100));
             }
         } finally {
-            showingVolume = false;
+            volume.addChangeListener(volumeChange);
         }
     }
 
