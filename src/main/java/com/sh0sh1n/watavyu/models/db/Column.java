@@ -180,7 +180,7 @@ public interface Column {
 
     /**
      * Renames a code, unless the column is locked. Any name is taken, as undo puts back the names a code has had;
-     * {@code CodeCommands} and the Datavyu JSON import keep names to those a project file allows.
+     * {@code CodeCommands} keeps names to those a project file allows.
      *
      * @param index the code's place
      * @param name  its new name

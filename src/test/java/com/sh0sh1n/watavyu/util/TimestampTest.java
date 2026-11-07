@@ -55,9 +55,9 @@ public class TimestampTest {
         assertEquals(Timestamp.parse("0:0:1:5"), 1_005L);
     }
 
-    /** B13: Datavyu wrote negative times as negative hours plus positive fields; they are not times. */
+    /** A negative time is not a time, however it is written. */
     @Test
-    public void parseRefusesNegativeTimesAsDatavyuWroteThem() {
+    public void parseRefusesNegativeTimes() {
         assertThrows(IllegalArgumentException.class, () -> Timestamp.parse("-1:59:59:999"));
         assertThrows(IllegalArgumentException.class, () -> Timestamp.parse("-01:00:00:000"));
         assertThrows(IllegalArgumentException.class, () -> Timestamp.parse("-1500"));

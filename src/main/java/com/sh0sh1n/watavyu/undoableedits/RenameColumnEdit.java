@@ -68,7 +68,7 @@ public final class RenameColumnEdit extends TypedRenameEdit implements GuardedEd
     @Override
     void apply(final String name) {
         try {
-            // A name it has had may be one Datavyu allowed and Watavyu does not, kept from an imported file.
+            // A name it has had may be one a new column could not take, kept from a project file.
             column.setName(name, true);
         } catch (UserWarningException e) {
             // The column is unlocked, as every later edit is undone.

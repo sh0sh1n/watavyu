@@ -28,8 +28,6 @@ public enum Command {
     SELECT_COLUMN_RIGHT("Select column to right"),
     UNDO("Undo"),
     REDO("Redo"),
-    EXPORT_JSON(menu("exportJSONMenuItem.text")),
-    IMPORT_JSON(menu("importJSONMenuItem.text")),
     TEMPORAL_LAYOUT(menu("weakTemporalAlignmentMenuItem.text")),
     ZOOM_IN(menu("zoomInMenuItem.text")),
     ZOOM_OUT(menu("zoomOutMenuItem.text")),

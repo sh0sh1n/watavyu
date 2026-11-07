@@ -51,9 +51,9 @@ public final class Timestamp {
     }
 
     /**
-     * Parses a time typed by a person or read from an old Datavyu file. Each field may hold any number of digits and
-     * carries into the next, so {@code 00:75:00:000} is 1 hour 15 minutes. A plain number is taken as milliseconds,
-     * which old Datavyu files use. A negative time, which Datavyu could write, is not a time.
+     * Parses a time typed by a person. Each field may hold any number of digits and carries into the next, so
+     * {@code 00:75:00:000} is 1 hour 15 minutes. A plain number is taken as milliseconds. A negative time is not a
+     * time.
      *
      * @param text the time
      * @return the time in milliseconds

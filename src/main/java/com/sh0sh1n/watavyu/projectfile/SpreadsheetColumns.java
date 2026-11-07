@@ -105,8 +105,8 @@ public final class SpreadsheetColumns {
     }
 
     /**
-     * Adds columns to a spreadsheet, after any it already has. Names that the spreadsheet would refuse for a new
-     * column are kept, as they are for columns from older Datavyu files.
+     * Adds columns to a spreadsheet, after any it already has. A project file may hold names that the spreadsheet
+     * would refuse for a new column, and they are kept.
      *
      * @param dataStore the spreadsheet
      * @param columns   the columns to add, in order

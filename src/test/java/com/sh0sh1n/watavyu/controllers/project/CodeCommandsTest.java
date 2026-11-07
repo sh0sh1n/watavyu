@@ -212,17 +212,6 @@ public class CodeCommandsTest {
         assertFalse(spreadsheet.getUndoManager().canUndo());
     }
 
-    /** A name a project file refuses, which a Datavyu import can bring, comes back on undo. */
-    @Test
-    public void undoPutsBackANameKeptFromAnImport() {
-        gaze.renameCode(1, "code01");
-
-        codes.rename(gaze, 1, "side", false);
-        spreadsheet.undo();
-
-        assertEquals(names(), List.of("code01", "code01", "code03"));
-    }
-
     /** Typing a name back to what it was leaves nothing to undo, rather than a step that changes nothing. */
     @Test
     public void typingBackToTheOldNameLeavesNothingToUndo() throws Exception {
@@ -345,9 +334,9 @@ public class CodeCommandsTest {
         assertFalse(spreadsheet.getUndoManager().canUndo());
     }
 
-    /** A name kept from a Datavyu file, which Watavyu would not allow, comes back on undo. */
+    /** A name kept from a project file, which a new column could not take, comes back on undo. */
     @Test
-    public void undoPutsBackANameKeptFromAnImportedFile() throws Exception {
+    public void undoPutsBackANameKeptFromAProjectFile() throws Exception {
         gaze.setName("Gaze direction", true);
 
         spreadsheet.columns().rename(gaze, "gaze", false);

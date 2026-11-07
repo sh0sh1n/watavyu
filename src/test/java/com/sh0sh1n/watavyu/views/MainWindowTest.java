@@ -319,14 +319,12 @@ public class MainWindowTest {
         assertFalse(delete.isEnabled(), "the untitled tab has no cells selected");
     }
 
-    /** New Cell needs a shown column last given a cell, and Export a shown column. */
+    /** New Cell needs a shown column last given a cell. */
     @Test
-    public void newCellAndExportNeedAShownColumn() throws Exception {
+    public void newCellNeedsAShownColumn() throws Exception {
         ProjectController study = secondTab();
         Action newCell = view.action(Command.NEW_CELL);
-        Action export = view.action(Command.EXPORT_JSON);
         assertFalse(newCell.isEnabled(), "no column has been given a cell");
-        assertTrue(export.isEnabled());
 
         onEdt(() -> {
             study.getDataStore().getColumn("gaze").setSelected(true);
@@ -339,7 +337,6 @@ public class MainWindowTest {
             view.refreshCommands();
         });
         assertFalse(newCell.isEnabled());
-        assertFalse(export.isEnabled());
     }
 
     /** A hidden column is not beside anything: a cell between two hidden columns has none beside it. */

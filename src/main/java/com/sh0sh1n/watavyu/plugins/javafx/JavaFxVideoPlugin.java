@@ -28,29 +28,15 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Locale;
 import java.util.List;
-import java.nio.charset.StandardCharsets;
-import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
 /**
  * Video playback through OpenJFX Media, the only video player. Accepts only the containers OpenJFX documents for
  * H.264/AAC; QuickTime .mov is rejected by the player and must be remuxed to MP4.
- *
- * <p>Project files identify a track's player by {@link #PLUGIN_UUID}, {@link #NAMESPACE} and
- * {@link #VIEWER_CLASS_NAME}, values from the plugin system this class used to be part of.
  */
 public final class JavaFxVideoPlugin {
 
     private static final Logger logger = LogManager.getLogger(JavaFxVideoPlugin.class);
-
-    /** Player identifier written to project files. */
-    public static final UUID PLUGIN_UUID = UUID.nameUUIDFromBytes("plugin.openjfx".getBytes(StandardCharsets.UTF_8));
-
-    /** Kind of media written to project files; any track of this kind opens with this player. */
-    public static final String NAMESPACE = "datavyu.video";
-
-    /** Viewer class written to project files. */
-    public static final String VIEWER_CLASS_NAME = JavaFxVideoViewer.class.getName();
 
     /** The extensions of the media files the player opens: video in MP4, and audio that OpenJFX plays on macOS. */
     public static final List<String> MEDIA_EXTENSIONS = List.of("mp4", "m4v", "m4a", "mp3", "wav", "aif", "aiff");
