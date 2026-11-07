@@ -20,7 +20,7 @@ import com.sh0sh1n.watavyu.util.Settings;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import com.sh0sh1n.watavyu.Datavyu;
+import com.sh0sh1n.watavyu.Watavyu;
 import com.sh0sh1n.watavyu.controllers.*;
 import com.sh0sh1n.watavyu.controllers.project.MediaColumns;
 import com.sh0sh1n.watavyu.controllers.project.ProjectController;
@@ -58,7 +58,7 @@ import java.util.concurrent.ExecutionException;
 /**
  * The main window: a tab per open spreadsheet, the menu bar, and the keyboard shortcuts.
  */
-public final class DatavyuView implements FileDropEventListener {
+public final class WatavyuWindow implements FileDropEventListener {
 
     // Variable for the amount to raise the font size by when zooming.
     public static final int ZOOM_INTERVAL = 2;
@@ -68,7 +68,7 @@ public final class DatavyuView implements FileDropEventListener {
     public static final int ZOOM_MIN_SIZE = 8;
 
     /** The logger instance for this class */
-    private static final Logger logger = LogManager.getLogger(DatavyuView.class);
+    private static final Logger logger = LogManager.getLogger(WatavyuWindow.class);
 
     /** How often each spreadsheet is autosaved, in minutes */
     private static final int AUTOSAVE_MINUTES = 1;
@@ -80,13 +80,13 @@ public final class DatavyuView implements FileDropEventListener {
     private VocabEditorV codeEditor;
 
     /** The running application, which quits and asks about unsaved work */
-    private final Datavyu app;
+    private final Watavyu app;
 
     /** The main window */
     private final JFrame frame;
 
     /** Text of this view's menus and dialogs */
-    private final Resources resources = Resources.of(DatavyuView.class);
+    private final Resources resources = Resources.of(WatavyuWindow.class);
 
     /** Every command's action, which its menu item and shortcut share */
     private final CommandTable commands = new CommandTable(this::countSelection);
@@ -108,11 +108,11 @@ public final class DatavyuView implements FileDropEventListener {
      * @param app   The running application.
      * @param frame The main window.
      */
-    public DatavyuView(final Datavyu app, final JFrame frame) {
+    public WatavyuWindow(final Watavyu app, final JFrame frame) {
         this.app = app;
         this.frame = frame;
         frame.setName("mainFrame");
-        frame.setTitle(Resources.of(Datavyu.class).getString("Application.title"));
+        frame.setTitle(Resources.of(Watavyu.class).getString("Application.title"));
         frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 
         defineCommands();
@@ -305,7 +305,7 @@ public final class DatavyuView implements FileDropEventListener {
             return;
         }
         // Show the project name instead of database.
-        Resources resourceMap = Resources.of(Datavyu.class);
+        Resources resourceMap = Resources.of(Watavyu.class);
         String postFix = projectController.isChanged() ? "  *" : "  ";
         String extension = "";
         final FileFilter lastSaveOption = projectController.getLastSaveOption();
@@ -392,7 +392,7 @@ public final class DatavyuView implements FileDropEventListener {
      * @return whether the project was saved
      */
     public boolean saveAs() {
-        DatavyuFileChooser fileChooser = new DatavyuFileChooser();
+        WatavyuFileChooser fileChooser = new WatavyuFileChooser();
 
         fileChooser.addChoosableFileFilter(ProjectFileFilter.INSTANCE);
 
@@ -464,7 +464,7 @@ public final class DatavyuView implements FileDropEventListener {
      * Action for exporting the current SpreadSheet as a JSON File
      */
     public void exportToJSON(){
-        DatavyuFileChooser fileChooser = new DatavyuFileChooser();
+        WatavyuFileChooser fileChooser = new WatavyuFileChooser();
 
         fileChooser.addChoosableFileFilter(JSONFilter.INSTANCE);
         fileChooser.setFileFilter(JSONFilter.INSTANCE);
@@ -476,7 +476,7 @@ public final class DatavyuView implements FileDropEventListener {
         }
     }
 
-    private void exportJSON(DatavyuFileChooser fc){
+    private void exportJSON(WatavyuFileChooser fc){
         ProjectController projectController = selectedController();
 
         try{
@@ -505,7 +505,7 @@ public final class DatavyuView implements FileDropEventListener {
      * Action for exposing the current SpreadSheet as a JSON File
      */
     public void importJSONToSpreadsheet(){
-        DatavyuFileChooser fileChooser = new DatavyuFileChooser();
+        WatavyuFileChooser fileChooser = new WatavyuFileChooser();
 
         fileChooser.addChoosableFileFilter(JSONFilter.INSTANCE);
         fileChooser.setFileFilter(JSONFilter.INSTANCE);
@@ -519,7 +519,7 @@ public final class DatavyuView implements FileDropEventListener {
         getSpreadsheetPanel().redrawCells();
     }
 
-    private void importJSON(DatavyuFileChooser fc){
+    private void importJSON(WatavyuFileChooser fc){
         try {
             new OpenDataStoreFileController(this::warn)
                     .importJSONToSpreadsheet(fc.getSelectedFile(), getSpreadsheetPanel().getDataStore());
@@ -542,17 +542,17 @@ public final class DatavyuView implements FileDropEventListener {
      * @return whether to overwrite it
      */
     private boolean overwriteExisting() {
-        Resources resourceMap = Resources.of(Datavyu.class);
+        Resources resourceMap = Resources.of(Watavyu.class);
         return Dialogs.confirm(frame, resourceMap.getString("OverwriteDialog.message"),
                 resourceMap.getString("OverwriteDialog.title"), "Overwrite");
     }
 
     /**
-     * Loading a Datavyu project
+     * Opens a project the user chooses.
      */
     public void open() {
 
-        DatavyuFileChooser fileChooser = new DatavyuFileChooser();
+        WatavyuFileChooser fileChooser = new WatavyuFileChooser();
 
         fileChooser.addChoosableFileFilter(ProjectFileFilter.INSTANCE);
 
@@ -565,11 +565,11 @@ public final class DatavyuView implements FileDropEventListener {
     }
 
     /**
-     * Simulate loading an Datavyu project from file chooser
+     * Opens a project file, as if it had been chosen in a file chooser.
      */
     public void open(final File file) {
         logger.info("Opening " + file.getAbsolutePath());
-        DatavyuFileChooser fc = new DatavyuFileChooser();
+        WatavyuFileChooser fc = new WatavyuFileChooser();
         fc.setVisible(false);
         fc.setSelectedFile(file);
 
@@ -607,7 +607,7 @@ public final class DatavyuView implements FileDropEventListener {
      *
      * @param fileChooser The file chooser to use.
      */
-    private void open(final DatavyuFileChooser fileChooser) {
+    private void open(final WatavyuFileChooser fileChooser) {
         // An untitled spreadsheet with no changes gives way to the project opened.
         ProjectController selected = selectedController();
         SpreadSheetPanel replaced = tabbedPane.getTabCount() == 1 && selected != null
@@ -652,7 +652,7 @@ public final class DatavyuView implements FileDropEventListener {
     }
 
     public void openExternalFile(final File f) {
-        DatavyuFileChooser fileChooser = new DatavyuFileChooser();
+        WatavyuFileChooser fileChooser = new WatavyuFileChooser();
         fileChooser.setSelectedFile(f);
         FileFilter filter = filterFor(f);
         fileChooser.setFileFilter(filter != null ? filter : ProjectFileFilter.INSTANCE);
@@ -716,7 +716,7 @@ public final class DatavyuView implements FileDropEventListener {
             return;
         }
 
-        DatavyuFileChooser fileChooser = new DatavyuFileChooser();
+        WatavyuFileChooser fileChooser = new WatavyuFileChooser();
         fileChooser.setVisible(false);
 
         for (File file : projects) {
@@ -730,7 +730,7 @@ public final class DatavyuView implements FileDropEventListener {
      * is selected, or each as a new media column.
      */
     public void addMedia() {
-        DatavyuFileChooser chooser = new DatavyuFileChooser();
+        WatavyuFileChooser chooser = new WatavyuFileChooser();
         chooser.setMultiSelectionEnabled(true);
         chooser.addChoosableFileFilter(JavaFxVideoPlugin.VIDEO_FILE_FILTER);
         chooser.setFileFilter(JavaFxVideoPlugin.VIDEO_FILE_FILTER);
@@ -1382,9 +1382,9 @@ public final class DatavyuView implements FileDropEventListener {
     }
 
     class OpenTask extends SwingWorker<ProjectController, Void> {
-        private DatavyuFileChooser fileChooser;
+        private WatavyuFileChooser fileChooser;
 
-        public OpenTask(final DatavyuFileChooser fileChooser) { this.fileChooser = fileChooser; }
+        public OpenTask(final WatavyuFileChooser fileChooser) { this.fileChooser = fileChooser; }
 
         @Override
         public ProjectController doInBackground() {

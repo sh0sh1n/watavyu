@@ -22,7 +22,7 @@ import sys
 
 CLASSES = "build/classes/java/main"
 SCRIPTS = ["src/main/resources/*.rb", "src/main/resources/scripts/*.rb", "src/main/favorites/*.rb"]
-ENTRY_POINTS = {"com.sh0sh1n.watavyu.Datavyu", "com.sh0sh1n.watavyu.plugins.javafx.JavaFxVideoPlugin"}
+ENTRY_POINTS = {"com.sh0sh1n.watavyu.Watavyu", "com.sh0sh1n.watavyu.plugins.javafx.JavaFxVideoPlugin"}
 CALLBACKS = set("""
     main run call toString equals hashCode compareTo compare accept getDescription values valueOf
     actionPerformed propertyChange stateChanged valueChanged itemStateChanged adjustmentValueChanged

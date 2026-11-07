@@ -6,11 +6,11 @@ import java.util.ResourceBundle;
 /**
  * User-interface text for a class, from the properties file {@code resources/<ClassName>.properties} in
  * the class's package. Keys the file lacks fall back to the application-wide
- * {@code com/sh0sh1n/watavyu/resources/Datavyu.properties}.
+ * {@code com/sh0sh1n/watavyu/resources/Watavyu.properties}.
  */
 public final class Resources {
 
-    private static final String APPLICATION_BUNDLE = "com.sh0sh1n.watavyu.resources.Datavyu";
+    private static final String APPLICATION_BUNDLE = "com.sh0sh1n.watavyu.resources.Watavyu";
 
     private final ResourceBundle bundle;
 

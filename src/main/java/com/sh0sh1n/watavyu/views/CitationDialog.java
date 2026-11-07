@@ -1,7 +1,7 @@
 package com.sh0sh1n.watavyu.views;
 
 import com.sh0sh1n.watavyu.util.Citation;
-import com.sh0sh1n.watavyu.util.DatavyuVersion;
+import com.sh0sh1n.watavyu.util.WatavyuVersion;
 
 import javax.swing.*;
 import java.awt.*;
@@ -17,7 +17,7 @@ public final class CitationDialog extends JDialog {
         setName(getClass().getSimpleName());
 
         Citation citation = Citation.load();
-        String version = DatavyuVersion.getVersion();
+        String version = WatavyuVersion.getVersion();
 
         JPanel content = new JPanel();
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));

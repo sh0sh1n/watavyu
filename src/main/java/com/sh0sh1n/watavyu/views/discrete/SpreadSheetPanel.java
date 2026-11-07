@@ -52,7 +52,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 
 /**
- * Custom view of contents of the Datavyu database as a spread sheet
+ * A spreadsheet tab: its columns, the controls drawer and the playhead.
  */
 public final class SpreadSheetPanel extends JPanel implements DataStoreListener, CellSelectionListener,
         ColumnSelectionListener, ColumnVisibilityListener, KeyEventDispatcher {
@@ -174,7 +174,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
 
         // set the database and layout the columns
         if (projectController.getDataStore() == null) {
-            projectController.setDataStore(new DatavyuDataStore());
+            projectController.setDataStore(new WatavyuDataStore());
         }
         setDatabase(projectController.getDataStore());
         newVariableSpacerButton.setText(" + ");
@@ -270,12 +270,9 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
     }
 
     /**
-     * Gets the single instance project associated with the currently running with Datavyu.
-     *
-     * @return The single project in use with this instance of Datavyu
+     * Returns the spreadsheet this tab shows.
      */
     public ProjectController getProjectController() {
-        // TODO: Do we want the project controller here or in Datavyu?
         return projectController;
     }
 

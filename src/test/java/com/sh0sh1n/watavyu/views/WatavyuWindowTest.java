@@ -36,10 +36,10 @@ import javax.swing.SwingUtilities;
  * spreadsheet with no changes gives way to a project opened, once it has opened, and each tab's title shows its own
  * project, the window's the selected one's.
  */
-public class DatavyuViewTest {
+public class WatavyuWindowTest {
 
     private JFrame frame;
-    private DatavyuView view;
+    private WatavyuWindow view;
     private Path folder;
 
     @BeforeMethod
@@ -96,20 +96,20 @@ public class DatavyuViewTest {
 
     @Test
     public void theTitleNamesTheApplicationAndTheProject() {
-        assertEquals(DatavyuView.windowTitle("Watavyu", "study.watavyu.json  *", false), "Watavyu - study.watavyu.json  *");
+        assertEquals(WatavyuWindow.windowTitle("Watavyu", "study.watavyu.json  *", false), "Watavyu - study.watavyu.json  *");
     }
 
     @Test
     public void theTitleShowsQuickKeyMode() {
-        assertEquals(DatavyuView.windowTitle("Watavyu", "study.watavyu.json  ", true), "Watavyu - study.watavyu.json   <QUICK KEY MODE>");
+        assertEquals(WatavyuWindow.windowTitle("Watavyu", "study.watavyu.json  ", true), "Watavyu - study.watavyu.json   <QUICK KEY MODE>");
     }
 
     /** B8: a recovered project is named after the project that was autosaved. */
     @Test
     public void aRecoveredProjectIsNamedAfterTheOriginal() {
-        assertEquals(DatavyuView.recoveredName("~study_12005522346316252883.watavyu.json"), "study");
-        assertEquals(DatavyuView.recoveredName("~session_04_5415962468724307690.watavyu.json"), "session_04");
-        assertEquals(DatavyuView.recoveredName("~noname_42.watavyu.json"), "noname");
+        assertEquals(WatavyuWindow.recoveredName("~study_12005522346316252883.watavyu.json"), "study");
+        assertEquals(WatavyuWindow.recoveredName("~session_04_5415962468724307690.watavyu.json"), "session_04");
+        assertEquals(WatavyuWindow.recoveredName("~noname_42.watavyu.json"), "noname");
     }
 
     /** It has its empty media columns but no unsaved changes, so it is not autosaved and gives way to a project. */

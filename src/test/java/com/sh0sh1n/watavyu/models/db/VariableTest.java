@@ -48,7 +48,7 @@ public class VariableTest {
     @BeforeMethod
     public void setUp() throws UserWarningException {
         ds = DataStoreFactory.newDataStore();
-        model = (DatavyuVariable) ds.createVariable("test");
+        model = (WatavyuVariable) ds.createVariable("test");
         modelListener = mock(VariableListener.class);
         model.addListener(modelListener);
         ds.markAsUnchanged();

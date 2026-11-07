@@ -92,7 +92,7 @@ java {
 }
 
 application {
-    mainClass.set("com.sh0sh1n.watavyu.Datavyu")
+    mainClass.set("com.sh0sh1n.watavyu.Watavyu")
     applicationDefaultJvmArgs = listOf("-Xmx1g")
 }
 
@@ -114,7 +114,7 @@ tasks.named<JavaExec>("run") {
     classpath = useJavafxModules(classpath)
 }
 
-// The Gradle project version is the only version; DatavyuVersion reads it from this resource.
+// The Gradle project version is the only version; WatavyuVersion reads it from this resource.
 tasks.processResources {
     val version = project.version.toString()
     inputs.property("version", version)

@@ -31,9 +31,9 @@ import java.util.Map;
 /**
  * TODO: Fill in the comment at the ???
  *
- * Acts as a connector between Datavyu's various data structures and a hash map that serves as key value store.
+ * Acts as a connector between Watavyu's various data structures and a hash map that serves as key value store.
  */
-public class DatavyuDataStore implements DataStore {
+public class WatavyuDataStore implements DataStore {
 
 
     /** Told when this spreadsheet is changed or saved, so its title can show it. */
@@ -54,7 +54,7 @@ public class DatavyuDataStore implements DataStore {
     /** The columns in spreadsheet order, which this keeps; views follow it. */
     private final List<Variable> order = new ArrayList<>();
 
-    public DatavyuDataStore() {
+    public WatavyuDataStore() {
         changed = false;
     }
 
@@ -165,7 +165,7 @@ public class DatavyuDataStore implements DataStore {
                     + "', one with the same name already exists.");
         }
 
-        Variable v = new DatavyuVariable(name, grandfathered, this, media);
+        Variable v = new WatavyuVariable(name, grandfathered, this, media);
         addVariable(v, order.size());
         return v;
     }

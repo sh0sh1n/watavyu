@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 /**
- * Datavyu's playback contract on top of a {@link PlaybackEngine}.
+ * Watavyu's playback contract on top of a {@link PlaybackEngine}.
  *
  * Methods may be called from any thread (Swing EDT, clock timer threads) and never block:
  * engine commands are queued on {@code engineThread}. While paused, the position is a frame

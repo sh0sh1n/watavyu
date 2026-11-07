@@ -28,9 +28,9 @@ import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * Maps a Datavyu variable to a data store.
+ * A spreadsheet column held in memory: its name, codes and cells.
  */
-public final class DatavyuVariable implements Variable {
+public final class WatavyuVariable implements Variable {
 
     /** Told of changes to this column. */
     private final List<VariableListener> listeners = new CopyOnWriteArrayList<>();
@@ -46,7 +46,7 @@ public final class DatavyuVariable implements Variable {
     private Boolean selected;
     private Boolean hidden;
     private String name;
-    private DatavyuDataStore owningDatastore;
+    private WatavyuDataStore owningDatastore;
     private boolean media;
     private boolean locked;
 
@@ -57,7 +57,7 @@ public final class DatavyuVariable implements Variable {
      * @param dds           The datastore to which this variable belongs
      * @param media         Whether this is a media column
      */
-    DatavyuVariable(String name, boolean grandfathered, DatavyuDataStore dds, boolean media)
+    WatavyuVariable(String name, boolean grandfathered, WatavyuDataStore dds, boolean media)
             throws UserWarningException {
         this.media = media;
         owningDatastore = dds;
@@ -111,7 +111,7 @@ public final class DatavyuVariable implements Variable {
             throw new IllegalStateException("The cells of media column " + name + " are clips");
         }
         requireUnlocked();
-        Cell c = new DatavyuCell(this, codes.size());
+        Cell c = new WatavyuCell(this, codes.size());
 
         cells.add(c);
 
@@ -129,7 +129,7 @@ public final class DatavyuVariable implements Variable {
             throw new IllegalStateException("Annotation column " + name + " has no clips");
         }
         requireUnlocked();
-        Cell c = new DatavyuCell(this, onset, clip);
+        Cell c = new WatavyuCell(this, onset, clip);
         cells.add(c);
         for (VariableListener vl : listeners) {
             vl.cellInserted(c);
@@ -383,8 +383,8 @@ public final class DatavyuVariable implements Variable {
     }
 
     /** Returns the column's cells, each made by it ({@link #addCell} takes back only its own). */
-    private List<DatavyuCell> ownCells() {
-        return cells.stream().map(DatavyuCell.class::cast).toList();
+    private List<WatavyuCell> ownCells() {
+        return cells.stream().map(WatavyuCell.class::cast).toList();
     }
 
     /** Marks the project changed and tells the views that the codes have, so they redraw names and values. */
@@ -406,6 +406,6 @@ public final class DatavyuVariable implements Variable {
     }
 
 
-    //would like to change the above calls to DatavyuDataStore.markAsChanged to this,
+    //would like to change the above calls to WatavyuDataStore.markAsChanged to this,
     //but am holding off for now to avoid merge complications
 }

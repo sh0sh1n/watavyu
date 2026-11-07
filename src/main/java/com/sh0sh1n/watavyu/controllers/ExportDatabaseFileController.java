@@ -22,7 +22,7 @@ import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import com.sh0sh1n.watavyu.Datavyu;
+import com.sh0sh1n.watavyu.Watavyu;
 import com.sh0sh1n.watavyu.models.db.*;
 
 import java.io.*;
@@ -47,7 +47,7 @@ public final class ExportDatabaseFileController {
     }
 
     /**
-     * Save a Datavyu Spreadseet in a JSON File.
+     * Saves a spreadsheet as Datavyu's JSON export.
      *
      * @param dbFileName Target File
      * @param dataStore DataStore to be saved as JSON
@@ -117,7 +117,7 @@ public final class ExportDatabaseFileController {
 
         } catch (IOException e) {
             logger.error("Export as JSON failed. Error: ", e);
-            Resources rMap = Resources.of(Datavyu.class);
+            Resources rMap = Resources.of(Watavyu.class);
             throw new UserWarningException(rMap.getString("UnableToSave.message", dbFileName), e);
         }
 

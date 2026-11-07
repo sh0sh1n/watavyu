@@ -8,13 +8,13 @@ import java.util.Properties;
 /**
  * The application version, stamped from the Gradle project version at build time.
  */
-public final class DatavyuVersion {
+public final class WatavyuVersion {
 
     private static final String VERSION_RESOURCE = "/com/sh0sh1n/watavyu/version.properties";
 
     private static final String VERSION = load();
 
-    private DatavyuVersion() {}
+    private WatavyuVersion() {}
 
     /**
      * Get the application version.
@@ -26,7 +26,7 @@ public final class DatavyuVersion {
     }
 
     private static String load() {
-        try (InputStream in = DatavyuVersion.class.getResourceAsStream(VERSION_RESOURCE)) {
+        try (InputStream in = WatavyuVersion.class.getResourceAsStream(VERSION_RESOURCE)) {
             if (in == null) {
                 throw new IllegalStateException("Missing resource " + VERSION_RESOURCE);
             }

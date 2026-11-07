@@ -19,7 +19,7 @@ import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 
-public class DatavyuCell implements Cell {
+public class WatavyuCell implements Cell {
 
     /** Told of changes to this cell. */
     private final List<CellListener> listeners = new CopyOnWriteArrayList<>();
@@ -43,7 +43,7 @@ public class DatavyuCell implements Cell {
      * @param parent the column
      * @param codes  how many codes it has
      */
-    DatavyuCell(final Variable parent, final int codes) {
+    WatavyuCell(final Variable parent, final int codes) {
         this.parent = parent;
 
         this.onset = 0L;
@@ -59,7 +59,7 @@ public class DatavyuCell implements Cell {
     }
 
     /** A media column's cell, which plays a clip from its onset for the clip's duration. */
-    DatavyuCell(final Variable parent, final long onset, final MediaClip clip) {
+    WatavyuCell(final Variable parent, final long onset, final MediaClip clip) {
         this(parent, 0);
         this.clip = clip;
         this.onset = Timestamp.requireNotNegative(onset);
@@ -309,7 +309,7 @@ public class DatavyuCell implements Cell {
 
     @Override
     public boolean equals(Object other) {
-        return other instanceof DatavyuCell cell && id.equals(cell.id);
+        return other instanceof WatavyuCell cell && id.equals(cell.id);
     }
 
     @Override
