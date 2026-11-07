@@ -8,7 +8,7 @@ import com.sh0sh1n.watavyu.controllers.project.ColumnCommands;
 import com.sh0sh1n.watavyu.controllers.project.ProjectController;
 import com.sh0sh1n.watavyu.models.db.DataStore;
 import com.sh0sh1n.watavyu.models.db.DataStoreFactory;
-import com.sh0sh1n.watavyu.models.db.Variable;
+import com.sh0sh1n.watavyu.models.db.Column;
 import com.sh0sh1n.watavyu.models.project.Project;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -19,17 +19,17 @@ import javax.swing.JMenuItem;
 public class HideColumnsTest {
 
     private DataStore dataStore;
-    private Variable first;
-    private Variable second;
-    private Variable third;
+    private Column first;
+    private Column second;
+    private Column third;
     private ColumnCommands columns;
 
     @BeforeMethod
     public void setUp() throws Exception {
         dataStore = DataStoreFactory.newDataStore();
-        first = dataStore.createVariable("first");
-        second = dataStore.createVariable("second");
-        third = dataStore.createMediaVariable("media_1");
+        first = dataStore.createColumn("first");
+        second = dataStore.createColumn("second");
+        third = dataStore.createMediaColumn("media_1");
         first.setSelected(true);
         second.setSelected(true);
         third.setSelected(false);

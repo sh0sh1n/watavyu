@@ -10,7 +10,7 @@ import com.sh0sh1n.watavyu.controllers.project.ProjectController;
 import com.sh0sh1n.watavyu.models.db.Cell;
 import com.sh0sh1n.watavyu.models.db.DataStore;
 import com.sh0sh1n.watavyu.models.db.DataStoreFactory;
-import com.sh0sh1n.watavyu.models.db.Variable;
+import com.sh0sh1n.watavyu.models.db.Column;
 import com.sh0sh1n.watavyu.models.project.Project;
 import com.sh0sh1n.watavyu.util.ClockTimer;
 import com.sh0sh1n.watavyu.util.ClockTimer.ClockListener;
@@ -27,7 +27,7 @@ public class ColumnClockTest {
     @Test
     public void cellsAndColumnsStopFollowingTheClockOnceGone() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
-        Variable notes = dataStore.createVariable("notes");
+        Column notes = dataStore.createColumn("notes");
         Cell deleted = notes.createPointCell(1_000);
         notes.createPointCell(2_000);
         ClockTimer clock = mock(ClockTimer.class);

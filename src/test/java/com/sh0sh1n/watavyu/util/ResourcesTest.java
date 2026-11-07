@@ -3,7 +3,7 @@ package com.sh0sh1n.watavyu.util;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNull;
 
-import com.sh0sh1n.watavyu.Datavyu;
+import com.sh0sh1n.watavyu.Watavyu;
 import com.sh0sh1n.watavyu.views.VideoController;
 import org.testng.annotations.Test;
 
@@ -23,13 +23,13 @@ public class ResourcesTest {
 
     @Test
     public void formatsArguments() {
-        assertEquals(Resources.of(Datavyu.class).getString("UnsavedDialog.tabmessage", "Study 1"),
+        assertEquals(Resources.of(Watavyu.class).getString("UnsavedDialog.tabmessage", "Study 1"),
             "Spreadsheet 'Study 1' has unsaved changes.\nDo you want to save before closing this tab?");
     }
 
     @Test
     public void trimsSurroundingSpaces() {
-        assertEquals(Resources.of(Datavyu.class).getString("WarningDialog.title"), "Warning:");
+        assertEquals(Resources.of(Watavyu.class).getString("WarningDialog.title"), "Warning:");
     }
 
     @Test

@@ -26,7 +26,7 @@ import java.util.List;
  */
 public class AddCellEdit extends SpreadSheetEdit {
     /**
-     * Variable name *
+     * Column name *
      */
     private String varName;
     private Cell addedCell;
@@ -48,7 +48,7 @@ public class AddCellEdit extends SpreadSheetEdit {
     @Override
     public void redo() throws CannotRedoException {
         super.redo();
-        addedCell.getVariable().addCell(addedCell);
+        addedCell.getColumn().addCell(addedCell);
         controller.setLastCreatedCell(addedCell);
         unselectAll();
     }

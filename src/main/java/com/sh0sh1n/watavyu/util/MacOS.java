@@ -1,6 +1,6 @@
 package com.sh0sh1n.watavyu.util;
 
-import com.sh0sh1n.watavyu.Datavyu;
+import com.sh0sh1n.watavyu.Watavyu;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -85,7 +85,7 @@ public class MacOS {
      * @param application the running application, which the handlers ask to open files, show About and quit
      * @return True if load was successful; otherwise false.
      */
-    public static boolean loadCompileHandler(final Datavyu application) {
+    public static boolean loadCompileHandler(final Watavyu application) {
         if (!Desktop.isDesktopSupported()) {
             return false;
         }
@@ -97,7 +97,7 @@ public class MacOS {
         if (desktop.isSupported(Desktop.Action.APP_OPEN_FILE)) {
             desktop.setOpenFileHandler(event -> event.getFiles().forEach(file -> {
                 if (application.isReadyToOpenFile()) {
-                    application.getView().openExternalFile(file);
+                    application.getWindow().openExternalFile(file);
                 } else {
                     application.setCommandLineFile(file.getAbsolutePath());
                 }

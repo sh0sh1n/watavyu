@@ -46,6 +46,6 @@ public final class TypeValueEdit extends TypedEdit<List<String>> {
 
     @Override
     public String getPresentationName() {
-        return "Change Value in " + cell.getVariable().getName();
+        return "Change Value in " + cell.getColumn().getName();
     }
 }

@@ -4,11 +4,10 @@ import com.sh0sh1n.watavyu.models.db.Cell;
 import com.sh0sh1n.watavyu.models.db.DataStore;
 import com.sh0sh1n.watavyu.models.db.MediaClip;
 import com.sh0sh1n.watavyu.models.db.UserWarningException;
-import com.sh0sh1n.watavyu.models.db.Variable;
+import com.sh0sh1n.watavyu.models.db.Column;
 import com.sh0sh1n.watavyu.projectfile.ProjectDocument.AnnotationCell;
 import com.sh0sh1n.watavyu.projectfile.ProjectDocument.AnnotationColumn;
 import com.sh0sh1n.watavyu.projectfile.ProjectDocument.Clip;
-import com.sh0sh1n.watavyu.projectfile.ProjectDocument.Column;
 import com.sh0sh1n.watavyu.projectfile.ProjectDocument.MediaColumn;
 import com.sh0sh1n.watavyu.projectfile.ProjectDocument.Source;
 
@@ -33,10 +32,10 @@ public final class SpreadsheetColumns {
      * @param projectFolder the folder the project file is saved in
      * @return its columns in spreadsheet order, with their cells in time order
      */
-    public static List<Column> columns(final DataStore dataStore, final Path projectFolder) {
-        List<Column> columns = new ArrayList<>();
-        for (Variable variable : dataStore.getAllVariables()) {
-            columns.add(variable.isMedia() ? media(variable, projectFolder) : annotation(variable));
+    public static List<ProjectDocument.Column> columns(final DataStore dataStore, final Path projectFolder) {
+        List<ProjectDocument.Column> columns = new ArrayList<>();
+        for (Column dataColumn : dataStore.getAllColumns()) {
+            columns.add(dataColumn.isMedia() ? media(dataColumn, projectFolder) : annotation(dataColumn));
         }
         return columns;
     }
@@ -49,33 +48,33 @@ public final class SpreadsheetColumns {
      */
     public static List<AnnotationColumn> of(final DataStore dataStore) {
         List<AnnotationColumn> columns = new ArrayList<>();
-        for (Variable variable : dataStore.getAllVariables()) {
-            if (!variable.isMedia()) {
-                columns.add(annotation(variable));
+        for (Column dataColumn : dataStore.getAllColumns()) {
+            if (!dataColumn.isMedia()) {
+                columns.add(annotation(dataColumn));
             }
         }
         return columns;
     }
 
     /** A media column, with what is known of each clip's file; a clip whose file never opened is saved all the same. */
-    private static MediaColumn media(final Variable variable, final Path projectFolder) {
+    private static MediaColumn media(final Column dataColumn, final Path projectFolder) {
         List<Clip> clips = new ArrayList<>();
-        for (Cell cell : variable.getCellsTemporally()) {
+        for (Cell cell : dataColumn.getCellsTemporally()) {
             MediaClip clip = cell.getClip();
             clips.add(new Clip(cell.getOnset(), clip.volume(), new Source(
                 ProjectPaths.stored(projectFolder, Path.of(clip.file())), clip.duration(), clip.frameRate(),
                 clip.width(), clip.height())));
         }
-        return new MediaColumn(variable.getName(), variable.isHidden(), variable.isLocked(), clips);
+        return new MediaColumn(dataColumn.getName(), dataColumn.isHidden(), dataColumn.isLocked(), clips);
     }
 
-    private static AnnotationColumn annotation(final Variable variable) {
-        List<String> codes = variable.getCodes();
+    private static AnnotationColumn annotation(final Column dataColumn) {
+        List<String> codes = dataColumn.getCodes();
         List<AnnotationCell> cells = new ArrayList<>();
-        for (Cell cell : variable.getCellsTemporally()) {
+        for (Cell cell : dataColumn.getCellsTemporally()) {
             cells.add(new AnnotationCell(cell.getOnset(), cell.getOffset(), cell.getValues()));
         }
-        return new AnnotationColumn(variable.getName(), codes, variable.isHidden(), variable.isLocked(), cells);
+        return new AnnotationColumn(dataColumn.getName(), codes, dataColumn.isHidden(), dataColumn.isLocked(), cells);
     }
 
     /**
@@ -86,21 +85,21 @@ public final class SpreadsheetColumns {
      * @param projectFolder the folder of the project file they came from
      * @throws UserWarningException if the spreadsheet already has a column of the same name
      */
-    public static void addColumns(final DataStore dataStore, final List<Column> columns, final Path projectFolder)
+    public static void addColumns(final DataStore dataStore, final List<ProjectDocument.Column> columns, final Path projectFolder)
             throws UserWarningException {
-        for (Column column : columns) {
+        for (ProjectDocument.Column column : columns) {
             if (column instanceof AnnotationColumn annotation) {
                 addTo(dataStore, List.of(annotation));
             } else if (column instanceof MediaColumn media) {
-                Variable variable = dataStore.createMediaVariable(media.name());
-                variable.setHidden(media.hidden());
+                Column dataColumn = dataStore.createMediaColumn(media.name());
+                dataColumn.setHidden(media.hidden());
                 for (Clip clip : media.clips()) {
                     Source source = clip.source();
-                    variable.createClip(clip.onset(), new MediaClip(
+                    dataColumn.createClip(clip.onset(), new MediaClip(
                         ProjectPaths.resolve(projectFolder, source.file()).toString(), source.duration(),
                         source.frameRate(), source.width(), source.height(), clip.volume()));
                 }
-                variable.setLocked(media.locked());
+                dataColumn.setLocked(media.locked());
             }
         }
     }
@@ -115,11 +114,11 @@ public final class SpreadsheetColumns {
      */
     public static void addTo(final DataStore dataStore, final List<AnnotationColumn> columns) throws UserWarningException {
         for (AnnotationColumn column : columns) {
-            Variable variable = dataStore.createVariable(column.name(), true);
-            variable.setHidden(column.hidden());
-            variable.setCodes(column.codes());
+            Column dataColumn = dataStore.createColumn(column.name(), true);
+            dataColumn.setHidden(column.hidden());
+            dataColumn.setCodes(column.codes());
             for (AnnotationCell annotated : column.cells()) {
-                Cell cell = variable.createCell();
+                Cell cell = dataColumn.createCell();
                 cell.setOnset(annotated.onset());
                 cell.setOffset(annotated.offset());
                 for (int i = 0; i < annotated.values().size(); i++) {
@@ -127,7 +126,7 @@ public final class SpreadsheetColumns {
                 }
             }
             // Locked last, once its cells are in.
-            variable.setLocked(column.locked());
+            dataColumn.setLocked(column.locked());
         }
     }
 }

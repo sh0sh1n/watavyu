@@ -32,7 +32,7 @@ public class ModifierClickTest {
     @BeforeMethod
     public void setUp() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
-        Cell model = dataStore.createVariable("gaze").createPointCell(1_000);
+        Cell model = dataStore.createColumn("gaze").createPointCell(1_000);
         cells = mock(CellSelectionListener.class);
         columns = mock(ColumnSelectionListener.class);
         SwingUtilities.invokeAndWait(() -> {
@@ -41,7 +41,7 @@ public class ModifierClickTest {
                 when(column.getProjectController()).thenReturn(TestSpreadsheets.withPlayback(dataStore));
                 cell = new SpreadsheetCell(column, model, cells);
                 header = new SpreadsheetColumn(TestSpreadsheets.withPlayback(dataStore),
-                    dataStore.createVariable("speech"), cells, columns, mock(ColumnVisibilityListener.class));
+                    dataStore.createColumn("speech"), cells, columns, mock(ColumnVisibilityListener.class));
             } catch (Exception e) {
                 throw new IllegalStateException(e);
             }

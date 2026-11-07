@@ -38,7 +38,7 @@ public class NoNetworkAccessTest {
 
     @Test
     public void mainClassesReferenceNoNetworkingApis() throws Exception {
-        Path mainClasses = Paths.get(Datavyu.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+        Path mainClasses = Paths.get(Watavyu.class.getProtectionDomain().getCodeSource().getLocation().toURI());
         assertTrue(Files.isDirectory(mainClasses), "expected compiled classes directory, got " + mainClasses);
 
         List<String> violations = new ArrayList<>();

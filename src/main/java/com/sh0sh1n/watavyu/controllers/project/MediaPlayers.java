@@ -8,8 +8,8 @@ import com.sh0sh1n.watavyu.models.db.DataStore;
 import com.sh0sh1n.watavyu.models.db.DataStoreListener;
 import com.sh0sh1n.watavyu.models.db.MediaClip;
 import com.sh0sh1n.watavyu.models.db.UserWarningException;
-import com.sh0sh1n.watavyu.models.db.Variable;
-import com.sh0sh1n.watavyu.models.db.VariableListener;
+import com.sh0sh1n.watavyu.models.db.Column;
+import com.sh0sh1n.watavyu.models.db.ColumnListener;
 import com.sh0sh1n.watavyu.plugins.StreamViewer;
 import com.sh0sh1n.watavyu.util.ClockTimer;
 import com.sh0sh1n.watavyu.views.MediaWindow;
@@ -84,7 +84,7 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
 
     private final DataStore dataStore;
     private final VideoController videoController;
-    private final Function<Variable, ColumnWindow> windowFactory;
+    private final Function<Column, ColumnWindow> windowFactory;
 
     /** Runs window changes on the Swing EDT. */
     private final Consumer<Runnable> onEdt;
@@ -96,16 +96,16 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
     private final Map<Cell, Object> opening = new HashMap<>();
 
     /** Each media column's window, once a clip in it has a player. */
-    private final Map<Variable, ColumnWindow> windows = new HashMap<>();
+    private final Map<Column, ColumnWindow> windows = new HashMap<>();
 
-    private final Map<Variable, VariableListener> columnListeners = new HashMap<>();
+    private final Map<Column, ColumnListener> columnListeners = new HashMap<>();
     private final Map<Cell, CellListener> clipListeners = new HashMap<>();
 
     /** Each media column's clips, for the clock's threads. */
-    private final Map<Variable, List<Span>> spans = new ConcurrentHashMap<>();
+    private final Map<Column, List<Span>> spans = new ConcurrentHashMap<>();
 
     /** The clip each column's window last showed; empty for black. */
-    private final Map<Variable, Optional<Cell>> shown = new ConcurrentHashMap<>();
+    private final Map<Column, Optional<Cell>> shown = new ConcurrentHashMap<>();
 
     /**
      * Starts following a spreadsheet's media columns, each in a {@link MediaWindow}. Their clips open with
@@ -124,13 +124,13 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
      * @param onEdt         runs window changes on the Swing EDT
      */
     MediaPlayers(final DataStore dataStore, final VideoController videoController,
-                 final Function<Variable, ColumnWindow> windowFactory, final Consumer<Runnable> onEdt) {
+                 final Function<Column, ColumnWindow> windowFactory, final Consumer<Runnable> onEdt) {
         this.dataStore = dataStore;
         this.videoController = videoController;
         this.windowFactory = windowFactory;
         this.onEdt = onEdt;
         dataStore.addListener(this);
-        for (Variable column : dataStore.getAllVariables()) {
+        for (Column column : dataStore.getAllColumns()) {
             if (column.isMedia()) {
                 follow(column);
             }
@@ -149,7 +149,7 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
         if (videoController.getClockTimer() != null) {
             videoController.getClockTimer().unRegisterListener(this);
         }
-        for (Variable column : List.copyOf(columnListeners.keySet())) {
+        for (Column column : List.copyOf(columnListeners.keySet())) {
             unfollow(column);
         }
     }
@@ -161,7 +161,7 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
      */
     public List<String> openAll() {
         List<String> missing = new ArrayList<>();
-        for (Variable column : dataStore.getAllVariables()) {
+        for (Column column : dataStore.getAllColumns()) {
             if (column.isMedia()) {
                 for (Cell clip : column.getCellsTemporally()) {
                     if (!open(clip)) {
@@ -181,7 +181,7 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
      * @param onset  where the clip starts
      * @return the clip
      */
-    Cell addClip(final Variable column, final File file, final long onset) {
+    Cell addClip(final Column column, final File file, final long onset) {
         return column.createClip(onset, MediaClip.of(file.getAbsolutePath()));
     }
 
@@ -193,8 +193,8 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
      * @return the new column
      * @throws UserWarningException if the column cannot be added
      */
-    Variable addMedia(final File file) throws UserWarningException {
-        Variable column = MediaColumns.add(dataStore);
+    Column addMedia(final File file) throws UserWarningException {
+        Column column = MediaColumns.add(dataStore);
         // Not selected, so that media added next gets its own column unless the user picks this one.
         column.setSelected(false);
         column.createClip(0, MediaClip.of(file.getAbsolutePath()));
@@ -208,7 +208,7 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
      * @param showing whether the windows show
      */
     public void setShowing(final boolean showing) {
-        players.forEach((clip, player) -> player.setViewerVisible(showing && !clip.getVariable().isHidden()));
+        players.forEach((clip, player) -> player.setViewerVisible(showing && !clip.getColumn().isHidden()));
     }
 
     /** Returns the player of a clip, or null if it has none. */
@@ -261,7 +261,7 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
      * EDT; the windows change on the EDT.
      */
     private void play(final long time) {
-        for (Map.Entry<Variable, List<Span>> entry : spans.entrySet()) {
+        for (Map.Entry<Column, List<Span>> entry : spans.entrySet()) {
             Cell winner = inPlay(entry.getValue(), time);
             for (Span span : entry.getValue()) {
                 if (span.player() != null) {
@@ -269,7 +269,7 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
                     span.player().setInPlay(span.clip().equals(winner) && !entry.getKey().isHidden());
                 }
             }
-            Variable column = entry.getKey();
+            Column column = entry.getKey();
             Optional<Cell> now = Optional.ofNullable(winner);
             if (!now.equals(shown.put(column, now))) {
                 onEdt.accept(() -> {
@@ -291,7 +291,7 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
     }
 
     /** Takes a fresh snapshot of a column's clips, and puts the right one in play now. */
-    private void refresh(final Variable column) {
+    private void refresh(final Column column) {
         if (!columnListeners.containsKey(column)) {
             spans.remove(column);
             shown.remove(column);
@@ -327,7 +327,7 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
         opening.put(clip, token);
         // Tried again, as when the clip comes back: it is marked only if this try fails too.
         clip.setClipFile(ClipFile.FOUND);
-        Variable column = clip.getVariable();
+        Column column = clip.getColumn();
         videoController.openStream(Identifier.generateIdentifier(), file, player -> {
             player.setWindowListener(showing -> setWindowShowing(column, showing));
             player.setOffset(clip.getOnset());
@@ -367,11 +367,11 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
         opening.remove(clip);
         StreamViewer player = players.remove(clip);
         if (player != null) {
-            Variable column = clip.getVariable();
+            Column column = clip.getColumn();
             ColumnWindow window = windows.get(column);
             if (window != null) {
                 window.removeClip(clip);
-                if (players.keySet().stream().noneMatch(other -> other.getVariable().equals(column))) {
+                if (players.keySet().stream().noneMatch(other -> other.getColumn().equals(column))) {
                     windows.remove(column).close();
                 }
             }
@@ -380,7 +380,7 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
     }
 
     /** Makes a column's window, whose volume control sets the volume of the clip in play. */
-    private ColumnWindow newWindow(final Variable column) {
+    private ColumnWindow newWindow(final Column column) {
         ColumnWindow window = windowFactory.apply(column);
         // Closing a media window hides its column, which silences it; showing the column shows the window again.
         window.setCloseListener(() -> column.setHidden(true));
@@ -408,7 +408,7 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
     }
 
     /** Shows or hides a column's window; a hidden column's window stays hidden. */
-    private void setWindowShowing(final Variable column, final boolean showing) {
+    private void setWindowShowing(final Column column, final boolean showing) {
         onEdt.accept(() -> {
             ColumnWindow window = windows.get(column);
             if (window != null) {
@@ -417,8 +417,8 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
         });
     }
 
-    private void follow(final Variable column) {
-        VariableListener listener = new VariableListener() {
+    private void follow(final Column column) {
+        ColumnListener listener = new ColumnListener() {
             @Override
             public void nameChanged(final String newName) {
             }
@@ -454,8 +454,8 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
         refresh(column);
     }
 
-    private void unfollow(final Variable column) {
-        VariableListener listener = columnListeners.remove(column);
+    private void unfollow(final Column column) {
+        ColumnListener listener = columnListeners.remove(column);
         if (listener != null) {
             column.removeListener(listener);
         }
@@ -470,7 +470,7 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
         CellListener listener = new CellListener() {
             @Override
             public void offsetChanged(final long newOffset) {
-                refresh(clip.getVariable());
+                refresh(clip.getColumn());
             }
 
             @Override
@@ -480,7 +480,7 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
                     player.setOffset(newOnset);
                     videoController.updateMaxViewerDuration();
                 }
-                refresh(clip.getVariable());
+                refresh(clip.getColumn());
             }
 
             @Override
@@ -507,7 +507,7 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
     }
 
     @Override
-    public void variableAdded(final Variable column) {
+    public void columnAdded(final Column column) {
         if (column.isMedia()) {
             follow(column);
             column.getCells().forEach(this::open);
@@ -515,26 +515,26 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
     }
 
     @Override
-    public void variableRemoved(final Variable column) {
+    public void columnRemoved(final Column column) {
         if (column.isMedia()) {
             unfollow(column);
         }
     }
 
     @Override
-    public void variableOrderChanged() {
+    public void columnOrderChanged() {
     }
 
     @Override
-    public void variableHidden(final Variable column) {
+    public void columnHidden(final Column column) {
     }
 
     @Override
-    public void variableVisible(final Variable column) {
+    public void columnVisible(final Column column) {
     }
 
     @Override
-    public void variableNameChange(final Variable column) {
+    public void columnNameChange(final Column column) {
     }
 
     @Override

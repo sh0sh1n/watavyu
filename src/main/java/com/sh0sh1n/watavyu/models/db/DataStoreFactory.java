@@ -25,6 +25,6 @@ public class DataStoreFactory {
      * @return A new empty DataStore.
      */
     public static DataStore newDataStore() {
-        return new DatavyuDataStore();
+        return new DefaultDataStore();
     }
 }

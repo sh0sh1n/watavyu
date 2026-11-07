@@ -15,7 +15,7 @@
 package com.sh0sh1n.watavyu.views.discrete;
 
 import com.sh0sh1n.watavyu.models.db.Cell;
-import com.sh0sh1n.watavyu.models.db.Variable;
+import com.sh0sh1n.watavyu.models.db.Column;
 import com.sh0sh1n.watavyu.util.Constants;
 
 import javax.swing.*;
@@ -37,9 +37,9 @@ public final class ColumnDataPanel extends JPanel implements KeyEventDispatcher 
      */
     private int columnHeight;
     /**
-     * The model that this variable represents.
+     * The model that this column represents.
      */
-    private Variable model;
+    private Column model;
     /**
      * Collection of the SpreadsheetCells held in by this data panel.
      */
@@ -56,14 +56,14 @@ public final class ColumnDataPanel extends JPanel implements KeyEventDispatcher 
     /**
      * Creates a new ColumnDataPanel.
      *
-     * @param column   The column containing this panel
+     * @param dataColumn   The column containing this panel
      * @param width    The width of the new column data panel in pixels.
-     * @param variable The Data Column that this panel represents.
+     * @param dataColumn The Data Column that this panel represents.
      * @param cellSelL Spreadsheet cell selection listener.
      */
     public ColumnDataPanel(final SpreadsheetColumn column,
                            final int width,
-                           final Variable variable,
+                           final Column dataColumn,
                            final CellSelectionListener cellSelL) {
         super();
 
@@ -72,7 +72,7 @@ public final class ColumnDataPanel extends JPanel implements KeyEventDispatcher 
         columnHeight = 0;
         cells = new ArrayList<>();
         viewMap = new HashMap<>();
-        model = variable;
+        model = dataColumn;
 
         setLayout(null);
         setBorder(BorderFactory.createMatteBorder(0, 0, 0, Constants.BORDER_SIZE,
@@ -85,7 +85,7 @@ public final class ColumnDataPanel extends JPanel implements KeyEventDispatcher 
         this.add(padding);
 
         // Populate the data column with spreadsheet cells.
-        buildDataPanelCells(column, variable, cellSelL);
+        buildDataPanelCells(column, dataColumn, cellSelL);
     }
 
     /**
@@ -110,16 +110,16 @@ public final class ColumnDataPanel extends JPanel implements KeyEventDispatcher 
     /**
      * Build the SpreadsheetCells and add to the DataPanel.
      *
-     * @param column   The column containing the cells
-     * @param variable The variable to display.
+     * @param dataColumn   The column containing the cells
+     * @param dataColumn The column to display.
      * @param cellSelL Spreadsheet listener to notify about cell selection
      *                 changes.
      */
-    private void buildDataPanelCells(final SpreadsheetColumn column, final Variable variable,
+    private void buildDataPanelCells(final SpreadsheetColumn column, final Column dataColumn,
                                      final CellSelectionListener cellSelL) {
 
         // traverse and build the cells
-        for (Cell cell : variable.getCellsTemporally()) {
+        for (Cell cell : dataColumn.getCellsTemporally()) {
             SpreadsheetCell sc = new SpreadsheetCell(column, cell, cellSelL);
             cell.addListener(sc);
 

@@ -22,7 +22,7 @@ import com.sh0sh1n.watavyu.models.db.Cell;
 import com.sh0sh1n.watavyu.models.db.DataStore;
 import com.sh0sh1n.watavyu.models.db.DataStoreFactory;
 import com.sh0sh1n.watavyu.models.db.UserWarningException;
-import com.sh0sh1n.watavyu.models.db.Variable;
+import com.sh0sh1n.watavyu.models.db.Column;
 import com.sh0sh1n.watavyu.models.project.Project;
 import com.sh0sh1n.watavyu.projectfile.ProjectDocument;
 import com.sh0sh1n.watavyu.projectfile.SpreadsheetColumns;
@@ -70,8 +70,8 @@ public final class ProjectController {
     /** The last cell that was selected */
     private Cell lastSelectedCell;
 
-    /** The last variable that was created */
-    private Variable lastCreatedVariable;
+    /** The last column that was created */
+    private Column lastCreatedColumn;
 
     /** Project has been changed */
     private boolean changed;
@@ -130,7 +130,7 @@ public final class ProjectController {
         newProject = false;
         lastCreatedCell = null;
         lastSelectedCell = null;
-        lastCreatedVariable = null;
+        lastCreatedColumn = null;
         lastSelectedCells = new ArrayList<>();
         dataStore.setTitleNotifier(this::titleChanged);
         undoSupport.addUndoableEditListener(event -> undoManager.addEdit(event.getEdit()));
@@ -296,7 +296,7 @@ public final class ProjectController {
             if (cell.equals(lastSelectedCell)) {
                 lastSelectedCell = null;
             }
-            if (dataStore.getVariable(cell) != null) {
+            if (dataStore.getColumn(cell) != null) {
                 dataStore.removeCell(cell);
             }
         }
@@ -414,19 +414,19 @@ public final class ProjectController {
     }
 
     /**
-     * Returns the last variable created for the datastore.
+     * Returns the last column created for the datastore.
      */
-    public Variable getLastCreatedVariable() {
-        return lastCreatedVariable;
+    public Column getLastCreatedColumn() {
+        return lastCreatedColumn;
     }
 
     /**
-     * Sets the newly created variable to the specified parameter.
+     * Sets the newly created column to the specified parameter.
      *
-     * @param newVariable The newly created variable.
+     * @param newColumn The newly created column.
      */
-    public void setLastCreatedVariable(final Variable newVariable) {
-        lastCreatedVariable = newVariable;
+    public void setLastCreatedColumn(final Column newColumn) {
+        lastCreatedColumn = newColumn;
     }
 
     /**

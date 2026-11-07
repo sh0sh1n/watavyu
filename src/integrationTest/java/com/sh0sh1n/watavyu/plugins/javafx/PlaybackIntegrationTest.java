@@ -317,7 +317,7 @@ public class PlaybackIntegrationTest {
 
     @Test
     public void seeksImmediatelyAfterPauseAlwaysShowTheTarget() throws Exception {
-        // Datavyu's clock seeks every viewer right after pausing. Stock OpenJFX sometimes
+        // Watavyu's clock seeks every viewer right after pausing. Stock OpenJFX sometimes
         // left the frame from before the seek on screen here.
         java.util.Random random = new java.util.Random(3);
         List<String> failures = new ArrayList<>();

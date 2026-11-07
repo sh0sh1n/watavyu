@@ -28,16 +28,16 @@ import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * Maps a Datavyu variable to a data store.
+ * A spreadsheet column held in memory: its name, codes and cells.
  */
-public final class DatavyuVariable implements Variable {
+public final class DefaultColumn implements Column {
 
     /** Told of changes to this column. */
-    private final List<VariableListener> listeners = new CopyOnWriteArrayList<>();
+    private final List<ColumnListener> listeners = new CopyOnWriteArrayList<>();
     /** Cells in time order: by onset, then by offset. */
     private static final Comparator<Cell> CELL_ORDER =
         Comparator.comparingLong(Cell::getOnset).thenComparingLong(Cell::getOffset);
-    final private UUID variableId = UUID.randomUUID();
+    final private UUID columnId = UUID.randomUUID();
     private List<Cell> cells = new CopyOnWriteArrayList<>();
     /** The codes' names, in order; each cell has a value for each. */
     private final List<String> codes = new ArrayList<>();
@@ -46,18 +46,18 @@ public final class DatavyuVariable implements Variable {
     private Boolean selected;
     private Boolean hidden;
     private String name;
-    private DatavyuDataStore owningDatastore;
+    private DefaultDataStore owningDatastore;
     private boolean media;
     private boolean locked;
 
     /**
      * Constructor.
-     * @param name          The name to use for the variable being constructed.
-     * @param grandfathered Flag to exempt variable from naming rules.
-     * @param dds           The datastore to which this variable belongs
+     * @param name          The name to use for the column being constructed.
+     * @param grandfathered Flag to exempt column from naming rules.
+     * @param dds           The datastore to which this column belongs
      * @param media         Whether this is a media column
      */
-    DatavyuVariable(String name, boolean grandfathered, DatavyuDataStore dds, boolean media)
+    DefaultColumn(String name, boolean grandfathered, DefaultDataStore dds, boolean media)
             throws UserWarningException {
         this.media = media;
         owningDatastore = dds;
@@ -78,13 +78,13 @@ public final class DatavyuVariable implements Variable {
         if (refusesEdits()) {
             return;
         }
-        if (equals(cell.getVariable())) {
+        if (equals(cell.getColumn())) {
             if (isHidden()) {
                 // As an undo puts back a cell that was selected.
                 cell.setSelected(false);
             }
             cells.add(cell);
-            for (VariableListener vl : listeners) {
+            for (ColumnListener vl : listeners) {
                 vl.cellInserted(cell);
             }
             owningDatastore.markAsChanged();
@@ -99,10 +99,10 @@ public final class DatavyuVariable implements Variable {
 
 
     /**
-     * Returns the internal Identifier for this variable.
+     * Returns the internal Identifier for this column.
      */
     public UUID getID() {
-        return variableId;
+        return columnId;
     }
 
     @Override
@@ -111,11 +111,11 @@ public final class DatavyuVariable implements Variable {
             throw new IllegalStateException("The cells of media column " + name + " are clips");
         }
         requireUnlocked();
-        Cell c = new DatavyuCell(this, codes.size());
+        Cell c = new DefaultCell(this, codes.size());
 
         cells.add(c);
 
-        for (VariableListener vl : listeners) {
+        for (ColumnListener vl : listeners) {
             vl.cellInserted(c);
         }
 
@@ -129,9 +129,9 @@ public final class DatavyuVariable implements Variable {
             throw new IllegalStateException("Annotation column " + name + " has no clips");
         }
         requireUnlocked();
-        Cell c = new DatavyuCell(this, onset, clip);
+        Cell c = new DefaultCell(this, onset, clip);
         cells.add(c);
-        for (VariableListener vl : listeners) {
+        for (ColumnListener vl : listeners) {
             vl.cellInserted(c);
         }
         owningDatastore.markAsChanged();
@@ -153,7 +153,7 @@ public final class DatavyuVariable implements Variable {
         if (newLocked != locked) {
             locked = newLocked;
             owningDatastore.markAsChanged();
-            for (VariableListener vl : listeners) {
+            for (ColumnListener vl : listeners) {
                 vl.lockChanged(newLocked);
             }
         }
@@ -162,7 +162,7 @@ public final class DatavyuVariable implements Variable {
     @Override
     public boolean refusesEdits() {
         if (locked) {
-            for (VariableListener vl : listeners) {
+            for (ColumnListener vl : listeners) {
                 vl.editRefused();
             }
         }
@@ -193,7 +193,7 @@ public final class DatavyuVariable implements Variable {
 
         owningDatastore.markAsChanged();
 
-        for (VariableListener vl : listeners) {
+        for (ColumnListener vl : listeners) {
             vl.cellRemoved(cell);
         }
 
@@ -269,7 +269,7 @@ public final class DatavyuVariable implements Variable {
                 }
             }
 
-            for (VariableListener vl : listeners) {
+            for (ColumnListener vl : listeners) {
                 vl.visibilityChanged(hidden);
             }
         }
@@ -307,9 +307,9 @@ public final class DatavyuVariable implements Variable {
         String oldName = name;
         this.name = newName;
         if (oldName != null && owningDatastore != null) {
-            owningDatastore.updateVariableName(oldName, newName, this);
+            owningDatastore.updateColumnName(oldName, newName, this);
         }
-        for (VariableListener vl : listeners) {
+        for (ColumnListener vl : listeners) {
             vl.nameChanged(newName);
         }
     }
@@ -377,35 +377,35 @@ public final class DatavyuVariable implements Variable {
         }
         codes.set(index, newName);
         owningDatastore.markAsChanged();
-        for (VariableListener vl : listeners) {
+        for (ColumnListener vl : listeners) {
             vl.codeRenamed(index);
         }
     }
 
     /** Returns the column's cells, each made by it ({@link #addCell} takes back only its own). */
-    private List<DatavyuCell> ownCells() {
-        return cells.stream().map(DatavyuCell.class::cast).toList();
+    private List<DefaultCell> ownCells() {
+        return cells.stream().map(DefaultCell.class::cast).toList();
     }
 
     /** Marks the project changed and tells the views that the codes have, so they redraw names and values. */
     private void codesChanged() {
         owningDatastore.markAsChanged();
-        for (VariableListener vl : listeners) {
+        for (ColumnListener vl : listeners) {
             vl.codesChanged();
         }
     }
 
     @Override
-    public void addListener(final VariableListener listener) {
+    public void addListener(final ColumnListener listener) {
         listeners.add(listener);
     }
 
     @Override
-    public void removeListener(final VariableListener listener) {
+    public void removeListener(final ColumnListener listener) {
         listeners.remove(listener);
     }
 
 
-    //would like to change the above calls to DatavyuDataStore.markAsChanged to this,
+    //would like to change the above calls to WatavyuDataStore.markAsChanged to this,
     //but am holding off for now to avoid merge complications
 }

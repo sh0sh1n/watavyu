@@ -35,7 +35,7 @@ public interface DataStore {
      *
      * @return a copy of the columns, in order
      */
-    List<Variable> getAllVariables();
+    List<Column> getAllColumns();
 
     /**
      * Finds a column's place in the spreadsheet order.
@@ -43,7 +43,7 @@ public interface DataStore {
      * @param column a column
      * @return its place, or -1 if it is not in the spreadsheet
      */
-    int indexOf(Variable column);
+    int indexOf(Column column);
 
     /**
      * Tells whether a column is in the spreadsheet: one remembered, or held by an undo edit, may have been taken out.
@@ -51,7 +51,7 @@ public interface DataStore {
      * @param column a column, or null
      * @return whether it is in the spreadsheet
      */
-    default boolean contains(final Variable column) {
+    default boolean contains(final Column column) {
         return column != null && indexOf(column) >= 0;
     }
 
@@ -63,24 +63,24 @@ public interface DataStore {
      * @return whether it is in the spreadsheet
      */
     default boolean contains(final Cell cell) {
-        return cell != null && contains(cell.getVariable()) && cell.getVariable().contains(cell);
+        return cell != null && contains(cell.getColumn()) && cell.getColumn().contains(cell);
     }
 
     /**
-     * Returns all the variables held in the datastore that are visible and not hidden.
+     * Returns all the columns held in the datastore that are visible and not hidden.
      */
-    List<Variable> getVisibleVariables();
+    List<Column> getVisibleColumns();
 
     /**
-     * Returns the variables selected in the datastore.
+     * Returns the columns selected in the datastore.
      */
-    List<Variable> getSelectedVariables();
+    List<Column> getSelectedColumns();
 
     /**
-     * Clears the variable selection - sets selected to false for every variable
+     * Clears the column selection - sets selected to false for every column
      * in the datastore.
      */
-    void clearVariableSelection();
+    void clearColumnSelection();
 
     /**
      * Returns all the selected cells, across the entire datastore.
@@ -94,16 +94,16 @@ public interface DataStore {
     void clearCellSelection();
 
     /**
-     * Clear both the variable and cell selections.
+     * Clear both the column and cell selections.
      */
     void deselectAll();
 
     /**
-     * Returns the variable that matches varName, NULL if unable to find a
-     * variable that matches varName.
-     * @param varName The name of the variable to fetch.
+     * Returns the column that matches varName, NULL if unable to find a
+     * column that matches varName.
+     * @param varName The name of the column to fetch.
      */
-    Variable getVariable(String varName);
+    Column getColumn(String varName);
 
     /**
      * Finds the column holding a cell, which is the cell's own: a column takes no other's cells.
@@ -111,19 +111,19 @@ public interface DataStore {
      * @param cell a cell, or null
      * @return its column, or null if it is not in the spreadsheet ({@link #contains(Cell)})
      */
-    default Variable getVariable(final Cell cell) {
-        return contains(cell) ? cell.getVariable() : null;
+    default Column getColumn(final Cell cell) {
+        return contains(cell) ? cell.getColumn() : null;
     }
 
     /**
-     * Creates and adds a variable to this datastore.
+     * Creates and adds a column to this datastore.
      *
-     * @param name The name of the variable to add to the datastore.
+     * @param name The name of the column to add to the datastore.
      *
-     * @return The new variable that was added to the datastore, with one code.
+     * @return The new column that was added to the datastore, with one code.
      * @throws UserWarningException if a column of that name exists, or the name breaks the naming rules
      */
-    Variable createVariable(final String name) throws UserWarningException;
+    Column createColumn(final String name) throws UserWarningException;
 
     /**
      * Creates and adds a media column, with no clips. Its name is not held to the naming rules for new columns.
@@ -133,19 +133,19 @@ public interface DataStore {
      * @return The new media column.
      * @throws UserWarningException if a column of that name exists
      */
-    Variable createMediaVariable(String name) throws UserWarningException;
+    Column createMediaColumn(String name) throws UserWarningException;
 
     /**
-     * Creates and adds a variable to this datastore.
+     * Creates and adds a column to this datastore.
      *
-     * @param name The name of the variable to add to the datastore.
-     * @param grandfathered Flag to exempt variable from naming rules.
+     * @param name The name of the column to add to the datastore.
+     * @param grandfathered Flag to exempt column from naming rules.
      *
-     * @return The new variable that was added to the datastore, with one code.
+     * @return The new column that was added to the datastore, with one code.
      * @throws UserWarningException if a column of that name exists, or the name breaks the naming rules and is not
      *                              exempt from them
      */
-    Variable createVariable(final String name, boolean grandfathered)
+    Column createColumn(final String name, boolean grandfathered)
         throws UserWarningException;
 
     /**
@@ -153,7 +153,7 @@ public interface DataStore {
      *
      * @param var the column
      */
-    void removeVariable(final Variable var);
+    void removeColumn(final Column var);
 
     /**
      * Puts a column created earlier back at a place in the spreadsheet order, as undo and redo do, then tells the
@@ -163,7 +163,7 @@ public interface DataStore {
      * @param index its place, from 0 to the number of columns
      * @throws IllegalArgumentException if the spreadsheet has a column of the same name, or the place is out of range
      */
-    void addVariable(Variable var, int index);
+    void addColumn(Column var, int index);
 
     /**
      * Moves a column to another place in the spreadsheet order, shifting those between, then tells the listeners.
@@ -172,10 +172,10 @@ public interface DataStore {
      * @param index its new place, from 0 to one less than the number of columns
      * @throws IllegalArgumentException if the column is not in the spreadsheet or the place is out of range
      */
-    void moveVariable(Variable var, int index);
+    void moveColumn(Column var, int index);
 
     /**
-     * Removes a variable from the datastore.
+     * Removes a column from the datastore.
      *
      * @param cell The cell to remove from the datastore.
      */
@@ -215,9 +215,9 @@ public interface DataStore {
      *
      * @param oldname  the name the column had
      * @param newName  the name it has now
-     * @param variable the column
+     * @param column the column
      */
-    void updateVariableName(String oldname, String newName, Variable variable);
+    void updateColumnName(String oldname, String newName, Column column);
 
     /**
      * Sets the title notifier that needs to be informed when the title of the

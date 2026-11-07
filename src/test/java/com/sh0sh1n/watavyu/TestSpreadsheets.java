@@ -3,7 +3,7 @@ package com.sh0sh1n.watavyu;
 import com.sh0sh1n.watavyu.controllers.project.ProjectController;
 import com.sh0sh1n.watavyu.models.db.DataStore;
 import com.sh0sh1n.watavyu.models.project.Project;
-import com.sh0sh1n.watavyu.views.DatavyuView;
+import com.sh0sh1n.watavyu.views.MainWindow;
 import com.sh0sh1n.watavyu.views.VideoController;
 
 import javax.swing.JFrame;
@@ -33,7 +33,7 @@ public final class TestSpreadsheets {
      * @param frame the window
      * @return the main window's contents, with one untitled spreadsheet
      */
-    public static DatavyuView mainWindow(final JFrame frame) {
-        return new DatavyuView(new Datavyu(), frame);
+    public static MainWindow mainWindow(final JFrame frame) {
+        return new MainWindow(new Watavyu(), frame);
     }
 }

@@ -22,7 +22,7 @@ import com.sh0sh1n.watavyu.controllers.project.ProjectController;
 import com.sh0sh1n.watavyu.util.Dialogs;
 import com.sh0sh1n.watavyu.models.db.DataStoreListener;
 import com.sh0sh1n.watavyu.models.db.UserWarningException;
-import com.sh0sh1n.watavyu.models.db.Variable;
+import com.sh0sh1n.watavyu.models.db.Column;
 import com.sh0sh1n.watavyu.util.StringUtils;
 import com.sh0sh1n.watavyu.views.discrete.datavalues.vocabelements.FormalArgEditor;
 import com.sh0sh1n.watavyu.views.discrete.datavalues.vocabelements.VocabElementV;
@@ -83,8 +83,8 @@ public final class VocabEditorV extends JDialog {
     private JLabel statusBar;
     private JSeparator statusSeperator;
     private JLabel nameWarningsLabel;
-    private JButton moveVariableUpButton;
-    private JButton moveVariableDownButton;
+    private JButton moveColumnUpButton;
+    private JButton moveColumnDownButton;
 
     private java.util.ResourceBundle bundle = java.util.ResourceBundle.getBundle("com/sh0sh1n/watavyu/views/resources/VocabEditorV");
 
@@ -159,12 +159,12 @@ public final class VocabEditorV extends JDialog {
             this.editor = editor;
         }
 
-        @Override public void variableAdded(final Variable column) { editor.followColumns(); }
-        @Override public void variableRemoved(final Variable column) { editor.followColumns(); }
-        @Override public void variableOrderChanged() { editor.followColumns(); }
-        @Override public void variableHidden(final Variable column) { }
-        @Override public void variableVisible(final Variable column) { }
-        @Override public void variableNameChange(final Variable column) { }
+        @Override public void columnAdded(final Column column) { editor.followColumns(); }
+        @Override public void columnRemoved(final Column column) { editor.followColumns(); }
+        @Override public void columnOrderChanged() { editor.followColumns(); }
+        @Override public void columnHidden(final Column column) { }
+        @Override public void columnVisible(final Column column) { }
+        @Override public void columnNameChange(final Column column) { }
     }
 
     /**
@@ -172,10 +172,10 @@ public final class VocabEditorV extends JDialog {
      * typed in it and the focus, so only new columns get rows.
      */
     private void followColumns() {
-        Map<Variable, VocabElementV> kept = new HashMap<>();
-        veViews.forEach(row -> kept.put(row.getVariable(), row));
+        Map<Column, VocabElementV> kept = new HashMap<>();
+        veViews.forEach(row -> kept.put(row.getColumn(), row));
         List<VocabElementV> rows = new ArrayList<>();
-        for (Variable column : annotationColumns()) {
+        for (Column column : annotationColumns()) {
             VocabElementV row = kept.remove(column);
             rows.add(row != null ? row : new VocabElementV(column, this));
         }
@@ -201,15 +201,15 @@ public final class VocabEditorV extends JDialog {
         updateDialogState();
     }
 
-    private List<Variable> annotationColumns() {
-        List<Variable> columns = new ArrayList<>(controller.getDataStore().getAllVariables());
-        columns.removeIf(Variable::isMedia);
+    private List<Column> annotationColumns() {
+        List<Column> columns = new ArrayList<>(controller.getDataStore().getAllColumns());
+        columns.removeIf(Column::isMedia);
         return columns;
     }
 
     /** Puts the focus in a column's row, as on its name. */
-    private void focusRow(final Variable column) {
-        veViews.stream().filter(row -> row.getVariable().equals(column)).forEach(VocabElementV::requestFocus);
+    private void focusRow(final Column column) {
+        veViews.stream().filter(row -> row.getColumn().equals(column)).forEach(VocabElementV::requestFocus);
     }
 
     private void makeElements() {
@@ -238,7 +238,7 @@ public final class VocabEditorV extends JDialog {
         try {
             LOGGER.info("vocEd - add column");
 
-            Variable v = controller.columns().newColumn(varName);
+            Column v = controller.columns().newColumn(varName);
             // The rows follow the spreadsheet's columns, so the new one has its row already.
             focusRow(v);
             updateDialogState();
@@ -254,7 +254,7 @@ public final class VocabEditorV extends JDialog {
      */
     public void moveArgumentLeft() {
         LOGGER.info("vocEd - move code left");
-        Variable var = selectedVocabElement.getVariable();
+        Column var = selectedVocabElement.getColumn();
         int moved = selectedArgumentI - 1;
         if (!controller.codes().move(var, selectedArgumentI, moved)) {
             return;
@@ -272,7 +272,7 @@ public final class VocabEditorV extends JDialog {
      */
     public void moveArgumentRight() {
         LOGGER.info("vocEd - move code right");
-        Variable var = selectedVocabElement.getVariable();
+        Column var = selectedVocabElement.getColumn();
         int moved = selectedArgumentI + 1;
         if (!controller.codes().move(var, selectedArgumentI, moved)) {
             return;
@@ -286,29 +286,29 @@ public final class VocabEditorV extends JDialog {
     }
 
     /**
-     * The action to invoke when the user clicks the move variable up button.
+     * The action to invoke when the user clicks the move column up button.
      */
-    public void moveVariableUp(){
+    public void moveColumnUp(){
         LOGGER.error("vocEd - move column up");
-        Variable var = selectedVocabElement.getVariable();
+        Column var = selectedVocabElement.getColumn();
         VocabElementV v = selectedVocabElement;
         int idx = getVocabElements().indexOf(v);
         if(idx > 0) {
-            controller.columns().move(var, getVocabElements().get(idx-1).getVariable());
+            controller.columns().move(var, getVocabElements().get(idx-1).getColumn());
             focusRow(var);
         }
     }
 
     /**
-     * The action to invoke when the user clicks the move variable up button.
+     * The action to invoke when the user clicks the move column up button.
      */
-    public void moveVariableDown(){
+    public void moveColumnDown(){
         LOGGER.error("vocEd - move column up");
-        Variable var = selectedVocabElement.getVariable();
+        Column var = selectedVocabElement.getColumn();
         VocabElementV v = selectedVocabElement;
         int idx = getVocabElements().indexOf(v);
         if(idx < getVocabElements().size() - 1) {
-            controller.columns().move(var, getVocabElements().get(idx+1).getVariable());
+            controller.columns().move(var, getVocabElements().get(idx+1).getColumn());
             focusRow(var);
         }
     }
@@ -317,7 +317,7 @@ public final class VocabEditorV extends JDialog {
      * The action to invoke when the user clicks on the add code button.
      */
     public void addCode() {
-        int added = controller.codes().add(selectedVocabElement.getVariable());
+        int added = controller.codes().add(selectedVocabElement.getColumn());
         if (added < 0) {
             return;
         }
@@ -336,22 +336,22 @@ public final class VocabEditorV extends JDialog {
      */
     public void delete() {
         // A locked column, its codes included, is deleted only once it is unlocked.
-        if (selectedVocabElement != null && selectedVocabElement.getVariable().refusesEdits()) {
+        if (selectedVocabElement != null && selectedVocabElement.getColumn().refusesEdits()) {
             return;
         }
         // User has vocab element selected - delete it from the editor.
         if (selectedVocabElement != null && selectedArgument == null) {
             if (JOptionPane.showConfirmDialog(this, "Are you sure you want to delete the column " +
-                    selectedVocabElement.getVariable().getName() + "?", "Delete Column",
+                    selectedVocabElement.getColumn().getName() + "?", "Delete Column",
                     JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
                 LOGGER.info("vocEd - delete element");
-                controller.columns().delete(List.of(selectedVocabElement.getVariable()));
+                controller.columns().delete(List.of(selectedVocabElement.getColumn()));
             }
 
             // User has argument selected - delete it from the vocab element.
         } else if (selectedArgument != null) {
             LOGGER.info("vocEd - delete code");
-            controller.codes().delete(selectedVocabElement.getVariable(), selectedArgument.getArgPos());
+            controller.codes().delete(selectedVocabElement.getColumn(), selectedArgument.getArgPos());
         }
 
         updateDialogState();
@@ -409,19 +409,19 @@ public final class VocabEditorV extends JDialog {
         if(selectedVocabElement != null) {
             int selectedVocabI = getVocabElements().indexOf(selectedVocabElement);
             if (selectedVocabI > 0) {
-                moveVariableUpButton.setEnabled(true);
+                moveColumnUpButton.setEnabled(true);
             } else {
-                moveVariableUpButton.setEnabled(false);
+                moveColumnUpButton.setEnabled(false);
             }
 
             if (selectedVocabI < getVocabElements().size() - 1) {
-                moveVariableDownButton.setEnabled(true);
+                moveColumnDownButton.setEnabled(true);
             } else {
-                moveVariableDownButton.setEnabled(false);
+                moveColumnDownButton.setEnabled(false);
             }
         } else {
-            moveVariableUpButton.setEnabled(false);
-            moveVariableDownButton.setEnabled(false);
+            moveColumnUpButton.setEnabled(false);
+            moveColumnDownButton.setEnabled(false);
         }
 
         if (selectedArgument != null) {
@@ -434,7 +434,7 @@ public final class VocabEditorV extends JDialog {
                 moveCodeLeftButton.setEnabled(false);
             }
 
-            if (selectedArgumentI < (selectedVocabElement.getVariable().getCodes().size() - 1)) {
+            if (selectedArgumentI < (selectedVocabElement.getColumn().getCodes().size() - 1)) {
                 moveCodeRightButton.setEnabled(true);
             } else {
                 moveCodeRightButton.setEnabled(false);
@@ -465,8 +465,8 @@ public final class VocabEditorV extends JDialog {
         statusSeperator = new javax.swing.JSeparator();
         jLabel1 = new javax.swing.JLabel();
         nameWarningsLabel = new javax.swing.JLabel();
-        moveVariableDownButton = new javax.swing.JButton();
-        moveVariableUpButton = new javax.swing.JButton();
+        moveColumnDownButton = new javax.swing.JButton();
+        moveColumnUpButton = new javax.swing.JButton();
 
         jScrollPane1.setName("jScrollPane1");
 
@@ -535,33 +535,33 @@ public final class VocabEditorV extends JDialog {
         gridBagConstraints.insets = new java.awt.Insets(5, 0, 5, 5);
         getContentPane().add(moveCodeRightButton, gridBagConstraints);
 
-        moveVariableUpButton.addActionListener(e -> moveVariableUp());
-        moveVariableUpButton.setIcon(Glyph.of(Glyph.Shape.UP, ARROW_SIZE));
-        moveVariableUpButton.setText(bundle.getString("moveVariableUpButton.text"));
-        moveVariableUpButton.setToolTipText(bundle.getString("moveVariableUpButton.tip"));
-        moveVariableUpButton.setHorizontalTextPosition(javax.swing.SwingConstants.LEFT);
-        moveVariableUpButton.setName("moveVariableUp");
+        moveColumnUpButton.addActionListener(e -> moveColumnUp());
+        moveColumnUpButton.setIcon(Glyph.of(Glyph.Shape.UP, ARROW_SIZE));
+        moveColumnUpButton.setText(bundle.getString("moveColumnUpButton.text"));
+        moveColumnUpButton.setToolTipText(bundle.getString("moveColumnUpButton.tip"));
+        moveColumnUpButton.setHorizontalTextPosition(javax.swing.SwingConstants.LEFT);
+        moveColumnUpButton.setName("moveColumnUp");
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 5;
         gridBagConstraints.gridy = 2;
         gridBagConstraints.gridwidth = 1;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.EAST;
         gridBagConstraints.insets = new java.awt.Insets(5, 0, 5, 5);
-        getContentPane().add(moveVariableUpButton, gridBagConstraints);
+        getContentPane().add(moveColumnUpButton, gridBagConstraints);
 
-        moveVariableDownButton.addActionListener(e -> moveVariableDown());
-        moveVariableDownButton.setIcon(Glyph.of(Glyph.Shape.DOWN, ARROW_SIZE));
-        moveVariableDownButton.setText(bundle.getString("moveVariableDownButton.text"));
-        moveVariableDownButton.setToolTipText(bundle.getString("moveVariableDownButton.tip"));
-        moveVariableDownButton.setHorizontalTextPosition(javax.swing.SwingConstants.LEFT);
-        moveVariableDownButton.setName("moveVariableDown");
+        moveColumnDownButton.addActionListener(e -> moveColumnDown());
+        moveColumnDownButton.setIcon(Glyph.of(Glyph.Shape.DOWN, ARROW_SIZE));
+        moveColumnDownButton.setText(bundle.getString("moveColumnDownButton.text"));
+        moveColumnDownButton.setToolTipText(bundle.getString("moveColumnDownButton.tip"));
+        moveColumnDownButton.setHorizontalTextPosition(javax.swing.SwingConstants.LEFT);
+        moveColumnDownButton.setName("moveColumnDown");
         gridBagConstraints = new java.awt.GridBagConstraints();
         gridBagConstraints.gridx = 6;
         gridBagConstraints.gridy = 2;
         gridBagConstraints.gridwidth = 1;
         gridBagConstraints.anchor = java.awt.GridBagConstraints.EAST;
         gridBagConstraints.insets = new java.awt.Insets(5, 0, 5, 5);
-        getContentPane().add(moveVariableDownButton, gridBagConstraints);
+        getContentPane().add(moveColumnDownButton, gridBagConstraints);
 
         deleteButton.addActionListener(e -> delete());
         deleteButton.setText(bundle.getString("deleteButton.text"));
@@ -693,8 +693,8 @@ public final class VocabEditorV extends JDialog {
         addCodeButton.addMouseListener(ma);
         moveCodeLeftButton.addMouseListener(ma);
         moveCodeRightButton.addMouseListener(ma);
-        moveVariableDownButton.addMouseListener(ma);
-        moveVariableUpButton.addMouseListener(ma);
+        moveColumnDownButton.addMouseListener(ma);
+        moveColumnUpButton.addMouseListener(ma);
 
     }
 

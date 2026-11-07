@@ -77,69 +77,69 @@ public class DataStoreTest {
     }
 
     @Test
-    public void createVariable() throws UserWarningException {
+    public void createColumn() throws UserWarningException {
         assertFalse(model.isChanged());
-        model.createVariable("foo");
+        model.createColumn("foo");
         assertTrue(model.isChanged());
-        Variable var = model.getVariable("foo");
-        List<Variable> varList = new ArrayList<Variable>();
+        Column var = model.getColumn("foo");
+        List<Column> varList = new ArrayList<Column>();
         varList.add(var);
 
         assertNotNull(var);
 
-        // TODO: database should be changed after adding a new variable.
+        // TODO: database should be changed after adding a new column.
         // assertTrue(model.isChanged());
 
-        assertEquals(model.getSelectedVariables(), varList);
-        assertEquals(model.getAllVariables(), varList);
+        assertEquals(model.getSelectedColumns(), varList);
+        assertEquals(model.getAllColumns(), varList);
         assertEquals(var.getName(), "foo");
         assertEquals(var.getCodes().size(), 1);
         assertTrue(var.isSelected());
         assertTrue(!var.isHidden());
         assertEquals(var.getCells().size(), 0);
-        verify(modelListener).variableAdded(var);
-        verify(modelListener, times(0)).variableOrderChanged();
-        verify(modelListener, times(0)).variableRemoved(var);
-        verify(modelListener, times(0)).variableHidden(var);
-        verify(modelListener, times(0)).variableNameChange(var);
-        verify(modelListener, times(0)).variableVisible(var);
+        verify(modelListener).columnAdded(var);
+        verify(modelListener, times(0)).columnOrderChanged();
+        verify(modelListener, times(0)).columnRemoved(var);
+        verify(modelListener, times(0)).columnHidden(var);
+        verify(modelListener, times(0)).columnNameChange(var);
+        verify(modelListener, times(0)).columnVisible(var);
         verify(titleListener).updateTitle();
     }
 
     @Test(expectedExceptions = UserWarningException.class)
-    public void unableToCreateVariable() throws UserWarningException {
-        model.createVariable("foo");
-        model.createVariable("foo");
+    public void unableToCreateColumn() throws UserWarningException {
+        model.createColumn("foo");
+        model.createColumn("foo");
     }
 
     @Test
-    public void removeVariable() throws UserWarningException {
-        Variable var = model.createVariable("foo");
-        List<Variable> varList = new ArrayList<Variable>();
+    public void removeColumn() throws UserWarningException {
+        Column var = model.createColumn("foo");
+        List<Column> varList = new ArrayList<Column>();
         varList.add(var);
 
-        assertEquals(model.getAllVariables(), varList);
-        verify(modelListener).variableAdded(var);
+        assertEquals(model.getAllColumns(), varList);
+        verify(modelListener).columnAdded(var);
 
         model.markAsUnchanged();
         assertFalse(model.isChanged());
-        model.removeVariable(var);
+        model.removeColumn(var);
         assertTrue(model.isChanged());
 
-        assertEquals(model.getAllVariables().size(), 0);
-        assertEquals(model.getSelectedVariables().size(), 0);
+        assertEquals(model.getAllColumns().size(), 0);
+        assertEquals(model.getSelectedColumns().size(), 0);
 
-        verify(modelListener).variableRemoved(var);
-        verify(modelListener, times(0)).variableHidden(var);
-        verify(modelListener, times(0)).variableVisible(var);
-        verify(modelListener, times(0)).variableNameChange(var);
-        verify(modelListener, times(0)).variableOrderChanged();
+        verify(modelListener).columnRemoved(var);
+        verify(modelListener, times(0)).columnHidden(var);
+        verify(modelListener, times(0)).columnVisible(var);
+        verify(modelListener, times(0)).columnNameChange(var);
+        verify(modelListener, times(0)).columnOrderChanged();
     }
 
     @Test
     public void unchangedByDefault() throws UserWarningException {
         assertFalse(model.isChanged());
-        model.createVariable("test");
+        model.createColumn("test");
         assertTrue(model.isChanged());
         model.markAsUnchanged();
         assertFalse(model.isChanged());

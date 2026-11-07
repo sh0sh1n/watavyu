@@ -14,7 +14,7 @@
  */
 package com.sh0sh1n.watavyu.views;
 
-import com.sh0sh1n.watavyu.util.DatavyuVersion;
+import com.sh0sh1n.watavyu.util.AppVersion;
 import com.sh0sh1n.watavyu.views.discrete.SpreadsheetTheme;
 
 import javax.swing.BorderFactory;
@@ -51,7 +51,7 @@ public final class AboutV extends JDialog {
         panel.add(line("Watavyu", SpreadsheetTheme.headerFont().deriveFont(34F),
                 SpreadsheetTheme.PALETTE.text()));
         panel.add(Box.createVerticalStrut(8));
-        JLabel version = line(DatavyuVersion.getVersion(), SpreadsheetTheme.timeFont(13F),
+        JLabel version = line(AppVersion.getVersion(), SpreadsheetTheme.timeFont(13F),
                 SpreadsheetTheme.PALETTE.accent());
         version.setName("version");
         panel.add(version);

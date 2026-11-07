@@ -4,7 +4,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import com.sh0sh1n.watavyu.models.db.Cell;
 import com.sh0sh1n.watavyu.models.db.DataStore;
-import com.sh0sh1n.watavyu.models.db.Variable;
+import com.sh0sh1n.watavyu.models.db.Column;
 import com.sh0sh1n.watavyu.undoableedits.AddCellEdit;
 import com.sh0sh1n.watavyu.undoableedits.RemoveCellEdit;
 import com.sh0sh1n.watavyu.util.ArrayDirection;
@@ -48,7 +48,7 @@ public final class CellCommands {
      * @return the new cell, or null if there is no such column or it is hidden or locked
      */
     public Cell newCell(final long time) {
-        return newCellIn(spreadsheet.getLastCreatedVariable(), time);
+        return newCellIn(spreadsheet.getLastCreatedColumn(), time);
     }
 
     /**
@@ -59,8 +59,8 @@ public final class CellCommands {
      * @return the new cell, or null if that column is a media column or is hidden or locked
      */
     public Cell newCellInSelectedColumn(final long time) {
-        List<Variable> selected = selectedColumns();
-        return newCellIn(selected.isEmpty() ? spreadsheet.getLastCreatedVariable() : selected.get(0), time);
+        List<Column> selected = selectedColumns();
+        return newCellIn(selected.isEmpty() ? spreadsheet.getLastCreatedColumn() : selected.get(0), time);
     }
 
     /**
@@ -72,19 +72,19 @@ public final class CellCommands {
      * @param column a column
      * @return whether it is shown
      */
-    private static boolean shown(final Variable column) {
+    private static boolean shown(final Column column) {
         return !column.isHidden();
     }
 
     /** @return the selected columns, in spreadsheet order */
-    private List<Variable> selectedColumns() {
-        return dataStore().getAllVariables().stream().filter(Variable::isSelected).toList();
+    private List<Column> selectedColumns() {
+        return dataStore().getAllColumns().stream().filter(Column::isSelected).toList();
     }
 
     /** @return the selected cells, by column in spreadsheet order and then by time */
     private List<Cell> selectedCells() {
         List<Cell> selected = new ArrayList<>();
-        for (Variable column : dataStore().getAllVariables()) {
+        for (Column column : dataStore().getAllColumns()) {
             column.getCells().stream().filter(Cell::isSelected).sorted(BY_ONSET).forEach(selected::add);
         }
         return selected;
@@ -97,7 +97,7 @@ public final class CellCommands {
      * @return whether it has
      */
     public boolean hasColumnForNewCell() {
-        Variable last = spreadsheet.getLastCreatedVariable();
+        Column last = spreadsheet.getLastCreatedColumn();
         return inSpreadsheet(last) && takesCells(last);
     }
 
@@ -114,10 +114,10 @@ public final class CellCommands {
      *         annotation column can take it
      */
     public Cell newCellClosingPrevious(final long time) {
-        List<Variable> selected = selectedColumns();
+        List<Column> selected = selectedColumns();
         Cell lastSelected = spreadsheet.getLastSelectedCell();
-        Variable closing = selected.size() == 1 ? selected.get(0) : inSpreadsheet(lastSelected)
-            ? lastSelected.getVariable() : null;
+        Column closing = selected.size() == 1 ? selected.get(0) : inSpreadsheet(lastSelected)
+            ? lastSelected.getColumn() : null;
         if (closing != null && shown(closing)) {
             if (closing.refusesEdits()) {
                 return null;
@@ -131,7 +131,7 @@ public final class CellCommands {
     }
 
     /** @return the cell to close before the time, as {@link #newCellClosingPrevious(long)} picks it, or null */
-    private Cell cellToClose(final Variable column, final long time) {
+    private Cell cellToClose(final Column column, final long time) {
         List<Cell> started = column.getCells().stream().filter(cell -> cell.getOnset() <= time).sorted(BY_ONSET)
             .toList();
         if (started.isEmpty()) {
@@ -144,30 +144,30 @@ public final class CellCommands {
     }
 
     /** @return the column for a new cell at a time, as {@link #newCellClosingPrevious(long)} picks it, or null */
-    private Variable columnForNewCellAt() {
-        for (Variable column : selectedColumns()) {
+    private Column columnForNewCellAt() {
+        for (Column column : selectedColumns()) {
             if (takesCells(column)) {
                 return column;
             }
         }
         for (Cell cell : selectedCells()) {
-            if (takesCells(cell.getVariable())) {
-                return cell.getVariable();
+            if (takesCells(cell.getColumn())) {
+                return cell.getColumn();
             }
         }
         if (hasColumnForNewCell()) {
-            return spreadsheet.getLastCreatedVariable();
+            return spreadsheet.getLastCreatedColumn();
         }
-        return dataStore().getAllVariables().stream().filter(CellCommands::takesCells).findFirst().orElse(null);
+        return dataStore().getAllColumns().stream().filter(CellCommands::takesCells).findFirst().orElse(null);
     }
 
     /** @return whether a column can be given a new cell, locks aside: a shown annotation column */
-    private static boolean takesCells(final Variable column) {
+    private static boolean takesCells(final Column column) {
         return !column.isMedia() && shown(column);
     }
 
     /** Makes a point cell in a column, which is then the one last given a cell, and records it; null if refused. */
-    private Cell newCellIn(final Variable column, final long time) {
+    private Cell newCellIn(final Column column, final long time) {
         Cell cell = createPointCell(column, time);
         if (cell != null) {
             dataStore().deselectAll();
@@ -177,7 +177,7 @@ public final class CellCommands {
     }
 
     /** @return whether a column is in the spreadsheet, as one remembered as last given a cell may have been deleted */
-    private boolean inSpreadsheet(final Variable column) {
+    private boolean inSpreadsheet(final Column column) {
         return dataStore().contains(column);
     }
 
@@ -186,7 +186,7 @@ public final class CellCommands {
         return dataStore().contains(cell);
     }
 
-    private Cell createPointCell(final Variable column, final long time) {
+    private Cell createPointCell(final Column column, final long time) {
         // A hidden column refuses quietly: it cannot be seen to.
         if (!inSpreadsheet(column) || !takesCells(column) || column.refusesEdits()) {
             return null;
@@ -194,7 +194,7 @@ public final class CellCommands {
         logger.info("New cell in " + column.getName() + " at " + time);
         Cell cell = column.createPointCell(time);
         spreadsheet.setLastCreatedCell(cell);
-        spreadsheet.setLastCreatedVariable(column);
+        spreadsheet.setLastCreatedColumn(column);
         record(new AddCellEdit(spreadsheet, column.getName(), cell));
         return cell;
     }
@@ -207,15 +207,15 @@ public final class CellCommands {
      * @return the new cells
      */
     public List<Cell> newCellsBeside(final ArrayDirection direction) {
-        List<Variable> visible = dataStore().getVisibleVariables();
+        List<Column> visible = dataStore().getVisibleColumns();
         List<Cell> made = new ArrayList<>();
         for (Cell source : selectedCells()) {
-            int own = visible.indexOf(source.getVariable());
+            int own = visible.indexOf(source.getColumn());
             int beside = own + direction.getModifier();
             if (own < 0 || beside < 0 || beside >= visible.size()) {
                 continue;
             }
-            Variable column = visible.get(beside);
+            Column column = visible.get(beside);
             if (column.isMedia() || column.refusesEdits()) {
                 continue;
             }
@@ -237,7 +237,7 @@ public final class CellCommands {
      * @param time   the new cell's onset and offset
      * @return the new cell, or null in a media column, a hidden or locked one or one with no codes
      */
-    public Cell newCellTyped(final Variable column, final char typed, final long time) {
+    public Cell newCellTyped(final Column column, final char typed, final long time) {
         if (!inSpreadsheet(column) || !takesCells(column) || column.refusesEdits()) {
             return null;
         }
@@ -282,14 +282,14 @@ public final class CellCommands {
             return selected;
         }
         return spreadsheet.getLastSelectedCells().stream().filter(this::inSpreadsheet)
-            .filter(cell -> shown(cell.getVariable())).distinct().toList();
+            .filter(cell -> shown(cell.getColumn())).distinct().toList();
     }
 
     /** Delete Cells: deletes the selected cells, except those in locked columns, as one edit in the undo history. */
     public void deleteSelected() {
         List<Cell> deleted = new ArrayList<>();
         for (Cell cell : selectedCells()) {
-            if (!cell.getVariable().refusesEdits()) {
+            if (!cell.getColumn().refusesEdits()) {
                 deleted.add(cell);
             }
         }

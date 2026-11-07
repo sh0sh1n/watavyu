@@ -27,42 +27,42 @@ package com.sh0sh1n.watavyu.models.db;
  */
 public interface DataStoreListener {
     /**
-     * Called when a variable is added to the datastore.
+     * Called when a column is added to the datastore.
      *
-     * @param newVariable The variable that was just added to the datastore.
+     * @param newColumn The column that was just added to the datastore.
      */
-    void variableAdded(final Variable newVariable);
+    void columnAdded(final Column newColumn);
 
     /**
-     * Called when a variable is removed from the datastore.
+     * Called when a column is removed from the datastore.
      *
-     * @param deletedVariable The variable that was removed from the datastore.
+     * @param deletedColumn The column that was removed from the datastore.
      */
-    void variableRemoved(final Variable deletedVariable);
+    void columnRemoved(final Column deletedColumn);
 
     /**
-     * Called when the order of variables in the datastore change.
+     * Called when the order of columns in the datastore change.
      */
-    void variableOrderChanged();
+    void columnOrderChanged();
     
     /**
-     * Called when a variable is hidden.
+     * Called when a column is hidden.
      *
-     * @param hiddenVariable The variable that was hidden.
+     * @param hiddenColumn The column that was hidden.
      */
-    void variableHidden(final Variable hiddenVariable);
+    void columnHidden(final Column hiddenColumn);
 
     /**
-     * Called when a variable is made visible (opposite of hidden).
+     * Called when a column is made visible (opposite of hidden).
      *
-     * @param visibleVariable  The variable that was made visible.
+     * @param visibleColumn  The column that was made visible.
      */
-    void variableVisible(final Variable visibleVariable);
+    void columnVisible(final Column visibleColumn);
 
     /**
-     * Called when the name of a variable has changed.
+     * Called when the name of a column has changed.
      *
-     * @param editedVariable The variable that has had its name changed.
+     * @param editedColumn The column that has had its name changed.
      */
-    void variableNameChange(final Variable editedVariable);
+    void columnNameChange(final Column editedColumn);
 }

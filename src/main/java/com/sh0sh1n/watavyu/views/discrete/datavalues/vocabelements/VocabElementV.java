@@ -19,8 +19,8 @@ import com.sh0sh1n.watavyu.views.LockMark;
 import com.sh0sh1n.watavyu.views.discrete.SpreadsheetTheme;
 import com.sh0sh1n.watavyu.util.Resources;
 import com.sh0sh1n.watavyu.models.db.Cell;
-import com.sh0sh1n.watavyu.models.db.Variable;
-import com.sh0sh1n.watavyu.models.db.VariableListener;
+import com.sh0sh1n.watavyu.models.db.Column;
+import com.sh0sh1n.watavyu.models.db.ColumnListener;
 import com.sh0sh1n.watavyu.views.VocabEditorV;
 import com.sh0sh1n.watavyu.views.discrete.EditorComponent;
 
@@ -84,9 +84,9 @@ public final class VocabElementV extends JPanel {
     /** How many changes typed into this view's editors are being applied. */
     private int typing;
     /**
-     * The underlying variable model that this vocab element view represents.
+     * The underlying column model that this vocab element view represents.
      */
-    private transient Variable varModel;
+    private transient Column varModel;
     /**
      * The parent editor for this vocab element view.
      */
@@ -99,7 +99,7 @@ public final class VocabElementV extends JPanel {
      * Hears of the column being renamed or locked or its codes changing, as undo does from the spreadsheet, and of
      * changes it refuses, while this view is showing.
      */
-    private final transient VariableListener columnListener = new VariableListener() {
+    private final transient ColumnListener columnListener = new ColumnListener() {
         @Override public void nameChanged(final String newName) { showModel(); }
         @Override public void visibilityChanged(final boolean isHidden) { }
         @Override public void cellInserted(final Cell newCell) { }
@@ -109,7 +109,7 @@ public final class VocabElementV extends JPanel {
         @Override public void editRefused() { lockMark.shake(); }
     };
 
-    public VocabElementV(Variable var, VocabEditorV vev) {
+    public VocabElementV(Column var, VocabEditorV vev) {
 
         Resources rMap = Resources.of(VocabElementV.class);
 
@@ -283,7 +283,7 @@ public final class VocabElementV extends JPanel {
         return null;
     }
 
-    public final Variable getVariable() {
+    public final Column getColumn() {
         return varModel;
     }
 

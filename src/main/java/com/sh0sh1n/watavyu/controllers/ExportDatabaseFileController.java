@@ -22,7 +22,7 @@ import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import com.sh0sh1n.watavyu.Datavyu;
+import com.sh0sh1n.watavyu.Watavyu;
 import com.sh0sh1n.watavyu.models.db.*;
 
 import java.io.*;
@@ -40,14 +40,14 @@ public final class ExportDatabaseFileController {
     private static Logger logger = LogManager.getLogger(ExportDatabaseFileController.class);
 
     /** @return the spreadsheet's annotation columns, which are what is exported; media columns are not */
-    private static List<Variable> annotationColumns(final DataStore dataStore) {
-        List<Variable> columns = new ArrayList<>(dataStore.getAllVariables());
-        columns.removeIf(Variable::isMedia);
+    private static List<Column> annotationColumns(final DataStore dataStore) {
+        List<Column> columns = new ArrayList<>(dataStore.getAllColumns());
+        columns.removeIf(Column::isMedia);
         return columns;
     }
 
     /**
-     * Save a Datavyu Spreadseet in a JSON File.
+     * Saves a spreadsheet as Datavyu's JSON export.
      *
      * @param dbFileName Target File
      * @param dataStore DataStore to be saved as JSON
@@ -64,12 +64,12 @@ public final class ExportDatabaseFileController {
             //Spreadsheet name Field
 //            g.writeStringField("name", dataStore.getName());
 
-            //Start an Array of Passes (Column(Spreadsheet)/Variable(DataStore))
+            //Start an Array of Passes (Column(Spreadsheet)/Column(DataStore))
             g.writeArrayFieldStart("passes");
-            for (Variable column : annotationColumns(dataStore)) {
-                // Start an Object for each Pass(Column/Variable)
+            for (Column column : annotationColumns(dataStore)) {
+                // Start an Object for each Pass(Column/Column)
                 g.writeStartObject();
-                // Pass(Column/Variable) name
+                // Pass(Column/Column) name
                 g.writeStringField("name", column.getName());
 
                 // Datavyu's names: every column is a matrix of nominal codes.
@@ -117,7 +117,7 @@ public final class ExportDatabaseFileController {
 
         } catch (IOException e) {
             logger.error("Export as JSON failed. Error: ", e);
-            Resources rMap = Resources.of(Datavyu.class);
+            Resources rMap = Resources.of(Watavyu.class);
             throw new UserWarningException(rMap.getString("UnableToSave.message", dbFileName), e);
         }
 

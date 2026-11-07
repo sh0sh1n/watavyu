@@ -27,29 +27,29 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
 /**
- * Tests for the Variable Interface
+ * Tests for the Column Interface
  */
-public class VariableTest {
+public class ColumnTest {
     /**
-     * The parent datastore for the variable.
+     * The parent datastore for the column.
      */
     private DataStore ds;
 
     /**
      * The model we are testing.
      */
-    private Variable model;
+    private Column model;
 
     /**
      * the modelListener we are testing.
      */
-    private VariableListener modelListener;
+    private ColumnListener modelListener;
 
     @BeforeMethod
     public void setUp() throws UserWarningException {
         ds = DataStoreFactory.newDataStore();
-        model = (DatavyuVariable) ds.createVariable("test");
-        modelListener = mock(VariableListener.class);
+        model = (DefaultColumn) ds.createColumn("test");
+        modelListener = mock(ColumnListener.class);
         model.addListener(modelListener);
         ds.markAsUnchanged();
     }
@@ -68,8 +68,8 @@ public class VariableTest {
         model.setName("test2");
         assertTrue(ds.isChanged());
         assertEquals(model.getName(), "test2");
-        assertEquals(ds.getVariable("test"), null);
-        assertEquals(ds.getVariable("test2"), model);
+        assertEquals(ds.getColumn("test"), null);
+        assertEquals(ds.getColumn("test2"), model);
         verify(modelListener).nameChanged("test2");
         verify(modelListener, times(0)).visibilityChanged(true);
         verify(modelListener, times(0)).cellInserted(null);
@@ -117,7 +117,7 @@ public class VariableTest {
         assertFalse(model.isSelected());
         assertFalse(cell.isSelected());
         assertTrue(ds.getSelectedCells().isEmpty());
-        assertTrue(ds.getSelectedVariables().isEmpty());
+        assertTrue(ds.getSelectedColumns().isEmpty());
 
         // Nor is it once shown again: nothing was selected while it was hidden.
         model.setHidden(false);
@@ -158,10 +158,10 @@ public class VariableTest {
 
     @Test
     public void testIsSelected() {
-        List<Variable> vars = new ArrayList<Variable>();
+        List<Column> vars = new ArrayList<Column>();
         vars.add(model);
         assertTrue(model.isSelected());
-        assertEquals(ds.getSelectedVariables(), vars);
+        assertEquals(ds.getSelectedColumns(), vars);
         assertFalse(ds.isChanged());
         model.setSelected(false);
         assertFalse(model.isSelected());
@@ -179,7 +179,7 @@ public class VariableTest {
         assertTrue(ds.isChanged());
         cells.add(c);
         assertTrue(model.contains(c));
-        assertEquals(ds.getVariable(c), model);
+        assertEquals(ds.getColumn(c), model);
         assertEquals(model.getCells(), cells);
         verify(modelListener).cellInserted(c);
         verify(modelListener, times(0)).visibilityChanged(true);
@@ -235,54 +235,54 @@ public class VariableTest {
     }
 
     @Test(expectedExceptions = UserWarningException.class)
-    public void uniqueVariableNames() throws UserWarningException {
-        ds.createVariable("test");
+    public void uniqueColumnNames() throws UserWarningException {
+        ds.createColumn("test");
     }
 
     @Test(expectedExceptions = UserWarningException.class)
     public void nameWithCharacters() throws UserWarningException {
-        ds.createVariable("");
+        ds.createColumn("");
     }
 
     @Test(expectedExceptions = UserWarningException.class)
     public void badCharacterSpace() throws UserWarningException {
-        ds.createVariable(" blah ");
+        ds.createColumn(" blah ");
     }
 
 
     @Test(expectedExceptions = UserWarningException.class)
     public void badCharacter1() throws UserWarningException {
-        ds.createVariable("as)ds");
+        ds.createColumn("as)ds");
     }
 
     @Test(expectedExceptions = UserWarningException.class)
     public void badCharacter2() throws UserWarningException {
-        ds.createVariable("ac(dc");
+        ds.createColumn("ac(dc");
     }
 
     @Test(expectedExceptions = UserWarningException.class)
     public void badCharacter3() throws UserWarningException {
-        ds.createVariable("ac>dc");
+        ds.createColumn("ac>dc");
     }
 
     @Test(expectedExceptions = UserWarningException.class)
     public void badCharacter4() throws UserWarningException {
-        ds.createVariable("ac<dc");
+        ds.createColumn("ac<dc");
     }
 
     @Test(expectedExceptions = UserWarningException.class)
     public void badCharacter5() throws UserWarningException {
-        ds.createVariable("ac,dc");
+        ds.createColumn("ac,dc");
     }
 
     @Test(expectedExceptions = UserWarningException.class)
     public void badCharacter6() throws UserWarningException {
-        ds.createVariable("ac\"dc");
+        ds.createColumn("ac\"dc");
     }
 
     @Test(expectedExceptions = UserWarningException.class)
     public void startsWithNumber() throws UserWarningException {
-        ds.createVariable("1acdc");
+        ds.createColumn("1acdc");
     }
 
     /** Cells in time order are ordered by onset, and cells with the same onset by offset. */

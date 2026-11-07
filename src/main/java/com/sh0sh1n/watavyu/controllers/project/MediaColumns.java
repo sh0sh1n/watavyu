@@ -2,7 +2,7 @@ package com.sh0sh1n.watavyu.controllers.project;
 
 import com.sh0sh1n.watavyu.models.db.DataStore;
 import com.sh0sh1n.watavyu.models.db.UserWarningException;
-import com.sh0sh1n.watavyu.models.db.Variable;
+import com.sh0sh1n.watavyu.models.db.Column;
 import com.sh0sh1n.watavyu.projectfile.MediaColumnNames;
 
 import java.util.Set;
@@ -21,9 +21,9 @@ public final class MediaColumns {
      * @return the new column, selected as new columns are
      * @throws UserWarningException if the column cannot be added
      */
-    public static Variable add(final DataStore dataStore) throws UserWarningException {
-        Set<String> names = dataStore.getAllVariables().stream().map(Variable::getName).collect(Collectors.toSet());
-        return dataStore.createMediaVariable(MediaColumnNames.next(names));
+    public static Column add(final DataStore dataStore) throws UserWarningException {
+        Set<String> names = dataStore.getAllColumns().stream().map(Column::getName).collect(Collectors.toSet());
+        return dataStore.createMediaColumn(MediaColumnNames.next(names));
     }
 
     /**
@@ -34,11 +34,11 @@ public final class MediaColumns {
      * @return the new column
      * @throws UserWarningException if the column cannot be added
      */
-    public static Variable addSelected(final DataStore dataStore) throws UserWarningException {
-        for (Variable column : dataStore.getAllVariables()) {
+    public static Column addSelected(final DataStore dataStore) throws UserWarningException {
+        for (Column column : dataStore.getAllColumns()) {
             column.setSelected(false);
         }
-        Variable column = add(dataStore);
+        Column column = add(dataStore);
         column.setSelected(true);
         return column;
     }

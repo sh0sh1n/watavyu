@@ -21,13 +21,13 @@ import java.util.List;
 public class CellValuesTest {
 
     private DataStore dataStore;
-    private Variable column;
+    private Column column;
     private Cell cell;
 
     @BeforeMethod
     public void setUp() throws UserWarningException {
         dataStore = DataStoreFactory.newDataStore();
-        column = dataStore.createVariable("gaze");
+        column = dataStore.createColumn("gaze");
         cell = column.createCell();
     }
 
@@ -66,7 +66,7 @@ public class CellValuesTest {
 
     @Test
     public void aClipHasNoValues() throws UserWarningException {
-        Cell clip = dataStore.createMediaVariable("media_1")
+        Cell clip = dataStore.createMediaColumn("media_1")
             .createClip(0, new MediaClip("/study/cam.mp4", 10_000, 30, 1280, 720, 1));
 
         assertTrue(clip.getValues().isEmpty());
@@ -130,7 +130,7 @@ public class CellValuesTest {
     /** A cell put back, as by an undo, goes only into its own column. */
     @Test
     public void aColumnTakesOnlyItsOwnCells() throws UserWarningException {
-        Variable other = dataStore.createVariable("speech");
+        Column other = dataStore.createColumn("speech");
         column.removeCell(cell);
 
         other.addCell(cell);

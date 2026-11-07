@@ -21,8 +21,7 @@ import java.nio.file.Paths;
 
 
 /**
- * This class represents a project in Datavyu. A project manages the different
- * files used by Datavyu, such as database files and media files.
+ * A spreadsheet's project: its name, and the name and folder of its file.
  */
 public final class Project {
 

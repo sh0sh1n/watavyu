@@ -25,7 +25,7 @@ public class ColumnHeaderClickTest {
         DataStore dataStore = DataStoreFactory.newDataStore();
         SwingUtilities.invokeAndWait(() -> {
             try {
-                header = new SpreadsheetColumn(TestSpreadsheets.withPlayback(dataStore), dataStore.createVariable("notes"),
+                header = new SpreadsheetColumn(TestSpreadsheets.withPlayback(dataStore), dataStore.createColumn("notes"),
                     mock(CellSelectionListener.class), mock(ColumnSelectionListener.class),
                     mock(ColumnVisibilityListener.class));
             } catch (Exception e) {

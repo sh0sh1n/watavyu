@@ -19,12 +19,12 @@ public class SpreadsheetUndoTest {
     /** Makes a spreadsheet with a column named notes holding one cell at 1 s, as two open projects might. */
     private static ProjectController spreadsheet() throws Exception {
         ProjectController spreadsheet = new ProjectController(new Project(), DataStoreFactory.newDataStore());
-        spreadsheet.getDataStore().createVariable("notes").createPointCell(1_000);
+        spreadsheet.getDataStore().createColumn("notes").createPointCell(1_000);
         return spreadsheet;
     }
 
     private static Cell cell(final ProjectController spreadsheet) {
-        return spreadsheet.getDataStore().getVariable("notes").getCells().get(0);
+        return spreadsheet.getDataStore().getColumn("notes").getCells().get(0);
     }
 
     /** Moves the cell's onset and records the change, as typing a time in it does. */

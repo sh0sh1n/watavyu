@@ -23,36 +23,36 @@
 package com.sh0sh1n.watavyu.models.db;
 
 /**
- * Implement this interface to be notified of changes to a variable.
+ * Implement this interface to be notified of changes to a column.
  */
-public interface VariableListener {
+public interface ColumnListener {
 
     /**
-     * Called when the name of a variable has changed.
+     * Called when the name of a column has changed.
      *
-     * @param newName The new name of the variable.
+     * @param newName The new name of the column.
      */
     void nameChanged(final String newName);
 
     /**
-     * Called when the visibility of a variable has changed.
+     * Called when the visibility of a column has changed.
      *
-     * @param isHidden The visibility state of the variable, true if hidden,
+     * @param isHidden The visibility state of the column, true if hidden,
      * false otherwise.
      */
     void visibilityChanged(final boolean isHidden);
 
     /**
-     * A cell has been inserted into the variable.
+     * A cell has been inserted into the column.
      *
-     * @param newCell The new cell that has been added to the variable.
+     * @param newCell The new cell that has been added to the column.
      */
     void cellInserted(final Cell newCell);
 
     /**
-     * A cell has been removed from the variable.
+     * A cell has been removed from the column.
      *
-     * @param deletedCell The cell that has been removed from the variable.
+     * @param deletedCell The cell that has been removed from the column.
      */
     void cellRemoved(final Cell deletedCell);
 

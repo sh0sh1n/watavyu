@@ -9,7 +9,7 @@ import com.sh0sh1n.watavyu.controllers.project.ProjectController;
 import com.sh0sh1n.watavyu.models.db.Cell;
 import com.sh0sh1n.watavyu.models.db.DataStoreFactory;
 import com.sh0sh1n.watavyu.models.db.UserWarningException;
-import com.sh0sh1n.watavyu.models.db.Variable;
+import com.sh0sh1n.watavyu.models.db.Column;
 import com.sh0sh1n.watavyu.models.project.Project;
 import com.sh0sh1n.watavyu.views.discrete.EditorComponent;
 import com.sh0sh1n.watavyu.views.discrete.datavalues.vocabelements.FormalArgEditor;
@@ -52,8 +52,8 @@ public class VocabEditorVTest {
         });
         try {
             assertSame(editor.get().getProjectController(), second);
-            assertEquals(first.getDataStore().getAllVariables().size(), 0);
-            assertEquals(second.getDataStore().getAllVariables().size(), 1);
+            assertEquals(first.getDataStore().getAllColumns().size(), 0);
+            assertEquals(second.getDataStore().getAllColumns().size(), 1);
             assertTrue(second.getUndoManager().canUndo());
         } finally {
             SwingUtilities.invokeAndWait(() -> editor.get().dispose());
@@ -79,7 +79,7 @@ public class VocabEditorVTest {
         });
         try {
             assertTrue(passedOn.get(), "the key reached the dispatchers");
-            assertEquals(spreadsheet.getDataStore().getAllVariables().size(), 0);
+            assertEquals(spreadsheet.getDataStore().getAllColumns().size(), 0);
         } finally {
             SwingUtilities.invokeAndWait(() -> {
                 focus.removeKeyEventDispatcher(probe);
@@ -107,7 +107,7 @@ public class VocabEditorVTest {
     @Test
     public void aColumnNameTypedIsOneEditThatTheEditorFollowsBack() throws Exception {
         ProjectController spreadsheet = spreadsheet();
-        Variable gaze = spreadsheet.getDataStore().createVariable("gaze");
+        Column gaze = spreadsheet.getDataStore().createColumn("gaze");
         AtomicReference<VocabEditorV> editor = new AtomicReference<>();
         SwingUtilities.invokeAndWait(() -> {
             editor.set(new VocabEditorV(null, false, spreadsheet));
@@ -129,7 +129,7 @@ public class VocabEditorVTest {
     @Test
     public void codeEditsAreUndoneInTheEditorAndTheCells() throws Exception {
         ProjectController spreadsheet = spreadsheet();
-        Variable gaze = spreadsheet.getDataStore().createVariable("gaze");
+        Column gaze = spreadsheet.getDataStore().createColumn("gaze");
         Cell cell = gaze.createPointCell(0);
         cell.setValue(0, "left");
         AtomicReference<VocabEditorV> editor = new AtomicReference<>();
@@ -157,7 +157,7 @@ public class VocabEditorVTest {
     @Test
     public void aRefusedNameIsShownAsRefused() throws Exception {
         ProjectController spreadsheet = spreadsheet();
-        Variable gaze = spreadsheet.getDataStore().createVariable("gaze");
+        Column gaze = spreadsheet.getDataStore().createColumn("gaze");
         gaze.addCode();
         AtomicReference<VocabEditorV> editor = new AtomicReference<>();
         AtomicReference<List<String>> refused = new AtomicReference<>();
@@ -184,7 +184,7 @@ public class VocabEditorVTest {
     @Test
     public void aSelectedCodeIsForgottenWhenAnUndoRebuildsItsColumn() throws Exception {
         ProjectController spreadsheet = spreadsheet();
-        Variable gaze = spreadsheet.getDataStore().createVariable("gaze");
+        Column gaze = spreadsheet.getDataStore().createColumn("gaze");
         gaze.addCode();
         AtomicReference<VocabEditorV> editor = new AtomicReference<>();
         AtomicReference<FormalArgEditor> before = new AtomicReference<>();
@@ -209,10 +209,10 @@ public class VocabEditorVTest {
     @Test
     public void theRowsFollowTheSpreadsheetsColumns() throws Exception {
         ProjectController spreadsheet = spreadsheet();
-        Variable gaze = spreadsheet.getDataStore().createVariable("gaze");
-        Variable speech = spreadsheet.getDataStore().createVariable("speech");
+        Column gaze = spreadsheet.getDataStore().createColumn("gaze");
+        Column speech = spreadsheet.getDataStore().createColumn("speech");
         AtomicReference<VocabEditorV> editor = new AtomicReference<>();
-        List<List<Variable>> rows = new ArrayList<>();
+        List<List<Column>> rows = new ArrayList<>();
         Runnable look = () -> rows.add(rows(editor.get()));
         SwingUtilities.invokeAndWait(() -> {
             editor.set(new VocabEditorV(null, false, spreadsheet));
@@ -234,26 +234,26 @@ public class VocabEditorVTest {
     }
 
     /** Makes a column, from inside a Swing task, which cannot throw a checked exception. */
-    private static Variable column(final ProjectController spreadsheet, final String name) {
+    private static Column column(final ProjectController spreadsheet, final String name) {
         try {
-            return spreadsheet.getDataStore().createVariable(name);
+            return spreadsheet.getDataStore().createColumn(name);
         } catch (UserWarningException e) {
             throw new AssertionError(e);
         }
     }
 
-    private static List<Variable> rows(final VocabEditorV editor) {
-        return editor.getVocabElements().stream().map(VocabElementV::getVariable).toList();
+    private static List<Column> rows(final VocabEditorV editor) {
+        return editor.getVocabElements().stream().map(VocabElementV::getColumn).toList();
     }
 
     /** A column added elsewhere gets a row of its own; the other rows keep what is typed in them, refused or not. */
     @Test
     public void aNewColumnLeavesTheOtherRowsAsTheyAre() throws Exception {
         ProjectController spreadsheet = spreadsheet();
-        Variable gaze = spreadsheet.getDataStore().createVariable("gaze");
+        Column gaze = spreadsheet.getDataStore().createColumn("gaze");
         AtomicReference<VocabEditorV> editor = new AtomicReference<>();
         AtomicReference<VocabElementV> before = new AtomicReference<>();
-        AtomicReference<Variable> added = new AtomicReference<>();
+        AtomicReference<Column> added = new AtomicReference<>();
         SwingUtilities.invokeAndWait(() -> {
             editor.set(new VocabEditorV(null, false, spreadsheet));
             before.set(editor.get().getVocabElements().get(0));
@@ -274,11 +274,11 @@ public class VocabEditorVTest {
     public void theEditorFollowsTheSpreadsheetItShowsWhileOpen() throws Exception {
         ProjectController first = spreadsheet();
         ProjectController second = spreadsheet();
-        Variable gaze = second.getDataStore().createVariable("gaze");
+        Column gaze = second.getDataStore().createColumn("gaze");
         AtomicReference<VocabEditorV> editor = new AtomicReference<>();
-        AtomicReference<Variable> early = new AtomicReference<>();
-        AtomicReference<Variable> speech = new AtomicReference<>();
-        List<List<Variable>> seen = new ArrayList<>();
+        AtomicReference<Column> early = new AtomicReference<>();
+        AtomicReference<Column> speech = new AtomicReference<>();
+        List<List<Column>> seen = new ArrayList<>();
         AtomicReference<List<String>> codes = new AtomicReference<>();
         SwingUtilities.invokeAndWait(() -> {
             editor.set(new VocabEditorV(null, false, first));
@@ -328,7 +328,7 @@ public class VocabEditorVTest {
     @Test
     public void theWarningsSayWhatWasTypedWasApplied() throws Exception {
         ProjectController spreadsheet = spreadsheet();
-        spreadsheet.getDataStore().createVariable("gaze");
+        spreadsheet.getDataStore().createColumn("gaze");
         AtomicReference<VocabEditorV> editor = new AtomicReference<>();
         List<String> said = new ArrayList<>();
         SwingUtilities.invokeAndWait(() -> {

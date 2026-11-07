@@ -31,9 +31,9 @@ import java.util.Map;
 /**
  * TODO: Fill in the comment at the ???
  *
- * Acts as a connector between Datavyu's various data structures and a hash map that serves as key value store.
+ * Acts as a connector between Watavyu's various data structures and a hash map that serves as key value store.
  */
-public class DatavyuDataStore implements DataStore {
+public class DefaultDataStore implements DataStore {
 
 
     /** Told when this spreadsheet is changed or saved, so its title can show it. */
@@ -49,12 +49,12 @@ public class DatavyuDataStore implements DataStore {
     private List<DataStoreListener> dataStoreListeners = new ArrayList<>();
 
     /** The columns by name. */
-    private final Map<String, Variable> variables = new HashMap<>();
+    private final Map<String, Column> columns = new HashMap<>();
 
     /** The columns in spreadsheet order, which this keeps; views follow it. */
-    private final List<Variable> order = new ArrayList<>();
+    private final List<Column> order = new ArrayList<>();
 
-    public DatavyuDataStore() {
+    public DefaultDataStore() {
         changed = false;
     }
 
@@ -69,44 +69,44 @@ public class DatavyuDataStore implements DataStore {
     }
 
     @Override
-    public List<Variable> getAllVariables() {
+    public List<Column> getAllColumns() {
         return new ArrayList<>(order);
     }
 
     @Override
-    public int indexOf(final Variable column) {
+    public int indexOf(final Column column) {
         return order.indexOf(column);
     }
 
     @Override
-    public List<Variable> getVisibleVariables() {
-        List<Variable> allVariables = getAllVariables();
-        List<Variable> visibleVariables = new ArrayList<>();
-        for (Variable variable : allVariables) {
-            if (!variable.isHidden()) {
-                visibleVariables.add(variable);
+    public List<Column> getVisibleColumns() {
+        List<Column> allColumns = getAllColumns();
+        List<Column> visibleColumns = new ArrayList<>();
+        for (Column column : allColumns) {
+            if (!column.isHidden()) {
+                visibleColumns.add(column);
             }
         }
-        return visibleVariables;
+        return visibleColumns;
     }
 
     @Override
-    public List<Variable> getSelectedVariables() {
-        return order.stream().filter(Variable::isSelected).toList();
+    public List<Column> getSelectedColumns() {
+        return order.stream().filter(Column::isSelected).toList();
     }
 
     @Override
-    public void clearVariableSelection() {
-        for (Variable variable : order) {
-            variable.setSelected(false);
+    public void clearColumnSelection() {
+        for (Column column : order) {
+            column.setSelected(false);
         }
     }
 
     @Override
     public List<Cell> getSelectedCells() {
         List<Cell> selectedCells = new ArrayList<>();
-        for (Variable variable : order) {
-            for (Cell cell : variable.getCells()) {
+        for (Column column : order) {
+            for (Cell cell : column.getCells()) {
                 if (cell.isSelected()) {
                     selectedCells.add(cell);
                 }
@@ -117,8 +117,8 @@ public class DatavyuDataStore implements DataStore {
 
     @Override
     public void clearCellSelection() {
-        for (Variable variable : order) {
-            for (Cell cell : variable.getCells()) {
+        for (Column column : order) {
+            for (Cell cell : column.getCells()) {
                 if (cell.isSelected()) {
                     cell.setSelected(false);
                 }
@@ -132,71 +132,71 @@ public class DatavyuDataStore implements DataStore {
     @Override
     public void deselectAll() {
         this.clearCellSelection();
-        this.clearVariableSelection();
+        this.clearColumnSelection();
     }
 
     @Override
-    public Variable getVariable(String varName) {
-        return variables.get(varName);
+    public Column getColumn(String varName) {
+        return columns.get(varName);
     }
 
     @Override
-    public Variable createVariable(final String name) throws UserWarningException {
-        return createVariable(name, false);
+    public Column createColumn(final String name) throws UserWarningException {
+        return createColumn(name, false);
     }
 
     @Override
-    public Variable createVariable(final String name, boolean grandfathered)
+    public Column createColumn(final String name, boolean grandfathered)
             throws UserWarningException {
-        return addNewVariable(name, grandfathered, false);
+        return addNewColumn(name, grandfathered, false);
     }
 
     @Override
-    public Variable createMediaVariable(final String name) throws UserWarningException {
-        return addNewVariable(name, true, true);
+    public Column createMediaColumn(final String name) throws UserWarningException {
+        return addNewColumn(name, true, true);
     }
 
-    private Variable addNewVariable(final String name, final boolean grandfathered,
+    private Column addNewColumn(final String name, final boolean grandfathered,
                                     final boolean media) throws UserWarningException {
-        // Check to make sure the variable name is not already in use:
-        Variable varTest = getVariable(name);
+        // Check to make sure the column name is not already in use:
+        Column varTest = getColumn(name);
         if (varTest != null) {
             throw new UserWarningException("Unable to add column with name '" + name
                     + "', one with the same name already exists.");
         }
 
-        Variable v = new DatavyuVariable(name, grandfathered, this, media);
-        addVariable(v, order.size());
+        Column v = new DefaultColumn(name, grandfathered, this, media);
+        addColumn(v, order.size());
         return v;
     }
 
     @Override
-    public void removeVariable(final Variable var) {
+    public void removeColumn(final Column var) {
         if (!order.remove(var)) {
             return;
         }
-        variables.remove(var.getName());
+        columns.remove(var.getName());
         markAsChanged();
         for (DataStoreListener listener : List.copyOf(dataStoreListeners)) {
-            listener.variableRemoved(var);
+            listener.columnRemoved(var);
         }
     }
 
     @Override
-    public void addVariable(final Variable var, final int index) {
-        if (variables.containsKey(var.getName()) || index < 0 || index > order.size()) {
+    public void addColumn(final Column var, final int index) {
+        if (columns.containsKey(var.getName()) || index < 0 || index > order.size()) {
             throw new IllegalArgumentException("Cannot add column " + var.getName() + " at " + index);
         }
-        variables.put(var.getName(), var);
+        columns.put(var.getName(), var);
         order.add(index, var);
         markAsChanged();
         for (DataStoreListener listener : List.copyOf(dataStoreListeners)) {
-            listener.variableAdded(var);
+            listener.columnAdded(var);
         }
     }
 
     @Override
-    public void moveVariable(final Variable var, final int index) {
+    public void moveColumn(final Column var, final int index) {
         int from = order.indexOf(var);
         if (from < 0 || index < 0 || index >= order.size()) {
             throw new IllegalArgumentException("Cannot move column " + var.getName() + " to " + index);
@@ -208,13 +208,13 @@ public class DatavyuDataStore implements DataStore {
         order.add(index, var);
         markAsChanged();
         for (DataStoreListener listener : List.copyOf(dataStoreListeners)) {
-            listener.variableOrderChanged();
+            listener.columnOrderChanged();
         }
     }
 
     @Override
     public void removeCell(final Cell cell) {
-        getVariable(cell).removeCell(cell);
+        getColumn(cell).removeCell(cell);
         markAsChanged();
     }
 
@@ -239,17 +239,17 @@ public class DatavyuDataStore implements DataStore {
     }
 
     @Override
-    public void updateVariableName(String oldName, String newName, Variable variable) {
+    public void updateColumnName(String oldName, String newName, Column column) {
         // A column out of the spreadsheet, as undo leaves one, keeps no name here.
-        if (!order.contains(variable)) {
+        if (!order.contains(column)) {
             return;
         }
-        this.variables.remove(oldName);
-        this.variables.put(newName, variable);
+        this.columns.remove(oldName);
+        this.columns.put(newName, column);
         if (!oldName.equals(newName)) {
             markAsChanged();
             for (DataStoreListener listener : this.dataStoreListeners) {
-                listener.variableNameChange(variable);
+                listener.columnNameChange(column);
             }
         }
     }

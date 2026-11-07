@@ -71,7 +71,7 @@ public enum Command {
 
     /** The menu labels, loaded once, when the first command is made. */
     private static final class Labels {
-        static final Resources MENU = Resources.of(DatavyuView.class);
+        static final Resources MENU = Resources.of(MainWindow.class);
     }
 
     /** Returns the command's name in menus and the shortcut list. */

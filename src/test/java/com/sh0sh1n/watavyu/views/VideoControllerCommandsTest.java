@@ -8,7 +8,7 @@ import static org.testng.Assert.assertThrows;
 import com.sh0sh1n.watavyu.TestSpreadsheets;
 import com.sh0sh1n.watavyu.controllers.project.ProjectController;
 import com.sh0sh1n.watavyu.models.db.DataStoreFactory;
-import com.sh0sh1n.watavyu.models.db.Variable;
+import com.sh0sh1n.watavyu.models.db.Column;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -100,7 +100,7 @@ public class VideoControllerCommandsTest {
 
     @Test
     public void newCellGoesInTheSelectedColumnAtTheCurrentTime() throws Exception {
-        Variable gaze = spreadsheet.getDataStore().createVariable("gaze");
+        Column gaze = spreadsheet.getDataStore().createColumn("gaze");
         gaze.setSelected(true);
 
         controller.run(Command.NEW_CELL_IN_SELECTED_COLUMN);

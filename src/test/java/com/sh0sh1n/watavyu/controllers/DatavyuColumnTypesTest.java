@@ -4,7 +4,7 @@ import static org.testng.Assert.assertEquals;
 
 import com.sh0sh1n.watavyu.models.db.DataStore;
 import com.sh0sh1n.watavyu.models.db.DataStoreFactory;
-import com.sh0sh1n.watavyu.models.db.Variable;
+import com.sh0sh1n.watavyu.models.db.Column;
 import com.sh0sh1n.watavyu.projectfile.ProjectDocument.AnnotationCell;
 import com.sh0sh1n.watavyu.projectfile.ProjectDocument.AnnotationColumn;
 import com.sh0sh1n.watavyu.projectfile.SpreadsheetColumns;
@@ -53,7 +53,7 @@ public class DatavyuColumnTypesTest {
     @Test
     public void exportedJsonImportsUnchanged() throws Exception {
         DataStore original = DataStoreFactory.newDataStore();
-        Variable mother = original.createVariable("mother");
+        Column mother = original.createColumn("mother");
         mother.addCode();
         var cell = mother.createCell();
         cell.setOnset(4_000);

@@ -24,7 +24,7 @@ final class CellTimes {
      */
     static boolean setOnset(final ProjectController spreadsheet, final Cell cell, final long onset) {
         long before = cell.getOnset();
-        if (cell.getVariable().refusesEdits() || before == onset) {
+        if (cell.getColumn().refusesEdits() || before == onset) {
             return false;
         }
         cell.setOnset(onset);
@@ -42,7 +42,7 @@ final class CellTimes {
      */
     static boolean setOffset(final ProjectController spreadsheet, final Cell cell, final long offset) {
         long before = cell.getOffset();
-        if (cell.getVariable().refusesEdits() || cell.getClip() != null || before == offset) {
+        if (cell.getColumn().refusesEdits() || cell.getClip() != null || before == offset) {
             return false;
         }
         cell.setOffset(offset);

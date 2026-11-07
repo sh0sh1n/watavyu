@@ -36,7 +36,7 @@ import java.util.ListIterator;
  * This class maintains the visual representation of the column in the
  * Spreadsheet window.
  */
-public final class SpreadsheetColumn extends JLabel implements VariableListener, MouseListener, MouseMotionListener,
+public final class SpreadsheetColumn extends JLabel implements ColumnListener, MouseListener, MouseMotionListener,
         ClockTimer.ClockListener {
 
     /** The logger for this class */
@@ -63,9 +63,9 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
     private DataStore dataStore;
 
     /**
-     * Reference to the variable.
+     * Reference to the column.
      */
-    private Variable variable;
+    private Column dataColumn;
 
     /**
      * ColumnDataPanel this column manages.
@@ -122,18 +122,18 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
      * Creates new SpreadsheetColumn.
      *
      * @param controller the spreadsheet this column is in
-     * @param var    the variable this column displays.
+     * @param var    the column this column displays.
      * @param cellSelL Spreadsheet cell selection listener to notify
      * @param colSelL  Column selection listener to notify.
      */
     public SpreadsheetColumn(final ProjectController controller,
-                             final Variable var,
+                             final Column var,
                              final CellSelectionListener cellSelL,
                              final ColumnSelectionListener colSelL,
                              final ColumnVisibilityListener colVisL) {
         this.controller = controller;
         this.dataStore = controller.getDataStore();
-        this.variable = var;
+        this.dataColumn = var;
         this.cellSelList = cellSelL;
         this.columnSelList = colSelL;
         this.columnVisList = colVisL;
@@ -190,8 +190,8 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
 
     /** Shows the lock mark while the column is locked. */
     private void updateLockMark() {
-        setIcon(variable.isLocked() ? lockMark : null);
-        setToolTipText(variable.isLocked() ? "Locked: right-click to unlock" : null);
+        setIcon(dataColumn.isLocked() ? lockMark : null);
+        setToolTipText(dataColumn.isLocked() ? "Locked: right-click to unlock" : null);
     }
 
     /** Returns the mark shown while the column is locked. */
@@ -206,7 +206,7 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
      * @param column  the column whose header was clicked
      * @return the menu item
      */
-    static JCheckBoxMenuItem lockItem(final ColumnCommands columns, final Variable column) {
+    static JCheckBoxMenuItem lockItem(final ColumnCommands columns, final Column column) {
         JCheckBoxMenuItem item = new JCheckBoxMenuItem("Lock Column", column.isLocked());
         item.setName("lockColumn");
         item.addActionListener(e -> columns.setLocked(column, item.isSelected()));
@@ -222,8 +222,8 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
      * @param column    the column whose header was clicked
      * @return the menu item
      */
-    static JMenuItem hideItem(final ColumnCommands columns, final DataStore dataStore, final Variable column) {
-        List<Variable> hidden = actedOn(dataStore, column);
+    static JMenuItem hideItem(final ColumnCommands columns, final DataStore dataStore, final Column column) {
+        List<Column> hidden = actedOn(dataStore, column);
         JMenuItem item = new JMenuItem(hidden.size() == 1 ? "Hide Column" : "Hide Selected Columns");
         item.setName("hideColumns");
         item.addActionListener(e -> columns.hide(hidden));
@@ -239,18 +239,18 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
      * @param column    the column whose header was clicked
      * @return the menu item
      */
-    static JMenuItem deleteItem(final ColumnCommands columns, final DataStore dataStore, final Variable column) {
-        List<Variable> deleted = actedOn(dataStore, column);
+    static JMenuItem deleteItem(final ColumnCommands columns, final DataStore dataStore, final Column column) {
+        List<Column> deleted = actedOn(dataStore, column);
         JMenuItem item = new JMenuItem(deleted.size() == 1 ? "Delete Column" : "Delete Selected Columns");
         item.setName("deleteColumns");
-        item.setEnabled(deleted.stream().noneMatch(Variable::isLocked));
+        item.setEnabled(deleted.stream().noneMatch(Column::isLocked));
         item.addActionListener(e -> columns.delete(deleted));
         return item;
     }
 
     /** @return the columns a header's menu acts on: the column, or every selected column if it is one of them */
-    private static List<Variable> actedOn(final DataStore dataStore, final Variable column) {
-        return column.isSelected() ? dataStore.getSelectedVariables() : List.of(column);
+    private static List<Column> actedOn(final DataStore dataStore, final Column column) {
+        return column.isSelected() ? dataStore.getSelectedColumns() : List.of(column);
     }
 
     /** Shows the column's header menu, if this event asks for one. */
@@ -259,10 +259,10 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
             return false;
         }
         JPopupMenu menu = new JPopupMenu();
-        menu.add(hideItem(controller.columns(), dataStore, variable));
-        menu.add(deleteItem(controller.columns(), dataStore, variable));
+        menu.add(hideItem(controller.columns(), dataStore, dataColumn));
+        menu.add(deleteItem(controller.columns(), dataStore, dataColumn));
         menu.addSeparator();
-        menu.add(lockItem(controller.columns(), variable));
+        menu.add(lockItem(controller.columns(), dataColumn));
         menu.show(this, me.getX(), me.getY());
         me.consume();
         return true;
@@ -286,8 +286,8 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
         dataHeight = newHeight;
     }
 
-    public Variable getVariable() {
-        return variable;
+    public Column getColumn() {
+        return dataColumn;
     }
 
     /**
@@ -297,7 +297,7 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
     public void registerListeners() {
         addMouseListener(this);
         addMouseMotionListener(this);
-        variable.addListener(this);
+        dataColumn.addListener(this);
         datapanel.registerListeners();
     }
 
@@ -308,7 +308,7 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
     public void deregisterListeners() {
         removeMouseListener(this);
         removeMouseMotionListener(this);
-        variable.removeListener(this);
+        dataColumn.removeListener(this);
         datapanel.deregisterListeners();
         controller.getVideoController().getClockTimer().unRegisterListener(this);
     }
@@ -373,10 +373,10 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
     }
 
     /**
-     * Returns selection status of underlying variable.
+     * Returns selection status of underlying column.
      */
     public boolean isSelected() {
-        return variable.isSelected();
+        return dataColumn.isSelected();
     }
 
     /**
@@ -386,7 +386,7 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
      */
     public void setSelected(final boolean isSelected) {
         LOGGER.info("select column");
-        variable.setSelected(isSelected);
+        dataColumn.setSelected(isSelected);
         this.selected = isSelected;
 
         setBorder(headerBorder(selected));
@@ -446,7 +446,7 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
      * Returns the header name of this SpreadsheetColumn.
      */
     public String getColumnName() {
-        return variable.getName();
+        return dataColumn.getName();
     }
 
     private void focusNextCell() {
@@ -491,7 +491,7 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
     }
 
     // *************************************************************************
-    // VariableListener Overrides
+    // ColumnListener Overrides
     // *************************************************************************
     @Override
     public void nameChanged(final String newName) {
@@ -618,7 +618,7 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
                     if (itr.hasNext()) swapCol = itr.next();
                     else break;
                 }
-                controller.columns().move(variable, swapCol.getVariable());
+                controller.columns().move(dataColumn, swapCol.getColumn());
             } else if (x < 0 && itr.hasPrevious()) {
                 swapCol = itr.previous();
                 while (x < 0 && itr.hasPrevious()) {
@@ -626,7 +626,7 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
                     if (itr.hasPrevious() && x < 0) swapCol = itr.previous();
                     else break;
                 }
-                controller.columns().move(variable, swapCol.getVariable());
+                controller.columns().move(dataColumn, swapCol.getColumn());
             }
 
             // Update globals

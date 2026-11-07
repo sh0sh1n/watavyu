@@ -89,7 +89,7 @@ public final class TimeStampDataValueEditor extends EditorComponent {
      * length, and no time in a locked column can.
      */
     public boolean isTypingAllowed() {
-        if (parentCell.getVariable().isLocked()) {
+        if (parentCell.getColumn().isLocked()) {
             return false;
         }
         return parentCell.getClip() == null || dataSourceType == TimeStampSource.Onset;
@@ -97,7 +97,7 @@ public final class TimeStampDataValueEditor extends EditorComponent {
 
     /** Returns whether an edit may go ahead; if not, a locked column hears it was refused. */
     private boolean allowsEdit() {
-        return !parentCell.getVariable().refusesEdits() && isTypingAllowed();
+        return !parentCell.getColumn().refusesEdits() && isTypingAllowed();
     }
 
     @Override
@@ -180,7 +180,7 @@ public final class TimeStampDataValueEditor extends EditorComponent {
     public void keyTyped(final KeyEvent e) {
         if (!isTypingAllowed()) {
             if (EditorTracker.isTypedEdit(e)) {
-                parentCell.getVariable().refusesEdits();
+                parentCell.getColumn().refusesEdits();
             }
             e.consume();
             return;

@@ -20,7 +20,7 @@ public class MediaColumnTest {
 
     @Test
     public void aClipEndsItsDurationAfterItsOnset() throws Exception {
-        Variable media = DataStoreFactory.newDataStore().createMediaVariable("media_1");
+        Column media = DataStoreFactory.newDataStore().createMediaColumn("media_1");
 
         Cell clip = media.createClip(2_000, CAM);
 
@@ -34,7 +34,7 @@ public class MediaColumnTest {
 
     @Test
     public void movingAClipMovesItsOffset() throws Exception {
-        Cell clip = DataStoreFactory.newDataStore().createMediaVariable("media_1").createClip(2_000, CAM);
+        Cell clip = DataStoreFactory.newDataStore().createMediaColumn("media_1").createClip(2_000, CAM);
 
         clip.setOnset(500);
 
@@ -45,7 +45,7 @@ public class MediaColumnTest {
     /** B13: no time is negative, so no clip starts before time zero. */
     @Test
     public void aClipCannotStartBeforeTimeZero() throws Exception {
-        Variable media = DataStoreFactory.newDataStore().createMediaVariable("media_1");
+        Column media = DataStoreFactory.newDataStore().createMediaColumn("media_1");
         Cell clip = media.createClip(2_000, CAM);
 
         assertThrows(IllegalArgumentException.class, () -> clip.setOnset(-500));
@@ -56,7 +56,7 @@ public class MediaColumnTest {
 
     @Test
     public void aClipsOffsetIsNotSetOnItsOwn() throws Exception {
-        Cell clip = DataStoreFactory.newDataStore().createMediaVariable("media_1").createClip(2_000, CAM);
+        Cell clip = DataStoreFactory.newDataStore().createMediaColumn("media_1").createClip(2_000, CAM);
 
         clip.setOffset(3_000);
 
@@ -66,7 +66,7 @@ public class MediaColumnTest {
     /** A clip whose file has not opened has no length yet; it gets one when the file says how long it is. */
     @Test
     public void aClipsOffsetFollowsWhatItsFileSays() throws Exception {
-        Cell clip = DataStoreFactory.newDataStore().createMediaVariable("media_1")
+        Cell clip = DataStoreFactory.newDataStore().createMediaColumn("media_1")
             .createClip(2_000, MediaClip.of("/study/cam.mp4"));
         assertEquals(clip.getOffset(), 2_000L);
 
@@ -78,7 +78,7 @@ public class MediaColumnTest {
 
     @Test
     public void aLockedColumnsClipsDoNotMove() throws Exception {
-        Variable media = DataStoreFactory.newDataStore().createMediaVariable("media_1");
+        Column media = DataStoreFactory.newDataStore().createMediaColumn("media_1");
         Cell clip = media.createClip(2_000, CAM);
 
         media.setLocked(true);
@@ -93,8 +93,8 @@ public class MediaColumnTest {
     @Test
     public void mediaAndAnnotationColumnsKeepTheirOwnKindOfCell() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
-        Variable media = dataStore.createMediaVariable("media_1");
-        Variable notes = dataStore.createVariable("notes");
+        Column media = dataStore.createMediaColumn("media_1");
+        Column notes = dataStore.createColumn("notes");
 
         assertThrows(IllegalStateException.class, media::createCell);
         assertThrows(IllegalStateException.class, () -> media.createPointCell(0));
@@ -107,8 +107,8 @@ public class MediaColumnTest {
     @Test
     public void mediaNamesShareTheSpreadsheetsNames() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
-        dataStore.createVariable("media_1");
+        dataStore.createColumn("media_1");
 
-        assertThrows(UserWarningException.class, () -> dataStore.createMediaVariable("media_1"));
+        assertThrows(UserWarningException.class, () -> dataStore.createMediaColumn("media_1"));
     }
 }

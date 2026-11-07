@@ -8,7 +8,7 @@ import com.sh0sh1n.watavyu.controllers.project.ProjectController;
 import com.sh0sh1n.watavyu.models.db.Cell;
 import com.sh0sh1n.watavyu.models.db.DataStoreFactory;
 import com.sh0sh1n.watavyu.models.db.UserWarningException;
-import com.sh0sh1n.watavyu.models.db.Variable;
+import com.sh0sh1n.watavyu.models.db.Column;
 import org.testng.annotations.Test;
 
 import java.awt.Component;
@@ -66,7 +66,7 @@ public class ColumnMoveKeyTest {
             selected.add(String.valueOf(panel.getSelectedColumn()));
 
             spreadsheet.columns().newColumn("gaze");
-            Variable speech = spreadsheet.columns().newColumn("speech");
+            Column speech = spreadsheet.columns().newColumn("speech");
             spreadsheet.columns().newColumn("gesture");
             spreadsheet.columns().hide(List.of(speech));
             spreadsheet.getDataStore().deselectAll();
@@ -74,11 +74,11 @@ public class ColumnMoveKeyTest {
 
             for (int direction : new int[] {1, 1, 1}) {
                 panel.selectNextColumn(direction);
-                selected.add(panel.getSelectedColumn().getVariable().getName());
+                selected.add(panel.getSelectedColumn().getColumn().getName());
             }
             spreadsheet.getDataStore().deselectAll();
             panel.selectNextColumn(-1);
-            selected.add(panel.getSelectedColumn().getVariable().getName());
+            selected.add(panel.getSelectedColumn().getColumn().getName());
         });
 
         assertEquals(selected, List.of("null", "gaze", "gesture", "gaze", "gesture"));
@@ -90,7 +90,7 @@ public class ColumnMoveKeyTest {
         AtomicReference<Cell> cell = new AtomicReference<>();
         onSheet((spreadsheet, panel) -> {
             spreadsheet.columns().newColumn("gaze");
-            Variable gesture = spreadsheet.columns().newColumn("gesture");
+            Column gesture = spreadsheet.columns().newColumn("gesture");
             cell.set(gesture.createPointCell(1_000));
             spreadsheet.getDataStore().deselectAll();
             cell.get().setSelected(true);
@@ -98,7 +98,7 @@ public class ColumnMoveKeyTest {
 
             panel.selectNextColumn(1);
 
-            assertEquals(panel.getSelectedColumn().getVariable().getName(), "gaze");
+            assertEquals(panel.getSelectedColumn().getColumn().getName(), "gaze");
         });
 
         assertTrue(cell.get().isSelected());

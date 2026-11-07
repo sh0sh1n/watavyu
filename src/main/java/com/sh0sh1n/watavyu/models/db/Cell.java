@@ -118,7 +118,7 @@ public interface Cell {
     void setValues(List<String> values);
 
     /** Returns the cell's column. */
-    Variable getVariable();
+    Column getColumn();
 
     /**
      * Returns true if the cell is selected, false otherwise.

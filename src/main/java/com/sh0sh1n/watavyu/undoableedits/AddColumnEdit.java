@@ -15,7 +15,7 @@
 package com.sh0sh1n.watavyu.undoableedits;
 
 import com.sh0sh1n.watavyu.models.db.DataStore;
-import com.sh0sh1n.watavyu.models.db.Variable;
+import com.sh0sh1n.watavyu.models.db.Column;
 
 import javax.swing.undo.AbstractUndoableEdit;
 import javax.swing.undo.CannotRedoException;
@@ -29,7 +29,7 @@ import javax.swing.undo.CannotUndoException;
 public final class AddColumnEdit extends AbstractUndoableEdit implements GuardedEdit {
 
     private final DataStore dataStore;
-    private final Variable column;
+    private final Column column;
     private final int index;
     private final String presentationName;
 
@@ -43,7 +43,7 @@ public final class AddColumnEdit extends AbstractUndoableEdit implements Guarded
      * @param column    the column, in the spreadsheet
      * @throws IllegalArgumentException if the column is not in the spreadsheet
      */
-    public AddColumnEdit(final DataStore dataStore, final Variable column) {
+    public AddColumnEdit(final DataStore dataStore, final Column column) {
         this.dataStore = dataStore;
         this.column = column;
         this.index = dataStore.indexOf(column);
@@ -73,7 +73,7 @@ public final class AddColumnEdit extends AbstractUndoableEdit implements Guarded
 
     @Override
     public String redoRefusal() {
-        return dataStore.getVariable(column.getName()) == null ? null
+        return dataStore.getColumn(column.getName()) == null ? null
             : "Another column is named " + column.getName() + ". Rename or delete it to redo this.";
     }
 
@@ -84,7 +84,7 @@ public final class AddColumnEdit extends AbstractUndoableEdit implements Guarded
         if (column.isSelected()) {
             dataStore.deselectAll();
         }
-        dataStore.removeVariable(column);
+        dataStore.removeColumn(column);
     }
 
     /**
@@ -103,7 +103,7 @@ public final class AddColumnEdit extends AbstractUndoableEdit implements Guarded
             dataStore.deselectAll();
         }
         // A place past the end, which only a column taken out without an edit could leave, puts the column last.
-        dataStore.addVariable(column, Math.min(index, dataStore.getAllVariables().size()));
+        dataStore.addColumn(column, Math.min(index, dataStore.getAllColumns().size()));
         column.setSelected(select);
     }
 }

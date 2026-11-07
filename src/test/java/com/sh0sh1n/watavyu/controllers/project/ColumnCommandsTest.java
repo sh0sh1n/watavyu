@@ -14,8 +14,8 @@ import com.sh0sh1n.watavyu.models.db.Cell;
 import com.sh0sh1n.watavyu.models.db.DataStore;
 import com.sh0sh1n.watavyu.models.db.DataStoreFactory;
 import com.sh0sh1n.watavyu.models.db.UserWarningException;
-import com.sh0sh1n.watavyu.models.db.Variable;
-import com.sh0sh1n.watavyu.models.db.VariableListener;
+import com.sh0sh1n.watavyu.models.db.Column;
+import com.sh0sh1n.watavyu.models.db.ColumnListener;
 import com.sh0sh1n.watavyu.models.project.Project;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -33,23 +33,23 @@ public class ColumnCommandsTest {
     private DataStore dataStore;
     private ProjectController spreadsheet;
     private ColumnCommands columns;
-    private Variable gaze;
-    private Variable speech;
-    private Variable gesture;
+    private Column gaze;
+    private Column speech;
+    private Column gesture;
 
     @BeforeMethod
     public void setUp() throws Exception {
         dataStore = DataStoreFactory.newDataStore();
         spreadsheet = new ProjectController(new Project(), dataStore);
         columns = spreadsheet.columns();
-        gaze = dataStore.createVariable("gaze");
-        speech = dataStore.createVariable("speech");
-        gesture = dataStore.createVariable("gesture");
+        gaze = dataStore.createColumn("gaze");
+        speech = dataStore.createColumn("speech");
+        gesture = dataStore.createColumn("gesture");
         dataStore.deselectAll();
     }
 
     private List<String> order() {
-        return dataStore.getAllVariables().stream().map(Variable::getName).toList();
+        return dataStore.getAllColumns().stream().map(Column::getName).toList();
     }
 
     private boolean canUndo() {
@@ -62,41 +62,41 @@ public class ColumnCommandsTest {
     public void aNewColumnGoesLastAndIsTheOneSelected() throws Exception {
         gaze.setSelected(true);
 
-        Variable notes = columns.newColumn("notes");
+        Column notes = columns.newColumn("notes");
 
         assertEquals(order(), List.of("gaze", "speech", "gesture", "notes"));
-        assertEquals(dataStore.getSelectedVariables(), List.of(notes));
-        assertSame(spreadsheet.getLastCreatedVariable(), notes);
+        assertEquals(dataStore.getSelectedColumns(), List.of(notes));
+        assertSame(spreadsheet.getLastCreatedColumn(), notes);
         assertEquals(spreadsheet.getUndoManager().getUndoPresentationName(), "Undo New Column \"notes\"");
     }
 
     @Test
     public void undoTakesANewColumnOutAndRedoPutsTheSameColumnBack() throws Exception {
-        Variable notes = columns.newColumn("notes");
+        Column notes = columns.newColumn("notes");
 
         spreadsheet.undo();
-        assertNull(dataStore.getVariable("notes"));
+        assertNull(dataStore.getColumn("notes"));
 
         spreadsheet.redo();
-        assertSame(dataStore.getVariable("notes"), notes);
+        assertSame(dataStore.getColumn("notes"), notes);
         assertEquals(order(), List.of("gaze", "speech", "gesture", "notes"));
-        assertEquals(dataStore.getSelectedVariables(), List.of(notes));
+        assertEquals(dataStore.getSelectedColumns(), List.of(notes));
     }
 
     /** Redo used to make a new column of the same name, so a cell redone after it went into the old, deleted one. */
     @Test
     public void aCellRedoneAfterItsNewColumnIsInTheSpreadsheet() throws Exception {
-        Variable notes = columns.newColumn("notes");
+        Column notes = columns.newColumn("notes");
         Cell cell = spreadsheet.cells().newCell(1_000);
-        assertSame(cell.getVariable(), notes);
+        assertSame(cell.getColumn(), notes);
 
         spreadsheet.undo();
         spreadsheet.undo();
         spreadsheet.redo();
         spreadsheet.redo();
 
-        assertEquals(dataStore.getVariable("notes").getCells(), List.of(cell));
-        assertSame(dataStore.getVariable(cell), notes);
+        assertEquals(dataStore.getColumn("notes").getCells(), List.of(cell));
+        assertSame(dataStore.getColumn(cell), notes);
     }
 
     @Test
@@ -117,31 +117,31 @@ public class ColumnCommandsTest {
 
     @Test
     public void newMediaColumnCanBeUndoneAndRedone() throws Exception {
-        Variable media = columns.newMediaColumn();
+        Column media = columns.newMediaColumn();
 
         assertTrue(media.isMedia());
-        assertEquals(dataStore.getSelectedVariables(), List.of(media));
+        assertEquals(dataStore.getSelectedColumns(), List.of(media));
         assertEquals(spreadsheet.getUndoManager().getUndoPresentationName(), "Undo New Media Column media_1");
         spreadsheet.undo();
         assertEquals(order(), List.of("gaze", "speech", "gesture"));
 
         spreadsheet.redo();
-        assertSame(dataStore.getVariable("media_1"), media);
+        assertSame(dataStore.getColumn("media_1"), media);
         assertEquals(order(), List.of("gaze", "speech", "gesture", "media_1"));
     }
 
     /** Redoing a column hidden since leaves the selection as it is, as a hidden column cannot be selected. */
     @Test
     public void redoingAColumnHiddenSinceKeepsTheSelection() throws Exception {
-        Variable notes = columns.newColumn("notes");
+        Column notes = columns.newColumn("notes");
         columns.hide(List.of(notes));
         spreadsheet.undo();
         speech.setSelected(true);
 
         spreadsheet.redo();
 
-        assertSame(dataStore.getVariable("notes"), notes);
-        assertEquals(dataStore.getSelectedVariables(), List.of(speech));
+        assertSame(dataStore.getColumn("notes"), notes);
+        assertEquals(dataStore.getSelectedColumns(), List.of(speech));
     }
 
     /** Undoing a new column clears the selection only if the column is selected then. */
@@ -155,14 +155,14 @@ public class ColumnCommandsTest {
 
         spreadsheet.undo();
 
-        assertEquals(dataStore.getSelectedVariables(), List.of(speech));
+        assertEquals(dataStore.getSelectedColumns(), List.of(speech));
         assertTrue(cell.isSelected());
 
         spreadsheet.redo();
         assertEquals(order(), List.of("gaze", "speech", "gesture", "notes"));
-        assertEquals(dataStore.getSelectedVariables(), List.of(dataStore.getVariable("notes")));
+        assertEquals(dataStore.getSelectedColumns(), List.of(dataStore.getColumn("notes")));
         spreadsheet.undo();
-        assertTrue(dataStore.getSelectedVariables().isEmpty(), "the column was the one selected");
+        assertTrue(dataStore.getSelectedColumns().isEmpty(), "the column was the one selected");
     }
 
     // Delete Column
@@ -208,40 +208,40 @@ public class ColumnCommandsTest {
     /** A column made outside the commands can take a deleted column's name before its undo. */
     @Test
     public void undoingADeletionWhoseNameIsTakenIsRefusedAndStaysAsItWas() throws Exception {
-        Variable media = columns.newMediaColumn();
+        Column media = columns.newMediaColumn();
         columns.delete(List.of(gaze, media));
-        Variable taken = dataStore.createMediaVariable("media_1");
+        Column taken = dataStore.createMediaColumn("media_1");
 
         assertEquals(spreadsheet.undo(), "Another column is named media_1. Rename or delete it to undo this.");
         assertThrows(CannotUndoException.class, spreadsheet.getUndoManager()::undo);
         assertEquals(order(), List.of("speech", "gesture", "media_1"));
-        assertSame(dataStore.getVariable("media_1"), taken);
+        assertSame(dataStore.getColumn("media_1"), taken);
 
-        dataStore.removeVariable(taken);
+        dataStore.removeColumn(taken);
         assertNull(spreadsheet.undo());
         assertEquals(order(), List.of("gaze", "speech", "gesture", "media_1"));
-        assertSame(dataStore.getVariable("media_1"), media);
+        assertSame(dataStore.getColumn("media_1"), media);
     }
 
     @Test
     public void aRefusedRedoStaysWhereItWasInTheHistory() throws Exception {
-        Variable media = columns.newMediaColumn();
+        Column media = columns.newMediaColumn();
         spreadsheet.undo();
-        Variable taken = dataStore.createMediaVariable("media_1");
+        Column taken = dataStore.createMediaColumn("media_1");
 
         assertEquals(spreadsheet.redo(), "Another column is named media_1. Rename or delete it to redo this.");
         assertThrows(CannotRedoException.class, spreadsheet.getUndoManager()::redo);
-        dataStore.removeVariable(taken);
+        dataStore.removeColumn(taken);
         assertNull(spreadsheet.redo());
 
-        assertSame(dataStore.getVariable("media_1"), media);
+        assertSame(dataStore.getColumn("media_1"), media);
     }
 
     /** Should a column be taken out without an edit, a deleted column whose place is past the end comes back last. */
     @Test
     public void aDeletedColumnWhosePlaceHasGoneComesBackLast() {
         columns.delete(List.of(gesture));
-        dataStore.removeVariable(speech);
+        dataStore.removeColumn(speech);
 
         spreadsheet.undo();
 
@@ -250,8 +250,8 @@ public class ColumnCommandsTest {
 
     @Test
     public void aLockedColumnStopsTheWholeDeletionAndShowsIt() {
-        VariableListener speechLock = mock(VariableListener.class);
-        VariableListener gestureLock = mock(VariableListener.class);
+        ColumnListener speechLock = mock(ColumnListener.class);
+        ColumnListener gestureLock = mock(ColumnListener.class);
         speech.addListener(speechLock);
         gesture.addListener(gestureLock);
         speech.setLocked(true);
@@ -322,7 +322,7 @@ public class ColumnCommandsTest {
         assertTrue(gesture.isHidden());
 
         columns.showAll();
-        assertTrue(dataStore.getAllVariables().stream().noneMatch(Variable::isHidden));
+        assertTrue(dataStore.getAllColumns().stream().noneMatch(Column::isHidden));
     }
 
     // Move

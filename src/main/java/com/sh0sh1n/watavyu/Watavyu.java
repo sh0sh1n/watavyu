@@ -20,7 +20,7 @@ import com.sh0sh1n.watavyu.util.MacOS;
 import com.sh0sh1n.watavyu.util.Resources;
 import com.sh0sh1n.watavyu.util.Settings;
 import com.sh0sh1n.watavyu.views.AboutV;
-import com.sh0sh1n.watavyu.views.DatavyuView;
+import com.sh0sh1n.watavyu.views.MainWindow;
 import com.sh0sh1n.watavyu.views.WindowPlacement;
 import com.sh0sh1n.watavyu.views.discrete.SpreadSheetPanel;
 import com.sh0sh1n.watavyu.views.discrete.SpreadsheetTheme;
@@ -36,7 +36,7 @@ import java.io.File;
  * The application: starts the main window, opens files given to it, and quits. One is made, by {@link #main}, and
  * given to what needs it; nothing reaches it through a static field.
  */
-public final class Datavyu {
+public final class Watavyu {
 
     /** System property that makes window title bars follow the Mac's appearance, as the palette does. */
     static final String TITLE_BAR_APPEARANCE = "apple.awt.application.appearance";
@@ -47,7 +47,7 @@ public final class Datavyu {
     }
 
     /** Logger for this class */
-    private static Logger logger = LogManager.getLogger(Datavyu.class);
+    private static Logger logger = LogManager.getLogger(Watavyu.class);
 
     /** The desired minimum initial width */
     private static final int INIT_MIN_X = 600;
@@ -67,11 +67,11 @@ public final class Datavyu {
     // TODO: Move this to some OS specifics
     private boolean osxPressAndHoldEnabled;
 
-    /** The main window. It exists before its contents, which use it while they are built. */
+    /** The main window's frame. It exists before the window, which uses it while it is built. */
     private JFrame mainFrame;
 
-    /** The contents of the main window. */
-    private DatavyuView datavyuView;
+    /** The main window: its tabs, menus and shortcuts. */
+    private MainWindow window;
 
     /** This application is ready to open a file; macOS asks it to open files from its own thread. */
     private volatile boolean readyToOpenFile;
@@ -79,21 +79,21 @@ public final class Datavyu {
     /** File path from the command line */
     private String commandLineFile;
 
-    Datavyu() {
+    Watavyu() {
     }
 
     /**
      * Main method launching the application
      *
-     * @param args The command line arguments passed to Datavyu. The first, if any, is a file to open.
+     * @param args The command line arguments passed to Watavyu. The first, if any, is a file to open.
      */
     public static void main(final String[] args) {
-        SwingUtilities.invokeLater(() -> new Datavyu().start(args));
+        SwingUtilities.invokeLater(() -> new Watavyu().start(args));
     }
 
-    /** Returns the main window's contents. */
-    public DatavyuView getView() {
-        return datavyuView;
+    /** Returns the main window. */
+    public MainWindow getWindow() {
+        return window;
     }
 
     public void setCommandLineFile(String commandLineFile) {
@@ -102,7 +102,7 @@ public final class Datavyu {
     }
 
     /**
-     * Returns the main window.
+     * Returns the main window's frame.
      */
     public JFrame getMainFrame() {
         return mainFrame;
@@ -126,7 +126,7 @@ public final class Datavyu {
      */
     public boolean safeQuit() {
         List<SpreadSheetPanel> spreadsheets = new ArrayList<>();
-        for (Component tab : datavyuView.getTabbedPane().getComponents()) {
+        for (Component tab : window.getTabbedPane().getComponents()) {
             if (tab instanceof SpreadSheetPanel spreadSheetPanel) {
                 spreadsheets.add(spreadSheetPanel);
             }
@@ -149,13 +149,13 @@ public final class Datavyu {
      * @return whether they may close: false if the user cancelled or a save did not happen
      */
     private boolean mayClose(final List<SpreadSheetPanel> spreadsheets, final String message) {
-        Resources resourceMap = Resources.of(Datavyu.class);
+        Resources resourceMap = Resources.of(Watavyu.class);
         String saveOption = "Save";
         String discardOption = "Don't save";
         String[] options = MacOS.getOptions(saveOption, discardOption, Dialogs.CANCEL);
         return UnsavedWork.mayClose(spreadsheets, spreadsheet -> spreadsheet.getProjectController().isChanged(),
             spreadsheet -> {
-                datavyuView.getTabbedPane().setSelectedComponent(spreadsheet);
+                window.getTabbedPane().setSelectedComponent(spreadsheet);
                 String projectName = spreadsheet.getProjectController().getProjectName();
                 if (projectName == null) {
                     projectName = spreadsheet.getDataStore().getName();
@@ -167,7 +167,7 @@ public final class Datavyu {
                     null, options, saveOption);
                 return UnsavedWork.choice(selected, options, saveOption, discardOption);
             },
-            spreadsheet -> datavyuView.save());
+            spreadsheet -> window.save());
     }
 
     /**
@@ -188,7 +188,7 @@ public final class Datavyu {
             commandLineFile = args[0];
         }
 
-        datavyuView = new DatavyuView(this, mainFrame);
+        window = new MainWindow(this, mainFrame);
         if (!WindowPlacement.restoreAndTrack(mainFrame, MAIN_WINDOW, true)) {
             mainFrame.pack();
             mainFrame.setSize(Math.max(mainFrame.getWidth(), INIT_MIN_X), Math.max(mainFrame.getHeight(), INIT_MIN_Y));
@@ -196,8 +196,8 @@ public final class Datavyu {
         }
         mainFrame.setVisible(true);
 
-        datavyuView.startFirstSpreadsheet();
-        datavyuView.checkForAutosavedFile();
+        window.startFirstSpreadsheet();
+        window.checkForAutosavedFile();
         ready();
     }
 
@@ -209,7 +209,7 @@ public final class Datavyu {
     private void ready() {
         readyToOpenFile = true;
         if (commandLineFile != null) {
-            datavyuView.openExternalFile(new File(commandLineFile));
+            window.openExternalFile(new File(commandLineFile));
             commandLineFile = null;
         }
     }

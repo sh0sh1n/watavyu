@@ -18,41 +18,41 @@ public class DataStoreEventsTest {
     @Test
     public void renamingAColumnTellsListenersItsNewName() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
-        Variable column = dataStore.createVariable("before");
+        Column column = dataStore.createColumn("before");
         DataStoreListener listener = mock(DataStoreListener.class);
         List<String> seen = new ArrayList<>();
-        doAnswer(call -> seen.add(((Variable) call.getArgument(0)).getName()))
-            .when(listener).variableNameChange(any());
+        doAnswer(call -> seen.add(((Column) call.getArgument(0)).getName()))
+            .when(listener).columnNameChange(any());
         dataStore.addListener(listener);
 
         column.setName("after");
 
         assertEquals(seen, List.of("after"));
-        assertEquals(dataStore.getVariable("after"), column);
+        assertEquals(dataStore.getColumn("after"), column);
     }
 
     @Test
     public void keepingAColumnsNameTellsNoOne() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
-        Variable column = dataStore.createVariable("same");
+        Column column = dataStore.createColumn("same");
         DataStoreListener listener = mock(DataStoreListener.class);
         dataStore.addListener(listener);
 
         column.setName("same");
 
-        verify(listener, never()).variableNameChange(any());
+        verify(listener, never()).columnNameChange(any());
     }
 
     @Test
     public void reorderingColumnsTellsListeners() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
-        Variable first = dataStore.createVariable("first");
-        dataStore.createVariable("second");
+        Column first = dataStore.createColumn("first");
+        dataStore.createColumn("second");
         DataStoreListener listener = mock(DataStoreListener.class);
         dataStore.addListener(listener);
 
-        dataStore.moveVariable(first, 1);
+        dataStore.moveColumn(first, 1);
 
-        verify(listener).variableOrderChanged();
+        verify(listener).columnOrderChanged();
     }
 }

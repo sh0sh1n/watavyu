@@ -19,7 +19,7 @@ import java.util.Arrays;
 /**
  * Presentation times of every video frame in a stream, in milliseconds.
  *
- * Datavyu works in whole milliseconds while frames start at fractional times
+ * Watavyu works in whole milliseconds while frames start at fractional times
  * (frame 1 of 30 fps video starts at 33.33 ms). {@link #reportedMillis(int)} rounds
  * a frame start up so that {@link #frameAt(long)} maps the reported time back to the
  * same frame. Seeks aim at {@link #seekTargetMillis(int)}, the middle of the frame, so

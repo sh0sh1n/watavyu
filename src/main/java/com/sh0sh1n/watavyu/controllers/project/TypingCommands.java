@@ -59,7 +59,7 @@ public final class TypingCommands {
      * @return whether the value changed: not in a locked column, a clip or a cell not in the spreadsheet
      */
     public boolean typeValue(final Cell cell, final int code, final String value, final boolean continuing) {
-        if (!spreadsheet.getDataStore().contains(cell) || cell.getClip() != null || cell.getVariable().refusesEdits()) {
+        if (!spreadsheet.getDataStore().contains(cell) || cell.getClip() != null || cell.getColumn().refusesEdits()) {
             return false;
         }
         List<String> before = cell.getValues();

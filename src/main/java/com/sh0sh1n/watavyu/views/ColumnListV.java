@@ -22,7 +22,7 @@ import com.sh0sh1n.watavyu.controllers.project.ColumnCommands;
 import com.sh0sh1n.watavyu.controllers.project.ProjectController;
 import com.sh0sh1n.watavyu.models.db.DataStore;
 import com.sh0sh1n.watavyu.models.db.DataStoreListener;
-import com.sh0sh1n.watavyu.models.db.Variable;
+import com.sh0sh1n.watavyu.models.db.Column;
 
 import javax.swing.*;
 import javax.swing.event.TableModelEvent;
@@ -34,38 +34,38 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * The dialog to list database variables.
+ * The dialog to list database columns.
  */
-public final class VariableListV extends JDialog
+public final class ColumnListV extends JDialog
         implements TableModelListener, DataStoreListener {
 
     /**
-     * The column for if a variable is visible or not.
+     * The column for if a column is visible or not.
      */
     private static final int VCOLUMN = 1;
     /**
-     * The column for a variables name.
+     * The column for a columns name.
      */
     private static final int NCOLUMN = 2;
     /**
-     * The column for order index of variable
+     * The column for order index of column
      */
     private static final int OCOLUMN = 0;
     /**
-     * The total number of columns in the variables list.
+     * The total number of columns in the columns list.
      */
     private static final int TOTAL_COLUMNS = 3;
     /**
      * The logger for this class.
      */
-    private static Logger LOGGER = LogManager.getLogger(VariableListV.class);
+    private static Logger LOGGER = LogManager.getLogger(ColumnListV.class);
     /**
-     * DataStore for holding all the information in the variable list.
+     * DataStore for holding all the information in the column list.
      */
     private DataStore dataStore;
 
     /**
-     * The table model of the JTable that lists the actual variables.
+     * The table model of the JTable that lists the actual columns.
      */
     private VListTableModel tableModel;
 
@@ -73,7 +73,7 @@ public final class VariableListV extends JDialog
      * Visual components for the dialog.
      */
     private javax.swing.JScrollPane jScrollPane1;
-    private javax.swing.JTable variableList;
+    private javax.swing.JTable columnList;
     private JButton showAllButton;
 
     /** Shows and hides the spreadsheet's columns. */
@@ -82,21 +82,21 @@ public final class VariableListV extends JDialog
     /**
      * Mapping between database column identifier - to the table model.
      */
-    private Map<Variable, Integer> dbToTableMap;
+    private Map<Column, Integer> dbToTableMap;
 
     /**
      * Resource map holding all the string information.
      */
-    private Resources rMap = Resources.of(VariableListV.class);
+    private Resources rMap = Resources.of(ColumnListV.class);
 
     /**
-     * Creates new form ListVariablesView.
+     * Creates new form ListColumnsView.
      *
      * @param parent     The parent frame for this dialog.
      * @param modal      Is this dialog to be modal (true), or not.
      * @param controller The spreadsheet whose columns it lists.
      */
-    public VariableListV(final java.awt.Frame parent,
+    public ColumnListV(final java.awt.Frame parent,
                          final boolean modal,
                          final ProjectController controller) {
         super(parent, modal);
@@ -113,11 +113,11 @@ public final class VariableListV extends JDialog
         tableModel.addColumn(rMap.getString("Table.nameColumn"));
         
         //fix visible and ordering columns to exact size, let last one grow with table
-        variableList.getColumnModel().getColumn(VCOLUMN).setMinWidth(60);
-        variableList.getColumnModel().getColumn(VCOLUMN).setMaxWidth(60);    
-        variableList.getColumnModel().getColumn(OCOLUMN).setMinWidth(40);
-        variableList.getColumnModel().getColumn(OCOLUMN).setMaxWidth(40);
-        variableList.setAutoResizeMode(JTable.AUTO_RESIZE_LAST_COLUMN);
+        columnList.getColumnModel().getColumn(VCOLUMN).setMinWidth(60);
+        columnList.getColumnModel().getColumn(VCOLUMN).setMaxWidth(60);    
+        columnList.getColumnModel().getColumn(OCOLUMN).setMinWidth(40);
+        columnList.getColumnModel().getColumn(OCOLUMN).setMaxWidth(40);
+        columnList.setAutoResizeMode(JTable.AUTO_RESIZE_LAST_COLUMN);
 
 
         populateTable();
@@ -126,19 +126,19 @@ public final class VariableListV extends JDialog
     @SuppressWarnings("unchecked")
     private void initComponents() {
         jScrollPane1 = new javax.swing.JScrollPane();
-        variableList = new javax.swing.JTable();
+        columnList = new javax.swing.JTable();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
-        setTitle(rMap.getString("variableListDialog.title"));
-        setName("variableListDialog"); 
+        setTitle(rMap.getString("columnListDialog.title"));
+        setName("columnListDialog"); 
 
         jScrollPane1.setName("jScrollPane1"); 
 
-        variableList.setModel(tableModel);
-        variableList.setMinimumSize(new java.awt.Dimension(400, 200));
-        variableList.setName("variableList");
-        variableList.setAutoCreateRowSorter(true);
-        jScrollPane1.setViewportView(variableList);
+        columnList.setModel(tableModel);
+        columnList.setMinimumSize(new java.awt.Dimension(400, 200));
+        columnList.setName("columnList");
+        columnList.setAutoCreateRowSorter(true);
+        jScrollPane1.setViewportView(columnList);
 
         showAllButton = new JButton(rMap.getString("showAllButton.text"));
         showAllButton.setName("showAllColumns");
@@ -162,14 +162,14 @@ public final class VariableListV extends JDialog
     }
 
     public void populateTable() {
-        for (Variable var : dataStore.getAllVariables()) {
+        for (Column var : dataStore.getAllColumns()) {
             insertRow(var, rMap);
         }
     }
 
     /** @return the column shown in a row of the table, or null */
-    private Variable variableAtRow(final int row) {
-        for (Map.Entry<Variable, Integer> entry : dbToTableMap.entrySet()) {
+    private Column columnAtRow(final int row) {
+        for (Map.Entry<Column, Integer> entry : dbToTableMap.entrySet()) {
             if (entry.getValue() == row) {
                 return entry.getKey();
             }
@@ -180,7 +180,7 @@ public final class VariableListV extends JDialog
     public void recreateMap() {
         dbToTableMap.clear();
         for (int i = 0; i < tableModel.getRowCount(); i++) {
-            dbToTableMap.put(dataStore.getVariable((String) tableModel.getValueAt(i, NCOLUMN)), i);
+            dbToTableMap.put(dataStore.getColumn((String) tableModel.getValueAt(i, NCOLUMN)), i);
         }
     }
 
@@ -203,10 +203,10 @@ public final class VariableListV extends JDialog
             String columnName = model.getColumnName(column);
             Object data = model.getValueAt(row, column);
 
-            Variable var = variableAtRow(row);
+            Column var = columnAtRow(row);
 
             if (columnName.equals(rMap.getString("Table.visibleColumn"))) {
-                LOGGER.info("Editied Variable Visbility from VariableList");
+                LOGGER.info("Editied Column Visbility from ColumnList");
 
                 if (var.isHidden() == (Boolean) data) {
                     if ((Boolean) data) {
@@ -220,29 +220,29 @@ public final class VariableListV extends JDialog
     }
 
     /**
-     * Inserts a row at the end of the variable list.
+     * Inserts a row at the end of the column list.
      *
-     * @param variable The variable to add to the list.
+     * @param dataColumn The column to add to the list.
      * @param rMap     The resource map - used to find localised string bundles
      */
-    public void insertRow(final Variable variable, final Resources rMap) {
-        insertRow(variable, rMap, -1);
+    public void insertRow(final Column dataColumn, final Resources rMap) {
+        insertRow(dataColumn, rMap, -1);
     }
 
     /**
-     * Add a new row to the variable list.
+     * Add a new row to the column list.
      *
-     * @param variable The Variable being added to the list.
+     * @param dataColumn The Column being added to the list.
      * @param rMap     The resource map - used to find localised string bundles.
      * @param position The position to place the new row.
      */
-    public void insertRow(final Variable variable,
+    public void insertRow(final Column dataColumn,
                           final Resources rMap,
                           int position) {
         Object[] vals = new Object[TOTAL_COLUMNS];
 
-        vals[VCOLUMN] = !variable.isHidden();
-        vals[NCOLUMN] = variable.getName();
+        vals[VCOLUMN] = !dataColumn.isHidden();
+        vals[NCOLUMN] = dataColumn.getName();
 
         // Add new row to table model.
         int rowId = tableModel.getRowCount();
@@ -252,46 +252,46 @@ public final class VariableListV extends JDialog
         vals[OCOLUMN] = rowId + 1;
 
         tableModel.insertRow(rowId, vals);
-        dbToTableMap.put(variable, rowId);
+        dbToTableMap.put(dataColumn, rowId);
     }
 
     @Override
-    public void variableAdded(final Variable newVariable) {
+    public void columnAdded(final Column newColumn) {
         // Undo puts a deleted column back in its place, not always last.
-        variableOrderChanged();
+        columnOrderChanged();
     }
 
     @Override
-    public void variableRemoved(final Variable deletedVariable) {
-        tableModel.removeRow(dbToTableMap.get(deletedVariable));
+    public void columnRemoved(final Column deletedColumn) {
+        tableModel.removeRow(dbToTableMap.get(deletedColumn));
         recreateMap();
     }
 
     @Override
-    public void variableOrderChanged() {
+    public void columnOrderChanged() {
         tableModel.setRowCount(0);
         dbToTableMap.clear();
         populateTable();
     }
 
     @Override
-    public void variableHidden(final Variable hiddenVariable) {
-        tableModel.setValueAt(!hiddenVariable.isHidden(),
-                dbToTableMap.get(hiddenVariable),
+    public void columnHidden(final Column hiddenColumn) {
+        tableModel.setValueAt(!hiddenColumn.isHidden(),
+                dbToTableMap.get(hiddenColumn),
                 VCOLUMN);
     }
 
     @Override
-    public void variableVisible(final Variable visibleVariable) {
-        tableModel.setValueAt(!visibleVariable.isHidden(),
-                dbToTableMap.get(visibleVariable),
+    public void columnVisible(final Column visibleColumn) {
+        tableModel.setValueAt(!visibleColumn.isHidden(),
+                dbToTableMap.get(visibleColumn),
                 VCOLUMN);
     }
 
     @Override
-    public void variableNameChange(final Variable editedVariable) {
-        tableModel.setValueAt(editedVariable.getName(),
-                dbToTableMap.get(editedVariable),
+    public void columnNameChange(final Column editedColumn) {
+        tableModel.setValueAt(editedColumn.getName(),
+                dbToTableMap.get(editedColumn),
                 NCOLUMN);
     }
 
