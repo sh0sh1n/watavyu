@@ -153,33 +153,41 @@ tasks.register<Test>("integrationTest") {
     shouldRunAfter(tasks.test)
 }
 
-// Analysis reports that measure the work in TODO.md. They do not gate the build:
-// Error Prone ERRORs and the tests are the gates. ./gradlew analyze writes all of them under build/reports.
+// Analysis reports that measure the work in TODO.md. ./gradlew analyze writes all of them under build/reports.
 // ./gradlew compileJava -PallWarnings lists every javac lint and Error Prone warning (javac stops at 100).
-// Error Prone checks that have reached zero findings fail the build, so they stay at zero (AGENTS.md).
+// Each check that reaches zero findings fails the build from then on, so it stays at zero (AGENTS.md).
+
+// Error Prone checks at zero, as errors.
+val errorproneGatedChecks = listOf(
+    "MissingOverride",
+    // Javadoc
+    "MissingSummary", "InvalidParam", "EmptyBlockTag", "NotJavadoc", "AlmostJavadoc",
+)
 tasks.withType<JavaCompile>().configureEach {
-    options.errorprone.error("MissingOverride")
+    errorproneGatedChecks.forEach { options.errorprone.error(it) }
 }
 
-// javac's deprecation and removal warnings have reached zero in every source set. Error Prone's warnings have not, so
-// -Werror cannot go on the build's own compiles: each source set is compiled again, without Error Prone or annotation
-// processors (it has none), with those two warnings as errors, so they stay at zero.
-val deprecationGates = mutableSetOf<String>()
+// javac lint categories at zero in every source set. Error Prone's warnings are not all at zero, so -Werror cannot go
+// on the build's own compiles: each source set is compiled again, without Error Prone or annotation processors (it has
+// none), with only these categories on and as errors.
+val javacGatedCategories = listOf("deprecation", "removal", "dangling-doc-comments")
+val lintGates = mutableSetOf<String>()
 sourceSets.configureEach {
     val set = this
-    val gate = tasks.register<JavaCompile>("${set.name}DeprecationGate") {
-        description = "Fails if the ${set.name} sources use a deprecated API, or one marked for removal."
+    val gate = tasks.register<JavaCompile>("${set.name}LintGate") {
+        description = "Fails on any javac warning in $javacGatedCategories in the ${set.name} sources."
         group = "verification"
         source = set.java
         classpath = set.compileClasspath
-        destinationDirectory.set(layout.buildDirectory.dir("deprecation-gate/${set.name}"))
+        destinationDirectory.set(layout.buildDirectory.dir("lint-gate/${set.name}"))
         options.errorprone.enabled.set(false)
-        options.compilerArgs.addAll(listOf("-proc:none", "-Xlint:none", "-Xlint:deprecation,removal", "-Werror"))
+        options.compilerArgs.addAll(listOf("-proc:none", "-Xlint:none",
+            "-Xlint:" + javacGatedCategories.joinToString(","), "-Werror"))
     }
-    deprecationGates += gate.name
+    lintGates += gate.name
     tasks.check { dependsOn(gate) }
 }
-val compiles = tasks.withType<JavaCompile>().named { it !in deprecationGates }
+val compiles = tasks.withType<JavaCompile>().named { it !in lintGates }
 
 // ./gradlew compileJava compileTestJava -PerrorpronePatch=CheckA,CheckB rewrites the sources in place with Error
 // Prone's suggested fixes for those checks. Review the result like any other change.
@@ -203,6 +211,40 @@ pmd {
     isIgnoreFailures = true
     isConsoleOutput = false
 }
+
+// Every PMD rule in config/pmd/ruleset.xml fails the build except these, which are not at zero yet. A rule leaves
+// this list when it reaches zero, and a rule added to the ruleset is gated unless it is listed here.
+val pmdUngatedRules = setOf(
+    // Size and complexity
+    "GodClass", "TooManyMethods", "CyclomaticComplexity", "CognitiveComplexity", "CouplingBetweenObjects",
+    "NcssCount", "ExcessiveImports", "TooManyFields",
+    // Dead code
+    "UnusedPrivateField", "UnusedAssignment", "UnusedFormalParameter", "UnusedLocalVariable", "UnnecessaryImport",
+    // Error handling
+    "AvoidCatchingGenericException", "AvoidCatchingThrowable", "PreserveStackTrace", "EmptyCatchBlock",
+    "AvoidPrintStackTrace", "SystemPrintln",
+    // Correctness
+    "CompareObjectsWithEquals", "CloseResource", "AssignmentInOperand", "AvoidSynchronizedAtMethodLevel",
+    "CollapsibleIfStatements", "SimplifyBooleanReturns",
+    // Legacy APIs and idioms
+    "UseDiamondOperator", "LooseCoupling", "ForLoopCanBeForeach", "AvoidFieldNameMatchingMethodName",
+)
+val pmdGate = tasks.register("pmdGate") {
+    description = "Fails if PMD finds anything under a rule that has reached zero findings."
+    group = "verification"
+    val report = layout.buildDirectory.file("reports/pmd/main.xml")
+    dependsOn(tasks.named("pmdMain"))
+    inputs.file(report)
+    doLast {
+        val found = Regex("<violation [^>]*rule=\"([^\"]+)\"").findAll(report.get().asFile.readText())
+            .map { it.groupValues[1] }.filter { it !in pmdUngatedRules }.toList()
+        if (found.isNotEmpty()) {
+            throw GradleException("PMD found ${found.size} issue(s) under gated rules: " +
+                "${found.distinct()}; see build/reports/pmd/main.html")
+        }
+    }
+}
+tasks.check { dependsOn(pmdGate) }
 
 spotbugs {
     ignoreFailures.set(true)

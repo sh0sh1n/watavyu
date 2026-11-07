@@ -100,7 +100,7 @@ public final class DatavyuVariable implements Variable {
 
 
     /**
-     * @return The internal Identifier for this variable.
+     * Returns the internal Identifier for this variable.
      */
     public UUID getID() {
         return variableId;

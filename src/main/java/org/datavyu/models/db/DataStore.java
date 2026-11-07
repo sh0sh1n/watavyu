@@ -67,12 +67,12 @@ public interface DataStore {
     }
 
     /**
-     * @return All the variables held in the datastore that are visible and not hidden
+     * Returns all the variables held in the datastore that are visible and not hidden.
      */
     List<Variable> getVisibleVariables();
 
     /**
-     * @return The variables selected in the datastore.
+     * Returns the variables selected in the datastore.
      */
     List<Variable> getSelectedVariables();
 
@@ -83,7 +83,7 @@ public interface DataStore {
     void clearVariableSelection();
 
     /**
-     * @return All the selected cells, across the entire datastore.
+     * Returns all the selected cells, across the entire datastore.
      */
     List<Cell> getSelectedCells();
 
@@ -99,10 +99,9 @@ public interface DataStore {
     void deselectAll();
 
     /**
-     * @param varName The name of the variable to fetch.
-     *
-     * @return The variable that matches varName, NULL if unable to find a
+     * Returns the variable that matches varName, NULL if unable to find a
      * variable that matches varName.
+     * @param varName The name of the variable to fetch.
      */
     Variable getVariable(String varName);
 
@@ -122,7 +121,7 @@ public interface DataStore {
      * @param name The name of the variable to add to the datastore.
      *
      * @return The new variable that was added to the datastore, with one code.
-     * @throws UserWarningException
+     * @throws UserWarningException if a column of that name exists, or the name breaks the naming rules
      */
     Variable createVariable(final String name) throws UserWarningException;
 
@@ -143,7 +142,8 @@ public interface DataStore {
      * @param grandfathered Flag to exempt variable from naming rules.
      *
      * @return The new variable that was added to the datastore, with one code.
-     * @throws UserWarningException
+     * @throws UserWarningException if a column of that name exists, or the name breaks the naming rules and is not
+     *                              exempt from them
      */
     Variable createVariable(final String name, boolean grandfathered)
         throws UserWarningException;
@@ -182,7 +182,7 @@ public interface DataStore {
     void removeCell(final Cell cell);
 
     /**
-     * @return The name of the datastore.
+     * Returns the name of the datastore.
      */
     String getName();
 
@@ -197,7 +197,7 @@ public interface DataStore {
     void markAsChanged();
 
     /**
-     * @return True if the data store has changed since it was last saved, false
+     * Returns true if the data store has changed since it was last saved, false
      * otherwise.
      */
     boolean isChanged();
@@ -210,10 +210,12 @@ public interface DataStore {
     void setName(final String datastoreName);
 
     /**
-     * Updates the variable name in the hash table
-     * @param oldname
-     * @param newName
-     * @param variable
+     * Files a column under its new name, and tells the listeners if the name changed. A column out of the spreadsheet,
+     * as undo leaves one, is not filed.
+     *
+     * @param oldname  the name the column had
+     * @param newName  the name it has now
+     * @param variable the column
      */
     void updateVariableName(String oldname, String newName, Variable variable);
 

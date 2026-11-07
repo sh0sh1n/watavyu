@@ -1,4 +1,4 @@
-/**
+/*
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -37,13 +37,21 @@ interface PlaybackEngine {
     /** Seeks exactly to the given stream time. */
     void seek(double millis);
 
-    /** @param rate A forward rate within the engine's supported range. */
+    /**
+     * Sets the playback rate.
+     *
+     * @param rate A forward rate within the engine's supported range.
+     */
     void setRate(double rate);
 
-    /** @param volume Linear volume from 0 to 1. */
+    /**
+     * Sets the volume.
+     *
+     * @param volume Linear volume from 0 to 1.
+     */
     void setVolume(double volume);
 
-    /** @return The last presentation time the engine reported. */
+    /** Returns the last presentation time the engine reported. */
     double currentTimeMillis();
 
     void dispose();

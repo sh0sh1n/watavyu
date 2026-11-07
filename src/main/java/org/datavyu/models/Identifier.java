@@ -1,4 +1,4 @@
-/**
+/*
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -50,10 +50,6 @@ public class Identifier {
         return sequenceNumber;
     }
 
-    /*
-     * (non-Javadoc)
-     * @see java.lang.Object#hashCode()
-     */
     @Override
     public int hashCode() {
         // For implementation details see, Josh Bloch's Effective Java, 2nd edition, page 47ff.
@@ -63,10 +59,6 @@ public class Identifier {
         return hashCode;
     }
 
-    /*
-     * (non-Javadoc)
-     * @see java.lang.Object#equals(java.lang.Object)
-     */
     @Override
     public boolean equals(final Object obj) {
         return (this == obj) || (obj != null && getClass() == obj.getClass()

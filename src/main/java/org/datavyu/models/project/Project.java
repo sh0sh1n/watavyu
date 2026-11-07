@@ -1,4 +1,4 @@
-/**
+/*
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -42,13 +42,15 @@ public final class Project {
     private String projectDirectory;
 
     /**
-     * @return The database file name. Does not include directory.
+     * Returns the database file name. Does not include directory.
      */
     public String getDatabaseFileName() {
         return databaseFileName;
     }
 
     /**
+     * Sets the project file's name.
+     *
      * @param fileName the database file name. Does not include directory.
      */
     public void setDatabaseFileName(final String fileName) {
@@ -56,7 +58,7 @@ public final class Project {
     }
 
     /**
-     * @return The name of this project.
+     * Returns the name of this project.
      */
     public String getProjectName() {
         return projectName;
@@ -86,13 +88,15 @@ public final class Project {
     }
 
     /**
-     * @return the projectDirectory
+     * Returns the projectDirectory.
      */
     public String getProjectDirectory() {
         return projectDirectory;
     }
 
     /**
+     * Sets the folder the project file is in.
+     *
      * @param projectDirectory the projectDirectory to set
      */
     public void setProjectDirectory(final String projectDirectory) {

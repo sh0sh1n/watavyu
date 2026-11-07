@@ -1,4 +1,4 @@
-/**
+/*
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -284,7 +284,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
         return projectController;
     }
 
-    /** @return what plays this spreadsheet's media columns, or null before the video controller is set */
+    /** Returns what plays this spreadsheet's media columns, or null before the video controller is set. */
     public MediaPlayers getMediaPlayers() {
         return mediaPlayers;
     }
@@ -349,7 +349,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
         }
     }
 
-    /** @return the playhead beside the columns, or null before the video controller is set */
+    /** Returns the playhead beside the columns, or null before the video controller is set. */
     public PlayheadCarriage getPlayhead() {
         return playhead;
     }
@@ -461,7 +461,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
     /**
      * Remove a column panel from the scroll panel viewport.
      *
-     * @param var
+     * @param var the column whose panel goes
      */
     private void removeColumn(final Variable var) {
         for (SpreadsheetColumn col : columns) {
@@ -476,16 +476,16 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
     }
 
     /**
-     * @return the vector of Spreadsheet columns.
-         * Need for UISpec4J testing
+     * Returns the vector of Spreadsheet columns.
+     * Need for UISpec4J testing.
      */
     public List<SpreadsheetColumn> getColumns() {
         return columns;
     }
 
     /**
-     * @return the vector of Spreadsheet columns.
-     * Need for UISpec4J testing
+     * Returns the vector of Spreadsheet columns.
+     * Need for UISpec4J testing.
      */
     public List<SpreadsheetColumn> getVisibleColumns() {
         List<SpreadsheetColumn> visibleColumns = new ArrayList<>();
@@ -525,7 +525,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
     }
 
     /**
-     * @return Database this spreadsheet displays
+     * Returns the data store this spreadsheet shows.
      */
     public DataStore getDataStore() {
         return (dataStore);

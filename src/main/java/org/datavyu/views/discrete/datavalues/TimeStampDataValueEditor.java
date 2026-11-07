@@ -1,4 +1,4 @@
-/**
+/*
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -99,13 +99,8 @@ public final class TimeStampDataValueEditor extends EditorComponent {
     }
 
     /**
-     * Action to take by this editor when a key is pressed.
-     *
-     * @param e The KeyEvent that triggered this action.
-     */
-    /**
-     * @return whether this time can be edited: a clip's offset never can, as it follows from the clip's onset and
-     * length, and no time in a locked column can
+     * Returns whether this time can be edited: a clip's offset never can, as it follows from the clip's onset and
+     * length, and no time in a locked column can.
      */
     public boolean isTypingAllowed() {
         if (parentCell.getVariable().isLocked()) {

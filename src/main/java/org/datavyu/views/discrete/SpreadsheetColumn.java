@@ -1,4 +1,4 @@
-/**
+/*
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -158,7 +158,7 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
         controller.getVideoController().getClockTimer().registerListener(this);
     }
 
-    /** @return the spreadsheet this column is in */
+    /** Returns the spreadsheet this column is in. */
     public ProjectController getProjectController() {
         return controller;
     }
@@ -269,14 +269,16 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
     }
 
     /**
-     * @return The height in pixels of the cells that have been laid in this
-     * column
+     * Returns the height in pixels of the cells that have been laid in this
+     * column.
      */
     public int getWorkingHeight() {
         return dataHeight;
     }
 
     /**
+     * Sets the height of the column's laid-out cells.
+     *
      * @param newHeight The height in pixels of the cells that have been laid
      *                  in this column.
      */
@@ -312,7 +314,7 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
     }
 
     /**
-     * @return Column Header size as a dimension.
+     * Returns column Header size as a dimension.
      */
     public Dimension getHeaderSize() {
         return new Dimension(getWidth(), DEFAULT_HEADER_HEIGHT);
@@ -334,6 +336,8 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
     }
 
     /**
+     * Sets the column's width.
+     *
      * @param colWidth Column width to set in pixels.
      */
     public void setWidth(final int colWidth) {
@@ -350,7 +354,7 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
     }
 
     /**
-     * @return The datapanel.
+     * Returns the datapanel.
      */
     public ColumnDataPanel getDataPanel() {
         return datapanel;
@@ -369,7 +373,7 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
     }
 
     /**
-     * @return selection status of underlying variable
+     * Returns selection status of underlying variable.
      */
     public boolean isSelected() {
         return variable.isSelected();
@@ -400,7 +404,7 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
     }
 
     /**
-     * @return The SpreadsheetCells in this column.
+     * Returns the SpreadsheetCells in this column.
      */
     public List<SpreadsheetCell> getCells() {
         return datapanel.getCells();
@@ -417,7 +421,7 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
     }
 
     /**
-     * @return The Spreadsheet cells in this column temporally.
+     * Returns the Spreadsheet cells in this column temporally.
      */
     public List<SpreadsheetCell> getCellsTemporally() {
         return datapanel.getCellsTemporally();
@@ -439,7 +443,7 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
     }
 
     /**
-     * @return The header name of this SpreadsheetColumn.
+     * Returns the header name of this SpreadsheetColumn.
      */
     public String getColumnName() {
         return variable.getName();
@@ -475,11 +479,8 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
     public void requestFocus() {
         controller.getSpreadSheetPanel().revalidate();
         controller.getSpreadSheetPanel().reorientView(this);
-        /**
-         * Request focus for this column. It will request focus for the first
-         * SpreadsheetCell in the column if one exists. If no cells exist it
-         * will request focus for the datapanel of the column.
-         */
+        // Request focus for this column. It will request focus for the first SpreadsheetCell in the column if one
+        // exists. If no cells exist it will request focus for the datapanel of the column.
         if (datapanel.getCells().size() > 0) {
 //            datapanel.getCells().get(0).requestFocusInWindow();
             SpreadsheetCell sc = datapanel.getSelectedCell();

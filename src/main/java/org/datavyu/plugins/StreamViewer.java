@@ -35,7 +35,7 @@ import org.datavyu.models.Identifier;
 public interface StreamViewer {
 
     /**
-     * @return Identifier used to identify this viewer.
+     * Returns identifier used to identify this viewer.
      */
     Identifier getIdentifier();
 
@@ -65,7 +65,7 @@ public interface StreamViewer {
      */
     void setViewerVisible(boolean isVisible);
 
-    /** @return the component that shows the video, for showing it in a media column's window */
+    /** Returns the component that shows the video, for showing it in a media column's window. */
     java.awt.Component getVideoComponent();
 
     /**
@@ -92,12 +92,12 @@ public interface StreamViewer {
     File getSourceFile();
 
     /**
-     * @return Currently stored frames per second.
+     * Returns currently stored frames per second.
      */
     float getFramesPerSecond();
     
     /**
-     * @return The current time in milliseconds, or -1 if player PTS is NaN.
+     * Returns the current time in milliseconds, or -1 if player PTS is NaN.
      */
     long getCurrentTime();
 
@@ -152,16 +152,20 @@ public interface StreamViewer {
      */
     void setCurrentTime(long time);
 
-    /** @return the volume set for the video, from 0 to 1, including while it is muted by hiding the window */
+    /** Returns the volume set for the video, from 0 to 1, including while it is muted by hiding the window. */
     float getVolumeLevel();
 
-    /** @param volume the volume to set for the video, from 0 to 1 */
+    /**
+     * Sets the volume for the video.
+     *
+     * @param volume the volume to set for the video, from 0 to 1
+     */
     void setVolumeLevel(float volume);
 
-    /** @return whether the video window is shown */
+    /** Returns whether the video window is shown. */
     boolean isViewerVisible();
 
-    /** @return the video's size in pixels */
+    /** Returns the video's size in pixels. */
     Dimension getVideoSize();
 
     /**
@@ -175,7 +179,7 @@ public interface StreamViewer {
     boolean isSeekPlaybackEnabled();
 
     /**
-     * @return False if this viewer cannot play at negative rates; the controller then
+     * Returns false if this viewer cannot play at negative rates; the controller then
      * stops shuttling at zero instead of going into reverse.
      */
     default boolean isReversePlaybackSupported() {

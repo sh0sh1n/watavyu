@@ -29,22 +29,22 @@ public record MediaClip(String file, long duration, double frameRate, int width,
     }
 
     /**
+     * Returns this clip at that volume.
      * @param newVolume the clip's volume, from 0 to 1
-     * @return this clip at that volume
      */
     public MediaClip withVolume(final double newVolume) {
         return new MediaClip(file, duration, frameRate, width, height, newVolume);
     }
 
     /**
-     * @return this clip with what its opened file says
+     * Returns this clip with what its opened file says.
      */
     public MediaClip withDetails(final long newDuration, final double newFrameRate, final int newWidth,
                                  final int newHeight) {
         return new MediaClip(file, newDuration, newFrameRate, newWidth, newHeight, volume);
     }
 
-    /** @return the file's name, without its folder */
+    /** Returns the file's name, without its folder. */
     public String fileName() {
         Path name = Path.of(file).getFileName();
         return name == null ? file : name.toString();

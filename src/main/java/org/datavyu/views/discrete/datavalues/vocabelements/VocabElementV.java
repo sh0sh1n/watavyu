@@ -1,4 +1,4 @@
-/**
+/*
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -183,7 +183,7 @@ public class VocabElementV extends JPanel {
     }
 
     /**
-     * @return The parent dialog of this vocab element view.
+     * Returns the parent dialog of this vocab element view.
      */
     public final VocabEditorV getParentDialog() {
         return parentEditor;
@@ -294,7 +294,7 @@ public class VocabElementV extends JPanel {
     }
 
     /**
-     * @return The component for the name of the vocab element.
+     * Returns the component for the name of the vocab element.
      */
     public final VENameEditor getNameComponent() {
         for (EditorComponent ed : veRootView.getEditors()) {
@@ -314,7 +314,7 @@ public class VocabElementV extends JPanel {
     }
 
     /**
-     * @return The view of the formal argument that has focus, null if no formal
+     * Returns the view of the formal argument that has focus, null if no formal
      * argument view in this vocab element has focus.
      */
     public final FormalArgEditor getArgWithFocus() {
@@ -327,6 +327,8 @@ public class VocabElementV extends JPanel {
     }
 
     /**
+     * Puts the caret in a code's editor.
+     *
      * @param argEd The arg editor to set focus on.
      */
     public final void requestArgFocus(FormalArgEditor argEd) {
@@ -334,7 +336,7 @@ public class VocabElementV extends JPanel {
     }
 
     /**
-     * @return VocabElementRootView vocabElementRootView.
+     * Returns the view of the column and its codes.
      */
     public final VocabElementRootView getDataView() {
         return veRootView;

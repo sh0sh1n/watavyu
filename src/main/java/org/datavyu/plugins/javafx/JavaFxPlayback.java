@@ -1,4 +1,4 @@
-/**
+/*
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -71,7 +71,11 @@ public final class JavaFxPlayback {
         }));
     }
 
-    /** @param handler Receives playback errors on the engine thread. */
+    /**
+     * Sets what hears of playback errors.
+     *
+     * @param handler Receives playback errors on the engine thread.
+     */
     public void setErrorHandler(final Consumer<Throwable> handler) {
         errorHandler = handler;
     }
@@ -84,7 +88,7 @@ public final class JavaFxPlayback {
         return (float) frames.framesPerSecond();
     }
 
-    /** @return True when frame times were read from the file, so single-frame steps are exact. */
+    /** Returns true when frame times were read from the file, so single-frame steps are exact. */
     public boolean isStepEnabled() {
         return frames.isMeasured();
     }
@@ -97,12 +101,12 @@ public final class JavaFxPlayback {
         return disposed;
     }
 
-    /** @return The requested forward rate, used the next time playback starts. */
+    /** Returns the requested forward rate, used the next time playback starts. */
     public float rate() {
         return rate;
     }
 
-    /** @return The playing position, or the start of the displayed frame while paused. */
+    /** Returns the playing position, or the start of the displayed frame while paused. */
     public long currentTimeMillis() {
         if (playing) {
             return (long) engine.currentTimeMillis();
@@ -110,7 +114,7 @@ public final class JavaFxPlayback {
         return frames.reportedMillis(frame);
     }
 
-    /** @return The frame shown while paused. */
+    /** Returns the frame shown while paused. */
     public int currentFrame() {
         return playing ? frames.frameAt(engine.currentTimeMillis()) : frame;
     }
@@ -150,6 +154,8 @@ public final class JavaFxPlayback {
     }
 
     /**
+     * Sets the playback rate.
+     *
      * @param newRate Positive rates play forward at that speed; zero or negative pauses,
      *                because this backend cannot play in reverse.
      */
@@ -174,7 +180,11 @@ public final class JavaFxPlayback {
         seekFrame(frame - 1);
     }
 
-    /** @param volume Linear volume from 0 to 1. */
+    /**
+     * Sets the volume.
+     *
+     * @param volume Linear volume from 0 to 1.
+     */
     public void setVolume(final float volume) {
         onEngine(() -> engine.setVolume(volume));
     }

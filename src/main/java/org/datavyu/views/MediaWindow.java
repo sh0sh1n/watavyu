@@ -142,7 +142,7 @@ public final class MediaWindow extends JDialog implements MediaPlayers.ColumnWin
         closeListener = listener;
     }
 
-    /** @return the volume control, for tests */
+    /** Returns the volume control, for tests. */
     JSlider volumeControl() {
         return volume;
     }

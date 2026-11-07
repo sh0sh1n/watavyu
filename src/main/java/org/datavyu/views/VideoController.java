@@ -1,4 +1,4 @@
-/**
+/*
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -47,6 +47,8 @@ public final class VideoController implements ClockListener {
     public interface Playhead {
 
         /**
+         * Shows the clock's time and rate.
+         *
          * @param time the clock's time, in milliseconds
          * @param rate the clock's rate, as {@link #rateText(float, boolean)} gives it
          * @param playing whether playback is running, so the sheet follows the needle
@@ -167,7 +169,7 @@ public final class VideoController implements ClockListener {
     }
 
     /**
-     * @return the controls drawer: the playback and coding buttons, laid out as a numeric keypad, and their fields
+     * Returns the controls drawer: the playback and coding buttons, laid out as a numeric keypad, and their fields.
      */
     public JComponent getControls() {
         return gridButtonPanel;
@@ -318,11 +320,11 @@ public final class VideoController implements ClockListener {
     }
 
     /**
+     * Returns whether playback has run into the end it is heading for: the timeline's end going forward, or time
+     * zero going backward. Playback starting at either edge and heading away from it carries on.
      * @param clockTime   the clock's time
      * @param rate        the clock's rate
      * @param timelineEnd the end of the timeline
-     * @return whether playback has run into the end it is heading for: the timeline's end going forward, or time
-     * zero going backward. Playback starting at either edge and heading away from it carries on.
      */
     static boolean atTimelineEdge(final double clockTime, final float rate, final long timelineEnd) {
         return rate > 0 ? clockTime >= timelineEnd : rate < 0 && clockTime <= 0;
@@ -394,10 +396,10 @@ public final class VideoController implements ClockListener {
     }
 
     /**
+     * Returns the rate as the playhead shows it: {@code 1.25×} while playing, {@code paused 1.25×} while paused at a
+     * rate, and {@code stopped} at rate zero.
      * @param rate   the clock's rate
      * @param paused whether the clock is paused
-     * @return the rate as the playhead shows it: {@code 1.25×} while playing, {@code paused 1.25×} while paused at a
-     * rate, and {@code stopped} at rate zero
      */
     static String rateText(final float rate, final boolean paused) {
         if (rate == 0F) {
@@ -934,8 +936,8 @@ public final class VideoController implements ClockListener {
     }
 
     /**
-     * @return whether a clip plays at a clock time; only such a clip steps by frame when jogging, so the clock follows
-     * the clip shown rather than another in the same column
+     * Returns whether a clip plays at a clock time; only such a clip steps by frame when jogging, so the clock follows
+     * the clip shown rather than another in the same column.
      */
     static boolean holds(final StreamViewer clip, final long clockTime) {
         return clockTime >= clip.getOffset() && clockTime < clip.getOffset() + clip.getDuration();
@@ -949,8 +951,8 @@ public final class VideoController implements ClockListener {
     }
 
     /**
+     * Returns the frame rate jogging steps by.
      * @param highestVideoFrameRate the highest frame rate of the open media with video, 0 if none has video
-     * @return the frame rate jogging steps by
      */
     static double jogFrameRate(final double highestVideoFrameRate) {
         return highestVideoFrameRate > 0 ? highestVideoFrameRate : DEFAULT_JOG_FRAME_RATE;

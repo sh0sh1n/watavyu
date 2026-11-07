@@ -30,19 +30,16 @@ import java.util.List;
 public interface Variable {
 
     /**
-     * Adds a already formed cell to the variable
+     * Puts a cell back into the column, as undo does.
      *
-     * @param cell
+     * @param cell a cell made by this column
      */
     void addCell(final Cell cell);
 
     /**
-     * Creates and inserts a cell into the variable.
+     * Creates and inserts a cell from 0 to 0.
      *
-     * @return The newly created cell.
-     */
-    /**
-     * @return a new cell from 0 to 0
+     * @return the new cell
      * @throws IllegalStateException if this is a media column, whose cells are clips
      */
     Cell createCell();
@@ -63,7 +60,7 @@ public interface Variable {
     void removeCell(final Cell cell);
 
     /**
-     * @return All the cells stored in the variable.
+     * Returns all the cells stored in the variable.
      */
     List<Cell> getCells();
 
@@ -76,7 +73,7 @@ public interface Variable {
     Cell getCellTemporally(final int index);
 
     /**
-     * @return the names of the column's codes, in order; each cell has a value for each. A media column has none.
+     * Returns the names of the column's codes, in order; each cell has a value for each. A media column has none.
      */
     List<String> getCodes();
 
@@ -90,18 +87,18 @@ public interface Variable {
     void setCodes(List<String> codes);
 
     /**
-     * @return All the cells stored in the variable using a temporal alignment.
+     * Returns all the cells stored in the variable using a temporal alignment.
      */
     List<Cell> getCellsTemporally();
 
     /**
+     * Returns true if this variable contains the supplied cell, false otherwise.
      * @param c The cell to check if it exists in this variable.
-     * @return True if this variable contains the supplied cell, false otherwise.
      */
     boolean contains(final Cell c);
 
     /**
-     * @return True if the variable is currently selected or not.
+     * Returns true if the variable is currently selected or not.
      */
     boolean isSelected();
 
@@ -114,7 +111,7 @@ public interface Variable {
     void setSelected(final boolean selected);
 
     /**
-     * @return True if the variable is currently hidden or not.
+     * Returns true if the variable is currently hidden or not.
      */
     boolean isHidden();
 
@@ -127,7 +124,7 @@ public interface Variable {
     void setHidden(final boolean hidden);
 
     /**
-     * @return The name of the variable as a string.
+     * Returns the name of the variable as a string.
      */
     String getName();
 
@@ -204,8 +201,8 @@ public interface Variable {
     DataStore getOwningDatastore();
 
     /**
-     * @return whether this is a media column, whose cells are clips made with {@link #createClip}; an annotation
-     * column's cells are made with {@link #createCell}
+     * Returns whether this is a media column, whose cells are clips made with {@link #createClip}; an annotation
+     * column's cells are made with {@link #createCell}.
      */
     boolean isMedia();
 

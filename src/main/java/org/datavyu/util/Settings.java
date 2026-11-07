@@ -61,7 +61,7 @@ public final class Settings {
     }
 
     /**
-     * @return The settings of this run, loaded on first use.
+     * Returns the settings of this run, loaded on first use.
      */
     public static synchronized Settings get() {
         if (instance == null) {
@@ -71,7 +71,7 @@ public final class Settings {
     }
 
     /**
-     * @return The settings file this run uses.
+     * Returns the settings file this run uses.
      */
     static Path defaultFile() {
         String directory = System.getProperty(DIRECTORY_PROPERTY);
@@ -127,7 +127,7 @@ public final class Settings {
     }
 
     /**
-     * @return The folder last chosen in a file dialog, or null if none was.
+     * Returns the folder last chosen in a file dialog, or null if none was.
      */
     public synchronized String getLastChosenDirectory() {
         return data.lastChosenDirectory;
@@ -148,7 +148,7 @@ public final class Settings {
     }
 
     /**
-     * @return Recently opened or saved projects, most recent first.
+     * Returns recently opened or saved projects, most recent first.
      */
     public synchronized List<File> getRecentProjects() {
         List<File> files = new ArrayList<>();
@@ -173,7 +173,7 @@ public final class Settings {
     }
 
     /**
-     * @return Whether playback stops at the end of the last media clip; true unless turned off.
+     * Returns whether playback stops at the end of the last media clip; true unless turned off.
      */
     public synchronized boolean isStopAtEndOfMedia() {
         return data.stopAtEndOfMedia;
@@ -184,7 +184,7 @@ public final class Settings {
     }
 
     /**
-     * @return Whether the playback controls show beside the spreadsheet; true unless hidden.
+     * Returns whether the playback controls show beside the spreadsheet; true unless hidden.
      */
     public synchronized boolean isShowControls() {
         return data.showControls;
@@ -195,7 +195,7 @@ public final class Settings {
     }
 
     /**
-     * @return Whether the playhead's line runs across the spreadsheet's columns as well as its own strip; true unless
+     * Returns whether the playhead's line runs across the spreadsheet's columns as well as its own strip; true unless
      * turned off.
      */
     public synchronized boolean isPlayheadAcrossColumns() {
@@ -207,7 +207,7 @@ public final class Settings {
     }
 
     /**
-     * @return How many empty media columns a new spreadsheet starts with: 1 unless set otherwise, never below 0.
+     * Returns how many empty media columns a new spreadsheet starts with: 1 unless set otherwise, never below 0.
      */
     public synchronized int getNewSpreadsheetMediaColumns() {
         return Math.max(data.newSpreadsheetMediaColumns, 0);
@@ -218,7 +218,7 @@ public final class Settings {
     }
 
     /**
-     * @return Whether cell values are set in a monospaced font: true when {@code spreadsheetFont} is {@code mono},
+     * Returns whether cell values are set in a monospaced font: true when {@code spreadsheetFont} is {@code mono},
      * false for {@code sans} or anything else.
      */
     public synchronized boolean isMonospacedValues() {
@@ -230,7 +230,7 @@ public final class Settings {
     }
 
     /**
-     * @return How far the times and values of cells the needle has passed fade toward the cell colour, from 0
+     * Returns how far the times and values of cells the needle has passed fade toward the cell colour, from 0
      * (unchanged) to 100 (hidden): {@value #DEFAULT_PAST_CELL_DIM} unless set otherwise, clamped to that range.
      */
     public synchronized int getPastCellDim() {
@@ -242,8 +242,8 @@ public final class Settings {
     }
 
     /**
+     * Returns the window's bounds when it was last moved or resized.
      * @param window The window's key, see {@link org.datavyu.views.WindowPlacement}.
-     * @return The window's bounds when it was last moved or resized.
      */
     public synchronized Optional<Rectangle> getWindowBounds(final String window) {
         Bounds bounds = data.windows.get(window);

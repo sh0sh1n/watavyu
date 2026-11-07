@@ -1,4 +1,4 @@
-/**
+/*
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -220,7 +220,7 @@ public final class DatavyuView implements FileDropEventListener {
         panel.close();
     }
 
-    /** @return the selected tab's spreadsheet, or null when no tab is open */
+    /** Returns the selected tab's spreadsheet, or null when no tab is open. */
     public ProjectController selectedController() {
         SpreadSheetPanel panel = getSpreadsheetPanel();
         return panel == null ? null : panel.getProjectController();
@@ -236,14 +236,14 @@ public final class DatavyuView implements FileDropEventListener {
     }
 
     /**
-     * @return The main window.
+     * Returns the main window.
      */
     public JFrame getFrame() {
         return frame;
     }
 
     /**
-     * @return The selected spreadsheet.
+     * Returns the selected spreadsheet.
      */
     public JComponent getComponent() {
         return (JComponent) tabbedPane.getSelectedComponent();
@@ -335,11 +335,11 @@ public final class DatavyuView implements FileDropEventListener {
 
 
     /**
+     * Returns the main window's title.
      * @param applicationTitle The application's name.
      * @param document         The project's file name and changed marker.
      * @param quickKeyMode     Whether quick-key mode is on. Highlight-and-focus mode is on by default, so its state is
      *                         shown only on its button and menu item.
-     * @return The main window's title.
      */
     static String windowTitle(final String applicationTitle, final String document, final boolean quickKeyMode) {
         String title = applicationTitle + " - " + document;
@@ -692,9 +692,9 @@ public final class DatavyuView implements FileDropEventListener {
     }
 
     /**
+     * Returns the project's name.
      * @param autosave the name of an autosaved file: {@code ~}, the project's name, {@code _} and a number, then the
      *                 extension
-     * @return the project's name
      */
     static String recoveredName(final String autosave) {
         String name = ProjectPaths.isProjectFile(autosave)
@@ -951,8 +951,6 @@ public final class DatavyuView implements FileDropEventListener {
 
     /**
      * Function to reset the zoom level to the default size.
-     *
-     * @param evt The event that triggered this action.
      */
     public void resetZoom() {
         changeFontSize(SpreadsheetTheme.DEFAULT_DATA_FONT_SIZE - SpreadsheetTheme.dataFont().getSize());

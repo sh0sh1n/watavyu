@@ -1,4 +1,4 @@
-/**
+/*
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
@@ -181,7 +181,7 @@ public final class NewProjectV extends DatavyuDialog {
     }
 
     /**
-     * @return The new name of the database as specified by the user.
+     * Returns the new name of the database as specified by the user.
      */
     public String getProjectName() {
         return nameField.getText();
