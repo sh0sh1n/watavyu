@@ -8,6 +8,7 @@ import java.awt.Desktop;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -71,6 +72,9 @@ public class MacOS {
         try (BufferedReader output = new BufferedReader(
                 new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
             return output.lines().toList();
+        } catch (UncheckedIOException e) {
+            // Reading the lines wraps a failure to read them.
+            throw e.getCause();
         }
     }
 
