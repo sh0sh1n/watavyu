@@ -41,7 +41,7 @@ public class FrameIndexTest {
         FrameIndex index = thirtyFps();
 
         for (int frame = 0; frame < index.frameCount(); frame++) {
-            assertEquals(index.frameAt(index.reportedMillis(frame)), frame, "frame " + frame);
+            assertEquals(index.frameAt((double) index.reportedMillis(frame)), frame, "frame " + frame);
         }
         assertEquals(index.reportedMillis(1), 34);
         assertEquals(index.reportedMillis(2), 67);

@@ -91,7 +91,7 @@ public class SheetLayoutOrdinal extends SheetLayout {
                     cell.setOrdinal(ord);
                     cell.repaint();
                     ord++;
-                    currentHeight += d.getHeight();
+                    currentHeight += d.height;
 
                     // Determine if this cell overlaps with the previous cell.
                     if (prevCell != null) {

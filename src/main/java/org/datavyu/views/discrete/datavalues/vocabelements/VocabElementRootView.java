@@ -94,11 +94,11 @@ public final class VocabElementRootView extends JTextArea {
      * Recalculates and sets the text to display.
      */
     public void rebuildText() {
-        String ans = "";
+        StringBuilder text = new StringBuilder();
         for (EditorComponent item : editors) {
-            ans += item.getText();
+            text.append(item.getText());
         }
-        setText(ans);
+        setText(text.toString());
     }
 
     /**

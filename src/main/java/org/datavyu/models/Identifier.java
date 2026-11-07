@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * The static generateIdentifier function provides new, unique identifiers in a thread-safe manner.
  */
-public class Identifier {
+public final class Identifier {
 
     /** Lazily initialized hash code */
     private volatile int cachedHash;
@@ -61,8 +61,7 @@ public class Identifier {
 
     @Override
     public boolean equals(final Object obj) {
-        return (this == obj) || (obj != null && getClass() == obj.getClass()
-                && sequenceNumber == ((Identifier) obj).sequenceNumber);
+        return obj instanceof Identifier other && sequenceNumber == other.sequenceNumber;
     }
 
     @Override

@@ -76,7 +76,7 @@ public final class DatavyuVariable implements Variable {
         if (refusesEdits()) {
             return;
         }
-        if (cell.getVariable() == this) {
+        if (equals(cell.getVariable())) {
             if (isHidden()) {
                 // As an undo puts back a cell that was selected.
                 cell.setSelected(false);

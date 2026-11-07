@@ -96,7 +96,8 @@ public final class MediaWindow extends JDialog implements MediaPlayers.ColumnWin
         if (video == null) {
             return;
         }
-        String name = "clip-" + nextName++;
+        String name = "clip-" + nextName;
+        nextName++;
         names.put(clip, name);
         videos.put(clip, video);
         content.add(video, name);

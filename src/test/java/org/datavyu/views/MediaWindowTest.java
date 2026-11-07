@@ -2,6 +2,7 @@ package org.datavyu.views;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertSame;
 import static org.testng.Assert.assertTrue;
 
 import org.testng.annotations.Test;
@@ -44,10 +45,10 @@ public class MediaWindowTest {
                 assertEquals(window.getTitle(), "media_1");
 
                 window.showClip(b, 0.5);
-                assertTrue(shown(window) == second);
+                assertSame(shown(window), second);
 
                 window.showClip(a, 1.0);
-                assertTrue(shown(window) == first);
+                assertSame(shown(window), first);
 
                 window.showClip(null, null);
                 assertTrue(isGap(shown(window)));

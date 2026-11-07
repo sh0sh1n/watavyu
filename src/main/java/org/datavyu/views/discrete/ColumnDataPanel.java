@@ -233,7 +233,8 @@ public final class ColumnDataPanel extends JPanel implements KeyEventDispatcher 
         for (Cell c : model.getCellsTemporally()) {
             SpreadsheetCell sc = viewMap.get(c);
             if (sc != null) {
-                sc.setOrdinal(ord++);
+                sc.setOrdinal(ord);
+                ord++;
                 result.add(sc);
             }
         }
@@ -270,59 +271,30 @@ public final class ColumnDataPanel extends JPanel implements KeyEventDispatcher 
      */
     @Override
     public boolean dispatchKeyEvent(final KeyEvent e) {
-        if ((e.getID() == KeyEvent.KEY_PRESSED) && ((e.getKeyCode() == KeyEvent.VK_UP)
-                || (e.getKeyCode() == KeyEvent.VK_DOWN))) {
-
-            SpreadsheetCell selectedCell = getSelectedCell();
-
-            if (selectedCell != null) {
-
-                int cellId = getCellsTemporally().indexOf(selectedCell);
-
-                if (e.getKeyCode() == KeyEvent.VK_UP) {
-
-                    if (0 <= cellId - 1 && cellId - 1 < getCellsTemporally().size()) {
-
-                        selectedCell.getCell().setHighlighted(false);
-                        selectedCell.getCell().setSelected(false);
-                        int pos = selectedCell.getDataView().getEdTracker().indexOfCurrentEditor();
-                        requestFocus();
-
-                        SpreadsheetCell cellUP = getCellsTemporally().get(cellId - 1);
-
-                        cellUP.getCell().setHighlighted(true);
-                        cellUP.getCell().setSelected(true);
-                        cellUP.getDataView().getEdTracker().setEditor(cellUP.getDataView().getEdTracker().getEditorAtIndex(pos > -1 ? pos : 0));
-                        cellUP.requestFocus();
-
-                        e.consume();
-
-                        return true;
-                    }
-                }
-                if (e.getKeyCode() == KeyEvent.VK_DOWN) {
-
-                    if (0 <= cellId + 1 && cellId + 1 < getCellsTemporally().size()) {
-
-                        selectedCell.getCell().setHighlighted(false);
-                        selectedCell.getCell().setSelected(false);
-                        int pos = selectedCell.getDataView().getEdTracker().indexOfCurrentEditor();
-                        requestFocus();
-
-                        SpreadsheetCell cellDOWN = getCellsTemporally().get(cellId + 1);
-
-                        cellDOWN.getCell().setHighlighted(true);
-                        cellDOWN.getCell().setSelected(true);
-                        cellDOWN.getDataView().getEdTracker().setEditor(cellDOWN.getDataView().getEdTracker().getEditorAtIndex(pos > -1 ? pos : 0));
-                        cellDOWN.requestFocus();
-
-                        e.consume();
-
-                        return true;
-                    }
-                }
-            }
+        if (e.getID() != KeyEvent.KEY_PRESSED
+                || (e.getKeyCode() != KeyEvent.VK_UP && e.getKeyCode() != KeyEvent.VK_DOWN)) {
+            return false;
         }
-        return false;
+        SpreadsheetCell selectedCell = getSelectedCell();
+        if (selectedCell == null) {
+            return false;
+        }
+        int target = getCellsTemporally().indexOf(selectedCell) + (e.getKeyCode() == KeyEvent.VK_UP ? -1 : 1);
+        if (target < 0 || target >= getCellsTemporally().size()) {
+            return false;
+        }
+
+        selectedCell.getCell().setHighlighted(false);
+        selectedCell.getCell().setSelected(false);
+        int pos = selectedCell.getDataView().getEdTracker().indexOfCurrentEditor();
+        requestFocus();
+
+        SpreadsheetCell next = getCellsTemporally().get(target);
+        next.getCell().setHighlighted(true);
+        next.getCell().setSelected(true);
+        next.getDataView().getEdTracker().setEditor(next.getDataView().getEdTracker().getEditorAtIndex(Math.max(pos, 0)));
+        next.requestFocus();
+        e.consume();
+        return true;
     }
 }

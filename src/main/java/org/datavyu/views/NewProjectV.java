@@ -165,15 +165,7 @@ public final class NewProjectV extends DatavyuDialog {
     } // GEN-LAST:event_okButtonActionPerformed
 
     private boolean isValidProjectName(final String name) {
-        if (name == null) {
-            return false;
-        }
-
-        if (name.length() == 0) {
-            return false;
-        }
-
-        return true;
+        return name != null && !name.isEmpty();
     }
 
     /**

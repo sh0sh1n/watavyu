@@ -51,7 +51,8 @@ public abstract class SheetLayout extends ScrollPaneLayout {
     @Override
     public final void layoutContainer(final Container parent) {
         super.layoutContainer(parent);
-        Component view = ((JScrollPane) parent).getViewport().getView();
+        // The scroll pane's viewport, which the layout keeps.
+        Component view = getViewport() == null ? null : getViewport().getView();
         if (view != null && view.isValid() && parent.getSize().equals(placedFor)) {
             return;
         }

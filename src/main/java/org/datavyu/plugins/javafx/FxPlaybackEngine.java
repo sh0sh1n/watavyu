@@ -54,7 +54,9 @@ final class FxPlaybackEngine implements PlaybackEngine {
         this.videoWidth = media.getWidth();
         this.videoHeight = media.getHeight();
         this.mediaDurationMillis = media.getDuration().toMillis();
-        this.timeListener = (property, oldTime, newTime) -> lastTimeMillis = newTime.toMillis();
+        this.timeListener = (property, oldTime, newTime) -> {
+            lastTimeMillis = newTime.toMillis();
+        };
         player.currentTimeProperty().addListener(timeListener);
         player.setOnEndOfMedia(() -> {
             if (listener != null) {

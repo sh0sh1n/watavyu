@@ -266,7 +266,7 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
             for (Span span : entry.getValue()) {
                 if (span.player() != null) {
                     // A hidden column's clips are out of play: paused and silent.
-                    span.player().setInPlay(span.clip() == winner && !entry.getKey().isHidden());
+                    span.player().setInPlay(span.clip().equals(winner) && !entry.getKey().isHidden());
                 }
             }
             Variable column = entry.getKey();
@@ -333,7 +333,7 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
             player.setOffset(clip.getOnset());
             player.setVolumeLevel((float) clip.getClip().volume());
         }, player -> {
-            if (opening.get(clip) != token) {
+            if (!token.equals(opening.get(clip))) {
                 // The clip went, and perhaps came back with undo, while this player was opening.
                 videoController.shutdown(player.getIdentifier(), false);
                 return;
@@ -354,7 +354,7 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
             refresh(column);
             player.setViewerVisible(!column.isHidden());
         }, () -> {
-            if (opening.get(clip) != token) {
+            if (!token.equals(opening.get(clip))) {
                 return;
             }
             opening.remove(clip);
@@ -371,7 +371,7 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
             ColumnWindow window = windows.get(column);
             if (window != null) {
                 window.removeClip(clip);
-                if (players.keySet().stream().noneMatch(other -> other.getVariable() == column)) {
+                if (players.keySet().stream().noneMatch(other -> other.getVariable().equals(column))) {
                     windows.remove(column).close();
                 }
             }

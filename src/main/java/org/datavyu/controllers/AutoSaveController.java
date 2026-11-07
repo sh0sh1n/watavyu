@@ -74,7 +74,7 @@ public final class AutoSaveController implements ActionListener {
     /** Deletes the last autosave, as the spreadsheet's work was just saved; saving goes on while it changes. */
     public void clear() {
         if (file != null) {
-            file.delete();
+            delete(file);
             file = null;
         }
     }
@@ -106,7 +106,7 @@ public final class AutoSaveController implements ActionListener {
             new SaveController().saveProject(next, controller.toDocument(next.getParentFile().toPath()), false);
             // The previous autosave goes only once this one is written, so a failure or crash leaves one behind.
             if (file != null) {
-                file.delete();
+                delete(file);
             }
             file = next;
             next = null;
@@ -116,8 +116,15 @@ public final class AutoSaveController implements ActionListener {
             logger.error("IOException: Unable to autosave.", ioe);
         } finally {
             if (next != null) {
-                next.delete();
+                delete(next);
             }
+        }
+    }
+
+    /** Deletes an autosave, and logs it if the file stays. */
+    private static void delete(final File autosave) {
+        if (!autosave.delete() && autosave.exists()) {
+            logger.warn("Could not delete the autosave " + autosave);
         }
     }
 }

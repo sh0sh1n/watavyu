@@ -132,8 +132,10 @@ public final class Citation {
                 names.add(author.get("name"));
             } else {
                 StringBuilder initials = new StringBuilder();
-                for (String given : author.get("given-names").split(" ")) {
-                    initials.append(initials.length() == 0 ? "" : " ").append(given.charAt(0)).append('.');
+                for (String given : author.get("given-names").split(" ", -1)) {
+                    if (!given.isEmpty()) {
+                        initials.append(initials.length() == 0 ? "" : " ").append(given.charAt(0)).append('.');
+                    }
                 }
                 names.add(author.get("family-names") + ", " + initials);
             }
@@ -172,7 +174,7 @@ public final class Citation {
 
     /** The citation key: the title's first word, lowercased, since keys cannot contain spaces or punctuation. */
     private String key() {
-        String[] words = title.toLowerCase(Locale.ROOT).split("[^a-z0-9]+");
+        String[] words = title.toLowerCase(Locale.ROOT).split("[^a-z0-9]+", -1);
         for (String word : words) {
             if (!word.isEmpty()) {
                 return word;

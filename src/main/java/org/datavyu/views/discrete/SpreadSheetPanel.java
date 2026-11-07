@@ -504,7 +504,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
      */
     public void setDatabase(final DataStore db) {
         // check if we need to deregister any existing listeners.
-        if ((dataStore != null) && (dataStore != db)) {
+        if (dataStore != null && !dataStore.equals(db)) {
             dataStore.removeListener(this);
         }
 
@@ -575,20 +575,16 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
             return false;
         }
         SpreadsheetColumn selectedColumn = getSelectedColumn();
-        if (e.getID() == KeyEvent.KEY_PRESSED && !e.isMetaDown() && !e.isControlDown()) {
-            if ((projectController.isQuickKeyMode() &&
-                    (Character.isAlphabetic(e.getKeyChar()) || Character.isDigit(e.getKeyChar()))
-            )) {
-
-                if (selectedColumn != null && !selectedColumn.getVariable().isMedia()) {
-                    // A locked column refuses the cell, and the key is still taken.
-                    projectController.cells().newCellTyped(selectedColumn.getVariable(), e.getKeyChar(),
-                        videoController.getCurrentTime());
-                    e.consume();
-                    return true;
-                }
-                // Add a cell to that column with this key in the first argument
-            }
+        // In quick-key mode, a letter or digit typed in a selected annotation column makes a cell holding it. A locked
+        // column refuses the cell, and the key is still taken.
+        if (e.getID() == KeyEvent.KEY_PRESSED && !e.isMetaDown() && !e.isControlDown()
+                && projectController.isQuickKeyMode()
+                && (Character.isAlphabetic(e.getKeyChar()) || Character.isDigit(e.getKeyChar()))
+                && selectedColumn != null && !selectedColumn.getVariable().isMedia()) {
+            projectController.cells().newCellTyped(selectedColumn.getVariable(), e.getKeyChar(),
+                videoController.getCurrentTime());
+            e.consume();
+            return true;
         }
         return false;
     }

@@ -135,7 +135,7 @@ public final class EditorTracker
         boolean foundEd = false;
         preCharCount = 0;
         postCharCount = 0;
-        if (currentEditor != NO_EDITOR) {
+        if (!currentEditor.equals(NO_EDITOR)) {
             for (EditorComponent ed : editors) {
                 if (ed.equals(currentEditor)) {
                     foundEd = true;
@@ -437,11 +437,10 @@ public final class EditorTracker
             }
 
             case KeyEvent.VK_ENTER -> {
-                if (!currentEditor.isReturnKeyAccepted() || !currentEditor.canSubSelect()) {
-                    // help out the editors that don't want the return key
-                    if (e.getKeyLocation() == KeyEvent.KEY_LOCATION_STANDARD) {
-                        e.consume();
-                    }
+                // help out the editors that don't want the return key
+                if ((!currentEditor.isReturnKeyAccepted() || !currentEditor.canSubSelect())
+                        && e.getKeyLocation() == KeyEvent.KEY_LOCATION_STANDARD) {
+                    e.consume();
                 }
             }
             case KeyEvent.VK_TAB -> {
@@ -451,13 +450,13 @@ public final class EditorTracker
                         setEditor(nextEditor());
                     } else if (e.isShiftDown()) {
                         setEditor(prevEditor());
-                        if (currentEditor == NO_EDITOR) {
+                        if (currentEditor.equals(NO_EDITOR)) {
                             setEditor(lastEditor());
                         }
                         setEditor(currentEditor); // required for selection issue
                     } else {
                         setEditor(nextEditor());
-                        if (currentEditor == NO_EDITOR) {
+                        if (currentEditor.equals(NO_EDITOR)) {
                             setEditor(firstEditor());
                         }
                         setEditor(currentEditor); // required for selection issue
@@ -483,12 +482,12 @@ public final class EditorTracker
     private void leaveEditor(final boolean left) {
         if (left) {
             setEditor(prevEditor(), Integer.MAX_VALUE, Integer.MAX_VALUE);
-            if (currentEditor == NO_EDITOR) {
+            if (currentEditor.equals(NO_EDITOR)) {
                 setEditor(firstEditor(), 0, 0);
             }
         } else {
             setEditor(nextEditor(), 0, 0);
-            if (currentEditor == NO_EDITOR) {
+            if (currentEditor.equals(NO_EDITOR)) {
                 setEditor(lastEditor(), Integer.MAX_VALUE, Integer.MAX_VALUE);
             }
         }

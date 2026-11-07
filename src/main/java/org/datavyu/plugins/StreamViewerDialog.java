@@ -282,7 +282,7 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
 
     /** @return the clip's own time at a clock time, kept within the clip */
     private long clipTime(final double clockTime) {
-        return (long) Math.min(Math.max(clockTime - offset, 0), getDuration());
+        return (long) Math.min(Math.max(clockTime - (double) offset, 0), (double) getDuration());
     }
 
     /** @return whether a clock time falls within the clip */

@@ -6,8 +6,9 @@ import org.apache.logging.log4j.Logger;
 
 import java.awt.Desktop;
 import java.io.BufferedReader;
-import java.io.File;
+import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -32,24 +33,15 @@ public class MacOS {
     }
 
     /**
-     * Test whether the Apple press and hold functionality is enable.d
+     * Test whether the Apple press and hold functionality is enabled.
      *
      * @return True if press and hold is enabled; otherwise false.
      */
     public static boolean isOSXPressAndHoldEnabled() {
         try {
-            Process process = new ProcessBuilder(new String[]{"bash", "-c", "defaults read -g ApplePressAndHoldEnabled"})
-                    .redirectErrorStream(true)
-                    .directory(new File("./"))
-                    .start();
-            List<String> output = new ArrayList<>();
-            BufferedReader br = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            String line;
-            while ((line = br.readLine()) != null) {
-                output.add(line);
-            }
-            return !(output.size() > 0 && output.get(0).equals("0"));
-        } catch (Exception e) {
+            List<String> output = defaults("read", "-g", "ApplePressAndHoldEnabled");
+            return output.isEmpty() || !output.get(0).equals("0");
+        } catch (IOException e) {
             logger.error("Error when checking press and hold on OSX " + e.getMessage());
         }
         return false;
@@ -62,20 +54,23 @@ public class MacOS {
      */
     public static void setOSXPressAndHoldValue(boolean pressAndHold) {
         try {
-            Process process = new ProcessBuilder(new String[]{
-                    "bash", "-c", "defaults write -g ApplePressAndHoldEnabled -bool " + (pressAndHold ? "true" : "false")})
-                    .redirectErrorStream(true)
-                    .directory(new File("./"))
-                    .start();
-            StringBuilder stringBuilder = new StringBuilder();
-            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(process.getInputStream()));
-            String line;
-            while ((line = bufferedReader.readLine()) != null) {
-                stringBuilder.append(line).append(System.getProperty("line.separator"));
-            }
-            logger.info("Press and hold for OSX command returned: " + stringBuilder);
-        } catch (Exception e) {
+            List<String> output = defaults("write", "-g", "ApplePressAndHoldEnabled", "-bool",
+                pressAndHold ? "true" : "false");
+            logger.info("Press and hold for OSX command returned: " + String.join(System.lineSeparator(), output));
+        } catch (IOException e) {
             logger.error("Error occurred when processing press and hold " + e);
+        }
+    }
+
+    /** Runs the {@code defaults} command with these arguments, and returns the lines it prints, errors included. */
+    private static List<String> defaults(final String... arguments) throws IOException {
+        List<String> command = new ArrayList<>();
+        command.add("defaults");
+        command.addAll(List.of(arguments));
+        Process process = new ProcessBuilder(command).redirectErrorStream(true).start();
+        try (BufferedReader output = new BufferedReader(
+                new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
+            return output.lines().toList();
         }
     }
 
@@ -96,7 +91,7 @@ public class MacOS {
         }
         if (desktop.isSupported(Desktop.Action.APP_OPEN_FILE)) {
             desktop.setOpenFileHandler(event -> event.getFiles().forEach(file -> {
-                if (application.readyToOpenFile) {
+                if (application.isReadyToOpenFile()) {
                     application.getView().openExternalFile(file);
                 } else {
                     application.setCommandLineFile(file.getAbsolutePath());

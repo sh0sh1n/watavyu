@@ -152,7 +152,8 @@ public final class Mp4FrameTable {
         long time = 0;
         for (long[] run : runs) {
             for (long c = 0; c < run[0]; c++) {
-                times[i++] = time;
+                times[i] = time;
+                i++;
                 time += run[1];
             }
         }
@@ -172,7 +173,8 @@ public final class Mp4FrameTable {
             // in them too; reading them as signed is what players do.
             int offset = b.getInt();
             for (long c = 0; c < count && i < samples; c++) {
-                offsets[i++] = offset;
+                offsets[i] = offset;
+                i++;
             }
         }
         return offsets;
@@ -251,7 +253,7 @@ public final class Mp4FrameTable {
                 size = b.getLong();
                 header = 16;
             } else if (size == 0) {
-                size = b.limit() - start;
+                size = (long) b.limit() - start;
             }
             if (size < header || start + size > b.limit()) {
                 break;

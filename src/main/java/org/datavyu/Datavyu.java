@@ -73,8 +73,8 @@ public final class Datavyu {
     /** The contents of the main window. */
     private DatavyuView datavyuView;
 
-    /** This application is ready to open a file */
-    public boolean readyToOpenFile = false;
+    /** This application is ready to open a file; macOS asks it to open files from its own thread. */
+    private volatile boolean readyToOpenFile;
 
     /** File path from the command line */
     private String commandLineFile;
@@ -199,6 +199,11 @@ public final class Datavyu {
         datavyuView.startFirstSpreadsheet();
         datavyuView.checkForAutosavedFile();
         ready();
+    }
+
+    /** Returns whether the application is ready to open a file, as it is once its window and settings are up. */
+    public boolean isReadyToOpenFile() {
+        return readyToOpenFile;
     }
 
     private void ready() {

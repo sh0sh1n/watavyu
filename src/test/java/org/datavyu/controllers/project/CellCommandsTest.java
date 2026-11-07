@@ -273,7 +273,7 @@ public class CellCommandsTest {
         cells.newCellClosingPrevious(5_000);
 
         List<Cell> temporal = gaze.getCellsTemporally();
-        Cell last = temporal.get(1) == together.get(0) || temporal.get(1) == together.get(1) ? temporal.get(1) : null;
+        Cell last = together.contains(temporal.get(1)) ? temporal.get(1) : null;
         assertEquals(last.getOffset(), 4_999);
         assertEquals(temporal.get(0).getOffset(), 3_000);
     }

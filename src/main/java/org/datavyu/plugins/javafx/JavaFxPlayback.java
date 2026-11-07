@@ -121,7 +121,7 @@ public final class JavaFxPlayback {
 
     /** Shows the frame on screen at the given time, clamped to the stream. */
     public void seek(final long millis) {
-        seekFrame(frames.frameAt(millis));
+        seekFrame(frames.frameAt((double) millis));
     }
 
     public void play() {

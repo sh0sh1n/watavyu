@@ -309,9 +309,9 @@ public final class ClockTimer {
      * Update the clock time with the elapsed time since the last update
      */
     private synchronized void updateElapsedTime() {
-        double newTime = System.nanoTime();
+        double newTime = (double) System.nanoTime();
         clockTime = stopped ? clockTime : Math.min(Math.max(
-                clockTime + rate * (newTime - lastTime) / NANO_IN_MILLI, minTime), maxTime);
+                clockTime + rate * (newTime - lastTime) / NANO_IN_MILLI, (double) minTime), (double) maxTime);
         lastTime = newTime;
     }
 

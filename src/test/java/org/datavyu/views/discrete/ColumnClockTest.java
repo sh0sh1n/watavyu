@@ -50,7 +50,7 @@ public class ColumnClockTest {
             List<SpreadsheetCell> cells = registered.getAllValues().stream()
                 .filter(SpreadsheetCell.class::isInstance).map(SpreadsheetCell.class::cast).toList();
             assertEquals(cells.size(), 2);
-            SpreadsheetCell deletedView = cells.stream().filter(cell -> cell.getCell() == deleted).findFirst()
+            SpreadsheetCell deletedView = cells.stream().filter(cell -> cell.getCell().equals(deleted)).findFirst()
                 .orElseThrow();
 
             notes.removeCell(deleted);

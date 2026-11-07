@@ -99,4 +99,16 @@ public class CitationTest {
         assertEquals(citation.apa("1.0.0"),
             "Lovelace, A. (n.d.). Say \"Watavyu\" (Version 1.0.0) [Computer software]. https://example.org");
     }
+
+    /** Extra spaces between, before or after given names add no initials. */
+    @Test
+    public void extraSpacesInGivenNamesAreSkipped() {
+        Citation citation = parse(BASE + """
+            authors:
+              - given-names: " Ada  Maria "
+                family-names: Lovelace
+            """);
+        assertEquals(citation.apa("1.0.0"),
+            "Lovelace, A. M. (n.d.). Watavyu (Version 1.0.0) [Computer software]. https://github.com/sh0sh1n/watavyu");
+    }
 }
