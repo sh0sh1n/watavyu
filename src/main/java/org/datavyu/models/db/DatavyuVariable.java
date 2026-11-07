@@ -23,8 +23,6 @@
 
 package org.datavyu.models.db;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -34,10 +32,9 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public final class DatavyuVariable implements Variable {
 
-    private static Logger logger = LogManager.getLogger(DatavyuVariable.class);
     /** Told of changes to this column. */
     private final List<VariableListener> listeners = new CopyOnWriteArrayList<>();
-    private static CellComparator CellComparator = new CellComparator();
+    private static final CellComparator CELL_ORDER = new CellComparator();
     final private UUID variableId = UUID.randomUUID();
     private List<Cell> cells = new CopyOnWriteArrayList<>();
     /** The codes' names, in order; each cell has a value for each. */
@@ -207,7 +204,7 @@ public final class DatavyuVariable implements Variable {
 
     @Override
     public Cell getCellTemporally(final int index) {
-        Collections.sort(cells, CellComparator);
+        cells.sort(CELL_ORDER);
         return cells.get(index);
     }
 
@@ -231,7 +228,7 @@ public final class DatavyuVariable implements Variable {
 
     @Override
     public List<Cell> getCellsTemporally() {
-        Collections.sort(cells, CellComparator);
+        cells.sort(CELL_ORDER);
         return cells;
     }
 

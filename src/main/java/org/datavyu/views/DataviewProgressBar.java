@@ -96,7 +96,7 @@ public class DataviewProgressBar extends JDialog {
         cancelButton.addActionListener(new java.awt.event.ActionListener() {
             @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jButton_cancelActionPerformed(evt);
+                jButton_cancelActionPerformed();
             }
         });
 
@@ -132,7 +132,7 @@ public class DataviewProgressBar extends JDialog {
         pack();
     }
 
-    private void jButton_cancelActionPerformed(java.awt.event.ActionEvent evt) {
+    private void jButton_cancelActionPerformed() {
         isCanceled = true;
         infoTextArea.append(String.format("Aborting..."));
         if (isError) {

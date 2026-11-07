@@ -63,7 +63,6 @@ public class SheetLayoutOrdinal extends SheetLayout {
         List<ColInfo> columnHeight = new ArrayList<>();
 
         int maxHeight = 0;
-        int selectedHeight = -1;
         int colID = 0;
         SpreadsheetCell selectedCell = null;
         for (SpreadsheetColumn col : mainView.getColumns()) {
@@ -82,7 +81,6 @@ public class SheetLayoutOrdinal extends SheetLayout {
                     }
                     Dimension d = cell.getPreferredSize();
                     if (cell.getCell().isSelected()) {
-                        selectedHeight = currentHeight;
                         selectedCell = cell;
                     }
 

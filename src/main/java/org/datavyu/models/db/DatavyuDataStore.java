@@ -22,8 +22,6 @@
  */
 package org.datavyu.models.db;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -37,8 +35,6 @@ import java.util.Map;
  */
 public class DatavyuDataStore implements DataStore {
 
-    /** Logger for the DataStore */
-    private static Logger logger = LogManager.getLogger(DatavyuDataStore.class);
 
     /** Told when this spreadsheet is changed or saved, so its title can show it. */
     private TitleNotifier titleNotifier = null;

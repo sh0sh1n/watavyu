@@ -24,8 +24,8 @@ public class DatavyuCell implements Cell {
     /** Told of changes to this cell. */
     private final List<CellListener> listeners = new CopyOnWriteArrayList<>();
     final private UUID id = UUID.randomUUID();
-    private long onset = 0L;
-    private long offset = 0L;
+    private long onset;
+    private long offset;
     private boolean selected;
     private boolean highlighted;
     private Variable parent;

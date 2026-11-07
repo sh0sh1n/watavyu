@@ -2,7 +2,6 @@ package org.datavyu.views.discrete;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
-import static org.testng.Assert.assertThrows;
 import static org.testng.Assert.assertTrue;
 
 import org.datavyu.controllers.project.ProjectController;
@@ -13,13 +12,9 @@ import org.datavyu.models.db.MediaClip;
 import org.datavyu.models.db.Variable;
 import org.datavyu.models.db.VariableListener;
 import org.datavyu.models.project.Project;
-import org.datavyu.undoableedits.LockColumnEdit;
 import org.testng.annotations.Test;
 
 import javax.swing.JCheckBoxMenuItem;
-import javax.swing.undo.CannotRedoException;
-import javax.swing.undo.CannotUndoException;
-import javax.swing.undo.UndoableEdit;
 import java.util.ArrayList;
 import java.util.List;
 

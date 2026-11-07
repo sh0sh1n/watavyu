@@ -18,7 +18,6 @@ import org.datavyu.util.Settings;
 
 import javax.swing.*;
 import java.awt.*;
-import java.io.File;
 
 
 /**

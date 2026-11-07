@@ -295,7 +295,7 @@ public final class VariableListV extends DatavyuDialog
                 NCOLUMN);
     }
 
-    private class VListTableModel extends DefaultTableModel {
+    private static class VListTableModel extends DefaultTableModel {
         @Override
         public Class<?> getColumnClass(int column) {
             if (column == VCOLUMN) {

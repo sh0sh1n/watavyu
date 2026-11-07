@@ -225,20 +225,12 @@ public class VariableTest {
 
     @Test
     public void testTemporalOrder() {
-        List<Cell> cells = new ArrayList<Cell>();
-        List<Cell> orderedCells = new ArrayList<Cell>();
         Cell c1 = model.createCell();
         Cell c2 = model.createCell();
 
-        cells.add(c1);
-        cells.add(c2);
-
-        orderedCells.add(c2);
-        orderedCells.add(c1);
-
         c1.setOnset(100);
 
-        assertEquals(model.getCellsTemporally(), orderedCells);
+        assertEquals(model.getCellsTemporally(), List.of(c2, c1));
         assertEquals(model.getCellTemporally(0), c2);
     }
 

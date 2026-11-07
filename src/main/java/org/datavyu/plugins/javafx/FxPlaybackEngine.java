@@ -40,21 +40,21 @@ final class FxPlaybackEngine implements PlaybackEngine {
     /** The fastest rate MediaPlayer accepts. */
     static final double MAX_RATE = 8.0;
 
-    private final MediaPlayer player;
-    private final int width;
-    private final int height;
-    private final double durationMillis;
+    private final MediaPlayer mediaPlayer;
+    private final int videoWidth;
+    private final int videoHeight;
+    private final double mediaDurationMillis;
     private final ChangeListener<Duration> timeListener;
-    private volatile double currentTimeMillis;
+    private volatile double lastTimeMillis;
     private Listener listener;
 
     private FxPlaybackEngine(final MediaPlayer player) {
-        this.player = player;
+        this.mediaPlayer = player;
         Media media = player.getMedia();
-        this.width = media.getWidth();
-        this.height = media.getHeight();
-        this.durationMillis = media.getDuration().toMillis();
-        this.timeListener = (property, oldTime, newTime) -> currentTimeMillis = newTime.toMillis();
+        this.videoWidth = media.getWidth();
+        this.videoHeight = media.getHeight();
+        this.mediaDurationMillis = media.getDuration().toMillis();
+        this.timeListener = (property, oldTime, newTime) -> lastTimeMillis = newTime.toMillis();
         player.currentTimeProperty().addListener(timeListener);
         player.setOnEndOfMedia(() -> {
             if (listener != null) {
@@ -123,19 +123,19 @@ final class FxPlaybackEngine implements PlaybackEngine {
 
     /** Returns the player for a MediaView. */
     MediaPlayer player() {
-        return player;
+        return mediaPlayer;
     }
 
     int width() {
-        return width;
+        return videoWidth;
     }
 
     int height() {
-        return height;
+        return videoHeight;
     }
 
     double durationMillis() {
-        return durationMillis;
+        return mediaDurationMillis;
     }
 
     @Override
@@ -145,44 +145,44 @@ final class FxPlaybackEngine implements PlaybackEngine {
 
     @Override
     public void play() {
-        player.play();
+        mediaPlayer.play();
     }
 
     @Override
     public void pause() {
-        player.pause();
-        currentTimeMillis = player.getCurrentTime().toMillis();
+        mediaPlayer.pause();
+        lastTimeMillis = mediaPlayer.getCurrentTime().toMillis();
     }
 
     @Override
     public void seek(final double millis) {
-        player.seek(Duration.millis(millis));
-        currentTimeMillis = millis;
+        mediaPlayer.seek(Duration.millis(millis));
+        lastTimeMillis = millis;
     }
 
     @Override
     public void setRate(final double rate) {
-        player.setRate(Math.min(rate, MAX_RATE));
+        mediaPlayer.setRate(Math.min(rate, MAX_RATE));
     }
 
     @Override
     public void setVolume(final double volume) {
-        player.setVolume(volume);
+        mediaPlayer.setVolume(volume);
     }
 
     @Override
     public double currentTimeMillis() {
-        return currentTimeMillis;
+        return lastTimeMillis;
     }
 
     @Override
     public void dispose() {
-        player.currentTimeProperty().removeListener(timeListener);
-        player.setOnEndOfMedia(null);
-        player.setOnError(null);
-        player.setOnReady(null);
-        player.getMedia().setOnError(null);
+        mediaPlayer.currentTimeProperty().removeListener(timeListener);
+        mediaPlayer.setOnEndOfMedia(null);
+        mediaPlayer.setOnError(null);
+        mediaPlayer.setOnReady(null);
+        mediaPlayer.getMedia().setOnError(null);
         listener = null;
-        player.dispose();
+        mediaPlayer.dispose();
     }
 }

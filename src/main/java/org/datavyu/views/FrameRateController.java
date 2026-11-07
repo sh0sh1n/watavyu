@@ -10,7 +10,6 @@ import java.util.Map;
  */
 public class FrameRateController {
 
-    private static final long USER_FRAME_RATE_ID = -1;
 
     private Map<Long, Float> trackToFrameRate = new HashMap<>();
 

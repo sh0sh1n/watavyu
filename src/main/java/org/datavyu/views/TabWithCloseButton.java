@@ -87,7 +87,7 @@ public class TabWithCloseButton extends JPanel {
     }
 
     private class TabButton extends JButton implements ActionListener {
-        public TabButton() {
+        TabButton() {
             int size = 18;
             setPreferredSize(new Dimension(size, size));
             setToolTipText("close this tab");

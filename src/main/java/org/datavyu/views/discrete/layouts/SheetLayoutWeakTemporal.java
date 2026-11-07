@@ -47,7 +47,7 @@ public class SheetLayoutWeakTemporal extends SheetLayout {
     static final int TAIL_MAX = 600;
 
     /** Where times fell down the sheet in the last layout. */
-    private TimeAxis timeAxis = TimeAxis.NONE;
+    private TimeAxis lastAxis = TimeAxis.NONE;
 
     /**
      * SheetLayoutOrdinal constructor.
@@ -195,7 +195,7 @@ public class SheetLayoutWeakTemporal extends SheetLayout {
                 bottoms.merge(end, sc.getY() + sc.getHeight(), Integer::max);
             }
         }
-        timeAxis = new TimeAxis(onsetMap, bottoms);
+        lastAxis = new TimeAxis(onsetMap, bottoms);
 
         padColumns(mainView);
         laidOut();
@@ -239,7 +239,7 @@ public class SheetLayoutWeakTemporal extends SheetLayout {
 
     @Override
     public Optional<TimeAxis> timeAxis() {
-        return Optional.of(timeAxis);
+        return Optional.of(lastAxis);
     }
 
     @Override

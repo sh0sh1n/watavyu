@@ -494,7 +494,6 @@ public final class DatavyuView implements FileDropEventListener {
             if (!canSave(fc.getSelectedFile().getParent(), dbFileName)) {
                 return;
             }
-            File file = new File(fc.getSelectedFile().getParent(), dbFileName);
 
             exportJSON.exportAsJSON(dbFileName, projectController.getDataStore());
         } catch (Exception e) {
@@ -619,7 +618,6 @@ public final class DatavyuView implements FileDropEventListener {
         task.addPropertyChangeListener(new PropertyChangeListener() {
             @Override
             public void propertyChange(PropertyChangeEvent evt) {
-                String test = "";
                 if ("progress".equals(evt.getPropertyName())) {
                     int val = (Integer) evt.getNewValue();
                     String msg = switch (val) {
@@ -1445,7 +1443,7 @@ public final class DatavyuView implements FileDropEventListener {
         }
     }
 
-    private class NoEditTableModel extends DefaultTableModel {
+    private static class NoEditTableModel extends DefaultTableModel {
         @Override
         public boolean isCellEditable(int r, int c) {
             return false;

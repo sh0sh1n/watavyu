@@ -187,13 +187,7 @@ public class SpreadsheetView extends JPanel implements Scrollable {
     public final int getScrollableUnitIncrement(final Rectangle visibleRect,
                                                 final int orientation,
                                                 final int direction) {
-        //Get the current position.
-        int currentPosition = 0;
-        if (orientation == SwingConstants.HORIZONTAL) {
-            currentPosition = visibleRect.x;
-        } else {
-            currentPosition = visibleRect.y;
-        }
+        int currentPosition = orientation == SwingConstants.HORIZONTAL ? visibleRect.x : visibleRect.y;
 
         //Return the number of pixels between currentPosition
         //and the nearest tick mark in the indicated direction.

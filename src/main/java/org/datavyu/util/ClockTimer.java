@@ -57,7 +57,7 @@ public final class ClockTimer {
     private double lastTime;
 
     /** Is the clock stopped */
-    private volatile boolean isStopped;
+    private volatile boolean stopped;
 
     /** The rate factor for the clock updates */
     private float rate = 1F;
@@ -80,7 +80,7 @@ public final class ClockTimer {
         lastTime = 0;
         minTime = 0;
         maxTime = 0;
-        isStopped = true;
+        stopped = true;
 
         execService.scheduleAtFixedRate(() -> periodicSync()
             , CLOCK_DELAY, CLOCK_INTERVAL, TimeUnit.MILLISECONDS);
@@ -213,19 +213,19 @@ public final class ClockTimer {
      * start event with the current clock time
      */
     public synchronized void start() {
-        if (isStopped) {
+        if (stopped) {
             logger.debug("Starting Clock");
-            isStopped = false;
+            stopped = false;
             lastTime = System.nanoTime();
             notifyStart();
         }
     }
 
     private synchronized void stop() {
-        if (!isStopped) {
+        if (!stopped) {
             logger.debug("Stopping Clock");
             updateElapsedTime();
-            isStopped = true;
+            stopped = true;
             notifyStop();
             // Force sync after a stop
             notifyForceSync();
@@ -240,10 +240,10 @@ public final class ClockTimer {
      * instead of calling stop directly!
      */
     public synchronized void pause() {
-        if (!isStopped) {
+        if (!stopped) {
             logger.debug("Pausing Clock");
             updateElapsedTime();
-            isStopped = true;
+            stopped = true;
             notifyPause();
             // Force sync after a stop
             notifyForceSync();
@@ -254,7 +254,7 @@ public final class ClockTimer {
      * Returns true if clock is Paused.
      */
     public boolean isPaused() {
-        return isStopped;
+        return stopped;
     }
 
     /**
@@ -310,7 +310,7 @@ public final class ClockTimer {
      */
     private synchronized void updateElapsedTime() {
         double newTime = System.nanoTime();
-        clockTime = isStopped ? clockTime : Math.min(Math.max(
+        clockTime = stopped ? clockTime : Math.min(Math.max(
                 clockTime + rate * (newTime - lastTime) / NANO_IN_MILLI, minTime), maxTime);
         lastTime = newTime;
     }

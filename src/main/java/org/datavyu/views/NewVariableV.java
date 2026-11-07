@@ -86,7 +86,7 @@ public final class NewVariableV extends DatavyuDialog {
         okButton.addActionListener(new java.awt.event.ActionListener() {
             @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                okButtonActionPerformed(evt);
+                okButtonActionPerformed();
             }
         });
 
@@ -95,7 +95,7 @@ public final class NewVariableV extends DatavyuDialog {
         cancelButton.addActionListener(new java.awt.event.ActionListener() {
             @Override
             public void actionPerformed(java.awt.event.ActionEvent evt) {
-                cancelButtonActionPerformed(evt);
+                cancelButtonActionPerformed();
             }
         });
 
@@ -138,10 +138,8 @@ public final class NewVariableV extends DatavyuDialog {
 
     /**
      * The action to invoke when the user selects the OK button.
-     *
-     * @param evt The event that triggered this action.
      */
-    private void okButtonActionPerformed(final java.awt.event.ActionEvent evt) {// GEN-FIRST:event_okButtonActionPerformed
+    private void okButtonActionPerformed() {// GEN-FIRST:event_okButtonActionPerformed
         try {
             logger.info("newVar - create column:" + getVariableName());
             controller.columns().newColumn(getVariableName());
@@ -156,10 +154,8 @@ public final class NewVariableV extends DatavyuDialog {
 
     /**
      * The action to invoke when the user selects the cancel button.
-     *
-     * @param evt The event that triggered this action.
      */
-    private void cancelButtonActionPerformed(final java.awt.event.ActionEvent evt) {// GEN-FIRST:event_cancelButtonActionPerformed
+    private void cancelButtonActionPerformed() {// GEN-FIRST:event_cancelButtonActionPerformed
         logger.info("newVar - cancel create.");
         dispose();
 

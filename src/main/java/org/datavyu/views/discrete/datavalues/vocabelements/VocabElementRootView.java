@@ -14,8 +14,6 @@
  */
 package org.datavyu.views.discrete.datavalues.vocabelements;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.datavyu.models.db.Variable;
 import org.datavyu.views.discrete.EditorComponent;
 import org.datavyu.views.discrete.EditorTracker;
@@ -31,10 +29,6 @@ import java.util.List;
 public final class VocabElementRootView extends JTextArea {
 
     /**
-     * The logger for this class.
-     */
-    private static Logger LOGGER = LogManager.getLogger(VocabElementRootView.class);
-    /**
      * Border to set the text area more aligned to the icons.
      */
     private static Border GAP_BORDER = BorderFactory.createEmptyBorder(2, 0, 0, 0);
@@ -46,7 +40,6 @@ public final class VocabElementRootView extends JTextArea {
      * The editor tracker responsible for the editor components.
      */
     private EditorTracker edTracker;
-    private VocabElementV pv;
 
     /**
      * Constructor
@@ -62,7 +55,6 @@ public final class VocabElementRootView extends JTextArea {
         // just push down a little bit
         setBorder(GAP_BORDER);
 
-        this.pv = pv;
 
         editors = new ArrayList<>();
         edTracker = new EditorTracker(this, editors, vocabVariable);
