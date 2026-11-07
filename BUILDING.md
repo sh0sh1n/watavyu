@@ -55,7 +55,7 @@ caffeinate -u -d ./gradlew playbackBenchmark -Pmedia=/path/to/video.mp4 [-Pseeks
 ## How the Gradle Build Works
 
 - `settings.gradle.kts` names the root project.
-- `build.gradle.kts` applies Gradle's `application` plugin, selects `com.sh0sh1n.watavyu.Datavyu` as the main class, and sets the 1 GB application heap. The build stops early on anything other than Apple Silicon macOS.
+- `build.gradle.kts` applies Gradle's `application` plugin, selects `com.sh0sh1n.watavyu.Watavyu` as the main class, and sets the 1 GB application heap. The build stops early on anything other than Apple Silicon macOS.
 - The Java toolchain requests JDK 25, so compiler selection is explicit rather than inherited from whichever JDK happens to be on `PATH`.
 - Dependencies resolve from Maven Central only. OpenJFX 27 (`javafx-base`, `-graphics`, `-media`, `-swing`, `mac-aarch64` classifier) is the video stack. The x86_64-only `ffmpeg-plugin` and `libNativeOSXCanvas` artifacts and their dead legacy repositories are gone.
 - Every dependency and plugin version is in `gradle/libs.versions.toml`. Gradle checks the SHA-256 of every downloaded artifact against `gradle/verification-metadata.xml` and fails the build on a mismatch or an unknown artifact; the wrapper checks the Gradle distribution against `distributionSha256Sum` in `gradle/wrapper/gradle-wrapper.properties`. To add or change a dependency, edit the catalog, then run `caffeinate -u -d ./gradlew --write-verification-metadata sha256 build analyze integrationTest` and review the new checksums in the diff before committing. `dependencyUpdates` turns verification off for its own lookups of newer versions.
@@ -180,7 +180,7 @@ The fork is a hard reset for macOS: no backward compatibility with old Datavyu v
 OpenJFX Media (`com.sh0sh1n.watavyu.plugins.javafx`) is the only video player. Each video window is a Swing dialog that hosts a JavaFX `MediaView` through `JFXPanel`; the spreadsheet, timeline and annotation model stay Swing. On macOS, OpenJFX plays video through AVFoundation, so decoding is hardware-accelerated.
 
 - `JavaFxVideoPlugin` opens a file on a background thread (it is no longer a plugin: there is no plugin system), waits up to 30 s for the player to become ready, and only then builds the window on the Swing EDT. Adding media and project loading both open videos this way, so neither UI thread blocks. A file that fails to open shows a message, its player is disposed, and its clip stays, marked as one that could not be opened.
-- `JavaFxPlayback` is the thread-safe adapter between Datavyu's clock/Swing threads and the JavaFX Application Thread. Every player command is queued to the JavaFX thread; reads never block. Rapid seeks (scrubbing) are coalesced so only the latest target is decoded.
+- `JavaFxPlayback` is the thread-safe adapter between Watavyu's clock/Swing threads and the JavaFX Application Thread. Every player command is queued to the JavaFX thread; reads never block. Rapid seeks (scrubbing) are coalesced so only the latest target is decoded.
 - `Mp4FrameTable` reads every frame's presentation time from the file's sample tables (`stts`, `ctts`, `elst`) without decoding. Seeks and frame steps target real frame boundaries, including variable-frame-rate files, and paused positions are reported as the displayed frame's start time rounded up to a whole millisecond. If the frame table cannot be read, 30 fps is assumed and frame stepping is disabled.
 - The reported frame rate is the nominal one (inverse of the median frame duration). OBS recordings hold the second-to-last frame for two frame times; edge frames like that do not make a file count as variable frame rate.
 - Reverse playback is not supported. Shuttling backward stops at 0x instead of entering negative rates, and a negative rate pauses. Frame stepping works in both directions.
@@ -203,7 +203,7 @@ This changes only the container; the original file is untouched and the video/au
 `third_party/openjfx-media-avf/` contains `avf.patch`, `build.sh`, and the resulting arm64 `libjfxmedia_avf.dylib` (checked in so normal builds do not need Xcode). The patch changes only OpenJFX 27's AVFoundation player (`AVFMediaPlayer.mm`):
 
 1. **Exact seeks.** Upstream seeks with `CMTimeMakeWithSeconds(time, 1)` and default tolerance, which truncates every seek to a whole second and then snaps to a keyframe. Measured with stock OpenJFX on this clip: 0 of 25 seeks landed on the requested frame (up to 36 frames off). The patch seeks with nanosecond precision and zero tolerance.
-2. **No audio processing tap.** Upstream attaches an `MTAudioProcessingTap` for balance, equalizer and spectrum, none of which Datavyu uses. It delayed the first new frame after play by ~350 ms (median 475 ms vs ~135 ms). Volume is applied on the `AVPlayer` instead.
+2. **No audio processing tap.** Upstream attaches an `MTAudioProcessingTap` for balance, equalizer and spectrum, none of which Watavyu uses. It delayed the first new frame after play by ~350 ms (median 475 ms vs ~135 ms). Volume is applied on the `AVPlayer` instead.
 3. **Seek frame delivery.** After a seek, AVFoundation's video output could hand over a frame decoded before the seek, stamped with the new time; OpenJFX then skipped the correct frame because its timestamp was unchanged, leaving a stale picture while paused (about 1 in 40 seeks issued right after pausing). The patch delivers the frame at the seek target when the seek completes, with a timestamp nudged by under a microsecond, and restarts the display link.
 
 To rebuild the library (needs Xcode command line tools and network access), then check the result:
@@ -245,7 +245,7 @@ Latencies are quantized by the 60 Hz display (frames arrive on refresh, roughly 
 
 Frame accuracy: every paused seek, step, seek after pause and end-of-file seek on the barcoded files showed exactly the requested frame. Before the seek-frame fix, about 1 in 40 seeks issued immediately after pausing, and 2 in 10 scrub bursts, left an older frame on screen.
 
-Playback starts about 130 ms after `play`, and the video then trails the wall clock by a steady 3 frames; Datavyu's clock remains authoritative and re-syncs the video when it drifts more than 1.5 s or on pause. With OpenJFX's audio tap still attached, the first new frame took about 470 ms.
+Playback starts about 130 ms after `play`, and the video then trails the wall clock by a steady 3 frames; Watavyu's clock remains authoritative and re-syncs the video when it drifts more than 1.5 s or on pause. With OpenJFX's audio tap still attached, the first new frame took about 470 ms.
 
 ### Caching and Proxies
 
@@ -259,7 +259,7 @@ Not needed for seeking with this backend. Native exact seeks already complete in
 - `./gradlew test` runs 485 tests and all pass, with none skipped. Before the move from Mockito 2.10 to 5.24.0, the `setUp` methods of `CellTest`, `DataStoreTest` and `ColumnTest` failed on JDK 25 ("Cannot define class using reflection") and TestNG skipped those classes' 27 tests. `OpenControllerTest` and `SaveControllerTest` pass since their Maven-era paths (a trailing slash on `testPath`, output under `target/`) were fixed. The suite is now a green verification gate.
 - On 2026-10-29, a generated project of 11 columns and 3,000 cells, driven in the running app on this machine with the EDT's event times recorded: scrolling in 6 or 40 px steps at 60 Hz kept the EDT about 21% busy with at most one event over 16 ms (33% on `main` before U5, and 44–56% with up to 18 such events before the layout stopped placing cells on scroll), and 10 s of playback at 1× or 4× with the sheet following the needle had at most two (45–67 before), with the playhead's line across the columns on or off. The harness was a throwaway; the rule it measured is pinned by `SheetLayoutTest`.
 - Checked by the owner on 2026-10-21: clips in one column take over each other's picture and sound, and clips in different media columns play their sound together, each following its window's volume control.
-- Not verified automatically: audible audio and the volume control (the volume path changed with the audio-tap removal), and interactive playback driven by the Datavyu clock and keyboard shortcuts. Check these by hand after `make run`.
+- Not verified automatically: audible audio and the volume control (the volume path changed with the audio-tap removal), and interactive playback driven by Watavyu's clock and keyboard shortcuts. Check these by hand after `make run`.
 
 ## Not Included
 

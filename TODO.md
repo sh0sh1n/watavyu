@@ -21,7 +21,7 @@ Updated 2026-11-06. Re-measure with the commands in [BUILDING.md › Analysis Re
 | Error Prone + javac lint warnings | 1,227 | 0: every compile fails on one, with `serial` off (about 130) |
 | PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 101 / 0 (PMD only in size and complexity and three deliberate catch-alls; the rest gated); 13 |
 | Never-invoked methods (`dead-code.py`) | 109+ | 28: test-only accessors, unused settings setters, and Swing overrides the script cannot see |
-| Static global access (`grep -rohP 'Datavyu\.(get\|set)\w*\(' src/main/java \| wc -l`) | about 330 call sites | 0: each tab's `ProjectController` is passed to what it owns |
+| Static global access (`grep -rohP 'Watavyu\.(get\|set)\w*\(' src/main/java \| wc -l`) | about 330 call sites | 0: each tab's `ProjectController` is passed to what it owns |
 
 ## Bugs
 
