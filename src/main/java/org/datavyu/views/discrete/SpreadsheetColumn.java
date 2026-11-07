@@ -576,7 +576,6 @@ public final class SpreadsheetColumn extends JLabel implements VariableListener,
             return;
         }
         if(moveable && !draggable) {
-            System.out.println("Pressed X: " + me.getX());
             setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
         }
     }

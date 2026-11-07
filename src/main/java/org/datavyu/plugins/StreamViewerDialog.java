@@ -307,19 +307,16 @@ public abstract class StreamViewerDialog extends DatavyuDialog implements Stream
 
     @Override
     public synchronized void streamsBoundaryCheck(final double clockTime) {
-        try {
-            if (!clockTimer.isPaused() && getCurrentTime() != -1) {
-                if (inPlay && holds(clockTime) && !isPlaying() && !isSeekPlaybackEnabled()) {
-                    logger.info("Stream Boundary Starting " + getIdentifier() + " at clock " + clockTime);
-                    start();
-                }
-                if ((!inPlay || !holds(clockTime)) && isPlaying()) {
-                    logger.info("Stream Boundary Stopping " + getIdentifier() + " at clock " + clockTime);
-                    pause();
-                }
+        // The clock logs a failure here and goes on.
+        if (!clockTimer.isPaused() && getCurrentTime() != -1) {
+            if (inPlay && holds(clockTime) && !isPlaying() && !isSeekPlaybackEnabled()) {
+                logger.info("Stream Boundary Starting " + getIdentifier() + " at clock " + clockTime);
+                start();
             }
-        } catch (Exception e) {
-            logger.error("Error during stream boundary check " + e.getMessage());
+            if ((!inPlay || !holds(clockTime)) && isPlaying()) {
+                logger.info("Stream Boundary Stopping " + getIdentifier() + " at clock " + clockTime);
+                pause();
+            }
         }
     }
 

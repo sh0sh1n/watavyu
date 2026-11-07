@@ -362,11 +362,7 @@ public final class VocabEditorV extends DatavyuDialog {
      */
     public void closeWindow() {
         LOGGER.info("vocEd - close");
-        try {
-            dispose();
-        } catch (Throwable e) {
-            LOGGER.error("Unable to destroy vocab editor view.", e);
-        }
+        dispose();
         updateDialogState();
     }
 

@@ -91,9 +91,13 @@ public final class Settings {
     public static Settings load(final Path file) {
         if (Files.isRegularFile(file)) {
             try {
+                // A file holding only null reads as null.
                 Data data = MAPPER.readValue(file.toFile(), Data.class);
-                return new Settings(file, data.normalized());
-            } catch (IOException | RuntimeException e) {
+                if (data != null) {
+                    return new Settings(file, data.normalized());
+                }
+                logger.warn("No settings in " + file + "; using defaults");
+            } catch (IOException e) {
                 logger.warn("Cannot read settings from " + file + "; using defaults", e);
             }
         }
@@ -112,7 +116,7 @@ public final class Settings {
             temporary = Files.createTempFile(folder, FILE_NAME, ".tmp");
             MAPPER.writeValue(temporary.toFile(), data);
             Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-        } catch (IOException | RuntimeException e) {
+        } catch (IOException e) {
             logger.error("Cannot save settings to " + file, e);
             deleteQuietly(temporary);
         }

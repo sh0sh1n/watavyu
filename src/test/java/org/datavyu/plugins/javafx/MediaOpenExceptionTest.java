@@ -4,6 +4,8 @@ import javafx.scene.media.MediaException;
 import org.testng.annotations.Test;
 
 import java.io.File;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
@@ -40,14 +42,15 @@ public class MediaOpenExceptionTest {
 
     @Test
     public void otherErrorsKeepTheirMessage() {
-        String message = MediaOpenException.from(new File("clip.mp4"), new IllegalStateException("boom")).getMessage();
+        String message = MediaOpenException.from(new File("clip.mp4"),
+            new ExecutionException(new IllegalStateException("boom"))).getMessage();
 
         assertEquals(message, "Cannot open clip.mp4: boom");
     }
 
     @Test
     public void timeoutsNameTheFileAndLimit() {
-        assertEquals(MediaOpenException.timedOut(new File("clip.mp4"), 30).getMessage(),
+        assertEquals(MediaOpenException.timedOut(new File("clip.mp4"), 30, new TimeoutException()).getMessage(),
                 "Cannot open clip.mp4: the player did not become ready within 30 seconds.");
     }
 }

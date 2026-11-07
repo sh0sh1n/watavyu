@@ -18,6 +18,8 @@ import javafx.scene.media.MediaException;
 
 import java.io.File;
 import java.util.Locale;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 
 /**
  * A video could not be opened. The message is written for the person who chose the file.
@@ -33,12 +35,13 @@ public final class MediaOpenException extends RuntimeException {
         super(message, cause);
     }
 
-    /** Returns an exception describing why the player rejected the file. */
-    static MediaOpenException from(final File file, final Throwable error) {
+    /** Returns an exception describing why the player rejected the file, from the failure of its opening. */
+    static MediaOpenException from(final File file, final ExecutionException failed) {
+        Throwable error = failed.getCause();
         if (error instanceof MediaException media) {
-            return forMediaError(file.getName(), media.getType(), media.getMessage(), error);
+            return forMediaError(file.getName(), media.getType(), media.getMessage(), failed);
         }
-        return new MediaOpenException("Cannot open " + file.getName() + ": " + error.getMessage(), error);
+        return new MediaOpenException("Cannot open " + file.getName() + ": " + error.getMessage(), failed);
     }
 
     static MediaOpenException forMediaError(final String name, final MediaException.Type type, final String detail,
@@ -61,8 +64,8 @@ public final class MediaOpenException extends RuntimeException {
                 + SUPPORTED_FORMAT, cause);
     }
 
-    static MediaOpenException timedOut(final File file, final long seconds) {
+    static MediaOpenException timedOut(final File file, final long seconds, final TimeoutException cause) {
         return new MediaOpenException("Cannot open " + file.getName() + ": the player did not become ready within "
-                + seconds + " seconds.", null);
+                + seconds + " seconds.", cause);
     }
 }

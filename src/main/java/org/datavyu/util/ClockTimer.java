@@ -16,10 +16,12 @@ package org.datavyu.util;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
@@ -70,6 +72,9 @@ public final class ClockTimer {
     /** Listeners of this clock */
     private final Set<ClockListener> clockListeners = new CopyOnWriteArraySet<>();
 
+    /** The ticks that notify the listeners, which closing cancels */
+    private final List<ScheduledFuture<?>> ticks;
+
     /**
      * Default constructor.
      */
@@ -82,14 +87,22 @@ public final class ClockTimer {
         maxTime = 0;
         stopped = true;
 
-        execService.scheduleAtFixedRate(() -> periodicSync()
-            , CLOCK_DELAY, CLOCK_INTERVAL, TimeUnit.MILLISECONDS);
-        execService.scheduleAtFixedRate(() -> checkClockBoundary()
-            , CLOCK_DELAY, CLOCK_INTERVAL, TimeUnit.MILLISECONDS);
-        execService.scheduleAtFixedRate(() -> checkStreamsBoundary()
-            , CLOCK_DELAY, CLOCK_INTERVAL, TimeUnit.MILLISECONDS);
-        execService.scheduleAtFixedRate(() -> notifySeekPlayback()
-            , CLOCK_DELAY, CLOCK_INTERVAL, TimeUnit.MILLISECONDS);
+        ticks = List.of(every(this::periodicSync), every(this::checkClockBoundary), every(this::checkStreamsBoundary),
+            every(this::notifySeekPlayback));
+    }
+
+    /**
+     * Runs a tick every {@value #CLOCK_INTERVAL} ms. A listener that fails is logged and the clock goes on, as an
+     * exception would cancel every later run of the tick.
+     */
+    private ScheduledFuture<?> every(final Runnable tick) {
+        return execService.scheduleAtFixedRate(() -> {
+            try {
+                tick.run();
+            } catch (RuntimeException e) {
+                logger.error("A clock listener failed", e);
+            }
+        }, CLOCK_DELAY, CLOCK_INTERVAL, TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -280,6 +293,7 @@ public final class ClockTimer {
      * running, and its listeners are told nothing more.
      */
     public void close() {
+        ticks.forEach(tick -> tick.cancel(false));
         execService.shutdownNow();
         clockListeners.clear();
         try {

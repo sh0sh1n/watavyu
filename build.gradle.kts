@@ -171,7 +171,11 @@ val errorproneGatedChecks = listOf(
     "RemoveUnusedImports",
     // Correctness
     "ReferenceEquality", "LongFloatConversion", "LongDoubleConversion", "NarrowCalculation", "IntLongMath",
-    "NarrowingCompoundAssignment", "StringSplitter", "DefaultCharset", "EqualsGetClass",
+    "NarrowingCompoundAssignment", "StringSplitter", "DefaultCharset", "EqualsGetClass", "NonOverridingEquals",
+    "HidingField", "ProtectedMembersInFinalClass", "ModifyCollectionInEnhancedForLoop", "SuperCallToObjectMethod",
+    "OperatorPrecedence", "AssignmentExpression", "ReturnFromVoid",
+    // Error handling
+    "CatchAndPrintStackTrace", "FutureReturnValueIgnored",
 )
 tasks.withType<JavaCompile>().configureEach {
     errorproneGatedChecks.forEach { options.errorprone.error(it) }
@@ -181,7 +185,8 @@ tasks.withType<JavaCompile>().configureEach {
 // on the build's own compiles: each source set is compiled again, without Error Prone or annotation processors (it has
 // none), with only these categories on and as errors.
 val javacGatedCategories = listOf(
-    "deprecation", "removal", "dangling-doc-comments", "rawtypes", "unchecked", "lossy-conversions",
+    "deprecation", "removal", "dangling-doc-comments", "rawtypes", "unchecked", "lossy-conversions", "try", "static",
+    "cast",
 )
 val lintGates = mutableSetOf<String>()
 sourceSets.configureEach {
@@ -230,11 +235,11 @@ val pmdUngatedRules = setOf(
     // Size and complexity
     "GodClass", "TooManyMethods", "CyclomaticComplexity", "CognitiveComplexity", "CouplingBetweenObjects",
     "NcssCount", "ExcessiveImports", "TooManyFields",
-    // Error handling
-    "AvoidCatchingGenericException", "AvoidCatchingThrowable", "PreserveStackTrace", "EmptyCatchBlock",
-    "AvoidPrintStackTrace", "SystemPrintln",
+    // Catches at a boundary that must report or survive any failure: a clock tick (ClockTimer.every), parsing an
+    // untrusted MP4 file (JavaFxVideoPlugin.readFrames) and the thread that opens media (VideoController.openStream).
+    "AvoidCatchingGenericException", "AvoidCatchingThrowable",
     // Correctness
-    "CloseResource", "AvoidSynchronizedAtMethodLevel",
+    "AvoidSynchronizedAtMethodLevel",
 )
 val pmdGate = tasks.register("pmdGate") {
     description = "Fails if PMD finds anything under a rule that has reached zero findings."

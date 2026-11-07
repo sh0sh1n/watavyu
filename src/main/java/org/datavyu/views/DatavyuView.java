@@ -53,6 +53,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.ExecutionException;
 
 /**
  * The main window: a tab per open spreadsheet, the menu bar, and the keyboard shortcuts.
@@ -493,8 +494,9 @@ public final class DatavyuView implements FileDropEventListener {
             }
 
             exportJSON.exportAsJSON(dbFileName, projectController.getDataStore());
-        } catch (Exception e) {
+        } catch (UserWarningException e) {
             logger.error("Failed export to JSON. Error: ", e);
+            warn(e.getMessage());
         }
 
     }
@@ -641,8 +643,11 @@ public final class DatavyuView implements FileDropEventListener {
             }
 
             progressBar.close();
-        } catch (Exception e) {
+        } catch (ExecutionException e) {
             logger.error("Failed opening project. Error: ", e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            logger.error("Interrupted opening a project", e);
         }
     }
 
