@@ -57,8 +57,7 @@ public final class ExportDatabaseFileController {
         ObjectMapper mapper = new ObjectMapper();
         JsonFactory f = mapper.getFactory();
         File jsonFile = new File(dbFileName);
-        try {
-            JsonGenerator g = f.createGenerator(jsonFile, JsonEncoding.UTF8);
+        try (JsonGenerator g = f.createGenerator(jsonFile, JsonEncoding.UTF8)) {
             g.setPrettyPrinter(new DefaultPrettyPrinter());
             //Start a Spreadsheet Object
             g.writeStartObject();
@@ -78,13 +77,9 @@ public final class ExportDatabaseFileController {
 
                 g.writeObjectFieldStart("arguments");
 
-                column.getCodes().forEach(code -> {
-                    try {
-                        g.writeStringField(code, "NOMINAL");
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                });
+                for (String code : column.getCodes()) {
+                    g.writeStringField(code, "NOMINAL");
+                }
                 g.writeEndObject();
 
                 //Start an Array of Cells
@@ -118,8 +113,6 @@ public final class ExportDatabaseFileController {
 
             //End a Spreadsheet Object
             g.writeEndObject();
-
-            g.close();
             logger.info("JSON File has been successfully saved");
 
         } catch (IOException e) {

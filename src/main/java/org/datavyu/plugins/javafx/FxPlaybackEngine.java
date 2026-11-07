@@ -79,39 +79,45 @@ final class FxPlaybackEngine implements PlaybackEngine {
     static FxPlaybackEngine open(final File file, final long timeoutSeconds) {
         JavaFxToolkit.requireBackgroundThread();
         JavaFxToolkit.ensureStarted();
-        CompletableFuture<FxPlaybackEngine> ready = new CompletableFuture<>();
         AtomicReference<MediaPlayer> created = new AtomicReference<>();
-        Platform.runLater(() -> {
-            try {
-                Media media = new Media(file.toURI().toString());
-                MediaPlayer player = new MediaPlayer(media);
-                created.set(player);
-                media.setOnError(() -> ready.completeExceptionally(media.getError()));
-                player.setOnError(() -> ready.completeExceptionally(player.getError()));
-                player.setOnReady(() -> {
-                    if (!ready.isDone()) {
-                        ready.complete(new FxPlaybackEngine(player));
-                    }
-                });
-            } catch (Throwable t) {
-                ready.completeExceptionally(t);
-            }
-        });
+        // The player is made, and its handlers set, in one task on the JavaFX thread. One that cannot be made fails the
+        // future, as does an error that the player or its media reports before it is ready.
+        CompletableFuture<FxPlaybackEngine> whenReady = new CompletableFuture<>();
+        CompletableFuture<FxPlaybackEngine> ready = CompletableFuture.supplyAsync(() -> {
+            MediaPlayer player = new MediaPlayer(new Media(file.toURI().toString()));
+            created.set(player);
+            completeWhenReady(player, whenReady);
+            return player;
+        }, Platform::runLater).thenCompose(player -> whenReady);
         try {
             return ready.get(timeoutSeconds, TimeUnit.SECONDS);
         } catch (TimeoutException e) {
+            // No engine is made for a player that becomes ready later.
+            whenReady.cancel(false);
             ready.cancel(false);
             disposeLater(created);
-            throw MediaOpenException.timedOut(file, timeoutSeconds);
+            throw MediaOpenException.timedOut(file, timeoutSeconds, e);
         } catch (ExecutionException e) {
             disposeLater(created);
-            throw MediaOpenException.from(file, e.getCause());
+            throw MediaOpenException.from(file, e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             ready.cancel(false);
             disposeLater(created);
             throw new MediaOpenException("Interrupted while opening " + file.getName(), e);
         }
+    }
+
+    /** Completes the future with the player's engine once it is ready, or fails it on its or its media's error. */
+    private static void completeWhenReady(final MediaPlayer player, final CompletableFuture<FxPlaybackEngine> ready) {
+        Media media = player.getMedia();
+        media.setOnError(() -> ready.completeExceptionally(media.getError()));
+        player.setOnError(() -> ready.completeExceptionally(player.getError()));
+        player.setOnReady(() -> {
+            if (!ready.isDone()) {
+                ready.complete(new FxPlaybackEngine(player));
+            }
+        });
     }
 
     private static void disposeLater(final AtomicReference<MediaPlayer> created) {

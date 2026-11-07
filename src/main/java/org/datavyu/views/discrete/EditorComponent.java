@@ -23,6 +23,7 @@ import java.awt.datatransfer.*;
 import java.awt.event.FocusEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
+import java.io.IOException;
 
 /**
  * EditorComponent - Abstract class for editing a segment of text within a
@@ -467,7 +468,8 @@ public abstract class EditorComponent implements ClipboardOwner {
                 this.keyTyped(ke);
             }
 
-        } catch (Exception ex) {
+        } catch (UnsupportedFlavorException | IOException | IllegalStateException ex) {
+            // The clipboard holds no text, or another application has it.
             LOGGER.error("Unable to get clipboard contents", ex);
         }
     }

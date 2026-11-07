@@ -93,7 +93,7 @@ public final class Settings {
             try {
                 Data data = MAPPER.readValue(file.toFile(), Data.class);
                 return new Settings(file, data.normalized());
-            } catch (IOException | RuntimeException e) {
+            } catch (IOException e) {
                 logger.warn("Cannot read settings from " + file + "; using defaults", e);
             }
         }
@@ -112,7 +112,7 @@ public final class Settings {
             temporary = Files.createTempFile(folder, FILE_NAME, ".tmp");
             MAPPER.writeValue(temporary.toFile(), data);
             Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-        } catch (IOException | RuntimeException e) {
+        } catch (IOException e) {
             logger.error("Cannot save settings to " + file, e);
             deleteQuietly(temporary);
         }

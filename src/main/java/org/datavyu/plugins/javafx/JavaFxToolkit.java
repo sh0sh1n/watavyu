@@ -15,19 +15,23 @@
 package org.datavyu.plugins.javafx;
 
 import javafx.application.Platform;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.swing.SwingUtilities;
-import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
 
 /**
  * Starts the JavaFX runtime once for the whole application and moves work between
  * the JavaFX Application Thread, the Swing EDT and background threads.
  */
 public final class JavaFxToolkit {
+
+    private static final Logger logger = LogManager.getLogger(JavaFxToolkit.class);
 
     private static final Object START_LOCK = new Object();
     private static boolean started;
@@ -49,7 +53,8 @@ public final class JavaFxToolkit {
                 Platform.startup(latch::countDown);
                 latch.await();
             } catch (IllegalStateException alreadyRunning) {
-                // Started elsewhere, for example by a JFXPanel.
+                // Started elsewhere, for example by a JFXPanel, which is as good.
+                logger.debug("JavaFX was already running", alreadyRunning);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 throw new IllegalStateException("Interrupted while starting JavaFX", e);
@@ -59,47 +64,28 @@ public final class JavaFxToolkit {
         }
     }
 
-    /** Runs a task on the JavaFX Application Thread; the future completes with its result. */
-    public static <T> CompletableFuture<T> onFx(final Callable<T> task) {
-        CompletableFuture<T> result = new CompletableFuture<>();
-        Runnable run = () -> {
-            try {
-                result.complete(task.call());
-            } catch (Throwable t) {
-                result.completeExceptionally(t);
-            }
-        };
+    /** Runs a task on the JavaFX Application Thread; the future holds its result, or what it threw. */
+    public static <T> Future<T> onFx(final Callable<T> task) {
+        FutureTask<T> future = new FutureTask<>(task);
         if (Platform.isFxApplicationThread()) {
-            run.run();
+            future.run();
         } else {
-            Platform.runLater(run);
+            Platform.runLater(future);
         }
-        return result;
+        return future;
     }
 
-    /** Runs a task on the Swing EDT and waits for it. Must be called off the EDT. */
-    public static <T> T onEdtAndWait(final Callable<T> task) throws Exception {
+    /**
+     * Runs a task on the Swing EDT and waits for it. Must be called off the EDT.
+     *
+     * @throws ExecutionException   holding what the task threw
+     * @throws InterruptedException if the wait is interrupted
+     */
+    public static <T> T onEdtAndWait(final Callable<T> task) throws InterruptedException, ExecutionException {
         requireBackgroundThread();
-        AtomicReference<T> result = new AtomicReference<>();
-        try {
-            SwingUtilities.invokeAndWait(() -> {
-                try {
-                    result.set(task.call());
-                } catch (Exception e) {
-                    throw new TaskFailed(e);
-                }
-            });
-        } catch (InvocationTargetException e) {
-            Throwable cause = e.getCause();
-            if (cause instanceof TaskFailed) {
-                throw (Exception) cause.getCause();
-            }
-            if (cause instanceof Error error) {
-                throw error;
-            }
-            throw (RuntimeException) cause;
-        }
-        return result.get();
+        FutureTask<T> future = new FutureTask<>(task);
+        SwingUtilities.invokeLater(future);
+        return future.get();
     }
 
     /** Fails fast if a caller would block a UI thread while media loads. */
@@ -109,9 +95,4 @@ public final class JavaFxToolkit {
         }
     }
 
-    private static final class TaskFailed extends RuntimeException {
-        TaskFailed(final Exception cause) {
-            super(cause);
-        }
-    }
 }

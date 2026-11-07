@@ -14,6 +14,7 @@
  */
 package org.datavyu.plugins.javafx;
 
+import javafx.application.Platform;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.datavyu.models.Identifier;
@@ -29,6 +30,7 @@ import java.util.Locale;
 import java.util.List;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 
 /**
  * Video playback through OpenJFX Media, the only video player. Accepts only the containers OpenJFX documents for
@@ -75,20 +77,26 @@ public final class JavaFxVideoPlugin {
     public static StreamViewer open(final Identifier identifier, final File sourceFile, final Frame parent,
                                     final ClockTimer clockTimer, final boolean modal) {
         FxPlaybackEngine engine = FxPlaybackEngine.open(sourceFile, OPEN_TIMEOUT_SECONDS);
+        boolean opened = false;
         try {
             // Audio has no frames: positions keep to an assumed rate, and frame stepping is off.
             FrameIndex frames = engine.width() > 0
                     ? readFrames(sourceFile, engine.durationMillis())
                     : FrameIndex.assumed(FALLBACK_FRAMES_PER_SECOND, engine.durationMillis());
-            return JavaFxToolkit.onEdtAndWait(
+            StreamViewer viewer = JavaFxToolkit.onEdtAndWait(
                     () -> new JavaFxVideoViewer(identifier, sourceFile, parent, clockTimer, modal, engine, frames));
-        } catch (Exception e) {
-            JavaFxToolkit.onFx(() -> {
-                engine.dispose();
-                return null;
-            });
-            throw e instanceof MediaOpenException mediaOpenException ? mediaOpenException
-                    : new MediaOpenException("Cannot open " + sourceFile.getName() + ": " + e.getMessage(), e);
+            opened = true;
+            return viewer;
+        } catch (ExecutionException e) {
+            throw new MediaOpenException("Cannot open " + sourceFile.getName() + ": " + e.getCause().getMessage(), e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new MediaOpenException("Interrupted while opening " + sourceFile.getName(), e);
+        } finally {
+            if (!opened) {
+                // Whatever stopped the window, the player it would have shown goes.
+                Platform.runLater(engine::dispose);
+            }
         }
     }
 
