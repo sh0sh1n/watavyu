@@ -16,7 +16,7 @@ Updated 2026-11-06. Re-measure with the commands in [BUILDING.md › Analysis Re
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
 | Java source (main) | 242 files, 42.5k lines | 142 files, 24.7k lines |
-| Tests / line coverage | 113 / 9.9% | 770 / 72.9%; views 62%, undo edits 94% |
+| Tests / line coverage | 113 / 9.9% | 771 / 72.9%; views 62%, undo edits 94% |
 | Runtime dependencies / with known vulnerabilities | 28 / 8 | 13 / 0 |
 | Error Prone + javac lint warnings | 1,227 | 0: every compile fails on one, with `serial` off (about 130) |
 | PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 101 / 0 (PMD only in size and complexity and three deliberate catch-alls; the rest gated); 13 |
