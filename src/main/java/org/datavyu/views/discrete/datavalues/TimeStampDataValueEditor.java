@@ -181,47 +181,10 @@ public final class TimeStampDataValueEditor extends EditorComponent {
                 break;
 
             case KeyEvent.VK_LEFT:
-                if (onlyShift(e)) {
-                    // The text component grows or shrinks the selection.
-                    break;
-                }
-
-                // Move caret to the left.
-                c = Math.max(0, getCaretPosition() - 1);
-                setCaretPosition(c);
-
-                // If after the move, we have a character to the left is
-                // preserved character we need to skip one before passing
-                // the key event down to skip again (effectively skipping
-                // the preserved character).
-                int b = Math.max(0, getCaretPosition());
-                c = Math.max(0, getCaretPosition() - 1);
-                if (isPreserved(getText().charAt(b))) {
-                    setCaretPosition(Math.max(0, getCaretPosition() - 1));
-                }
-                e.consume();
-
-                break;
-
             case KeyEvent.VK_RIGHT:
-                if (onlyShift(e)) {
-                    // The text component grows or shrinks the selection.
-                    break;
-                }
-
-                // Move caret to the right.
-                c = Math.min(getText().length(), getCaretPosition() + 1);
-                setCaretPosition(c);
-
-                // If after the move, we have a character to the right that
-                // is a preserved character, we need to skip one before
-                // passing the key event down to skip again (effectively
-                // skipping the preserved character)
-                b = Math.min(getText().length() - 1, getCaretPosition());
-                c = Math.min(getText().length() - 1, getCaretPosition() + 1);
-                if (c < getText().length()
-                        && (isPreserved(getText().charAt(b)))) {
-                    setCaretPosition(c);
+                // A time is alone in its field, so the caret stops at its ends.
+                if (movesCaret(e)) {
+                    moveCaret(e);
                 }
                 e.consume();
                 break;

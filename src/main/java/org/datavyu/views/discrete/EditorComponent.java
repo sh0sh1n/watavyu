@@ -107,12 +107,86 @@ public abstract class EditorComponent implements ClipboardOwner {
         | InputEvent.META_DOWN_MASK | InputEvent.ALT_DOWN_MASK | InputEvent.ALT_GRAPH_DOWN_MASK;
 
     /**
-     * Returns whether ⇧ is the one modifier key held, whatever mouse button is.
+     * Returns whether ← or → with the modifier keys held moves the caret: with none, ⇧ or ⌥, or both. With ⌘ or ⌃
+     * an arrow is a command or nothing.
      *
      * @param e a key event
      */
-    protected static boolean onlyShift(final KeyEvent e) {
-        return (e.getModifiersEx() & KEY_MODIFIERS) == InputEvent.SHIFT_DOWN_MASK;
+    public static boolean movesCaret(final KeyEvent e) {
+        return (e.getModifiersEx() & KEY_MODIFIERS & ~(InputEvent.SHIFT_DOWN_MASK | InputEvent.ALT_DOWN_MASK)) == 0;
+    }
+
+    /**
+     * Moves the caret for ← or → as a text field does, kept inside this editor: ⇧ grows or shrinks the selection and
+     * ⌥ moves by a word; without ⇧, a selection is left at its start (←) or end (→), from which ⌥ moves on a word.
+     * Without ⇧ the caret steps over a preserved character, such as a time's colon. An editor that cannot be part
+     * selected, such as an empty value's name, stays selected whole.
+     *
+     * @param e a key that {@link #movesCaret moves the caret}
+     * @return false, having moved nothing, for a move without ⇧ that would leave the editor: from its edge with
+     * nothing selected, or from an editor that cannot be part selected
+     */
+    public final boolean moveCaret(final KeyEvent e) {
+        boolean left = e.getKeyCode() == KeyEvent.VK_LEFT;
+        boolean word = (e.getModifiersEx() & InputEvent.ALT_DOWN_MASK) != 0;
+        if ((e.getModifiersEx() & InputEvent.SHIFT_DOWN_MASK) != 0) {
+            if (canSubSelect() && parentComp != null) {
+                parentComp.moveCaretPosition(startPos + caretStep(getCaretPosition(), left, word, false));
+            }
+            return true;
+        }
+        if (!canSubSelect()) {
+            return false;
+        }
+        int start = getSelectionStart();
+        int end = getSelectionEnd();
+        int from = start == end ? getCaretPosition() : left ? start : end;
+        if (start == end && from == (left ? 0 : editorText.length())) {
+            return false;
+        }
+        setCaretPosition(start == end || word ? caretStep(from, left, word, true) : from);
+        return true;
+    }
+
+    /**
+     * Returns where the caret goes from a place in this editor's text, a character or word to the left or right and
+     * no further than the text's ends.
+     *
+     * @param from          the place
+     * @param left          whether it goes left
+     * @param word          whether it goes to the start (left) or end (right) of a word, past what is not one
+     * @param skipPreserved whether a character step goes on past a preserved character
+     */
+    private int caretStep(final int from, final boolean left, final boolean word, final boolean skipPreserved) {
+        String text = editorText;
+        if (word) {
+            int to = from;
+            while (to > 0 && left && !isWordPart(text.codePointBefore(to))) {
+                to = text.offsetByCodePoints(to, -1);
+            }
+            while (to > 0 && left && isWordPart(text.codePointBefore(to))) {
+                to = text.offsetByCodePoints(to, -1);
+            }
+            while (to < text.length() && !left && !isWordPart(text.codePointAt(to))) {
+                to = text.offsetByCodePoints(to, 1);
+            }
+            while (to < text.length() && !left && isWordPart(text.codePointAt(to))) {
+                to = text.offsetByCodePoints(to, 1);
+            }
+            return to;
+        }
+        if (from == (left ? 0 : text.length())) {
+            return from;
+        }
+        int to = text.offsetByCodePoints(from, left ? -1 : 1);
+        if (skipPreserved && to > 0 && to < text.length() && isPreserved(text.charAt(to))) {
+            to += left ? -1 : 1;
+        }
+        return to;
+    }
+
+    private static boolean isWordPart(final int codePoint) {
+        return Character.isLetterOrDigit(codePoint);
     }
 
     /**
