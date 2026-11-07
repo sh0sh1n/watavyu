@@ -459,78 +459,6 @@ public final class MainWindow implements FileDropEventListener {
         return quickKeyMode;
     }
 
-
-    /**
-     * Action for exporting the current SpreadSheet as a JSON File
-     */
-    public void exportToJSON(){
-        RememberingFileChooser fileChooser = new RememberingFileChooser();
-
-        fileChooser.addChoosableFileFilter(JSONFilter.INSTANCE);
-        fileChooser.setFileFilter(JSONFilter.INSTANCE);
-
-        int result = fileChooser.showSaveDialog(getComponent());
-
-        if (result == JFileChooser.APPROVE_OPTION){
-            exportJSON(fileChooser);;
-        }
-    }
-
-    private void exportJSON(RememberingFileChooser fc){
-        ProjectController projectController = selectedController();
-
-        try{
-            ExportDatabaseFileController exportJSON = new ExportDatabaseFileController();
-
-            String dbFileName = fc.getSelectedFile().getPath();
-            if (!dbFileName.endsWith(".json")) {
-                dbFileName = dbFileName.concat(".json");
-            }
-
-            // Only save if the project file does not exists or if the user
-            // confirms a file overwrite in the case that the file exists.
-            if (!canSave(fc.getSelectedFile().getParent(), dbFileName)) {
-                return;
-            }
-
-            exportJSON.exportAsJSON(dbFileName, projectController.getDataStore());
-        } catch (UserWarningException e) {
-            logger.error("Failed export to JSON. Error: ", e);
-            warn(e.getMessage());
-        }
-
-    }
-
-    /**
-     * Action for exposing the current SpreadSheet as a JSON File
-     */
-    public void importJSONToSpreadsheet(){
-        RememberingFileChooser fileChooser = new RememberingFileChooser();
-
-        fileChooser.addChoosableFileFilter(JSONFilter.INSTANCE);
-        fileChooser.setFileFilter(JSONFilter.INSTANCE);
-
-        int result = fileChooser.showOpenDialog(getComponent());
-
-        if (result == JFileChooser.APPROVE_OPTION){
-            importJSON(fileChooser);
-        }
-
-        getSpreadsheetPanel().redrawCells();
-    }
-
-    private void importJSON(RememberingFileChooser fc){
-        try {
-            new OpenDataStoreFileController(this::warn)
-                    .importJSONToSpreadsheet(fc.getSelectedFile(), getSpreadsheetPanel().getDataStore());
-        } catch (UserWarningException | IOException e) {
-            logger.error("Failed import from JSON. Error: ", e);
-            warn(e.getMessage());
-        }
-    }
-
-
-
     private boolean canSave(final String directory, final String file) {
         File newFile = new File(directory, file);
         return (newFile.exists() && overwriteExisting()) || !newFile.exists();
@@ -1088,8 +1016,6 @@ public final class MainWindow implements FileDropEventListener {
         commands.define(Command.REDO, this::redo)
                 .labelled(() -> history() == null ? Command.REDO.label() : history().getRedoPresentationName())
                 .enabledWhen(() -> history() != null && history().canRedo());
-        commands.define(Command.EXPORT_JSON, this::exportToJSON).enabledWhen(() -> selection.visibleColumns());
-        commands.define(Command.IMPORT_JSON, this::importJSONToSpreadsheet);
         commands.define(Command.TEMPORAL_LAYOUT, this::toggleTemporalLayout)
                 .checked(() -> getSpreadsheetPanel() != null
                         && getSpreadsheetPanel().getLayoutType() == SheetLayoutType.WeakTemporal);
@@ -1134,13 +1060,12 @@ public final class MainWindow implements FileDropEventListener {
      * What the cell commands' state is worked out from, counted in one pass over the cells per refresh, which runs
      * before every key.
      *
-     * @param visibleColumns whether the selected tab shows any column
      * @param cells          how many cells are selected, all in shown columns, as hiding deselects
      * @param besideLeft     how many selected cells have a shown column to their left
      * @param besideRight    how many have a shown column to their right
      */
-    private record Selection(boolean visibleColumns, int cells, int besideLeft, int besideRight) {
-        static final Selection NONE = new Selection(false, 0, 0, 0);
+    private record Selection(int cells, int besideLeft, int besideRight) {
+        static final Selection NONE = new Selection(0, 0, 0);
     }
 
     private void countSelection() {
@@ -1160,7 +1085,7 @@ public final class MainWindow implements FileDropEventListener {
             left += place > 0 ? selected : 0;
             right += place >= 0 && place < shown.size() - 1 ? selected : 0;
         }
-        selection = new Selection(!shown.isEmpty(), cells, left, right);
+        selection = new Selection(cells, left, right);
     }
 
     /** Returns a command's label for one cell or for several, such as Delete Cell or Delete Cells. */
@@ -1304,9 +1229,6 @@ public final class MainWindow implements FileDropEventListener {
         spreadsheetMenu.addSeparator();
         spreadsheetMenu.add(item(Command.UNDO));
         spreadsheetMenu.add(item(Command.REDO));
-        spreadsheetMenu.addSeparator();
-        spreadsheetMenu.add(item(Command.EXPORT_JSON));
-        spreadsheetMenu.add(item(Command.IMPORT_JSON));
         spreadsheetMenu.addSeparator();
         spreadsheetMenu.add(checkItem(Command.TEMPORAL_LAYOUT));
         JMenu zoomMenu = new JMenu(resources.getString("zoomMenu.text"));
