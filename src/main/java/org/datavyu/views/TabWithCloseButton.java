@@ -44,7 +44,7 @@ import java.util.function.Consumer;
  * Contains a JLabel to show the text and
  * a JButton to close the tab it belongs to
  */
-public class TabWithCloseButton extends JPanel {
+public final class TabWithCloseButton extends JPanel {
     private final JTabbedPane pane;
 
     /** Closes a tab's spreadsheet, asking about unsaved work first */

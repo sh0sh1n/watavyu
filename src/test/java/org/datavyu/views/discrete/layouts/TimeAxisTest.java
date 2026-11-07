@@ -46,7 +46,7 @@ public class TimeAxisTest {
     @Test
     public void heightAndTimeAgree() {
         for (long time = 0; time <= 600_000; time += 7_000) {
-            assertEquals(axis.time(axis.y(time)), time, 7_500, "near " + time);
+            assertEquals((double) axis.time(axis.y(time)), (double) time, 7_500.0, "near " + time);
         }
     }
 

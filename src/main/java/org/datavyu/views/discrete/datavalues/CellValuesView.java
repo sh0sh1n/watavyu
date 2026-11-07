@@ -209,11 +209,11 @@ public final class CellValuesView extends JTextArea implements FocusListener {
 
     /** Returns the text the editors show, one after another. */
     private String valuesText() {
-        String ans = "";
+        StringBuilder text = new StringBuilder();
         for (EditorComponent item : allEditors) {
-            ans += item.getText();
+            text.append(item.getText());
         }
-        return ans;
+        return text.toString();
     }
 
     /**

@@ -66,8 +66,8 @@ public class TransparentPanel extends JPanel {
         g2.setComposite(composite);
         g2.drawImage(
                 image,
-                (int) (destination.getX() - (image.getWidth(this) / 2)),
-                (int) (destination.getY() - (image.getHeight(this) / 2)),
+                (int) (destination.getX() - image.getWidth(this) / 2.0),
+                (int) (destination.getY() - image.getHeight(this) / 2.0),
                 null);
     }
 }

@@ -85,7 +85,7 @@ public class PlaybackIntegrationTest {
                 return candidate;
             }
         }
-        for (String dir : System.getenv().getOrDefault("PATH", "").split(File.pathSeparator)) {
+        for (String dir : System.getenv().getOrDefault("PATH", "").split(File.pathSeparator, -1)) {
             if (new File(dir, "ffmpeg").canExecute()) {
                 return new File(dir, "ffmpeg").getPath();
             }
@@ -162,7 +162,7 @@ public class PlaybackIntegrationTest {
         ClockTimer clock = mock(ClockTimer.class);
         StreamViewer viewer = JavaFxVideoPlugin.open(Identifier.generateIdentifier(), m4a, null, clock, false);
         try {
-            assertEquals(viewer.getDuration(), 4_000L, 50L);
+            assertEquals((double) viewer.getDuration(), 4_000.0, 50.0);
             assertEquals(viewer.getVideoSize(), new Dimension(0, 0));
             assertFalse(viewer.isStepEnabled());
             assertTrue(viewer.getVideoComponent().getPreferredSize().width > 0, "the black picture has a size");

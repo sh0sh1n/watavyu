@@ -307,10 +307,7 @@ public final class VariableListV extends DatavyuDialog
         @Override
         public boolean isCellEditable(int row, int column) {
             // Columns are renamed in the Code Editor, not here.
-            if (column == VCOLUMN) {
-                return true;
-            }
-            return false;
+            return column == VCOLUMN;
         }
     }
 }

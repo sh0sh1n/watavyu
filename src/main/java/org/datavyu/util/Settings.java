@@ -17,6 +17,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Objects;
 import java.util.Map;
 import java.util.Optional;
 
@@ -106,8 +107,9 @@ public final class Settings {
     public synchronized void save() {
         Path temporary = null;
         try {
-            Files.createDirectories(file.toAbsolutePath().getParent());
-            temporary = Files.createTempFile(file.toAbsolutePath().getParent(), FILE_NAME, ".tmp");
+            Path folder = Objects.requireNonNull(file.toAbsolutePath().getParent(), "the settings file is in a folder");
+            Files.createDirectories(folder);
+            temporary = Files.createTempFile(folder, FILE_NAME, ".tmp");
             MAPPER.writeValue(temporary.toFile(), data);
             Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
         } catch (IOException | RuntimeException e) {

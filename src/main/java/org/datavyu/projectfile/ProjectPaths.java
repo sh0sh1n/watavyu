@@ -45,7 +45,8 @@ public final class ProjectPaths {
      * @return the project's name: the file name without {@value ProjectDocument#EXTENSION}
      */
     public static String projectName(final Path projectFile) {
-        String name = projectFile.getFileName().toString();
+        Path fileName = projectFile.getFileName();
+        String name = fileName == null ? "" : fileName.toString();
         return isProjectFile(name) ? name.substring(0, name.length() - ProjectDocument.EXTENSION.length()) : name;
     }
 

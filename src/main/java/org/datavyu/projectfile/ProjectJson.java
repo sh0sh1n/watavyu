@@ -71,7 +71,11 @@ public final class ProjectJson {
         try {
             // A symbolic link stays a link: the file it points to is the one replaced.
             Path target = Files.isSymbolicLink(file) ? file.toRealPath() : file.toAbsolutePath();
-            temporary = Files.createTempFile(target.getParent(), "." + target.getFileName(), ".tmp");
+            Path folder = target.getParent();
+            if (folder == null) {
+                throw new ProjectFileException("Unable to save " + file + ": it is not a file");
+            }
+            temporary = Files.createTempFile(folder, "." + target.getFileName(), ".tmp");
             Files.writeString(temporary, text, StandardCharsets.UTF_8);
             Files.setPosixFilePermissions(temporary, Files.exists(target)
                 ? Files.getPosixFilePermissions(target) : NEW_FILE_PERMISSIONS);

@@ -118,7 +118,7 @@ public final class VocabEditorV extends DatavyuDialog {
      * @param controller the spreadsheet
      */
     public void setProjectController(final ProjectController controller) {
-        if (controller != this.controller) {
+        if (!controller.equals(this.controller)) {
             if (isDisplayable()) {
                 this.controller.getDataStore().removeListener(columnsListener);
                 controller.getDataStore().addListener(columnsListener);
@@ -187,7 +187,7 @@ public final class VocabEditorV extends DatavyuDialog {
             selectedArgumentI = -1;
         }
         for (int i = 0; i < rows.size(); i++) {
-            if (rows.get(i).getParent() == verticalFrame) {
+            if (verticalFrame.equals(rows.get(i).getParent())) {
                 // Moved without being taken out, so a row keeps the focus.
                 verticalFrame.setComponentZOrder(rows.get(i), i);
             } else {

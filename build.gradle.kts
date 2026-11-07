@@ -169,6 +169,9 @@ val errorproneGatedChecks = listOf(
     // Dead code
     "UnusedVariable", "ModifiedButNotUsed", "EffectivelyPrivate", "ClassCanBeStatic", "VariableNameSameAsType",
     "RemoveUnusedImports",
+    // Correctness
+    "ReferenceEquality", "LongFloatConversion", "LongDoubleConversion", "NarrowCalculation", "IntLongMath",
+    "NarrowingCompoundAssignment", "StringSplitter", "DefaultCharset", "EqualsGetClass",
 )
 tasks.withType<JavaCompile>().configureEach {
     errorproneGatedChecks.forEach { options.errorprone.error(it) }
@@ -177,7 +180,9 @@ tasks.withType<JavaCompile>().configureEach {
 // javac lint categories at zero in every source set. Error Prone's warnings are not all at zero, so -Werror cannot go
 // on the build's own compiles: each source set is compiled again, without Error Prone or annotation processors (it has
 // none), with only these categories on and as errors.
-val javacGatedCategories = listOf("deprecation", "removal", "dangling-doc-comments", "rawtypes", "unchecked")
+val javacGatedCategories = listOf(
+    "deprecation", "removal", "dangling-doc-comments", "rawtypes", "unchecked", "lossy-conversions",
+)
 val lintGates = mutableSetOf<String>()
 sourceSets.configureEach {
     val set = this
@@ -229,8 +234,7 @@ val pmdUngatedRules = setOf(
     "AvoidCatchingGenericException", "AvoidCatchingThrowable", "PreserveStackTrace", "EmptyCatchBlock",
     "AvoidPrintStackTrace", "SystemPrintln",
     // Correctness
-    "CompareObjectsWithEquals", "CloseResource", "AssignmentInOperand", "AvoidSynchronizedAtMethodLevel",
-    "CollapsibleIfStatements", "SimplifyBooleanReturns",
+    "CloseResource", "AvoidSynchronizedAtMethodLevel",
 )
 val pmdGate = tasks.register("pmdGate") {
     description = "Fails if PMD finds anything under a rule that has reached zero findings."
@@ -260,9 +264,9 @@ tasks.withType<com.github.spotbugs.snom.SpotBugsTask>().configureEach {
     reports.create("xml") { required.set(true) }
 }
 
-// SpotBugs reports are not gates, except for categories that have reached zero findings: those fail the build, so
-// they stay at zero (AGENTS.md: checks only ratchet up).
-val spotbugsGatedCategories = setOf("MT_CORRECTNESS")
+// Every SpotBugs category fails the build except these, which are not at zero yet. A category leaves this list when it
+// reaches zero (AGENTS.md: checks only ratchet up).
+val spotbugsUngatedCategories = setOf("BAD_PRACTICE", "SECURITY")
 val spotbugsGate = tasks.register("spotbugsGate") {
     description = "Fails if SpotBugs finds anything in a category that has reached zero findings."
     group = "verification"
@@ -274,10 +278,10 @@ val spotbugsGate = tasks.register("spotbugsGate") {
         val categories = Regex("<BugPattern [^>]*type=\"([^\"]+)\"[^>]*category=\"([^\"]+)\"")
             .findAll(xml).associate { it.groupValues[1] to it.groupValues[2] }
         val found = Regex("<BugInstance [^>]*type=\"([^\"]+)\"").findAll(xml).map { it.groupValues[1] }
-            .filter { categories[it] in spotbugsGatedCategories }.toList()
+            .filter { categories[it] !in spotbugsUngatedCategories }.toList()
         if (found.isNotEmpty()) {
-            throw GradleException("SpotBugs found ${found.size} issue(s) in gated categories " +
-                "$spotbugsGatedCategories: ${found.distinct()}; see build/reports/spotbugs/main.html")
+            throw GradleException("SpotBugs found ${found.size} issue(s) in gated categories: " +
+                "${found.distinct()}; see build/reports/spotbugs/main.html")
         }
     }
 }

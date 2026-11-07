@@ -67,7 +67,7 @@ public final class DatavyuView implements FileDropEventListener {
     public static final int ZOOM_MIN_SIZE = 8;
 
     /** The logger instance for this class */
-    private static Logger logger = LogManager.getLogger(DatavyuView.class);
+    private static final Logger logger = LogManager.getLogger(DatavyuView.class);
 
     /** How often each spreadsheet is autosaved, in minutes */
     private static final int AUTOSAVE_MINUTES = 1;
@@ -250,37 +250,34 @@ public final class DatavyuView implements FileDropEventListener {
 
 
     public void checkForAutosavedFile() {
-        // Check for autosaved file (crash condition)
-        try {
-            File tempFile = File.createTempFile("test", "");
-            String path = FilenameUtils.getFullPath(tempFile.getPath());
-            tempFile.delete();
-            File folder = new File(path);
-            File[] listOfFiles = folder.listFiles();
-            if (listOfFiles != null) {
-                for (File f : listOfFiles) {
-                    // the last time datavyu crashed
-                    if (f.isFile() &&
-                            FilenameUtils.wildcardMatchOnSystem(f.getName(), "~*" + ProjectDocument.EXTENSION)) {
-
-                        // The autosave is deleted once it has opened, or if the user does not want it.
-                        if (JOptionPane.showConfirmDialog(null,
-                                "Watavyu quit before \"" + recoveredName(f.getName())
-                                    + "\" was saved. Recover the unsaved project?",
-                                "Watavyu",
-                                JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
-                            if (recover(f)) {
-                                f.delete();
-                                saveAs();
-                            }
-                        } else {
-                            f.delete();
-                        }
+        // Autosaves are written to the temporary folder, and one left there is from a run that did not quit cleanly.
+        File[] listOfFiles = new File(System.getProperty("java.io.tmpdir")).listFiles();
+        if (listOfFiles == null) {
+            return;
+        }
+        for (File f : listOfFiles) {
+            if (f.isFile() && FilenameUtils.wildcardMatchOnSystem(f.getName(), "~*" + ProjectDocument.EXTENSION)) {
+                // The autosave is deleted once it has opened, or if the user does not want it.
+                if (JOptionPane.showConfirmDialog(null,
+                        "Watavyu quit before \"" + recoveredName(f.getName())
+                            + "\" was saved. Recover the unsaved project?",
+                        "Watavyu",
+                        JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
+                    if (recover(f)) {
+                        deleteAutosave(f);
+                        saveAs();
                     }
+                } else {
+                    deleteAutosave(f);
                 }
             }
-        } catch (IOException e) {
-            logger.error("Auto save failed. Error: ", e);
+        }
+    }
+
+    /** Deletes an autosave that was recovered or declined, and logs it if the file stays. */
+    private static void deleteAutosave(final File autosave) {
+        if (!autosave.delete() && autosave.exists()) {
+            logger.warn("Could not delete the autosave " + autosave);
         }
     }
 
@@ -327,7 +324,7 @@ public final class DatavyuView implements FileDropEventListener {
         sheet.setName(tabTitle);
         tabbedPane.setTitleAt(index, tabTitle);
 
-        if (sheet == tabbedPane.getSelectedComponent()) {
+        if (sheet.equals(tabbedPane.getSelectedComponent())) {
             frame.setTitle(title);
         }
     }
@@ -891,11 +888,8 @@ public final class DatavyuView implements FileDropEventListener {
 
     public boolean checkIfFileAlreadyOpen(String filepath) {
         for (Component tab : tabbedPane.getComponents()) {
-            if (tab instanceof SpreadSheetPanel sp) {
-                if (sp.getProjectController().getFullPath() != null &&
-                        sp.getProjectController().getFullPath().equals(filepath)) {
-                    return true;
-                }
+            if (tab instanceof SpreadSheetPanel sp && filepath.equals(sp.getProjectController().getFullPath())) {
+                return true;
             }
         }
         return false;
@@ -1390,7 +1384,7 @@ public final class DatavyuView implements FileDropEventListener {
         @Override
         public ProjectController doInBackground() {
 
-            if (fileChooser != null && !fileChooser.getSelectedFile().exists()) {
+            if (!fileChooser.getSelectedFile().exists()) {
                 setProgress(2);
                 return null;
             }

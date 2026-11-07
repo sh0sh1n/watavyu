@@ -97,10 +97,7 @@ public final class TimeStampDataValueEditor extends EditorComponent {
 
     /** Returns whether an edit may go ahead; if not, a locked column hears it was refused. */
     private boolean allowsEdit() {
-        if (parentCell.getVariable().refusesEdits()) {
-            return false;
-        }
-        return isTypingAllowed();
+        return !parentCell.getVariable().refusesEdits() && isTypingAllowed();
     }
 
     @Override
