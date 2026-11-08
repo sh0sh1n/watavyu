@@ -14,6 +14,7 @@
  */
 package com.sh0sh1n.watavyu.views.spreadsheet.layouts;
 
+import com.sh0sh1n.watavyu.models.Cell;
 import com.sh0sh1n.watavyu.views.spreadsheet.SpreadsheetCell;
 import com.sh0sh1n.watavyu.views.spreadsheet.SpreadsheetColumn;
 import com.sh0sh1n.watavyu.views.spreadsheet.SpreadsheetView;
@@ -21,7 +22,10 @@ import com.sh0sh1n.watavyu.views.spreadsheet.SpreadsheetView;
 import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.function.ToIntFunction;
 
 /**
  * SheetLayoutOrdinal implements the ordinal style layout of SpreadsheetCells
@@ -31,15 +35,6 @@ public class SheetLayoutOrdinal extends SheetLayout {
     // The of the right hand margin.
     private int marginSize;
     private JScrollPane pane;
-
-    /**
-     * A column laid out, and how tall its cells came to.
-     *
-     * @param colID     the column's place among the sheet's columns
-     * @param colHeight the height of its cells in pixels
-     */
-    private record ColInfo(int colID, int colHeight) {
-    }
 
     /**
      * SheetLayoutOrdinal constructor.
@@ -57,83 +52,73 @@ public class SheetLayoutOrdinal extends SheetLayout {
     protected void layoutCells(Container parent) {
         // This layout must be applied to a Spreadsheet panel.
         pane = (JScrollPane) parent;
-        SpreadsheetView mainView = (SpreadsheetView) pane.getViewport()
-                .getView();
+        SpreadsheetView mainView = (SpreadsheetView) pane.getViewport().getView();
 
-        List<ColInfo> columnHeight = new ArrayList<>();
-
-        int maxHeight = 0;
-        int colID = 0;
-        SpreadsheetCell selectedCell = null;
+        List<SpreadsheetColumn> visibleColumns = new ArrayList<>();
+        Map<Cell, SpreadsheetCell> views = new HashMap<>();
+        Map<Cell, Integer> heights = new HashMap<>();
+        List<SheetGeometry.ColumnCells> columns = new ArrayList<>();
         for (SpreadsheetColumn col : mainView.getColumns()) {
-
-            // Only layout 'visible' columns.
-            if (col.isVisible()) {
-                int ord = 1;
-                int currentHeight = 0;
-                SpreadsheetCell prevCell = null;
-
-                for (SpreadsheetCell cell : col.getCellsTemporally()) {
-                    if (cell == null) {
-                        // We may have a race condition where a cell got deleted but
-                        // we don't know about it yet
-                        continue;
-                    }
-                    Dimension d = cell.getPreferredSize();
-                    if (cell.getCell().isSelected()) {
-                        selectedCell = cell;
-                    }
-
-                    cell.setBounds(0,
-                            currentHeight,
-                            (col.getWidth() - marginSize),
-                            (int) d.getHeight());
-                    cell.setOrdinal(ord);
-                    cell.repaint();
-                    ord++;
-                    currentHeight += d.height;
-
-                    // Determine if this cell overlaps with the previous cell.
-                    if (prevCell != null) {
-                        if (prevCell.getOffsetTicks() > cell.getOnsetTicks()) {
-                            prevCell.setOverlapBorder(true);
-                        } else {
-                            prevCell.setOverlapBorder(false);
-                        }
-                    }
-                    
-                    // Determine if this cell's onset is later than its (non-zero) offset
-                    if (cell.isUpsideDown()){
-                        cell.setOverlapBorder(true);
-                    }
-
-                    prevCell = cell;
-                }
-
-                columnHeight.add(new ColInfo(colID, currentHeight));
-                maxHeight = Math.max(maxHeight, currentHeight);
+            if (!col.isVisible()) {
+                continue;
             }
-
-            colID++;
+            visibleColumns.add(col);
+            List<Cell> cells = new ArrayList<>();
+            int ord = 1;
+            for (SpreadsheetCell view : col.getCellsTemporally()) {
+                view.setOrdinal(ord);
+                ord++;
+                views.put(view.getCell(), view);
+                heights.put(view.getCell(), view.getPreferredSize().height);
+                cells.add(view.getCell());
+            }
+            columns.add(new SheetGeometry.ColumnCells(col.getColumn(), col.getWidth(), cells));
         }
+
+        SheetGeometry geometry = place(columns, heights::get, marginSize);
+        views.forEach((cell, view) -> geometry.of(cell).ifPresent(placed -> {
+            view.setBounds(placed.bounds());
+            view.setOverlapBorder(placed.overlap());
+            view.repaint();
+        }));
 
         // Pad the columns out at the bottom.
-        maxHeight = Math.max(maxHeight, parent.getHeight());
-        for (ColInfo info : columnHeight) {
-            SpreadsheetColumn col = mainView.getColumns().get(info.colID());
-            int colHeight = info.colHeight();
-
+        int maxHeight = Math.max(geometry.height(), parent.getHeight());
+        for (SpreadsheetColumn col : visibleColumns) {
+            int colHeight = geometry.cellsHeight(col.getColumn());
             col.getDataPanel().setHeight(maxHeight);
-            col.getDataPanel().getPadding().setBounds(0,
-                    colHeight,
-                    col.getWidth(),
-                    (maxHeight - colHeight));
+            col.getDataPanel().getPadding().setBounds(0, colHeight, col.getWidth(), maxHeight - colHeight);
         }
+    }
 
-        if (selectedCell != null) {
-
-
+    /**
+     * Places each column's cells one below another in time order, each as tall as it needs to be, whatever their
+     * times. A cell is marked as overlapping where it ends after the next cell starts, and where its offset is before
+     * its onset, unless the offset is zero.
+     *
+     * @param columns  the shown columns, with their cells in time order
+     * @param heightOf how tall each cell needs to be
+     * @param margin   the width at each column's right edge that its cells leave for the rule
+     * @return where the cells lie
+     */
+    static SheetGeometry place(final List<SheetGeometry.ColumnCells> columns, final ToIntFunction<Cell> heightOf,
+                               final int margin) {
+        SheetGeometry.Builder geometry = new SheetGeometry.Builder();
+        for (SheetGeometry.ColumnCells col : columns) {
+            List<Cell> cells = col.cells();
+            int y = 0;
+            for (int i = 0; i < cells.size(); i++) {
+                Cell cell = cells.get(i);
+                Cell next = i == cells.size() - 1 ? null : cells.get(i + 1);
+                boolean upsideDown = cell.getOffset() < cell.getOnset() && cell.getOffset() != 0;
+                boolean overlapsNext = next != null && Math.max(cell.getOnset(), cell.getOffset()) > next.getOnset();
+                int height = heightOf.applyAsInt(cell);
+                geometry.place(cell, new Rectangle(0, y, col.width() - margin, height), upsideDown || overlapsNext);
+                y += height;
+            }
+            geometry.cellsHeight(col.column(), y);
         }
+        return geometry.build(TimeAxis.NONE);
     }
 
     @Override

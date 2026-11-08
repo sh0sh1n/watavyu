@@ -14,14 +14,21 @@
  */
 package com.sh0sh1n.watavyu.views.spreadsheet.layouts;
 
+import com.sh0sh1n.watavyu.models.Cell;
 import com.sh0sh1n.watavyu.views.spreadsheet.SpreadsheetCell;
 import com.sh0sh1n.watavyu.views.spreadsheet.SpreadsheetColumn;
 import com.sh0sh1n.watavyu.views.spreadsheet.SpreadsheetView;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.SortedSet;
+import java.util.TreeSet;
+import java.util.function.ToIntFunction;
 import java.util.stream.Collectors;
 /**
  * SheetLayoutWeakTemporal - mimics the weak temporal alignment style from
@@ -59,146 +66,151 @@ public class SheetLayoutWeakTemporal extends SheetLayout {
 
     @Override
     protected void layoutCells(Container parent) {
-        //TODO: figure out how to make this whole algorithm neater.
         pane = (JScrollPane) parent;
 
         // This layout must be applied to a Spreadsheet panel.
         SpreadsheetView mainView = (SpreadsheetView) pane.getViewport().getView();
 
-        maxHeight = parent.getHeight();
-
-        // Get visible columns.
-        List<SpreadsheetColumn> visible_columns = getVisibleColumns(mainView);
-
-        // Map columns to temporally ordered cells from column.
-        Map<SpreadsheetColumn, List<SpreadsheetCell>> cellMap = new HashMap<>();
-        for(SpreadsheetColumn col : visible_columns){
-            cellMap.put(col, col.getCellsTemporally());
+        List<SpreadsheetColumn> visibleColumns = getVisibleColumns(mainView);
+        Map<Cell, SpreadsheetCell> views = new HashMap<>();
+        Map<Cell, Integer> heights = new HashMap<>();
+        List<SheetGeometry.ColumnCells> columns = new ArrayList<>();
+        for (SpreadsheetColumn col : visibleColumns) {
+            List<Cell> cells = new ArrayList<>();
+            for (SpreadsheetCell view : col.getCellsTemporally()) {
+                views.put(view.getCell(), view);
+                heights.put(view.getCell(), view.getPreferredSize().height);
+                cells.add(view.getCell());
+            }
+            columns.add(new SheetGeometry.ColumnCells(col.getColumn(), col.getWidth(), cells));
         }
 
+        SheetGeometry geometry = place(columns, heights::get);
+        views.forEach((cell, view) -> geometry.of(cell).ifPresent(placed -> {
+            view.setBounds(placed.bounds());
+            view.setOverlapBorder(placed.overlap());
+        }));
+        for (SpreadsheetColumn col : visibleColumns) {
+            col.setWorkingHeight(geometry.cellsHeight(col.getColumn()));
+        }
+        maxHeight = Math.max(parent.getHeight(), geometry.height());
+        lastAxis = geometry.timeAxis();
+
+        padColumns(mainView);
+        laidOut();
+    }
+
+    /**
+     * Places cells in time. The times their cells start and end are spaced down the sheet ({@link #tops}). A cell
+     * starts at its onset's place, below the cells of its column that start at the same time, and reaches down to its
+     * offset's place, or to the next cell's top where it overlaps that cell, and is never shorter than it needs to be.
+     * A cell that ends a millisecond before the next starts reaches down to it, as one stretch of time. A cell is
+     * marked as overlapping where its offset reaches the next cell's onset, where it shares its onset with the next
+     * cell unless both are the same point, and where it ends before it starts.
+     *
+     * @param columns  the shown columns, with their cells in time order
+     * @param heightOf how tall each cell needs to be
+     * @return where the cells lie
+     */
+    static SheetGeometry place(final List<SheetGeometry.ColumnCells> columns, final ToIntFunction<Cell> heightOf) {
+        // Each onset gets the height of the cells that start then, in the column where they are tallest.
         SortedSet<Long> times = new TreeSet<>();
         Map<Long, Integer> heightMap = new HashMap<>();
-
-        /* Go through each column and assign "height" values to onset times.
-           This will determine how much space to allocate between onset times.
-           For each column, create an intermediate map and then merge with the
-           actual map using maximum values.  This is required since a column can have
-           multiple cells with the same onset.
-           Also accumulate all unique times.
-         */
-        for( SpreadsheetColumn col : visible_columns){
-            Map<Long, Integer> intermediateMap = new HashMap<>();
-            for( SpreadsheetCell curCell : cellMap.get(col)){
-                long onset = curCell.getOnsetTicks();
-                int height = curCell.getPreferredSize().height;
-                intermediateMap.compute(onset, (k, v) -> (v == null) ? height : v + height);
-
-                // Add the onset and offset times to our master set.
+        for (SheetGeometry.ColumnCells col : columns) {
+            Map<Long, Integer> inColumn = new HashMap<>();
+            for (Cell cell : col.cells()) {
+                long onset = cell.getOnset();
+                inColumn.merge(onset, heightOf.applyAsInt(cell), Integer::sum);
                 times.add(onset);
-                long offset = curCell.getOffsetTicksActual();
-                if(offset > onset) times.add(offset);
+                if (cell.getOffset() > onset) {
+                    times.add(cell.getOffset());
+                }
             }
-            // Merge the intermediate map entries.
-            intermediateMap.forEach( (k, v) -> heightMap.merge(k, v, Integer::max));
+            inColumn.forEach((time, height) -> heightMap.merge(time, height, Integer::max));
         }
-
         Map<Long, Integer> onsetMap = tops(times, heightMap);
 
-        /* Iterate over all spreadsheet cells and set boundaries using onset and offset maps.
-           Keep a local copy of the position maps.  Since each time value gets a range of positions
-           (starting from onset map's value and ending at the offset's value), update the local copy of
-           the onset map to get positions for cells sharing onsets.
-         */
+        // Each time's place is where the cells starting then begin; cells sharing an onset stack below one another,
+        // so each column moves its own copy of those places down as it places them.
+        SheetGeometry.Builder geometry = new SheetGeometry.Builder();
         Map<Long, Integer> offsetMap = new HashMap<>();
-        for( SpreadsheetColumn col : visible_columns){
-            List<SpreadsheetCell> orderedCells = cellMap.get(col);
-            int colWidth = col.getWidth();
+        for (SheetGeometry.ColumnCells col : columns) {
+            List<Cell> cells = col.cells();
+            int width = col.width() - 1;
             int colHeight = 0;
             Map<Long, Integer> onsetMapLocal = new HashMap<>(onsetMap);
-            SpreadsheetCell prevCell = null;
-            for (int i = 0; i < orderedCells.size(); i++) {
-                SpreadsheetCell curCell = orderedCells.get(i);
-                SpreadsheetCell nextCell = (i == orderedCells.size() - 1) ? null : orderedCells.get(i + 1);
-
-                long onset = curCell.getOnsetTicks();
-                long offset = curCell.getOffsetTicksActual();
+            Cell prevCell = null;
+            for (int i = 0; i < cells.size(); i++) {
+                Cell curCell = cells.get(i);
+                Cell nextCell = i == cells.size() - 1 ? null : cells.get(i + 1);
+                long onset = curCell.getOnset();
+                long offset = curCell.getOffset();
                 int cellTopY = onsetMapLocal.get(onset);
+                int preferred = heightOf.applyAsInt(curCell);
 
-                // Get height for cell
                 int cellHeight;
-                // Figure out height by looking at next cell's onset and offset times.
-                if (onset > offset) { // cell is reversed
-                    curCell.setOverlapBorder(true);
-                    cellHeight = curCell.getPreferredSize().height;
-                }
-                // Current onset equals next onset
-                else if (nextCell != null && onset == nextCell.getOnsetTicks()) {
-                    if (onset != offset || offset == nextCell.getOffsetTicksActual())
-                        curCell.setOverlapBorder(true);
-                    cellHeight = curCell.getPreferredSize().height;
-                }
-                // Current offset greater than or equal to next onset
-                else if (nextCell != null && offset >= nextCell.getOnsetTicks()) {
-                    curCell.setOverlapBorder(true);
-                    cellHeight = onsetMapLocal.get(nextCell.getOnsetTicks()) - cellTopY;
+                boolean overlap;
+                if (onset > offset) {
+                    overlap = true;
+                    cellHeight = preferred;
+                } else if (nextCell != null && onset == nextCell.getOnset()) {
+                    overlap = onset != offset || offset == nextCell.getOffset();
+                    cellHeight = preferred;
+                } else if (nextCell != null && offset >= nextCell.getOnset()) {
+                    overlap = true;
+                    cellHeight = onsetMapLocal.get(nextCell.getOnset()) - cellTopY;
                 } else {
-                    curCell.setOverlapBorder(false);
+                    overlap = false;
                     cellHeight = offsetMap.getOrDefault(offset, onsetMap.get(offset)) - cellTopY;
                 }
 
-                // Treat cells with 1ms interval as continuous. Stretch bottom of previous cell to top of current cell.
-                if (prevCell != null && onset - prevCell.getOffsetTicks() == 1) {
-                    prevCell.setBounds(0, prevCell.getY(), colWidth - 1, cellTopY - prevCell.getY());
-                    offsetMap.compute(offset, (k, v) -> (v == null) ? cellTopY : Math.max(v, cellTopY));
+                // Cells a millisecond apart are one stretch of time: the previous cell reaches down to this one.
+                if (prevCell != null && onset - end(prevCell) == 1) {
+                    Rectangle prev = geometry.bounds(prevCell);
+                    geometry.place(prevCell, new Rectangle(0, prev.y, width, cellTopY - prev.y),
+                            geometry.overlap(prevCell));
+                    offsetMap.merge(offset, cellTopY, Integer::max);
                 }
 
-                cellHeight = Math.max(cellHeight, curCell.getPreferredSize().height); // fix for edge cases...maybe investigate later
-                // Set cell boundary
-                curCell.setBounds(0, cellTopY, colWidth - 1, cellHeight);
+                cellHeight = Math.max(cellHeight, preferred);
+                geometry.place(curCell, new Rectangle(0, cellTopY, width, cellHeight), overlap);
 
-                // Update local onset map
-                int adjOn = cellHeight;
-                onsetMapLocal.compute(onset, (k, v) -> v + adjOn);
-
-                // Update offset map
-                if(!curCell.getOverlapBorder()) {
-                    int adjOff = cellTopY + cellHeight;
-                    offsetMap.compute(offset, (k, v) -> (v == null) ? adjOff : Math.max(v, adjOff));
+                onsetMapLocal.merge(onset, cellHeight, Integer::sum);
+                if (!overlap) {
+                    offsetMap.merge(offset, cellTopY + cellHeight, Integer::max);
                 }
-
-                // Update vars
                 colHeight = cellTopY + cellHeight;
                 prevCell = curCell;
             }
-
-            // Set column working height
-            col.setWorkingHeight(colHeight);
-            maxHeight = Math.max(maxHeight, colHeight);
+            geometry.cellsHeight(col.column(), colHeight);
         }
 
-        /* Do a second pass to update the offsets again. */
-        for (SpreadsheetColumn col : visible_columns) {
-            int colWidth = col.getWidth();
-            for (SpreadsheetCell sc : cellMap.get(col)) {
-                int mapHeight = offsetMap.getOrDefault(sc.getOffsetTicks(), -1) - sc.getY();
-                if (!sc.getOverlapBorder() && sc.getSize().getHeight() < mapHeight)
-                    sc.setBounds(0, sc.getY(), colWidth - 1, mapHeight);
+        // A cell that does not overlap reaches down to where the cells ending at its offset end.
+        for (SheetGeometry.ColumnCells col : columns) {
+            for (Cell cell : col.cells()) {
+                Rectangle bounds = geometry.bounds(cell);
+                int mapHeight = offsetMap.getOrDefault(end(cell), -1) - bounds.y;
+                if (!geometry.overlap(cell) && bounds.height < mapHeight) {
+                    geometry.place(cell, new Rectangle(0, bounds.y, bounds.width, mapHeight), false);
+                }
             }
         }
 
         // Each time spans from where its cells start to where the cells that end then end; a cell whose offset is
         // before its onset ends at its onset.
         Map<Long, Integer> bottoms = new HashMap<>();
-        for (SpreadsheetColumn col : visible_columns) {
-            for (SpreadsheetCell sc : cellMap.get(col)) {
-                long end = Math.max(sc.getOnsetTicks(), sc.getOffsetTicksActual());
-                bottoms.merge(end, sc.getY() + sc.getHeight(), Integer::max);
+        for (SheetGeometry.ColumnCells col : columns) {
+            for (Cell cell : col.cells()) {
+                Rectangle bounds = geometry.bounds(cell);
+                bottoms.merge(end(cell), bounds.y + bounds.height, Integer::max);
             }
         }
-        lastAxis = new TimeAxis(onsetMap, bottoms);
+        return geometry.build(new TimeAxis(onsetMap, bottoms));
+    }
 
-        padColumns(mainView);
-        laidOut();
+    /** Returns when a cell ends: its offset, or its onset if the offset is before it. */
+    private static long end(final Cell cell) {
+        return Math.max(cell.getOnset(), cell.getOffset());
     }
 
     /**
