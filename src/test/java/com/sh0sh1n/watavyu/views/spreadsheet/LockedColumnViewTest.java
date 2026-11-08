@@ -40,7 +40,8 @@ public class LockedColumnViewTest {
         SwingUtilities.invokeAndWait(() -> {
             spreadsheet = TestSpreadsheets.withPlayback(dataStore);
             try {
-                header = new SpreadsheetColumn(spreadsheet, notes, mock(CellSelectionListener.class),
+                header = new SpreadsheetColumn(spreadsheet, notes, new SpreadsheetView(spreadsheet),
+                    mock(CellSelectionListener.class),
                     mock(ColumnSelectionListener.class), mock(ColumnVisibilityListener.class));
             } catch (Exception e) {
                 throw new IllegalStateException(e);

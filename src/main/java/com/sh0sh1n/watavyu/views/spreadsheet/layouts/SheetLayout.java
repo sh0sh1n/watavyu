@@ -14,13 +14,13 @@
  */
 package com.sh0sh1n.watavyu.views.spreadsheet.layouts;
 
-import com.sh0sh1n.watavyu.views.spreadsheet.SpreadsheetCell;
 import com.sh0sh1n.watavyu.views.spreadsheet.SpreadsheetColumn;
 
 import javax.swing.*;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
+import java.awt.Rectangle;
 import java.util.Optional;
 
 /**
@@ -67,7 +67,12 @@ public abstract class SheetLayout extends ScrollPaneLayout {
      */
     protected abstract void layoutCells(Container parent);
 
-    public abstract void reorientView(SpreadsheetCell cell);
+    /**
+     * Scrolls a cell into sight.
+     *
+     * @param cell where the cell lies in the sheet
+     */
+    public abstract void reorientView(Rectangle cell);
 
     public abstract void reorientView(SpreadsheetColumn column);
 

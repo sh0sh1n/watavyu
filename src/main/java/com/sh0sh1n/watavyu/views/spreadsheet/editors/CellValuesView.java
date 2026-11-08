@@ -34,6 +34,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.StringJoiner;
 
 /**
  * A cell's values, as {@code (left, <code02>)}: an editor for each code's value, with the text between them fixed.
@@ -171,6 +172,26 @@ public final class CellValuesView extends JTextArea implements FocusListener {
         }
         editors.add(new FixedText(this, ")"));
         return editors;
+    }
+
+    /**
+     * Returns the text a cell's values show, as this view shows them before any typing: the clip a media cell plays,
+     * or each code's value between brackets, an empty value showing its code's name, as {@code (left, <code02>)}.
+     *
+     * @param cell a cell
+     */
+    public static String textOf(final Cell cell) {
+        MediaClip clip = cell.getClip();
+        if (clip != null) {
+            return clipLabel(clip, cell.getClipFile());
+        }
+        List<String> codes = cell.getColumn().getCodes();
+        StringJoiner text = new StringJoiner(", ", "(", ")");
+        for (int i = 0; i < codes.size(); i++) {
+            String value = cell.getValue(i);
+            text.add(value.isEmpty() ? "<" + codes.get(i) + ">" : value);
+        }
+        return text.toString();
     }
 
     /**

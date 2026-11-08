@@ -36,6 +36,9 @@ public final class SheetGeometry {
     public record Placed(Rectangle bounds, boolean overlap) {
     }
 
+    /** A sheet with nothing placed. */
+    public static final SheetGeometry EMPTY = new SheetGeometry(Map.of(), Map.of(), TimeAxis.NONE);
+
     private final Map<Cell, Placed> placed;
 
     private final Map<Column, Integer> cellsHeights;

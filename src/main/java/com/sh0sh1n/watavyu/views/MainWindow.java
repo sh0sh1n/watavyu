@@ -928,9 +928,8 @@ public final class MainWindow implements FileDropEventListener {
     public void changeFontSize(final int diff) {
         int size = SpreadsheetTheme.dataFont().getSize() + diff;
         SpreadsheetTheme.setDataFontSize(Math.max(Math.min(size, ZOOM_MAX_SIZE), ZOOM_MIN_SIZE));
-        // Create and redraw fresh window pane so all of the fonts are new again.
-        getSpreadsheetPanel().revalidate();
-        getSpreadsheetPanel().repaint();
+        // The cells are measured and drawn again in the new font.
+        getSpreadsheetPanel().redrawCells();
     }
 
     /**

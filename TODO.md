@@ -15,11 +15,11 @@ Updated 2026-11-08. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 | Measure | Before cleanup (2026-10-14) | Now |
 |---|---|---|
-| Java source (main) | 242 files, 42.5k lines | 138 files, 24.0k lines |
-| Tests / line coverage | 113 / 9.9% | 741 / 73.0%; views 60%, undo edits 94% |
+| Java source (main) | 242 files, 42.5k lines | 141 files, 24.6k lines |
+| Tests / line coverage | 113 / 9.9% | 747 / 73.2%; views 62%, undo edits 94% |
 | Runtime dependencies / with known vulnerabilities | 28 / 8 | 13 / 0 |
 | Error Prone + javac lint warnings | 1,227 | 0: every compile fails on one, with `serial` off (about 130) |
-| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 98 / 0 (PMD only in size and complexity and three deliberate catch-alls; the rest gated); 13 |
+| PMD / SpotBugs findings; PMD god classes | 626 / 113; 16 | 101 / 0 (PMD only in size and complexity and three deliberate catch-alls; the rest gated); 14 |
 | Never-invoked methods (`dead-code.py`) | 109+ | 28: test-only accessors, unused settings setters, and Swing overrides the script cannot see |
 | Static global access (`grep -rohP 'Watavyu\.(get\|set)\w*\(' src/main/java \| wc -l`) | about 330 call sites | 0: each tab's `ProjectController` is passed to what it owns |
 
@@ -73,8 +73,6 @@ Tech debt is paid down in the Java app rather than left for the C++ rewrite (AGE
 
 **R9. Autosave and crash recovery.** ready. `AutoSaveController` saves a `~<name>_*.watavyu.json` project file for each tab with unsaved changes to the temporary folder every minute; at launch, `MainWindow.checkForAutosavedFile` offers to recover any left in the temporary folder and opens one as an unsaved project; that flow is checked only by reading, as its dialogs need clicks. The temporary folder is shared with other apps and cleared by macOS. Settle this together with B11.
 
-**R12. The last warnings and findings.** ready, alongside the others. Every compile, SpotBugs and all but ten PMD rules fail the build on a finding (BUILDING.md › Lint). Left: PMD's size and complexity rules (96 findings: 13 god classes, 25 classes with too many methods, 43 complex methods, and coupling, length, imports and fields), which the structural refactors such as R14 shrink better than a pass of their own; javac's `serial` lint, off with about 130 warnings from Swing views that are never serialized (clearing it means `serialVersionUID`s and `transient` fields throughout); and PMD's two catch-all rules, held above zero by three deliberate catches (`ClockTimer.every`, `JavaFxVideoPlugin.readFrames`, `VideoController.openStream`), so a new catch-all does not fail the build until those are restructured.
-
-**R14. A drawn spreadsheet.** ready. Each cell is a tree of Swing components (`SpreadsheetCell`, its time fields and value editors), which is what limits how large a sheet stays smooth. A sheet that paints its visible cells and puts one editor over the cell being edited, as `JTable` does, would lift that limit and move the cursor and selection into the model, which the planned interaction model wants. The largest item; it changes how much the C++ rewrite's one objective, performance, is still needed.
+**R12. The last warnings and findings.** ready, alongside the others. Every compile, SpotBugs and all but ten PMD rules fail the build on a finding (BUILDING.md › Lint). Left: PMD's size and complexity rules (98 findings: 14 god classes, 27 classes with too many methods, 42 complex methods, and coupling, length, imports and fields), which structural refactors shrink better than a pass of their own; javac's `serial` lint, off with about 130 warnings from Swing views that are never serialized (clearing it means `serialVersionUID`s and `transient` fields throughout); and PMD's two catch-all rules, held above zero by three deliberate catches (`ClockTimer.every`, `JavaFxVideoPlugin.readFrames`, `VideoController.openStream`), so a new catch-all does not fail the build until those are restructured.
 
 **R15. One class for each data-model type.** ready, low priority (owner), *from reading*. `DataStore`, `Column` and `Cell` (`models`) are interfaces with one implementation each, `DefaultDataStore`, `DefaultColumn` and `DefaultCell`, left from Datavyu's pluggable database. Merging each pair into one class would retire the `Default*` names and the duplicated declarations.
