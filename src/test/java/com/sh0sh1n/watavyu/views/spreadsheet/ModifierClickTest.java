@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.sh0sh1n.watavyu.TestSpreadsheets;
+import com.sh0sh1n.watavyu.controllers.ProjectController;
 import com.sh0sh1n.watavyu.models.Cell;
 import com.sh0sh1n.watavyu.models.DataStore;
 import com.sh0sh1n.watavyu.models.DataStoreFactory;
@@ -26,13 +27,14 @@ public class ModifierClickTest {
 
     private CellSelectionListener cells;
     private ColumnSelectionListener columns;
+    private Cell model;
     private SpreadsheetCell cell;
     private SpreadsheetColumn header;
 
     @BeforeMethod
     public void setUp() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
-        Cell model = dataStore.createColumn("gaze").createPointCell(1_000);
+        model = dataStore.createColumn("gaze").createPointCell(1_000);
         cells = mock(CellSelectionListener.class);
         columns = mock(ColumnSelectionListener.class);
         SwingUtilities.invokeAndWait(() -> {
@@ -40,8 +42,9 @@ public class ModifierClickTest {
                 SpreadsheetColumn column = mock(SpreadsheetColumn.class);
                 when(column.getProjectController()).thenReturn(TestSpreadsheets.withPlayback(dataStore));
                 cell = new SpreadsheetCell(column, model, cells);
-                header = new SpreadsheetColumn(TestSpreadsheets.withPlayback(dataStore),
-                    dataStore.createColumn("speech"), cells, columns, mock(ColumnVisibilityListener.class));
+                ProjectController spreadsheet = TestSpreadsheets.withPlayback(dataStore);
+                header = new SpreadsheetColumn(spreadsheet, dataStore.createColumn("speech"),
+                    new SpreadsheetView(spreadsheet), cells, columns, mock(ColumnVisibilityListener.class));
             } catch (Exception e) {
                 throw new IllegalStateException(e);
             }
@@ -65,7 +68,7 @@ public class ModifierClickTest {
             cell.mousePressed(mouse(cell, MouseEvent.MOUSE_PRESSED, InputEvent.META_DOWN_MASK)));
 
         verify(cells, never()).clearCellSelection();
-        verify(cells).addCellToSelection(cell);
+        verify(cells).addCellToSelection(model);
     }
 
     @Test
@@ -74,7 +77,7 @@ public class ModifierClickTest {
             cell.mousePressed(mouse(cell, MouseEvent.MOUSE_PRESSED, InputEvent.SHIFT_DOWN_MASK)));
 
         verify(cells, never()).clearCellSelection();
-        verify(cells).addCellToContinousSelection(cell);
+        verify(cells).addCellToContinousSelection(model);
     }
 
     /** A right-click, or a ⌃-click, which macOS takes for one, leaves the selection alone, as on a column's header. */

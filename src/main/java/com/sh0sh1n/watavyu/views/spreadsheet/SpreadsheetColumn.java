@@ -36,7 +36,7 @@ import java.util.ListIterator;
  * Spreadsheet window.
  */
 public final class SpreadsheetColumn extends JLabel implements ColumnListener, MouseListener, MouseMotionListener,
-        ClockTimer.ClockListener {
+        ClockTimer.ClockListener, KeyEventDispatcher {
 
     /** The logger for this class */
     private static Logger logger = LogManager.getLogger(SpreadsheetColumn.class);
@@ -66,10 +66,8 @@ public final class SpreadsheetColumn extends JLabel implements ColumnListener, M
      */
     private Column dataColumn;
 
-    /**
-     * ColumnDataPanel this column manages.
-     */
-    private ColumnDataPanel datapanel;
+    /** The sheet that draws this column's cells. */
+    private final SpreadsheetView sheet;
 
     /**
      * Width of the column in pixels.
@@ -106,12 +104,6 @@ public final class SpreadsheetColumn extends JLabel implements ColumnListener, M
      */
     private ColumnVisibilityListener columnVisList;
 
-    /**
-     * Layout state: The height of the column data area in pixels.
-     */
-    private int dataHeight = 0;
-
-
     private int previouslyFocusedCellIdx = -1;
 
     /** The spreadsheet this column is in */
@@ -122,17 +114,20 @@ public final class SpreadsheetColumn extends JLabel implements ColumnListener, M
      *
      * @param controller the spreadsheet this column is in
      * @param var    the column this column displays.
+     * @param sheet  the sheet that draws its cells
      * @param cellSelL Spreadsheet cell selection listener to notify
      * @param colSelL  Column selection listener to notify.
      */
     public SpreadsheetColumn(final ProjectController controller,
                              final Column var,
+                             final SpreadsheetView sheet,
                              final CellSelectionListener cellSelL,
                              final ColumnSelectionListener colSelL,
                              final ColumnVisibilityListener colVisL) {
         this.controller = controller;
         this.dataStore = controller.getDataStore();
         this.dataColumn = var;
+        this.sheet = sheet;
         this.cellSelList = cellSelL;
         this.columnSelList = colSelL;
         this.columnVisList = colVisL;
@@ -150,9 +145,7 @@ public final class SpreadsheetColumn extends JLabel implements ColumnListener, M
         setText(var.getName());
         updateLockMark();
 
-        datapanel = new ColumnDataPanel(this, width, var, cellSelL);
         this.setVisible(!var.isHidden());
-        datapanel.setVisible(!var.isHidden());
 
         controller.getVideoController().getClockTimer().registerListener(this);
     }
@@ -160,6 +153,11 @@ public final class SpreadsheetColumn extends JLabel implements ColumnListener, M
     /** Returns the spreadsheet this column is in. */
     public ProjectController getProjectController() {
         return controller;
+    }
+
+    /** Returns what hears of the selection of this column's cells. */
+    CellSelectionListener getCellSelectionListener() {
+        return cellSelList;
     }
 
     /** The window's glass pane, which shows a column's image while it is dragged. */
@@ -267,24 +265,6 @@ public final class SpreadsheetColumn extends JLabel implements ColumnListener, M
         return true;
     }
 
-    /**
-     * Returns the height in pixels of the cells that have been laid in this
-     * column.
-     */
-    public int getWorkingHeight() {
-        return dataHeight;
-    }
-
-    /**
-     * Sets the height of the column's laid-out cells.
-     *
-     * @param newHeight The height in pixels of the cells that have been laid
-     *                  in this column.
-     */
-    public void setWorkingHeight(final int newHeight) {
-        dataHeight = newHeight;
-    }
-
     public Column getColumn() {
         return dataColumn;
     }
@@ -297,7 +277,10 @@ public final class SpreadsheetColumn extends JLabel implements ColumnListener, M
         addMouseListener(this);
         addMouseMotionListener(this);
         dataColumn.addListener(this);
-        datapanel.registerListeners();
+        for (Cell cell : dataColumn.getCells()) {
+            sheet.watch(cell);
+        }
+        KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(this);
     }
 
     /**
@@ -308,7 +291,10 @@ public final class SpreadsheetColumn extends JLabel implements ColumnListener, M
         removeMouseListener(this);
         removeMouseMotionListener(this);
         dataColumn.removeListener(this);
-        datapanel.deregisterListeners();
+        KeyboardFocusManager.getCurrentKeyboardFocusManager().removeKeyEventDispatcher(this);
+        for (Cell cell : dataColumn.getCells()) {
+            sheet.unwatch(cell);
+        }
         controller.getVideoController().getClockTimer().unRegisterListener(this);
     }
 
@@ -317,13 +303,6 @@ public final class SpreadsheetColumn extends JLabel implements ColumnListener, M
      */
     public Dimension getHeaderSize() {
         return new Dimension(getWidth(), DEFAULT_HEADER_HEIGHT);
-    }
-
-    /**
-     * Clears the display components from the spreadsheet column.
-     */
-    public void clear() {
-        datapanel.clear();
     }
 
     /**
@@ -348,15 +327,8 @@ public final class SpreadsheetColumn extends JLabel implements ColumnListener, M
         setMaximumSize(dim);
         revalidate();
 
-        datapanel.setWidth(width);
-        datapanel.revalidate();
-    }
-
-    /**
-     * Returns the datapanel.
-     */
-    public ColumnDataPanel getDataPanel() {
-        return datapanel;
+        sheet.revalidate();
+        sheet.repaint();
     }
 
     /**
@@ -402,40 +374,33 @@ public final class SpreadsheetColumn extends JLabel implements ColumnListener, M
         previouslyFocusedCellIdx = index;
     }
 
-    /**
-     * Returns the SpreadsheetCells in this column.
-     */
-    public List<SpreadsheetCell> getCells() {
-        return datapanel.getCells();
+    /** Returns the column's cells in time order. */
+    public List<Cell> getCellsTemporally() {
+        return dataColumn.getCellsTemporally();
+    }
+
+    /** Returns the first selected cell in time order, or null if none is. */
+    public Cell getSelectedCell() {
+        for (Cell cell : getCellsTemporally()) {
+            if (cell.isSelected()) {
+                return cell;
+            }
+        }
+        return null;
     }
 
     /**
-     * Gets a specific spreadsheet cell temporally.
+     * Returns the cell whose onset is nearest a cell's, the first of those as near.
      *
-     * @param index The index of the spreadsheet cell you wish to retrieve.
-     * @return The nth spreadsheet cell temporally.
+     * @param cell a cell, in this column or another
+     * @return the nearest cell, or null for a column without cells
      */
-    public SpreadsheetCell getCellTemporally(final int index) {
-        return datapanel.getCellTemporally(index);
-    }
-
-    /**
-     * Returns the Spreadsheet cells in this column temporally.
-     */
-    public List<SpreadsheetCell> getCellsTemporally() {
-        return datapanel.getCellsTemporally();
-    }
-
-    public SpreadsheetCell getNearestCellTemporally(SpreadsheetCell sc) {
-        SpreadsheetCell closestCell = null;
-        for(SpreadsheetCell c : datapanel.getCellsTemporally()) {
-            if(closestCell == null) {
+    public Cell getNearestCellTemporally(final Cell cell) {
+        Cell closestCell = null;
+        for (Cell c : getCellsTemporally()) {
+            if (closestCell == null
+                    || Math.abs(cell.getOnset() - c.getOnset()) < Math.abs(cell.getOnset() - closestCell.getOnset())) {
                 closestCell = c;
-            } else {
-                if(Math.abs(sc.getOnsetTicks() - c.getOnsetTicks()) < Math.abs(sc.getOnsetTicks()
-                        - closestCell.getOnsetTicks())) {
-                    closestCell = c;
-                }
             }
         }
         return closestCell;
@@ -450,24 +415,61 @@ public final class SpreadsheetColumn extends JLabel implements ColumnListener, M
 
     private void focusNextCell() {
         long time = controller.getVideoController().getCurrentTime();
-        List<SpreadsheetCell> tempCells = getCellsTemporally();
-        for (SpreadsheetCell c : tempCells) {
-            if (c.getCell().isInTimeWindow(time)) {
-                if(!c.isFocusOwner()) {
-                    int firstEmpty = c.getCell().getValues().indexOf("");
-                    c.requestFocus();
-                    if(firstEmpty > -1) {
-                        c.getDataView().getEdTracker().setEditor(c.getDataView().getEdTracker().getEditorAtArgIndex(firstEmpty));
+        for (Cell c : getCellsTemporally()) {
+            if (c.isInTimeWindow(time)) {
+                SpreadsheetCell editor = sheet.edit(c);
+                if (!editor.isFocusOwner()) {
+                    int firstEmpty = c.getValues().indexOf("");
+                    editor.requestFocus();
+                    EditorTracker tracker = editor.getDataView().getEdTracker();
+                    if (firstEmpty > -1) {
+                        tracker.setEditor(tracker.getEditorAtArgIndex(firstEmpty));
                     } else {
-                        c.getDataView().getEdTracker().setEditor(c.getDataView().getEdTracker().getEditorAtIndex(previouslyFocusedCellIdx > -1 ? previouslyFocusedCellIdx : 0));
+                        tracker.setEditor(tracker.getEditorAtIndex(Math.max(previouslyFocusedCellIdx, 0)));
                     }
-                }
-                if(c.getCell().getOnset() > time) {
-                    break;
                 }
                 break;
             }
         }
+    }
+
+    /**
+     * ↑ and ↓ move the selection to the cell before or after the selected one in time, in this column, keeping the
+     * caret in the same value; the first and last cells go no further.
+     *
+     * @param e The key event to dispatch.
+     * @return true if the event has been consumed by this dispatch, false
+     * otherwise
+     */
+    @Override
+    public boolean dispatchKeyEvent(final KeyEvent e) {
+        if (e.getID() != KeyEvent.KEY_PRESSED
+                || (e.getKeyCode() != KeyEvent.VK_UP && e.getKeyCode() != KeyEvent.VK_DOWN)) {
+            return false;
+        }
+        Cell selected = getSelectedCell();
+        if (selected == null) {
+            return false;
+        }
+        List<Cell> cells = getCellsTemporally();
+        int target = cells.indexOf(selected) + (e.getKeyCode() == KeyEvent.VK_UP ? -1 : 1);
+        if (target < 0 || target >= cells.size()) {
+            return false;
+        }
+        int pos = sheet.getEditor().filter(editor -> editor.getCell().equals(selected))
+                .map(editor -> editor.getDataView().getEdTracker().indexOfCurrentEditor()).orElse(-1);
+        Cell next = cells.get(target);
+
+        selected.setHighlighted(false);
+        selected.setSelected(false);
+        next.setHighlighted(true);
+        next.setSelected(true);
+        SpreadsheetCell editor = sheet.edit(next);
+        EditorTracker tracker = editor.getDataView().getEdTracker();
+        tracker.setEditor(tracker.getEditorAtIndex(Math.max(pos, 0)));
+        editor.requestFocus();
+        e.consume();
+        return true;
     }
 
     // *************************************************************************
@@ -477,14 +479,12 @@ public final class SpreadsheetColumn extends JLabel implements ColumnListener, M
     public void requestFocus() {
         controller.getSpreadSheetPanel().revalidate();
         controller.getSpreadSheetPanel().reorientView(this);
-        // Request focus for this column. It will request focus for the first SpreadsheetCell in the column if one
-        // exists. If no cells exist it will request focus for the datapanel of the column.
-        if (datapanel.getCells().size() > 0) {
-//            datapanel.getCells().get(0).requestFocusInWindow();
-            SpreadsheetCell sc = datapanel.getSelectedCell();
-            if(sc != null) sc.requestFocus();
+        // The column's selected cell takes the focus, if it has one; otherwise the sheet does.
+        Cell selectedCell = getSelectedCell();
+        if (selectedCell != null) {
+            sheet.edit(selectedCell).requestFocus();
         } else {
-            datapanel.requestFocusInWindow();
+            sheet.requestFocusInWindow();
         }
 
     }
@@ -500,7 +500,8 @@ public final class SpreadsheetColumn extends JLabel implements ColumnListener, M
     @Override
     public void visibilityChanged(final boolean isHidden) {
         setVisible(!isHidden);
-        this.datapanel.setVisible(!isHidden);
+        sheet.revalidate();
+        sheet.repaint();
         this.setSelected(false);
         columnVisList.columnVisibilityChanged();
     }
@@ -524,36 +525,33 @@ public final class SpreadsheetColumn extends JLabel implements ColumnListener, M
     }
 
     /**
-     * Redraws the cells that show a renamed code's name, as each key typed renames it: a cell draws a code's name only
-     * as the placeholder of an empty value.
+     * Redraws the cells, which show a renamed code's name as the placeholder of an empty value, as each key typed
+     * renames it.
      */
     @Override
     public void codeRenamed(final int index) {
-        for (SpreadsheetCell cell : getCells()) {
-            if (cell.getCell().getValue(index).isEmpty()) {
-                cell.redrawValues();
-            }
-        }
+        redrawValues();
     }
 
     private void redrawValues() {
-        for (SpreadsheetCell cell : getCells()) {
-            cell.redrawValues();
-            cell.updateSelectionDisplay();
-        }
+        sheet.redrawColumn(this);
     }
 
+    /** A new cell is drawn, and takes the focus. */
     @Override
     public void cellInserted(final Cell newCell) {
-        datapanel.insertCell(this, newCell, cellSelList);
+        sheet.watch(newCell);
+        sheet.revalidate();
+        sheet.edit(newCell).requestFocus();
     }
 
+    /** A deleted cell goes from the sheet, and the cell after it in time takes the focus. */
     @Override
     public void cellRemoved(final Cell deletedCell) {
-        datapanel.deleteCell(deletedCell);
-        for(SpreadsheetCell c : getCellsTemporally()) {
-            if(c.getOnsetTicks() >= deletedCell.getOnset()) {
-                c.requestFocus();
+        sheet.unwatch(deletedCell);
+        for (Cell c : getCellsTemporally()) {
+            if (c.getOnset() >= deletedCell.getOnset()) {
+                sheet.edit(c).requestFocus();
                 break;
             }
         }

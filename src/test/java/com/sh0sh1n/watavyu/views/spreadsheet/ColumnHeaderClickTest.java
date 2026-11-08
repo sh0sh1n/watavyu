@@ -6,6 +6,7 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
 import com.sh0sh1n.watavyu.TestSpreadsheets;
+import com.sh0sh1n.watavyu.controllers.ProjectController;
 import com.sh0sh1n.watavyu.models.DataStore;
 import com.sh0sh1n.watavyu.models.DataStoreFactory;
 import org.testng.annotations.BeforeMethod;
@@ -25,8 +26,9 @@ public class ColumnHeaderClickTest {
         DataStore dataStore = DataStoreFactory.newDataStore();
         SwingUtilities.invokeAndWait(() -> {
             try {
-                header = new SpreadsheetColumn(TestSpreadsheets.withPlayback(dataStore), dataStore.createColumn("notes"),
-                    mock(CellSelectionListener.class), mock(ColumnSelectionListener.class),
+                ProjectController spreadsheet = TestSpreadsheets.withPlayback(dataStore);
+                header = new SpreadsheetColumn(spreadsheet, dataStore.createColumn("notes"),
+                    new SpreadsheetView(spreadsheet), mock(CellSelectionListener.class), mock(ColumnSelectionListener.class),
                     mock(ColumnVisibilityListener.class));
             } catch (Exception e) {
                 throw new IllegalStateException(e);

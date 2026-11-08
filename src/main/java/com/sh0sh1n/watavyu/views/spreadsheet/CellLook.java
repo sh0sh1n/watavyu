@@ -80,6 +80,21 @@ public final class CellLook {
     }
 
     /**
+     * Returns how a cell shows as selected: highlighted, outside highlight-and-focus mode, else selected or neither.
+     *
+     * @param selected          whether the cell is selected
+     * @param highlighted       whether it is highlighted
+     * @param highlightAndFocus whether highlight-and-focus mode is on
+     */
+    public static Selection selectionOf(final boolean selected, final boolean highlighted,
+                                        final boolean highlightAndFocus) {
+        if (highlighted && !highlightAndFocus) {
+            return Selection.HIGHLIGHTED;
+        }
+        return selected ? Selection.SELECTED : Selection.NONE;
+    }
+
+    /**
      * Returns the cell's colours.
      *
      * @param palette    the palette

@@ -3,7 +3,6 @@ package com.sh0sh1n.watavyu.views.spreadsheet.layouts;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
-import com.sh0sh1n.watavyu.views.spreadsheet.SpreadsheetCell;
 import com.sh0sh1n.watavyu.views.spreadsheet.SpreadsheetColumn;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
@@ -16,6 +15,7 @@ import javax.swing.SwingUtilities;
 import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Point;
+import java.awt.Rectangle;
 
 /**
  * A sheet's cells are placed again when something in the sheet changes or its scroll pane resizes, and not when it
@@ -33,7 +33,7 @@ public class SheetLayoutTest {
         }
 
         @Override
-        public void reorientView(final SpreadsheetCell cell) {
+        public void reorientView(final Rectangle cell) {
         }
 
         @Override

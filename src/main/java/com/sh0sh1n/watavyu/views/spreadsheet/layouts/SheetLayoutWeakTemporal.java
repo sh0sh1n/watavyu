@@ -15,13 +15,11 @@
 package com.sh0sh1n.watavyu.views.spreadsheet.layouts;
 
 import com.sh0sh1n.watavyu.models.Cell;
-import com.sh0sh1n.watavyu.views.spreadsheet.SpreadsheetCell;
 import com.sh0sh1n.watavyu.views.spreadsheet.SpreadsheetColumn;
 import com.sh0sh1n.watavyu.views.spreadsheet.SpreadsheetView;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,16 +27,11 @@ import java.util.Optional;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.function.ToIntFunction;
-import java.util.stream.Collectors;
 /**
  * SheetLayoutWeakTemporal - mimics the weak temporal alignment style from
  * original MacSHAPA.
  */
 public class SheetLayoutWeakTemporal extends SheetLayout {
-    // The of the right hand margin.
-
-    // The maximum height of the layout in pixels.
-    int maxHeight;
     private JScrollPane pane;
 
     /** The space between consecutive times, below the cells that start at the first. */
@@ -70,33 +63,9 @@ public class SheetLayoutWeakTemporal extends SheetLayout {
 
         // This layout must be applied to a Spreadsheet panel.
         SpreadsheetView mainView = (SpreadsheetView) pane.getViewport().getView();
-
-        List<SpreadsheetColumn> visibleColumns = getVisibleColumns(mainView);
-        Map<Cell, SpreadsheetCell> views = new HashMap<>();
-        Map<Cell, Integer> heights = new HashMap<>();
-        List<SheetGeometry.ColumnCells> columns = new ArrayList<>();
-        for (SpreadsheetColumn col : visibleColumns) {
-            List<Cell> cells = new ArrayList<>();
-            for (SpreadsheetCell view : col.getCellsTemporally()) {
-                views.put(view.getCell(), view);
-                heights.put(view.getCell(), view.getPreferredSize().height);
-                cells.add(view.getCell());
-            }
-            columns.add(new SheetGeometry.ColumnCells(col.getColumn(), col.getWidth(), cells));
-        }
-
-        SheetGeometry geometry = place(columns, heights::get);
-        views.forEach((cell, view) -> geometry.of(cell).ifPresent(placed -> {
-            view.setBounds(placed.bounds());
-            view.setOverlapBorder(placed.overlap());
-        }));
-        for (SpreadsheetColumn col : visibleColumns) {
-            col.setWorkingHeight(geometry.cellsHeight(col.getColumn()));
-        }
-        maxHeight = Math.max(parent.getHeight(), geometry.height());
+        SheetGeometry geometry = place(mainView.shownColumns(), mainView::heightOf);
         lastAxis = geometry.timeAxis();
-
-        padColumns(mainView);
+        mainView.setGeometry(geometry);
         laidOut();
     }
 
@@ -255,11 +224,11 @@ public class SheetLayoutWeakTemporal extends SheetLayout {
     }
 
     @Override
-    public void reorientView(SpreadsheetCell cell) {
+    public void reorientView(final Rectangle cell) {
         double viewMax = pane.getViewport().getViewRect().getY() + pane.getViewport().getViewRect().getHeight();
         double viewMin = pane.getViewport().getViewRect().getY();
-        int cellMax = cell.getY() + cell.getHeight();
-        int cellMin = cell.getY();
+        int cellMax = cell.y + cell.height;
+        int cellMin = cell.y;
 
         if (viewMax < cellMax && viewMin < cellMin) {
             int delta = (int)Math.min(cellMax - viewMax,
@@ -290,29 +259,5 @@ public class SheetLayoutWeakTemporal extends SheetLayout {
             pane.getViewport().setViewPosition(
                     new Point(columnMin, (int) pane.getViewport().getViewRect().getY()));
         }
-    }
-
-    /**
-     * Pads all the columns so that they all fill out to the maximum height of
-     * the spreadsheet.
-     *
-     * @param mainView The actual spreadsheet that we are populating.
-     */
-    private void padColumns(SpreadsheetView mainView) {
-        for (SpreadsheetColumn col : mainView.getColumns()) {
-            Integer colHeight = col.getWorkingHeight();
-
-            col.getDataPanel().setHeight(maxHeight);
-            col.getDataPanel().getPadding().setBounds(0,
-                    colHeight,
-                    col.getWidth(),
-                    (maxHeight - colHeight));
-        }
-    }
-
-    private List<SpreadsheetColumn> getVisibleColumns(SpreadsheetView mainView) {
-        return mainView.getColumns().parallelStream()
-                .filter(c -> c.isVisible())
-                .collect(Collectors.toList());
     }
 }

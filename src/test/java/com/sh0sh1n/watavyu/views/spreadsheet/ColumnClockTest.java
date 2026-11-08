@@ -5,6 +5,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertTrue;
 
 import com.sh0sh1n.watavyu.controllers.ProjectController;
 import com.sh0sh1n.watavyu.models.Cell;
@@ -21,11 +22,14 @@ import org.testng.annotations.Test;
 import java.util.List;
 import javax.swing.SwingUtilities;
 
-/** A column and its cells follow the clock while they are in the spreadsheet, and stop once they are gone. */
+/**
+ * The sheet follows the clock once for all its cells, rather than each cell following it; a column and the editor over
+ * the cell in focus follow it too. Each stops once it is gone.
+ */
 public class ColumnClockTest {
 
     @Test
-    public void cellsAndColumnsStopFollowingTheClockOnceGone() throws Exception {
+    public void theSheetColumnsAndEditorStopFollowingTheClockOnceGone() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
         Column notes = dataStore.createColumn("notes");
         Cell deleted = notes.createPointCell(1_000);
@@ -37,30 +41,31 @@ public class ColumnClockTest {
         spreadsheet.setVideoController(playback);
 
         SwingUtilities.invokeAndWait(() -> {
-            SpreadsheetColumn column;
-            try {
-                column = new SpreadsheetColumn(spreadsheet, notes, mock(CellSelectionListener.class),
-                    mock(ColumnSelectionListener.class), mock(ColumnVisibilityListener.class));
-            } catch (Exception e) {
-                throw new IllegalStateException(e);
-            }
+            SpreadsheetView sheet = new SpreadsheetView(spreadsheet);
+            SpreadsheetColumn column = new SpreadsheetColumn(spreadsheet, notes, sheet,
+                mock(CellSelectionListener.class), mock(ColumnSelectionListener.class),
+                mock(ColumnVisibilityListener.class));
+            sheet.addColumn(column);
             column.registerListeners();
+            SpreadsheetCell editor = sheet.edit(deleted);
+
             ArgumentCaptor<ClockListener> registered = ArgumentCaptor.forClass(ClockListener.class);
             verify(clock, atLeastOnce()).registerListener(registered.capture());
-            List<SpreadsheetCell> cells = registered.getAllValues().stream()
-                .filter(SpreadsheetCell.class::isInstance).map(SpreadsheetCell.class::cast).toList();
-            assertEquals(cells.size(), 2);
-            SpreadsheetCell deletedView = cells.stream().filter(cell -> cell.getCell().equals(deleted)).findFirst()
-                .orElseThrow();
+            List<ClockListener> listeners = registered.getAllValues();
+            assertEquals(listeners.size(), 3, "the sheet, the column and the editor: " + listeners);
+            assertTrue(listeners.contains(column));
+            assertTrue(listeners.contains(editor));
 
             notes.removeCell(deleted);
-            verify(clock).unRegisterListener(deletedView);
+            verify(clock).unRegisterListener(editor);
 
             column.deregisterListeners();
             verify(clock).unRegisterListener(column);
-            for (SpreadsheetCell cell : cells) {
-                verify(clock).unRegisterListener(cell);
-            }
+
+            sheet.close();
+            ClockListener sheetsOwn = listeners.stream().filter(listener -> listener != column && listener != editor)
+                .findFirst().orElseThrow();
+            verify(clock).unRegisterListener(sheetsOwn);
         });
     }
 }

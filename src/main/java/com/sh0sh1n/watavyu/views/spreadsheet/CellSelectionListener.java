@@ -14,6 +14,8 @@
  */
 package com.sh0sh1n.watavyu.views.spreadsheet;
 
+import com.sh0sh1n.watavyu.models.Cell;
+
 /**
  * A listener for listening to cell selection changes.
  */
@@ -24,7 +26,7 @@ public interface CellSelectionListener {
      *
      * @param cell The cell to add to the selection.
      */
-    void addCellToSelection(SpreadsheetCell cell);
+    void addCellToSelection(Cell cell);
 
     /**
      * Adds the cell and everything in between to the selected
@@ -32,14 +34,14 @@ public interface CellSelectionListener {
      *
      * @param cell The end point cell to use for the continuous selection.
      */
-    void addCellToContinousSelection(SpreadsheetCell cell);
+    void addCellToContinousSelection(Cell cell);
 
     /**
      * Sets the currently selected cell.
      *
      * @param cell The cell to use as the highlight.
      */
-    void setHighlightedCell(SpreadsheetCell cell);
+    void setHighlightedCell(Cell cell);
 
     /**
      * Notifiers the listeners to clear all the currently selected cells.

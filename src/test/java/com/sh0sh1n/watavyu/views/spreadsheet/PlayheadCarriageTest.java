@@ -1,9 +1,16 @@
 package com.sh0sh1n.watavyu.views.spreadsheet;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
+import com.sh0sh1n.watavyu.controllers.ProjectController;
+import com.sh0sh1n.watavyu.models.DataStoreFactory;
+import com.sh0sh1n.watavyu.models.Project;
+import com.sh0sh1n.watavyu.util.ClockTimer;
+import com.sh0sh1n.watavyu.views.VideoController;
 import com.sh0sh1n.watavyu.views.spreadsheet.layouts.TimeAxis;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -196,7 +203,11 @@ public class PlayheadCarriageTest {
     /** The line across the columns is drawn over the cells, faint enough to read them through. */
     @Test
     public void theLineIsDrawnOverTheCells() {
-        SpreadsheetView sheet = new SpreadsheetView();
+        VideoController playback = mock(VideoController.class);
+        when(playback.getClockTimer()).thenReturn(mock(ClockTimer.class));
+        ProjectController spreadsheet = new ProjectController(new Project(), DataStoreFactory.newDataStore());
+        spreadsheet.setVideoController(playback);
+        SpreadsheetView sheet = new SpreadsheetView(spreadsheet);
         sheet.setLayout(new BorderLayout());
         JPanel cell = new JPanel();
         cell.setBackground(Color.WHITE);

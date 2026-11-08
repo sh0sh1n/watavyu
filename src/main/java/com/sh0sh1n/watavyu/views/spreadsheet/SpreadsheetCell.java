@@ -27,7 +27,6 @@ import com.sh0sh1n.watavyu.views.spreadsheet.editors.TimeStampDataValueEditor.Ti
 import com.sh0sh1n.watavyu.views.spreadsheet.editors.TimeStampTextField;
 
 import javax.swing.*;
-import javax.swing.Box.Filler;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.ArrayList;
@@ -35,29 +34,22 @@ import java.util.List;
 
 
 /**
- * Visual representation of a spreadsheet cell.
+ * The cell being edited: live editors for its times and values, laid out as a drawn cell is ({@link CellParts}) and
+ * placed over it by the sheet ({@link SpreadsheetView#edit}). The sheet draws every other cell; this one follows its
+ * cell's changes, takes the clicks and keys typed into it, and moves the selection as a cell's view always has.
  */
 public final class SpreadsheetCell extends JPanel
         implements MouseListener, FocusListener, CellListener, ClockTimer.ClockListener {
 
     /**
-     * Width of spacer between onset and offset timestamps.
-     */
-    private static final int TIME_SPACER = 5;
-    /**
      * The logger for this class.
      */
     private static Logger logger = LogManager.getLogger(SpreadsheetCell.class);
-    boolean isLaid = false;
     private boolean brandNew;
     /**
      * The panel that displays the cell.
      */
     private JPanel cellPanel;
-    /**
-     * A panel for holding the header to the cell.
-     */
-    private JPanel topPanel;
     /**
      * A panel for holding the value of the cell.
      */
@@ -80,14 +72,6 @@ public final class SpreadsheetCell extends JPanel
      * The cell that this SpreadsheetCell represents.
      */
     private Cell model;
-    /**
-     * Component that sets the width of the cell.
-     */
-    private Filler stretcher;
-    /**
-     * strut creates the gap between this cell and the previous cell.
-     */
-    private Filler strut;
     /**
      * Does this cell overlap another?
      */
@@ -113,88 +97,34 @@ public final class SpreadsheetCell extends JPanel
 
         Resources rMap = Resources.of(SpreadsheetCell.class);
 
-        // Check the selected state of the datacell
-        // If it is already selected in the database, we need to inform
-        // the selector, but not trigger a selection change or deselect others.
         cellSelL = listener;
 
-        cellPanel = new JPanel();
-        cellPanel.addMouseListener(this);
-        strut = new Filler(new Dimension(0, 0),
-                new Dimension(0, 0),
-                new Dimension(Short.MAX_VALUE, 0));
-
-        setLayout(new BorderLayout());
-        this.add(strut, BorderLayout.NORTH);
-        this.add(cellPanel, BorderLayout.CENTER);
-
-        // Build components used for the spreadsheet cell.
-        topPanel = new JPanel();
-        topPanel.addMouseListener(this);
         ord = new JLabel();
-        ord.setFont(SpreadsheetTheme.labelFont());
-        ord.setForeground(SpreadsheetTheme.PALETTE.ordinal());
         ord.setToolTipText(rMap.getString("ord.tooltip"));
         ord.addMouseListener(this);
         ord.setFocusable(true);
 
         onset = new TimeStampTextField(controller, model, TimeStampSource.Onset);
-        onset.setFont(SpreadsheetTheme.labelFont());
-        onset.setForeground(SpreadsheetTheme.PALETTE.time());
         onset.setToolTipText(rMap.getString("onset.tooltip"));
         onset.addFocusListener(this);
         onset.addMouseListener(this);
         onset.setName("onsetTextField");
 
         offset = new TimeStampTextField(controller, model, TimeStampSource.Offset);
-        offset.setFont(SpreadsheetTheme.labelFont());
-        offset.setForeground(SpreadsheetTheme.PALETTE.time());
         offset.setToolTipText(rMap.getString("offset.tooltip"));
         offset.addFocusListener(this);
         offset.addMouseListener(this);
         offset.setName("offsetTextField");
 
         dataPanel = new CellValuesView(controller, model);
-        dataPanel.setFont(SpreadsheetTheme.dataFont());
-        dataPanel.setForeground(SpreadsheetTheme.PALETTE.text());
-
-        dataPanel.setOpaque(false);
         dataPanel.addFocusListener(this);
         dataPanel.addMouseListener(this);
         dataPanel.setName("cellValue");
 
-        // Set the appearance of the spreadsheet cell.
-        cellPanel.setBackground(SpreadsheetTheme.PALETTE.cell());
-        cellPanel.setBorder(CellLook.border(SpreadsheetTheme.PALETTE, CellLook.Selection.NONE, false, false));
-        cellPanel.setLayout(new BorderLayout());
-
-        // Set the apperance of the top panel and add child elements (ord, onset
-        // and offset).
-        topPanel.setOpaque(false);
-        topPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 2, 0));
-        topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.X_AXIS));
-        cellPanel.add(topPanel, BorderLayout.NORTH);
-        topPanel.add(ord);
-
-        Component strut1 = Box.createHorizontalStrut(TIME_SPACER);
-        topPanel.add(strut1);
-
-        Component glue = Box.createGlue();
-        topPanel.add(glue);
-
-        topPanel.add(onset);
-
-        Component strut2 = Box.createHorizontalStrut(TIME_SPACER);
-        topPanel.add(strut2);
-        topPanel.add(offset);
-
-        // Set the apperance of the data panel - add elements for dis6playing
-        // the actual data of the panel.
-        cellPanel.add(dataPanel, BorderLayout.CENTER);
-
-        Dimension d = new Dimension(229, 0);
-        stretcher = new Filler(d, d, d);
-        cellPanel.add(stretcher, BorderLayout.SOUTH);
+        CellParts parts = new CellParts(this, ord, onset, offset, dataPanel);
+        cellPanel = parts.body;
+        cellPanel.addMouseListener(this);
+        parts.top.addMouseListener(this);
 
         controller.getVideoController().getClockTimer().registerListener(this);
 
@@ -237,48 +167,6 @@ public final class SpreadsheetCell extends JPanel
     }
 
     /**
-     * Get the onset ticks
-     *
-     * @return Onset time as a long.
-     */
-    public long getOnsetTicks() {
-        return model.getOnset();
-    }
-
-    /**
-     * Get the offset ticks
-     *
-     * @return Offset ticks as a long.
-     */
-    public long getOffsetTicks() {
-        if (model.getOffset() < model.getOnset()) {
-            return model.getOnset();
-        }
-        return model.getOffset();
-    }
-
-    /**
-     * Get the actual offset ticks (even if less than onset).
-     *
-     * @return Offset ticks as a long.
-     */
-    public long getOffsetTicksActual() { return model.getOffset(); }
-    
-    public boolean isUpsideDown() {
-        return model.getOffset() < model.getOnset() && model.getOffset() != 0;  
-    }
-
-    /**
-     * Set the width of the SpreadsheetCell.
-     *
-     * @param width New width of the SpreadsheetCell.
-     */
-    public void setWidth(final int width) {
-        Dimension d = new Dimension(width, 0);
-        stretcher.changeShape(d, d, d);
-    }
-
-    /**
      * Set the border of the cell.
      *
      * @param overlap true if the cell overlaps with the following cell, false
@@ -287,13 +175,6 @@ public final class SpreadsheetCell extends JPanel
     public void setOverlapBorder(final boolean overlap) {
         cellOverlap = overlap;
         updateSelectionDisplay();
-    }
-
-    /**
-     * Get overlap.
-     */
-    public boolean getOverlapBorder(){
-        return cellOverlap;
     }
 
     /**
@@ -309,14 +190,8 @@ public final class SpreadsheetCell extends JPanel
      */
     public void updateSelectionDisplay() {
         boolean highlightAndFocus = controller.getVideoController().getCellHighlightAndFocus();
-        CellLook.Selection selection;
-        if (model.isHighlighted() && !highlightAndFocus) {
-            selection = CellLook.Selection.HIGHLIGHTED;
-        } else if (model.isSelected()) {
-            selection = CellLook.Selection.SELECTED;
-        } else {
-            selection = CellLook.Selection.NONE;
-        }
+        CellLook.Selection selection = CellLook.selectionOf(model.isSelected(), model.isHighlighted(),
+                highlightAndFocus);
         CellLook.Time time = highlightAndFocus || controller.getVideoController().getCellHighlighting()
                 ? CellLook.timeOf(model.getOnset(), model.getOffset(), controller.getVideoController().getCurrentTime())
                 : CellLook.Time.AHEAD;
@@ -348,8 +223,6 @@ public final class SpreadsheetCell extends JPanel
     @Override
     public void offsetChanged(final long newOffset) {
         offset.setValue();
-        // The time field is its own validate root; the sheet places its cells by time, so it lays them out again.
-        revalidate();
         if (model.isSelected()) {
             // Update the find windows to the newly selected cell's values
             controller.getVideoController().setOnsetField(model.getOnset());
@@ -360,8 +233,6 @@ public final class SpreadsheetCell extends JPanel
     @Override
     public void onsetChanged(final long newOnset) {
         onset.setValue();
-        // The time field is its own validate root; the sheet places its cells by time, so it lays them out again.
-        revalidate();
         if (model.isSelected()) {
             controller.getVideoController().setOnsetField(model.getOnset());
             controller.getVideoController().setOffsetField(model.getOffset());
@@ -435,7 +306,7 @@ public final class SpreadsheetCell extends JPanel
             model.setHighlighted(!model.isSelected());
 
             if (model.isSelected()) {
-                cellSelL.addCellToSelection(this);
+                cellSelL.addCellToSelection(model);
             }
 
             // User has clicked on editor or magic spot with modifier. Add
@@ -446,7 +317,7 @@ public final class SpreadsheetCell extends JPanel
             model.setHighlighted(!model.isSelected());
 
             if (model.isSelected()) {
-                cellSelL.addCellToSelection(this);
+                cellSelL.addCellToSelection(model);
             }
 
             // User has clicked on editor or magic spot with shift modifier.
@@ -454,7 +325,7 @@ public final class SpreadsheetCell extends JPanel
         } else if (contSel) {
           logger.debug("User has clicked on editor or magic spot with shift modifier");
             ord.requestFocus();
-            cellSelL.addCellToContinousSelection(this);
+            cellSelL.addCellToContinousSelection(model);
 
             // User has clicked somewhere in the cell without modifier. This
             // cell needs to be highlighted.
@@ -465,7 +336,7 @@ public final class SpreadsheetCell extends JPanel
                 // Deselect cells before selected cell contents.
                 cellSelL.clearCellSelection();
                 model.setHighlighted(true);
-                cellSelL.setHighlightedCell(this);
+                cellSelL.setHighlightedCell(model);
             }
         }
 
@@ -492,8 +363,10 @@ public final class SpreadsheetCell extends JPanel
 //                || cellPanel.getBorder().equals(OVERLAP_BORDER))) {
             model.setSelected(true);
 //        }
-        controller.getSpreadSheetPanel().validate();
-        controller.getSpreadSheetPanel().reorientView(this);
+        if (controller.getSpreadSheetPanel() != null) {
+            controller.getSpreadSheetPanel().validate();
+            controller.getSpreadSheetPanel().reorientView(model);
+        }
 
         parentColumn.setSelected(true);
     }

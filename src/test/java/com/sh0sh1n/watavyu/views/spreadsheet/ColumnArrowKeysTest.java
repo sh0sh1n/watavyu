@@ -29,8 +29,10 @@ public class ColumnArrowKeysTest {
     private Cell second;
     private Cell third;
 
-    /** Builds a column of three cells, in time order, and runs the test with its cells' panel on the EDT. */
-    private void withColumn(final Consumer<ColumnDataPanel> test) throws Exception {
+    private SpreadsheetView sheet;
+
+    /** Builds a column of three cells, in time order, and runs the test with its column on the EDT. */
+    private void withColumn(final Consumer<SpreadsheetColumn> test) throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
         notes = dataStore.createColumn("notes");
         // Made out of time order, so the keys follow time rather than the order cells were made.
@@ -49,12 +51,15 @@ public class ColumnArrowKeysTest {
         AtomicReference<Throwable> failure = new AtomicReference<>();
         SwingUtilities.invokeAndWait(() -> {
             try {
-                SpreadsheetColumn column = new SpreadsheetColumn(spreadsheet, notes, mock(CellSelectionListener.class),
-                    mock(ColumnSelectionListener.class), mock(ColumnVisibilityListener.class));
+                sheet = new SpreadsheetView(spreadsheet);
+                SpreadsheetColumn column = new SpreadsheetColumn(spreadsheet, notes, sheet,
+                    mock(CellSelectionListener.class), mock(ColumnSelectionListener.class),
+                    mock(ColumnVisibilityListener.class));
+                sheet.addColumn(column);
                 try {
-                    test.accept(column.getDataPanel());
+                    test.accept(column);
                 } finally {
-                    column.getDataPanel().deregisterListeners();
+                    sheet.close();
                 }
             } catch (Throwable t) {
                 failure.set(t);
@@ -65,21 +70,16 @@ public class ColumnArrowKeysTest {
         }
     }
 
-    private static KeyEvent press(final ColumnDataPanel panel, final int keyCode) {
-        return new KeyEvent(panel, KeyEvent.KEY_PRESSED, 0, 0, keyCode, KeyEvent.CHAR_UNDEFINED);
-    }
-
-    private static SpreadsheetCell view(final ColumnDataPanel panel, final Cell cell) {
-        return panel.getCellsTemporally().stream().filter(view -> view.getCell().equals(cell)).findFirst()
-            .orElseThrow();
+    private static KeyEvent press(final SpreadsheetColumn column, final int keyCode) {
+        return new KeyEvent(column, KeyEvent.KEY_PRESSED, 0, 0, keyCode, KeyEvent.CHAR_UNDEFINED);
     }
 
     @Test
     public void upSelectsTheCellBeforeInTime() throws Exception {
-        withColumn(panel -> {
+        withColumn(column -> {
             second.setSelected(true);
-            KeyEvent up = press(panel, KeyEvent.VK_UP);
-            assertTrue(panel.dispatchKeyEvent(up));
+            KeyEvent up = press(column, KeyEvent.VK_UP);
+            assertTrue(column.dispatchKeyEvent(up));
             assertTrue(up.isConsumed());
             assertTrue(first.isSelected());
             assertTrue(first.isHighlighted());
@@ -90,9 +90,9 @@ public class ColumnArrowKeysTest {
 
     @Test
     public void downSelectsTheCellAfterInTime() throws Exception {
-        withColumn(panel -> {
+        withColumn(column -> {
             second.setSelected(true);
-            assertTrue(panel.dispatchKeyEvent(press(panel, KeyEvent.VK_DOWN)));
+            assertTrue(column.dispatchKeyEvent(press(column, KeyEvent.VK_DOWN)));
             assertTrue(third.isSelected());
             assertFalse(second.isSelected());
         });
@@ -100,40 +100,42 @@ public class ColumnArrowKeysTest {
 
     @Test
     public void theCaretStaysInTheSameValue() throws Exception {
-        withColumn(panel -> {
+        withColumn(column -> {
             second.setSelected(true);
-            EditorTracker tracker = view(panel, second).getDataView().getEdTracker();
+            EditorTracker tracker = sheet.edit(second).getDataView().getEdTracker();
             tracker.setEditor(tracker.getEditorAtIndex(1));
-            panel.dispatchKeyEvent(press(panel, KeyEvent.VK_DOWN));
-            assertEquals(view(panel, third).getDataView().getEdTracker().indexOfCurrentEditor(), 1);
+            column.dispatchKeyEvent(press(column, KeyEvent.VK_DOWN));
+            SpreadsheetCell editor = sheet.getEditor().orElseThrow();
+            assertEquals(editor.getCell(), third, "the editor moved to the cell after");
+            assertEquals(editor.getDataView().getEdTracker().indexOfCurrentEditor(), 1);
         });
     }
 
     @Test
     public void theFirstAndLastCellsGoNoFurther() throws Exception {
-        withColumn(panel -> {
+        withColumn(column -> {
             first.setSelected(true);
-            KeyEvent up = press(panel, KeyEvent.VK_UP);
-            assertFalse(panel.dispatchKeyEvent(up));
+            KeyEvent up = press(column, KeyEvent.VK_UP);
+            assertFalse(column.dispatchKeyEvent(up));
             assertFalse(up.isConsumed());
             assertTrue(first.isSelected());
 
             first.setSelected(false);
             third.setSelected(true);
-            assertFalse(panel.dispatchKeyEvent(press(panel, KeyEvent.VK_DOWN)));
+            assertFalse(column.dispatchKeyEvent(press(column, KeyEvent.VK_DOWN)));
             assertTrue(third.isSelected());
         });
     }
 
     @Test
     public void otherKeysReleasesAndNoSelectionAreLeftAlone() throws Exception {
-        withColumn(panel -> {
-            assertFalse(panel.dispatchKeyEvent(press(panel, KeyEvent.VK_UP)));
+        withColumn(column -> {
+            assertFalse(column.dispatchKeyEvent(press(column, KeyEvent.VK_UP)));
 
             second.setSelected(true);
-            assertFalse(panel.dispatchKeyEvent(press(panel, KeyEvent.VK_LEFT)));
-            assertFalse(panel.dispatchKeyEvent(
-                new KeyEvent(panel, KeyEvent.KEY_RELEASED, 0, 0, KeyEvent.VK_UP, KeyEvent.CHAR_UNDEFINED)));
+            assertFalse(column.dispatchKeyEvent(press(column, KeyEvent.VK_LEFT)));
+            assertFalse(column.dispatchKeyEvent(
+                new KeyEvent(column, KeyEvent.KEY_RELEASED, 0, 0, KeyEvent.VK_UP, KeyEvent.CHAR_UNDEFINED)));
             assertTrue(second.isSelected());
         });
     }

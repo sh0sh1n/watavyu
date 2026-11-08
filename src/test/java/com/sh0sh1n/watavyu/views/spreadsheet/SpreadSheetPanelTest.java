@@ -13,11 +13,9 @@ import com.sh0sh1n.watavyu.models.UserWarningException;
 import com.sh0sh1n.watavyu.models.Column;
 import org.testng.annotations.Test;
 
-import java.awt.Component;
 import java.awt.event.KeyEvent;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -92,11 +90,8 @@ public class SpreadSheetPanelTest {
                 headers.set(Arrays.stream(panel.getColumns().get(0).getParent().getComponents())
                     .filter(SpreadsheetColumn.class::isInstance)
                     .map(header -> ((SpreadsheetColumn) header).getColumn().getName()).toList());
-                // Each column's cells sit under its header: the sheet's data panels are in the same order.
-                List<Component> sheet = Arrays.asList(panel.getColumns().get(0).getDataPanel().getParent().getComponents());
-                dataPanels.set(panel.getColumns().stream()
-                    .sorted(Comparator.comparingInt(column -> sheet.indexOf(column.getDataPanel())))
-                    .map(column -> column.getColumn().getName()).toList());
+                // Each column's cells sit under its header: the sheet draws the columns in the same order.
+                dataPanels.set(names(panel.getSheet().getColumns()));
             } catch (UserWarningException e) {
                 throw new AssertionError(e);
             } finally {
@@ -114,7 +109,7 @@ public class SpreadSheetPanelTest {
         return columns.stream().map(column -> column.getColumn().getName()).toList();
     }
 
-    /** A column's cells redraw when its codes change, undo included, as the Code Editor no longer redraws them. */
+    /** The cell in focus redraws when its column's codes change, undo included, as the Code Editor does not redraw it. */
     @Test
     public void cellsShowTheirColumnsCodesAfterEachChange() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
@@ -127,8 +122,9 @@ public class SpreadSheetPanelTest {
             () -> panel.set(new SpreadSheetPanel(TestSpreadsheets.withPlayback(dataStore), null)));
         ProjectController spreadsheet = panel.get().getProjectController();
         AtomicReference<List<String>> shown = new AtomicReference<>(new ArrayList<>());
+        // The cell in focus shows its values in its editor; the sheet draws the others from the model as it paints.
         Runnable look = () -> shown.get().add(
-            panel.get().getColumns().get(0).getCells().get(0).getDataView().getText());
+            panel.get().getSheet().edit(cell).getDataView().getText());
         try {
             SwingUtilities.invokeAndWait(() -> {
                 look.run();

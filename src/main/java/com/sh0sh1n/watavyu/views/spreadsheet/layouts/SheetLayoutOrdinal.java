@@ -15,16 +15,12 @@
 package com.sh0sh1n.watavyu.views.spreadsheet.layouts;
 
 import com.sh0sh1n.watavyu.models.Cell;
-import com.sh0sh1n.watavyu.views.spreadsheet.SpreadsheetCell;
 import com.sh0sh1n.watavyu.views.spreadsheet.SpreadsheetColumn;
 import com.sh0sh1n.watavyu.views.spreadsheet.SpreadsheetView;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.function.ToIntFunction;
 
 /**
@@ -53,42 +49,7 @@ public class SheetLayoutOrdinal extends SheetLayout {
         // This layout must be applied to a Spreadsheet panel.
         pane = (JScrollPane) parent;
         SpreadsheetView mainView = (SpreadsheetView) pane.getViewport().getView();
-
-        List<SpreadsheetColumn> visibleColumns = new ArrayList<>();
-        Map<Cell, SpreadsheetCell> views = new HashMap<>();
-        Map<Cell, Integer> heights = new HashMap<>();
-        List<SheetGeometry.ColumnCells> columns = new ArrayList<>();
-        for (SpreadsheetColumn col : mainView.getColumns()) {
-            if (!col.isVisible()) {
-                continue;
-            }
-            visibleColumns.add(col);
-            List<Cell> cells = new ArrayList<>();
-            int ord = 1;
-            for (SpreadsheetCell view : col.getCellsTemporally()) {
-                view.setOrdinal(ord);
-                ord++;
-                views.put(view.getCell(), view);
-                heights.put(view.getCell(), view.getPreferredSize().height);
-                cells.add(view.getCell());
-            }
-            columns.add(new SheetGeometry.ColumnCells(col.getColumn(), col.getWidth(), cells));
-        }
-
-        SheetGeometry geometry = place(columns, heights::get, marginSize);
-        views.forEach((cell, view) -> geometry.of(cell).ifPresent(placed -> {
-            view.setBounds(placed.bounds());
-            view.setOverlapBorder(placed.overlap());
-            view.repaint();
-        }));
-
-        // Pad the columns out at the bottom.
-        int maxHeight = Math.max(geometry.height(), parent.getHeight());
-        for (SpreadsheetColumn col : visibleColumns) {
-            int colHeight = geometry.cellsHeight(col.getColumn());
-            col.getDataPanel().setHeight(maxHeight);
-            col.getDataPanel().getPadding().setBounds(0, colHeight, col.getWidth(), maxHeight - colHeight);
-        }
+        mainView.setGeometry(place(mainView.shownColumns(), mainView::heightOf, marginSize));
     }
 
     /**
@@ -123,13 +84,13 @@ public class SheetLayoutOrdinal extends SheetLayout {
 
     @Override
 
-    public void reorientView(SpreadsheetCell cell) {
+    public void reorientView(final Rectangle cell) {
         // Set the new position of the scroll window.
 
         double viewMax = pane.getViewport().getViewRect().getY() + pane.getViewport().getViewRect().getHeight();
         double viewMin = pane.getViewport().getViewRect().getY();
-        int cellMax = cell.getY() + cell.getHeight();
-        int cellMin = cell.getY();
+        int cellMax = cell.y + cell.height;
+        int cellMin = cell.y;
 
         if (viewMax < cellMax) {
             pane.getViewport().setViewPosition(

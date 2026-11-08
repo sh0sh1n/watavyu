@@ -92,19 +92,14 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
     /** New column button to be added to the column header panel */
     private JButton newColumnButton = new JButton();
 
-    /** New spacer variable */
-    private JLabel newColumnSpacerButton = new JLabel();
-
     /** Hidden columns button to be added to the column header panel */
     private JButton hiddenColumnsButton;
 
-    private JLabel hiddenColumnsSpacerLabel = new JLabel();
-
     /** Highlighted cell */
-    private SpreadsheetCell highlightedCell;
+    private transient Cell highlightedCell;
 
     /** Last selected cell - used as an end point for continuous selections */
-    private SpreadsheetCell lastSelectedCell;
+    private transient Cell lastSelectedCell;
 
     /** Current layout */
     private SheetLayoutType currentLayoutType;
@@ -126,8 +121,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
         setName(this.getClass().getSimpleName());
         setLayout(new BorderLayout());
 
-        mainView = new SpreadsheetView();
-        mainView.setLayout(new BoxLayout(mainView, BoxLayout.X_AXIS));
+        mainView = new SpreadsheetView(projectController);
 
         headerView = new JPanel();
         headerView.setLayout(new BoxLayout(headerView, BoxLayout.X_AXIS));
@@ -175,11 +169,11 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
             projectController.setDataStore(new DefaultDataStore());
         }
         setDatabase(projectController.getDataStore());
-        newColumnSpacerButton.setText(" + ");
-        newColumnSpacerButton.setForeground(newColumnSpacerButton.getBackground());
-        mainView.add(newColumnSpacerButton);
 
         hiddenColumnsButton = makeHiddenVarsButton();
+        // The sheet is as wide as the header, whose buttons follow the columns.
+        mainView.setTrailingWidth(() -> newColumnButton.getPreferredSize().width
+                + hiddenColumnsButton.getPreferredSize().width);
         updateHiddenVars();
         hiddenColumnsButton.addMouseListener(new MouseAdapter() {
             @Override
@@ -188,8 +182,6 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
             }
         });
         headerView.add(hiddenColumnsButton);
-        hiddenColumnsSpacerLabel.setForeground(hiddenColumnsSpacerLabel.getBackground());
-        mainView.add(hiddenColumnsSpacerLabel);
 
 
         //layout the columns
@@ -244,27 +236,16 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
         hiddenColumnsButton.setText(hiddenColumnsButton.getText() + "  "); //cheating: easier than resizing the button
         
         hiddenColumnsButton.setEnabled(hiddensOnly.size() != 0);
-
-        hiddenColumnsSpacerLabel.setText(hiddenColumnsButton.getText());
     }
 
     /** Shows every cell's colours again, after the past-cell dimming changes. */
     public void refreshCellColours() {
-        for (SpreadsheetColumn col : getColumns()) {
-            for (SpreadsheetCell cell : col.getCells()) {
-                cell.refreshColours();
-            }
-        }
+        mainView.refreshColours();
     }
 
+    /** Lays out and draws every cell again, as after undo, a change of font or of highlighting. */
     public void redrawCells() {
-        for (SpreadsheetColumn col : getColumns()) {
-            for (SpreadsheetCell cell : col.getCells()) {
-                cell.redrawValues();
-                cell.updateSelectionDisplay();
-            }
-        }
-
+        mainView.redrawCells();
     }
 
     /**
@@ -272,6 +253,11 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
      */
     public ProjectController getProjectController() {
         return projectController;
+    }
+
+    /** Returns the sheet that draws the cells. */
+    SpreadsheetView getSheet() {
+        return mainView;
     }
 
     /** Returns what plays this spreadsheet's media columns, or null before the video controller is set. */
@@ -367,6 +353,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
             column.deregisterListeners();
         }
         dataStore.removeListener(this);
+        mainView.close();
         videoController.close();
         projectController.close();
     }
@@ -407,11 +394,9 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
         // Remove previous instance of newColumnButton from the header.
         headerView.remove(newColumnButton);
         headerView.remove(hiddenColumnsButton);
-        mainView.remove(newColumnSpacerButton);
-        mainView.remove(hiddenColumnsSpacerLabel);
 
         // Create the spreadsheet column and register it.
-        SpreadsheetColumn col = new SpreadsheetColumn(projectController, var, this, this, this);
+        SpreadsheetColumn col = new SpreadsheetColumn(projectController, var, mainView, this, this, this);
         col.registerListeners();
 
         // add the datapanel to the scrollpane viewport
@@ -424,8 +409,6 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
         headerView.add(newColumnButton);
         updateHiddenVars();
         headerView.add(hiddenColumnsButton);
-        mainView.add(newColumnSpacerButton);
-        mainView.add(hiddenColumnsSpacerLabel);
 
         // and add it to our maintained ref collection
         columns.add(col);
@@ -438,8 +421,6 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
     public void removeAll() {
         for (SpreadsheetColumn col : columns) {
             col.deregisterListeners();
-            col.clear();
-
             mainView.removeColumn(col);
             headerView.remove(col);
         }
@@ -455,6 +436,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
     private void removeColumn(final Column var) {
         for (SpreadsheetColumn col : columns) {
             if (col.getColumn().equals(var)) {
+                col.deregisterListeners();
                 mainView.removeColumn(col);
                 headerView.remove(col);
                 columns.remove(col);
@@ -634,72 +616,43 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
     }
 
     /**
-     * Returns the cells of the supplied column as ordered by the current
-     * layout.
-     *
-     * @param col The column to fetch the cells from.
-     * @return The cells in ordinal order if SheetLayoutType is Ordinal,
-     * otherwise the cells will be in temporal alignment.
-     */
-    public List<SpreadsheetCell> getOrderedCells(SpreadsheetColumn col) {
-        if (this.currentLayoutType == SheetLayoutType.Ordinal) {
-            return col.getCells();
-        } else {
-            return col.getCellsTemporally();
-        }
-    }
-
-    /**
-     * Adds a series of cells as a continuous selection.
+     * Adds a series of cells as a continuous selection: the cells in time order from the last one selected to this
+     * one, in the same column.
      *
      * @param cell The cell to use as the end point for the selection.
      */
     @Override
-    public void addCellToContinousSelection(final SpreadsheetCell cell) {
+    public void addCellToContinousSelection(final Cell cell) {
         if (lastSelectedCell != null) {
-            Cell c1 = lastSelectedCell.getCell();
-            Column v1 = dataStore.getColumn(c1);
-
-            Cell c2 = cell.getCell();
-            Column v2 = dataStore.getColumn(c2);
+            Column v1 = lastSelectedCell.getColumn();
 
             // We can only do continuous selections in a single column at
             // at the moment.
-            if (v1.equals(v2)) {
+            if (v1.equals(cell.getColumn())) {
 
                 // Deselect the highlighted cell.
                 if (highlightedCell != null) {
-                    highlightedCell.getCell().setHighlighted(false);
-                    highlightedCell.getCell().setSelected(true);
+                    highlightedCell.setHighlighted(false);
+                    highlightedCell.setSelected(true);
                     highlightedCell = null;
                 }
 
-                for (SpreadsheetColumn col : getColumns()) {
+                // Perform continuous selection.
+                boolean addToSelection = false;
+                for (Cell c : v1.getCellsTemporally()) {
+                    if (!addToSelection) {
+                        c.setSelected(false);
+                    }
 
-                    if (v1.equals(col.getColumn())) {
+                    if (c.equals(cell) || c.equals(lastSelectedCell)) {
+                        addToSelection = !addToSelection;
 
-                        // Perform continuous selection.
-                        boolean addToSelection = false;
+                        // We always include start and end cells.
+                        c.setSelected(true);
+                    }
 
-                        for (SpreadsheetCell c : getOrderedCells(col)) {
-
-                            if (!addToSelection) {
-                                c.getCell().setSelected(false);
-                            }
-
-                            if (c.equals(cell) || c.equals(lastSelectedCell)) {
-                                addToSelection = !addToSelection;
-
-                                // We always include start and end cells.
-                                c.getCell().setSelected(true);
-                            }
-
-                            if (addToSelection) {
-                                c.getCell().setSelected(true);
-                            }
-                        }
-
-                        break;
+                    if (addToSelection) {
+                        c.setSelected(true);
                     }
                 }
             }
@@ -714,12 +667,10 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
      * @param cell The cell to add to the selection.
      */
     @Override
-    public void addCellToSelection(final SpreadsheetCell cell) {
-//        clearColumnSelection();
-
+    public void addCellToSelection(final Cell cell) {
         if (highlightedCell != null) {
-            highlightedCell.getCell().setSelected(true);
-            highlightedCell.getCell().setHighlighted(false);
+            highlightedCell.setSelected(true);
+            highlightedCell.setHighlighted(false);
             highlightedCell = null;
         }
 
@@ -732,19 +683,14 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
      * @param cell The cell to highlight.
      */
     @Override
-    public void setHighlightedCell(final SpreadsheetCell cell) {
-        if (highlightedCell != null) {
-//            highlightedCell.getCell().setSelected(false);
-            highlightedCell.invalidate();
-        }
-        if(cell != null){
+    public void setHighlightedCell(final Cell cell) {
+        if (cell != null) {
             highlightedCell = cell;
             lastSelectedCell = cell;
-            highlightedCell.getCell().setHighlighted(true);
-//          clearColumnSelection();
-        }else{            
-            highlightedCell.getCell().setHighlighted(false);            
-        }        
+            highlightedCell.setHighlighted(true);
+        } else if (highlightedCell != null) {
+            highlightedCell.setHighlighted(false);
+        }
     }
 
     /**
@@ -786,8 +732,13 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
         repaint();
     }
 
-    public void reorientView(SpreadsheetCell cell) {
-        ((SheetLayout) scrollPane.getLayout()).reorientView(cell);
+    /**
+     * Scrolls a cell into sight, as when it takes the focus.
+     *
+     * @param cell the cell
+     */
+    public void reorientView(final Cell cell) {
+        mainView.boundsOf(cell).ifPresent(((SheetLayout) scrollPane.getLayout())::reorientView);
     }
 
     public void reorientView(SpreadsheetColumn column) {
@@ -863,40 +814,39 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
         if(0 <= newIndex
                 && newIndex < visibleColumns.size()) {
 
-            SpreadsheetCell sc = selectedColumn.getDataPanel().getSelectedCell();
+            Cell sc = selectedColumn.getSelectedCell();
 
             clearCellSelection();
             clearColumnSelection();
             requestFocus();
 
             SpreadsheetColumn newColumn = visibleColumns.get(newIndex);
-            SpreadsheetCell newCell;
-            if(!newColumn.getCells().isEmpty()) {
+            List<Cell> newCells = newColumn.getCellsTemporally();
+            Cell newCell;
+            if (!newCells.isEmpty()) {
                 if (sc != null) {
                     if (currentLayoutType == SheetLayoutType.WeakTemporal) {
                         newCell = newColumn.getNearestCellTemporally(sc);
                     } else {
                         int ord = selectedColumn.getCellsTemporally().indexOf(sc);
-                        if (newColumn.getCellsTemporally().size() > ord) {
-                            newCell = newColumn.getCellsTemporally().get(ord);
-                        } else {
-                            newCell = newColumn.getCellsTemporally().get(newColumn.getCellsTemporally().size() - 1);
-                        }
+                        newCell = newCells.get(Math.min(ord, newCells.size() - 1));
                     }
-                    sc.getCell().setHighlighted(false);
+                    sc.setHighlighted(false);
                 } else {
-                    newCell = newColumn.getCellTemporally(0);
+                    newCell = newCells.get(0);
                 }
                 selectedColumn.setSelected(false);
 
                 newColumn.setSelected(true);
 
-                newCell.getCell().setHighlighted(true);
-                newCell.getCell().setSelected(true);
+                newCell.setHighlighted(true);
+                newCell.setSelected(true);
 
                 newColumn.requestFocus();
-            }else{
-                if(sc != null) sc.getCell().setHighlighted(false);
+            } else {
+                if (sc != null) {
+                    sc.setHighlighted(false);
+                }
 
                 selectedColumn.setSelected(false);
                 newColumn.setSelected(true);
