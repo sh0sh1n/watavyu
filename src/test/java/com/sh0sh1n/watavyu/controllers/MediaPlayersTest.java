@@ -1,4 +1,4 @@
-package com.sh0sh1n.watavyu.controllers.project;
+package com.sh0sh1n.watavyu.controllers;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;

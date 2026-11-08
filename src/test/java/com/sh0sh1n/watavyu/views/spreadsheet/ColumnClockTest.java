@@ -6,7 +6,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 
-import com.sh0sh1n.watavyu.controllers.project.ProjectController;
+import com.sh0sh1n.watavyu.controllers.ProjectController;
 import com.sh0sh1n.watavyu.models.Cell;
 import com.sh0sh1n.watavyu.models.DataStore;
 import com.sh0sh1n.watavyu.models.DataStoreFactory;

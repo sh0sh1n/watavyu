@@ -1,6 +1,6 @@
 package com.sh0sh1n.watavyu;
 
-import com.sh0sh1n.watavyu.controllers.project.ProjectController;
+import com.sh0sh1n.watavyu.controllers.ProjectController;
 import com.sh0sh1n.watavyu.models.DataStore;
 import com.sh0sh1n.watavyu.models.Project;
 import com.sh0sh1n.watavyu.views.MainWindow;

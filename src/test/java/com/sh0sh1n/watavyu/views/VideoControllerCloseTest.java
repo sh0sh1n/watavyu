@@ -6,7 +6,7 @@ import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
 import com.sh0sh1n.watavyu.TestSpreadsheets;
-import com.sh0sh1n.watavyu.controllers.project.MediaPlayers;
+import com.sh0sh1n.watavyu.controllers.MediaPlayers;
 import com.sh0sh1n.watavyu.models.DataStoreFactory;
 import com.sh0sh1n.watavyu.playback.StreamViewer;
 import org.testng.annotations.Test;

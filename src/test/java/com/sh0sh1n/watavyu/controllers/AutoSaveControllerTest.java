@@ -5,7 +5,6 @@ import static org.testng.Assert.assertNotEquals;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 
-import com.sh0sh1n.watavyu.controllers.project.ProjectController;
 import com.sh0sh1n.watavyu.models.DataStoreFactory;
 import com.sh0sh1n.watavyu.models.Project;
 import org.testng.annotations.Test;

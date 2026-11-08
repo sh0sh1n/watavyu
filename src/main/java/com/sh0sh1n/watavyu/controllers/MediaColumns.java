@@ -1,4 +1,4 @@
-package com.sh0sh1n.watavyu.controllers.project;
+package com.sh0sh1n.watavyu.controllers;
 
 import com.sh0sh1n.watavyu.models.DataStore;
 import com.sh0sh1n.watavyu.models.UserWarningException;

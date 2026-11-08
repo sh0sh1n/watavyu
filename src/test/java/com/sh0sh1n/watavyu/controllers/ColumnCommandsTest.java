@@ -1,4 +1,4 @@
-package com.sh0sh1n.watavyu.controllers.project;
+package com.sh0sh1n.watavyu.controllers;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
