@@ -20,6 +20,7 @@ import com.sh0sh1n.watavyu.util.MacOS;
 import com.sh0sh1n.watavyu.util.Resources;
 import com.sh0sh1n.watavyu.util.Settings;
 import com.sh0sh1n.watavyu.views.AboutV;
+import com.sh0sh1n.watavyu.views.AppIcon;
 import com.sh0sh1n.watavyu.views.MainWindow;
 import com.sh0sh1n.watavyu.views.WindowPlacement;
 import com.sh0sh1n.watavyu.views.spreadsheet.SpreadSheetPanel;
@@ -174,6 +175,7 @@ public final class Watavyu {
      * Creates and shows the main window, then opens the file given on the command line.
      */
     private void start(final String[] args) {
+        AppIcon.install();
         // Key repeat instead of the accent popup while holding keys (B2: this changes the setting for every app).
         if (MacOS.isOSXPressAndHoldEnabled()) {
             osxPressAndHoldEnabled = true;
