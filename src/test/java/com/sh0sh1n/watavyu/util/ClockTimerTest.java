@@ -265,4 +265,75 @@ public class ClockTimerTest {
             clock.close();
         }
     }
+
+    /** Closing stops the ticks but still tells the listeners what changed before it, such as playback stopping. */
+    @Test
+    public void closingStillTellsTheChangesMadeBeforeIt() {
+        ClockTimer clock = new ClockTimer();
+        clock.setMaxTime(10_000);
+        List<String> told = new CopyOnWriteArrayList<>();
+        clock.registerListener(new Quiet() {
+            @Override
+            public void clockStop(final double clockTime) {
+                told.add("stop");
+            }
+
+            @Override
+            public void clockForceSync(final double clockTime) {
+                told.add(clockTime == 4_000 ? "force 4000" : "force");
+            }
+        });
+
+        clock.setRate(1f);
+        clock.setRate(0f);
+        clock.setForceTime(4_000);
+        clock.close();
+
+        assertEquals(told.subList(told.indexOf("stop"), told.size()), List.of("stop", "force", "force 4000"));
+    }
+
+    /**
+     * A boundary is judged by the clock's time as it is when the check is made, so a jump made since the tick that
+     * prompted it is not undone.
+     */
+    @Test
+    public void aBoundaryIsJudgedByTheTimeNow() {
+        ClockTimer clock = new ClockTimer();
+        try {
+            clock.setMaxTime(10_000);
+            clock.setForceTime(6_000);
+            clock.start();
+            clock.setForceTime(2_000);
+
+            assertFalse(clock.pauseIf((time, rate) -> time >= 5_000, 5_000), "the jump back left the boundary");
+            assertFalse(clock.isPaused());
+
+            clock.setForceTime(7_000);
+            assertTrue(clock.pauseIf((time, rate) -> time >= 5_000, 5_000));
+            assertTrue(clock.isPaused());
+            assertEquals(clock.getClockTime(), 5_000.0);
+
+            assertFalse(clock.pauseIf((time, rate) -> true), "a paused clock is not paused again");
+        } finally {
+            clock.close();
+        }
+    }
+
+    /** A boundary may pause the clock where it is. */
+    @Test
+    public void aBoundaryWithNoTimePausesTheClockWhereItIs() {
+        ClockTimer clock = new ClockTimer();
+        try {
+            clock.setMaxTime(10_000);
+            clock.setForceTime(3_000);
+            clock.setRate(-1f);
+
+            assertTrue(clock.pauseIf((time, rate) -> rate < 0));
+            assertTrue(clock.isPaused());
+            assertTrue(clock.getClockTime() <= 3_000.0 && clock.getClockTime() > 2_000.0,
+                "paused where it was: " + clock.getClockTime());
+        } finally {
+            clock.close();
+        }
+    }
 }

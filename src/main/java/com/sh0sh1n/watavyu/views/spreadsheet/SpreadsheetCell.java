@@ -195,10 +195,7 @@ public final class SpreadsheetCell extends JPanel
 
     /** Returns where the cell stands against the needle, as the sheet shows it. */
     private CellLook.Time timeNow() {
-        return controller.getVideoController().getCellHighlightAndFocus()
-                || controller.getVideoController().getCellHighlighting()
-                ? CellLook.timeOf(model.getOnset(), model.getOffset(), controller.getVideoController().getCurrentTime())
-                : CellLook.Time.AHEAD;
+        return new SpreadsheetView.Times(controller.getVideoController()).of(model);
     }
 
     /** Returns where the cell stood against the needle when it was last styled. */

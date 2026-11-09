@@ -103,6 +103,9 @@ public final class SpreadsheetView extends JPanel implements Scrollable {
     /** Follows the clock, to draw cells again as the needle passes them. */
     private final ClockFollower clockFollower = new ClockFollower();
 
+    /** Whether the sheet has closed, so a tick handed to the event thread before it closed does nothing. */
+    private boolean closed;
+
     /** The width the column header has after its columns: its buttons. */
     private IntSupplier trailingWidth = () -> 0;
 
@@ -133,6 +136,7 @@ public final class SpreadsheetView extends JPanel implements Scrollable {
 
     /** Stops following the clock and the cells, once the sheet is closed. */
     public void close() {
+        closed = true;
         controller.getVideoController().getClockTimer().unRegisterListener(clockFollower);
         for (Map.Entry<Cell, CellListener> watched : List.copyOf(watchers.entrySet())) {
             watched.getKey().removeListener(watched.getValue());
@@ -534,12 +538,20 @@ public final class SpreadsheetView extends JPanel implements Scrollable {
     }
 
     /**
-     * Follows the clock on the event thread: in highlight-and-focus mode, a column moves the focus to its cell in
-     * play, and the cells, drawn and edited, whose place against the needle has changed are drawn again.
+     * Follows the clock on the event thread: the cells, drawn and edited, whose place against the needle has changed
+     * are drawn again, and on a periodic tick, in highlight-and-focus mode, a column moves the focus to its cell in
+     * play. A jump leaves the focus where it is, as a new cell made at the needle takes it.
+     *
+     * @param moveFocus whether a periodic tick has come since the sheet last followed the clock
      */
-    private void followClock() {
-        for (SpreadsheetColumn column : List.copyOf(columns)) {
-            column.followNeedle();
+    private void followClock(final boolean moveFocus) {
+        if (closed) {
+            return;
+        }
+        if (moveFocus) {
+            for (SpreadsheetColumn column : columns) {
+                column.followNeedle();
+            }
         }
         showTime();
         if (editor != null) {
@@ -571,8 +583,8 @@ public final class SpreadsheetView extends JPanel implements Scrollable {
         }
     }
 
-    /** How cells stand against the needle at one moment, as the sheet shows it. */
-    private static final class Times {
+    /** How cells stand against the needle at one moment, as the sheet and its editor show it. */
+    static final class Times {
         private final boolean highlighting;
         private final long now;
 
@@ -631,11 +643,14 @@ public final class SpreadsheetView extends JPanel implements Scrollable {
         /** Whether a clock tick is waiting to be shown on the event thread. */
         private final AtomicBoolean tickPending = new AtomicBoolean();
 
+        /** Whether a periodic tick has come since the sheet last followed the clock. */
+        private final AtomicBoolean periodicPending = new AtomicBoolean();
+
         private void tick() {
             if (tickPending.compareAndSet(false, true)) {
                 SwingUtilities.invokeLater(() -> {
                     tickPending.set(false);
-                    followClock();
+                    followClock(periodicPending.getAndSet(false));
                 });
             }
         }
@@ -647,6 +662,7 @@ public final class SpreadsheetView extends JPanel implements Scrollable {
 
         @Override
         public void clockPeriodicSync(final double clockTime) {
+            periodicPending.set(true);
             tick();
         }
 

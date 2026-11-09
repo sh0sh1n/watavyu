@@ -177,7 +177,7 @@ public final class VideoController implements ClockListener {
     /**
      * Sets what shows the clock's time, and shows it the time now.
      *
-     * @param playhead shows the time; called from the clock's threads as well as the EDT
+     * @param playhead shows the time; called from the clock thread as well as the EDT
      */
     public void setPlayhead(final Playhead playhead) {
         this.playhead = playhead;
@@ -291,31 +291,26 @@ public final class VideoController implements ClockListener {
     @Override
     public void clockStart(double clockTime) {
         logger.info("Start");
-        updateCurrentTimeLabelAndNeedle((long) clockTime);
+        showClock();
     }
 
     @Override
     public void clockForceSync(double clockTime) {
         logger.debug("Forced sync to " + clockTime + " milliseconds.");
         // Updates the position of the needle and label
-        updateCurrentTimeLabelAndNeedle((long) clockTime);
+        showClock();
     }
 
     @Override
     public void clockBoundaryCheck(double clockTime) {
-        if (!clockTimer.isPaused()) {
-            long stop = mediaPlayers == null ? -1 : mediaPlayers.stopTime(Settings.get().isStopAtEndOfMedia());
-            float rate = clockTimer.getRate();
-            if (stop >= 0 && rate > 0 && clockTime >= stop) {
-                logger.info("Pausing at the end of the media, " + stop);
-                clockTimer.pause();
-                clockTimer.setForceTime(stop);
-            } else if (atTimelineEdge(clockTime, rate, getTimelineEnd())) {
-                logger.info("Clock Boundary Pausing Master Clock at " + clockTime);
-                clockTimer.pause();
-            }
+        long stop = mediaPlayers == null ? -1 : mediaPlayers.stopTime(Settings.get().isStopAtEndOfMedia());
+        long end = getTimelineEnd();
+        if (stop >= 0 && clockTimer.pauseIf((time, rate) -> rate > 0 && time >= stop, stop)) {
+            logger.info("Pausing at the end of the media, " + stop);
+        } else if (clockTimer.pauseIf((time, rate) -> atTimelineEdge(time, rate, end))) {
+            logger.info("Clock Boundary Pausing Master Clock at " + clockTimer.getClockTime());
         }
-        updateCurrentTimeLabelAndNeedle((long) clockTime);
+        showClock();
     }
 
     /**
@@ -346,7 +341,7 @@ public final class VideoController implements ClockListener {
     @Override
     public void clockPeriodicSync(double clockTime) {
         // Updates the position of the needle and label
-        updateCurrentTimeLabelAndNeedle((long) clockTime);
+        showClock();
     }
 
     /**
@@ -356,7 +351,7 @@ public final class VideoController implements ClockListener {
     public void clockStop(double clockTime) {
         logger.debug("Stop Clock at " + clockTime + " milliseconds.");
         // Updates the position of the needle and label
-        updateCurrentTimeLabelAndNeedle((long) clockTime);
+        showClock();
     }
 
     /**
@@ -366,7 +361,7 @@ public final class VideoController implements ClockListener {
     public void clockPause(double clockTime) {
         logger.debug("Pause Clock at " + clockTime + " milliseconds.");
         // Updates the position of the needle and label
-        updateCurrentTimeLabelAndNeedle((long) clockTime);
+        showClock();
     }
 
     /**
@@ -375,7 +370,7 @@ public final class VideoController implements ClockListener {
     @Override
     public void clockRate(float rate) {
         logger.debug("Update rate speed to " + rate);
-        updateCurrentTimeLabelAndNeedle(getCurrentTime());
+        showClock();
     }
 
     /**
@@ -385,8 +380,12 @@ public final class VideoController implements ClockListener {
         return timelineEnd;
     }
 
-    private void updateCurrentTimeLabelAndNeedle(long currentTime) {
-        showPlayhead(clockTimer.toRange(currentTime));
+    /**
+     * Shows the clock's time as it is now, not the time a tick or change brought: the clock thread may tell of a time
+     * a moment old, after the EDT has moved the clock on, and the needle would jump back until the next tick.
+     */
+    private void showClock() {
+        showPlayhead(clockTimer.toRange(getCurrentTime()));
     }
 
     private void showPlayhead(final long time) {
@@ -440,7 +439,7 @@ public final class VideoController implements ClockListener {
 
         timelineEnd = maxDuration;
         clockTimer.setMaxTime(maxDuration);
-        updateCurrentTimeLabelAndNeedle(getCurrentTime());
+        showClock();
     }
 
     /**
@@ -930,7 +929,7 @@ public final class VideoController implements ClockListener {
             //Force the time in order to update the cell highlighting
             clockTimer.setTime(newTime);
 
-            updateCurrentTimeLabelAndNeedle(newTime);
+            showClock();
         }
     }
 
@@ -1025,7 +1024,7 @@ public final class VideoController implements ClockListener {
             }
             //Force the time in order to update the cell highlighting
             clockTimer.setTime(newTime);
-            updateCurrentTimeLabelAndNeedle(newTime);
+            showClock();
         }
     }
 

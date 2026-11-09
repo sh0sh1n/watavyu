@@ -74,7 +74,7 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
         void close();
     }
 
-    /** Where a clip plays, as the clock's threads read it. */
+    /** Where a clip plays, as the clock thread reads it. */
     record Span(Cell clip, long onset, long end, StreamViewer player) {
 
         boolean holds(final long time) {
@@ -101,7 +101,7 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
     private final Map<Column, ColumnListener> columnListeners = new HashMap<>();
     private final Map<Cell, CellListener> clipListeners = new HashMap<>();
 
-    /** Each media column's clips, for the clock's threads. */
+    /** Each media column's clips, for the clock thread. */
     private final Map<Column, List<Span>> spans = new ConcurrentHashMap<>();
 
     /** The clip each column's window last showed; empty for black. */
@@ -218,7 +218,7 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
 
     /**
      * Where playback stops by itself: at the end of the last media clip of known length, unless that is turned off
-     * ({@link com.sh0sh1n.watavyu.util.Settings#isStopAtEndOfMedia}). Safe to call from the clock's threads.
+     * ({@link com.sh0sh1n.watavyu.util.Settings#isStopAtEndOfMedia}). Safe to call from the clock thread.
      *
      * @param stopAtEndOfMedia whether playback stops at the end of the media
      * @return the time to stop at, or -1 to play on
@@ -257,7 +257,7 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
     }
 
     /**
-     * Puts each column's clip in play at a time, and the others out of play. Called from the clock's threads and the
+     * Puts each column's clip in play at a time, and the others out of play. Called from the clock thread and the
      * EDT; the windows change on the EDT.
      */
     private void play(final long time) {

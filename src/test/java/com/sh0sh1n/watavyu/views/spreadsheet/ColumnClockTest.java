@@ -23,6 +23,7 @@ import org.testng.annotations.Test;
 
 import java.awt.Component;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CopyOnWriteArrayList;
 import javax.swing.JComponent;
 import javax.swing.RepaintManager;
@@ -165,5 +166,57 @@ public class ColumnClockTest {
             assertEquals(editor.getCell(), later);
             assertEquals(editor.getShownTime(), CellLook.Time.AHEAD);
         });
+    }
+
+    /**
+     * A jump in highlight-and-focus mode restyles the editor but leaves it where it is, as a new cell made at the
+     * needle takes the focus; only a periodic tick moves it.
+     */
+    @Test
+    public void aJumpStylesTheEditorButLeavesItWhereItIs() throws Exception {
+        when(playback.getCellHighlightAndFocus()).thenReturn(true);
+        when(clock.isPaused()).thenReturn(false);
+        SwingUtilities.invokeAndWait(() -> {
+            notes.setSelected(true);
+            sheet.edit(inPlay);
+        });
+        when(playback.getCurrentTime()).thenReturn(2_000L);
+
+        ClockListener listener = sheetsListener();
+        Thread clockThread = new Thread(() -> listener.clockForceSync(2_000), "clock");
+        clockThread.start();
+        clockThread.join();
+        SwingUtilities.invokeAndWait(() -> {
+            // Lets the jump handed to the event thread run.
+        });
+
+        SwingUtilities.invokeAndWait(() -> {
+            SpreadsheetCell editor = sheet.getEditor().orElseThrow();
+            assertEquals(editor.getCell(), inPlay);
+            assertEquals(editor.getShownTime(), CellLook.Time.PAST);
+        });
+    }
+
+    /** A tick handed to the event thread just before the sheet closes finds it closed and does nothing. */
+    @Test
+    public void aTickThatArrivesAfterTheSheetClosesDoesNothing() throws Exception {
+        when(playback.getCellHighlightAndFocus()).thenReturn(true);
+        when(playback.getCurrentTime()).thenReturn(1_000L);
+        when(clock.isPaused()).thenReturn(false);
+        SwingUtilities.invokeAndWait(() -> {
+            notes.setSelected(true);
+            sheet.edit(later);
+        });
+
+        ClockListener listener = sheetsListener();
+        SwingUtilities.invokeAndWait(() -> {
+            listener.clockPeriodicSync(1_000);
+            sheet.close();
+        });
+        SwingUtilities.invokeAndWait(() -> {
+            // Lets the tick handed to the event thread run.
+        });
+
+        SwingUtilities.invokeAndWait(() -> assertEquals(sheet.getEditor(), Optional.empty()));
     }
 }

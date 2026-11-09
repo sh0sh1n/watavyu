@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.function.Consumer;
@@ -34,6 +35,9 @@ import java.util.function.Consumer;
  * another thread, such as a rate set on the Swing event thread, is told to the listeners on the clock thread soon
  * after. So a listener may call the clock and may wait on another thread without deadlocking it, and one listener is
  * never called on two threads at once. Listeners hand Swing work to the event thread themselves.
+ *
+ * <p>A tick's time may be a moment old by the time a listener hears it, so a listener that would change the clock in
+ * answer to a tick, as by pausing at an end, asks the clock to judge the time as it is now ({@link #pauseIf}).
  */
 public final class ClockTimer {
 
@@ -86,8 +90,8 @@ public final class ClockTimer {
     /** Listeners of this clock */
     private final Set<ClockListener> clockListeners = new CopyOnWriteArraySet<>();
 
-    /** The tick, which closing cancels */
-    private final ScheduledFuture<?> ticks;
+    /** The repeating tick, which closing cancels */
+    private final ScheduledFuture<?> ticking;
 
     /**
      * Default constructor.
@@ -101,7 +105,7 @@ public final class ClockTimer {
         maxTime = 0;
         stopped = true;
 
-        ticks = clockThread.scheduleAtFixedRate(this::tick, CLOCK_DELAY, CLOCK_INTERVAL, TimeUnit.MILLISECONDS);
+        ticking = clockThread.scheduleAtFixedRate(this::tick, CLOCK_DELAY, CLOCK_INTERVAL, TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -285,6 +289,42 @@ public final class ClockTimer {
     }
 
     /**
+     * Pauses the clock where it is, if it is running and has reached a boundary.
+     *
+     * @param boundary whether the clock has reached the boundary, judged by its time and rate now
+     * @return whether the clock paused
+     * @see #pauseIf(Boundary, long)
+     */
+    public boolean pauseIf(final Boundary boundary) {
+        return pauseIf(boundary, OptionalLong.empty());
+    }
+
+    /**
+     * Pauses the clock at a time, if it is running and has reached a boundary. The boundary is judged under the
+     * clock's lock, by its time and rate as they are now rather than as the tick that prompted the check saw them, so
+     * a jump or a pause made on another thread since that tick is not undone.
+     *
+     * @param boundary whether the clock has reached the boundary, judged by its time and rate now
+     * @param at       where the clock pauses
+     * @return whether the clock paused
+     */
+    public boolean pauseIf(final Boundary boundary, final long at) {
+        return pauseIf(boundary, OptionalLong.of(at));
+    }
+
+    private boolean pauseIf(final Boundary boundary, final OptionalLong at) {
+        synchronized (lock) {
+            updateElapsedTime();
+            if (stopped || !boundary.reached(clockTime, rate)) {
+                return false;
+            }
+            pause();
+            at.ifPresent(this::setForceTime);
+            return true;
+        }
+    }
+
+    /**
      * Returns true if clock is Paused.
      */
     public boolean isPaused() {
@@ -312,22 +352,22 @@ public final class ClockTimer {
     }
 
     /**
-     * Stops the clock for good, as its spreadsheet closes: its thread stops, waiting briefly for a tick already
-     * running, and its listeners are told nothing more.
+     * Stops the clock for good, as its spreadsheet closes: it ticks no more, its listeners are told the changes made
+     * before closing, such as playback stopping, and then nothing more. Closing waits briefly for them to be told.
      */
     public void close() {
         synchronized (lock) {
-            ticks.cancel(false);
-            clockThread.shutdownNow();
-            clockListeners.clear();
+            ticking.cancel(false);
+            clockThread.shutdown();
         }
         try {
             if (!clockThread.awaitTermination(CLOSE_WAIT_MILLIS, TimeUnit.MILLISECONDS)) {
-                logger.warn("A clock tick was still running " + CLOSE_WAIT_MILLIS + " ms after closing");
+                logger.warn("The clock's listeners were still being told " + CLOSE_WAIT_MILLIS + " ms after closing");
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
+        clockListeners.clear();
     }
 
     /** Returns whether {@link #close()} has stopped the clock's thread. */
@@ -335,11 +375,12 @@ public final class ClockTimer {
         return clockThread.isShutdown();
     }
 
-  /**
-   * Un-Registers a clock listener
-   *
-   * @param listener Listener requiring clockTick updates
-   */
+    /**
+     * Un-Registers a clock listener. The clock thread may be telling the listener something as it is removed, so it
+     * may hear one call more; a listener that has closed ignores it.
+     *
+     * @param listener Listener requiring clockTick updates
+     */
     public void unRegisterListener(final ClockListener listener) {
         synchronized (lock) {
             clockListeners.remove(listener);
@@ -424,6 +465,19 @@ public final class ClockTimer {
     private void notifyPause() {
         double time = clockTime;
         post(listener -> listener.clockPause(time));
+    }
+
+    /** Whether the clock has reached a boundary, judged by its time and rate. */
+    @FunctionalInterface
+    public interface Boundary {
+        /**
+         * Returns whether the clock has reached the boundary.
+         *
+         * @param time the clock's time, in milliseconds
+         * @param rate the clock's rate
+         * @return whether the clock has reached the boundary
+         */
+        boolean reached(double time, float rate);
     }
 
     /**
