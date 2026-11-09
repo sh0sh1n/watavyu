@@ -20,7 +20,6 @@ import org.apache.logging.log4j.Logger;
 import com.sh0sh1n.watavyu.controllers.ProjectController;
 import com.sh0sh1n.watavyu.models.Cell;
 import com.sh0sh1n.watavyu.models.CellListener;
-import com.sh0sh1n.watavyu.util.ClockTimer;
 import com.sh0sh1n.watavyu.util.Settings;
 import com.sh0sh1n.watavyu.views.spreadsheet.editors.CellValuesView;
 import com.sh0sh1n.watavyu.views.spreadsheet.editors.TimeStampDataValueEditor.TimeStampSource;
@@ -39,7 +38,7 @@ import java.util.List;
  * cell's changes, takes the clicks and keys typed into it, and moves the selection as a cell's view always has.
  */
 public final class SpreadsheetCell extends JPanel
-        implements MouseListener, FocusListener, CellListener, ClockTimer.ClockListener {
+        implements MouseListener, FocusListener, CellListener {
 
     /**
      * The logger for this class.
@@ -126,14 +125,7 @@ public final class SpreadsheetCell extends JPanel
         cellPanel.addMouseListener(this);
         parts.top.addMouseListener(this);
 
-        controller.getVideoController().getClockTimer().registerListener(this);
-
         brandNew = true;
-    }
-
-    /** Stops following the clock, once the cell's view leaves the sheet. */
-    public void dispose() {
-        controller.getVideoController().getClockTimer().unRegisterListener(this);
     }
 
     /**
@@ -192,14 +184,32 @@ public final class SpreadsheetCell extends JPanel
         boolean highlightAndFocus = controller.getVideoController().getCellHighlightAndFocus();
         CellLook.Selection selection = CellLook.selectionOf(model.isSelected(), model.isHighlighted(),
                 highlightAndFocus);
-        CellLook.Time time = highlightAndFocus || controller.getVideoController().getCellHighlighting()
-                ? CellLook.timeOf(model.getOnset(), model.getOffset(), controller.getVideoController().getCurrentTime())
-                : CellLook.Time.AHEAD;
+        CellLook.Time time = timeNow();
         cellPanel.setBorder(CellLook.border(SpreadsheetTheme.PALETTE, selection, cellOverlap,
                 time == CellLook.Time.IN_PLAY));
         if (time != shownTime) {
             shownTime = time;
             showColours(CellLook.colours(SpreadsheetTheme.PALETTE, time, Settings.get().getPastCellDim()));
+        }
+    }
+
+    /** Returns where the cell stands against the needle, as the sheet shows it. */
+    private CellLook.Time timeNow() {
+        return controller.getVideoController().getCellHighlightAndFocus()
+                || controller.getVideoController().getCellHighlighting()
+                ? CellLook.timeOf(model.getOnset(), model.getOffset(), controller.getVideoController().getCurrentTime())
+                : CellLook.Time.AHEAD;
+    }
+
+    /** Returns where the cell stood against the needle when it was last styled. */
+    CellLook.Time getShownTime() {
+        return shownTime;
+    }
+
+    /** Restyles the cell if the needle has moved into, out of or past it since it was last styled. */
+    void followNeedle() {
+        if (timeNow() != shownTime) {
+            updateSelectionDisplay();
         }
     }
 
@@ -415,35 +425,4 @@ public final class SpreadsheetCell extends JPanel
         dataPanel.setFont(SpreadsheetTheme.dataFont());
         super.paint(g);
     }
-
-    @Override
-    public void clockForceSync(double clockTime) {
-        updateSelectionDisplay();
-    }
-
-    @Override
-    public void clockPeriodicSync(double clockTime) {
-        updateSelectionDisplay();
-    }
-
-    @Override
-    public void clockStop(double clockTime) { }
-
-    @Override
-    public void clockPause(double clockTime) { }
-
-    @Override
-    public void clockStart(double clockTime) { }
-
-    @Override
-    public void clockRate(float rate) { }
-
-    @Override
-    public void clockBoundaryCheck(double clockTime) { }
-
-    @Override
-    public void streamsBoundaryCheck(double clockTime) { }
-
-    @Override
-    public void clockSeekPlayback(double clockTime) { }
 }

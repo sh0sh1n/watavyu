@@ -9,63 +9,161 @@ import static org.testng.Assert.assertTrue;
 
 import com.sh0sh1n.watavyu.controllers.ProjectController;
 import com.sh0sh1n.watavyu.models.Cell;
+import com.sh0sh1n.watavyu.models.Column;
 import com.sh0sh1n.watavyu.models.DataStore;
 import com.sh0sh1n.watavyu.models.DataStoreFactory;
-import com.sh0sh1n.watavyu.models.Column;
 import com.sh0sh1n.watavyu.models.Project;
 import com.sh0sh1n.watavyu.util.ClockTimer;
 import com.sh0sh1n.watavyu.util.ClockTimer.ClockListener;
 import com.sh0sh1n.watavyu.views.VideoController;
 import org.mockito.ArgumentCaptor;
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
+import java.awt.Component;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import javax.swing.JComponent;
+import javax.swing.RepaintManager;
 import javax.swing.SwingUtilities;
 
 /**
- * The sheet follows the clock once for all its cells, rather than each cell following it; a column and the editor over
- * the cell in focus follow it too. Each stops once it is gone.
+ * The sheet alone follows the clock, for all its cells, its columns and the editor, and does so on the event thread:
+ * the clock's own thread touches no Swing component. It stops following the clock once it is closed.
  */
 public class ColumnClockTest {
 
-    @Test
-    public void theSheetColumnsAndEditorStopFollowingTheClockOnceGone() throws Exception {
+    private Column notes;
+    private Cell inPlay;
+    private Cell later;
+    private ClockTimer clock;
+    private VideoController playback;
+    private SpreadsheetView sheet;
+    private SpreadsheetColumn column;
+    private RepaintManager previousManager;
+
+    /** The Swing components asked to repaint or lay out again off the event thread. */
+    private final List<Component> offTheEventThread = new CopyOnWriteArrayList<>();
+
+    @BeforeMethod
+    public void setUp() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
-        Column notes = dataStore.createColumn("notes");
-        Cell deleted = notes.createPointCell(1_000);
-        notes.createPointCell(2_000);
-        ClockTimer clock = mock(ClockTimer.class);
-        VideoController playback = mock(VideoController.class);
+        notes = dataStore.createColumn("notes");
+        inPlay = notes.createPointCell(1_000);
+        later = notes.createPointCell(2_000);
+        clock = mock(ClockTimer.class);
+        playback = mock(VideoController.class);
         when(playback.getClockTimer()).thenReturn(clock);
         ProjectController spreadsheet = new ProjectController(new Project(), dataStore);
         spreadsheet.setVideoController(playback);
 
         SwingUtilities.invokeAndWait(() -> {
-            SpreadsheetView sheet = new SpreadsheetView(spreadsheet);
-            SpreadsheetColumn column = new SpreadsheetColumn(spreadsheet, notes, sheet,
-                mock(CellSelectionListener.class), mock(ColumnSelectionListener.class),
-                mock(ColumnVisibilityListener.class));
+            sheet = new SpreadsheetView(spreadsheet);
+            column = new SpreadsheetColumn(spreadsheet, notes, sheet, mock(CellSelectionListener.class),
+                mock(ColumnSelectionListener.class), mock(ColumnVisibilityListener.class));
             sheet.addColumn(column);
             column.registerListeners();
-            SpreadsheetCell editor = sheet.edit(deleted);
+            previousManager = RepaintManager.currentManager(sheet);
+            RepaintManager.setCurrentManager(new RepaintManager() {
+                @Override
+                public synchronized void addInvalidComponent(final JComponent component) {
+                    if (!SwingUtilities.isEventDispatchThread()) {
+                        offTheEventThread.add(component);
+                    }
+                    super.addInvalidComponent(component);
+                }
 
+                @Override
+                public void addDirtyRegion(final JComponent component, final int x, final int y, final int w,
+                                           final int h) {
+                    if (!SwingUtilities.isEventDispatchThread()) {
+                        offTheEventThread.add(component);
+                    }
+                    super.addDirtyRegion(component, x, y, w, h);
+                }
+            });
+        });
+    }
+
+    @AfterMethod
+    public void tearDown() throws Exception {
+        SwingUtilities.invokeAndWait(() -> RepaintManager.setCurrentManager(previousManager));
+    }
+
+    private ClockListener sheetsListener() {
+        ArgumentCaptor<ClockListener> registered = ArgumentCaptor.forClass(ClockListener.class);
+        verify(clock, atLeastOnce()).registerListener(registered.capture());
+        return registered.getValue();
+    }
+
+    @Test
+    public void theSheetAloneFollowsTheClockUntilItIsClosed() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            sheet.edit(later);
             ArgumentCaptor<ClockListener> registered = ArgumentCaptor.forClass(ClockListener.class);
             verify(clock, atLeastOnce()).registerListener(registered.capture());
-            List<ClockListener> listeners = registered.getAllValues();
-            assertEquals(listeners.size(), 3, "the sheet, the column and the editor: " + listeners);
-            assertTrue(listeners.contains(column));
-            assertTrue(listeners.contains(editor));
-
-            notes.removeCell(deleted);
-            verify(clock).unRegisterListener(editor);
-
-            column.deregisterListeners();
-            verify(clock).unRegisterListener(column);
+            assertEquals(registered.getAllValues().size(), 1, "the sheet alone: " + registered.getAllValues());
 
             sheet.close();
-            ClockListener sheetsOwn = listeners.stream().filter(listener -> listener != column && listener != editor)
-                .findFirst().orElseThrow();
-            verify(clock).unRegisterListener(sheetsOwn);
+            verify(clock).unRegisterListener(registered.getValue());
+        });
+    }
+
+    /**
+     * In highlight-and-focus mode, a tick while the clock runs moves the editor to the selected column's cell in play
+     * and styles it as in play, all on the event thread, though the clock ticks on its own.
+     */
+    @Test
+    public void aTickFromTheClockThreadMovesAndStylesTheEditorOnTheEventThread() throws Exception {
+        when(playback.getCellHighlightAndFocus()).thenReturn(true);
+        when(playback.getCurrentTime()).thenReturn(1_000L);
+        when(clock.isPaused()).thenReturn(false);
+        SwingUtilities.invokeAndWait(() -> {
+            notes.setSelected(true);
+            sheet.edit(later);
+        });
+        offTheEventThread.clear();
+
+        ClockListener listener = sheetsListener();
+        Thread clockThread = new Thread(() -> listener.clockPeriodicSync(1_000), "clock");
+        clockThread.start();
+        clockThread.join();
+        SwingUtilities.invokeAndWait(() -> {
+            // Lets the tick handed to the event thread run.
+        });
+
+        SwingUtilities.invokeAndWait(() -> {
+            SpreadsheetCell editor = sheet.getEditor().orElseThrow();
+            assertEquals(editor.getCell(), inPlay);
+            assertEquals(editor.getShownTime(), CellLook.Time.IN_PLAY);
+        });
+        assertTrue(offTheEventThread.isEmpty(), "touched off the event thread: " + offTheEventThread);
+    }
+
+    /** While the clock is paused, the editor stays where it was, though it still shows where the needle is. */
+    @Test
+    public void aPausedTickLeavesTheEditorWhereItIs() throws Exception {
+        when(playback.getCellHighlightAndFocus()).thenReturn(true);
+        when(playback.getCurrentTime()).thenReturn(1_000L);
+        when(clock.isPaused()).thenReturn(true);
+        SwingUtilities.invokeAndWait(() -> {
+            notes.setSelected(true);
+            sheet.edit(later);
+        });
+
+        ClockListener listener = sheetsListener();
+        Thread clockThread = new Thread(() -> listener.clockPeriodicSync(1_000), "clock");
+        clockThread.start();
+        clockThread.join();
+        SwingUtilities.invokeAndWait(() -> {
+            // Lets the tick handed to the event thread run.
+        });
+
+        SwingUtilities.invokeAndWait(() -> {
+            SpreadsheetCell editor = sheet.getEditor().orElseThrow();
+            assertEquals(editor.getCell(), later);
+            assertEquals(editor.getShownTime(), CellLook.Time.AHEAD);
         });
     }
 }

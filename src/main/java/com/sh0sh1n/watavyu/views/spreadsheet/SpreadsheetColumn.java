@@ -19,7 +19,6 @@ import org.apache.logging.log4j.Logger;
 import com.sh0sh1n.watavyu.controllers.ColumnCommands;
 import com.sh0sh1n.watavyu.controllers.ProjectController;
 import com.sh0sh1n.watavyu.models.*;
-import com.sh0sh1n.watavyu.util.ClockTimer;
 import com.sh0sh1n.watavyu.util.Constants;
 import com.sh0sh1n.watavyu.views.LockMark;
 
@@ -36,7 +35,7 @@ import java.util.ListIterator;
  * Spreadsheet window.
  */
 public final class SpreadsheetColumn extends JLabel implements ColumnListener, MouseListener, MouseMotionListener,
-        ClockTimer.ClockListener, KeyEventDispatcher {
+        KeyEventDispatcher {
 
     /** The logger for this class */
     private static Logger logger = LogManager.getLogger(SpreadsheetColumn.class);
@@ -147,7 +146,6 @@ public final class SpreadsheetColumn extends JLabel implements ColumnListener, M
 
         this.setVisible(!var.isHidden());
 
-        controller.getVideoController().getClockTimer().registerListener(this);
     }
 
     /** Returns the spreadsheet this column is in. */
@@ -295,7 +293,6 @@ public final class SpreadsheetColumn extends JLabel implements ColumnListener, M
         for (Cell cell : dataColumn.getCells()) {
             sheet.unwatch(cell);
         }
-        controller.getVideoController().getClockTimer().unRegisterListener(this);
     }
 
     /**
@@ -722,36 +719,15 @@ public final class SpreadsheetColumn extends JLabel implements ColumnListener, M
         }
     }
 
-    @Override
-    public void clockPeriodicSync(double clockTime) {
-        if(isSelected()
+    /**
+     * In highlight-and-focus mode, while the clock runs, puts the focus in the selected column's cell in play. Called
+     * by the sheet on the event thread as the clock ticks.
+     */
+    void followNeedle() {
+        if (isSelected()
             && controller.getVideoController().getCellHighlightAndFocus()
             && !controller.getVideoController().getClockTimer().isPaused()) {
             focusNextCell();
         }
     }
-
-    @Override
-    public void clockForceSync(double clockTime) { }
-
-    @Override
-    public void clockRate(float rate) { }
-
-    @Override
-    public void clockStart(double clockTime) { }
-
-    @Override
-    public void clockStop(double clockTime) { }
-
-    @Override
-    public void clockPause(double clockTime) { }
-
-    @Override
-    public void clockBoundaryCheck(double clockTime) { }
-
-    @Override
-    public void streamsBoundaryCheck(double clockTime) { }
-
-    @Override
-    public void clockSeekPlayback(double clockTime) { }
 }

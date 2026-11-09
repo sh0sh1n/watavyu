@@ -390,7 +390,6 @@ public final class SpreadsheetView extends JPanel implements Scrollable {
             return;
         }
         old.getCell().removeListener(old);
-        old.dispose();
         KeyboardFocusManager focus = KeyboardFocusManager.getCurrentKeyboardFocusManager();
         Component owner = focus.getFocusOwner();
         if (owner == null || !SwingUtilities.isDescendingFrom(owner, old)) {
@@ -534,6 +533,20 @@ public final class SpreadsheetView extends JPanel implements Scrollable {
         boundsOf(cell).ifPresent(this::repaint);
     }
 
+    /**
+     * Follows the clock on the event thread: in highlight-and-focus mode, a column moves the focus to its cell in
+     * play, and the cells, drawn and edited, whose place against the needle has changed are drawn again.
+     */
+    private void followClock() {
+        for (SpreadsheetColumn column : List.copyOf(columns)) {
+            column.followNeedle();
+        }
+        showTime();
+        if (editor != null) {
+            editor.followNeedle();
+        }
+    }
+
     /** Draws again the cells in sight whose place against the needle has changed since they were drawn. */
     private void showTime() {
         Times now = new Times(controller.getVideoController());
@@ -610,7 +623,10 @@ public final class SpreadsheetView extends JPanel implements Scrollable {
         }
     }
 
-    /** Shows each clock tick on the event thread, one at a time, as the clock ticks on a thread of its own. */
+    /**
+     * Hears the clock on its thread and follows it on the event thread, where all Swing work belongs: one tick at a
+     * time, skipping ticks that come while one is still waiting there.
+     */
     private final class ClockFollower implements ClockTimer.ClockListener {
         /** Whether a clock tick is waiting to be shown on the event thread. */
         private final AtomicBoolean tickPending = new AtomicBoolean();
@@ -619,7 +635,7 @@ public final class SpreadsheetView extends JPanel implements Scrollable {
             if (tickPending.compareAndSet(false, true)) {
                 SwingUtilities.invokeLater(() -> {
                     tickPending.set(false);
-                    showTime();
+                    followClock();
                 });
             }
         }
