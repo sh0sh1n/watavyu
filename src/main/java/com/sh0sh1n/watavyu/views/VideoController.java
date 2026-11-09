@@ -106,6 +106,9 @@ public final class VideoController implements ClockListener {
     /** Shows the clock's time; nothing until the spreadsheet sets one. */
     private volatile Playhead playhead = (time, rate, playing) -> { };
 
+    /** Held while the clock is read and shown, so a reading taken earlier on one thread is never shown last. */
+    private final Object showing = new Object();
+
     /** Keeps the players and the spreadsheet's media columns in step; null until a spreadsheet is set. */
     private MediaPlayers mediaPlayers;
 
@@ -181,7 +184,7 @@ public final class VideoController implements ClockListener {
      */
     public void setPlayhead(final Playhead playhead) {
         this.playhead = playhead;
-        showPlayhead(getCurrentTime());
+        showClock();
     }
 
     /**
@@ -303,12 +306,14 @@ public final class VideoController implements ClockListener {
 
     @Override
     public void clockBoundaryCheck(double clockTime) {
-        long stop = mediaPlayers == null ? -1 : mediaPlayers.stopTime(Settings.get().isStopAtEndOfMedia());
-        long end = getTimelineEnd();
-        if (stop >= 0 && clockTimer.pauseIf((time, rate) -> rate > 0 && time >= stop, stop)) {
-            logger.info("Pausing at the end of the media, " + stop);
-        } else if (clockTimer.pauseIf((time, rate) -> atTimelineEdge(time, rate, end))) {
-            logger.info("Clock Boundary Pausing Master Clock at " + clockTimer.getClockTime());
+        if (!clockTimer.isPaused()) {
+            long stop = mediaPlayers == null ? -1 : mediaPlayers.stopTime(Settings.get().isStopAtEndOfMedia());
+            long end = getTimelineEnd();
+            if (stop >= 0 && clockTimer.pauseIf((time, rate) -> rate > 0 && time >= stop, stop)) {
+                logger.info("Pausing at the end of the media, " + stop);
+            } else if (clockTimer.pauseIf((time, rate) -> atTimelineEdge(time, rate, end))) {
+                logger.info("Clock Boundary Pausing Master Clock at " + clockTimer.getClockTime());
+            }
         }
         showClock();
     }
@@ -381,16 +386,16 @@ public final class VideoController implements ClockListener {
     }
 
     /**
-     * Shows the clock's time as it is now, not the time a tick or change brought: the clock thread may tell of a time
-     * a moment old, after the EDT has moved the clock on, and the needle would jump back until the next tick.
+     * Shows the clock's time and rate as they are now, read together. The clock thread and the EDT both show them,
+     * and the playhead keeps the last it is given, so they are read and shown under one lock: otherwise a reading the
+     * clock thread took before the EDT jogged could be shown after it, and the needle would jump back until the next
+     * tick.
      */
     private void showClock() {
-        showPlayhead(clockTimer.toRange(getCurrentTime()));
-    }
-
-    private void showPlayhead(final long time) {
-        playhead.show(time, rateText(clockTimer.getRate(), clockTimer.isPaused()),
-                !clockTimer.isPaused() && clockTimer.getRate() != 0F);
+        synchronized (showing) {
+            ClockTimer.Reading now = clockTimer.read();
+            playhead.show(now.time(), rateText(now.rate(), now.paused()), !now.paused() && now.rate() != 0F);
+        }
     }
 
     /**

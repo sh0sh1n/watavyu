@@ -25,6 +25,7 @@ import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.function.Consumer;
+import java.util.function.ObjDoubleConsumer;
 
 
 /**
@@ -36,8 +37,9 @@ import java.util.function.Consumer;
  * after. So a listener may call the clock and may wait on another thread without deadlocking it, and one listener is
  * never called on two threads at once. Listeners hand Swing work to the event thread themselves.
  *
- * <p>A tick's time may be a moment old by the time a listener hears it, so a listener that would change the clock in
- * answer to a tick, as by pausing at an end, asks the clock to judge the time as it is now ({@link #pauseIf}).
+ * <p>Each call carries the clock's time as it is when the call is made, not when the change was: a listener told of a
+ * jump made before a step follows the step too. A listener that would change the clock in answer, as by pausing at an
+ * end, still asks the clock to judge the time as it is then ({@link #pauseIf}), as the clock may move meanwhile.
  */
 public final class ClockTimer {
 
@@ -105,7 +107,9 @@ public final class ClockTimer {
         maxTime = 0;
         stopped = true;
 
-        ticking = clockThread.scheduleAtFixedRate(this::tick, CLOCK_DELAY, CLOCK_INTERVAL, TimeUnit.MILLISECONDS);
+        // A fixed delay, not a fixed rate: ticks missed while a listener was slow are not run back to back, ahead of
+        // the changes made meanwhile.
+        ticking = clockThread.scheduleWithFixedDelay(this::tick, CLOCK_DELAY, CLOCK_INTERVAL, TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -325,6 +329,23 @@ public final class ClockTimer {
     }
 
     /**
+     * The clock's time, rate and whether it is paused, read together.
+     *
+     * @param time   the time, within the clock's range, in milliseconds
+     * @param rate   the rate
+     * @param paused whether the clock is paused
+     */
+    public record Reading(long time, float rate, boolean paused) {
+    }
+
+    /** Returns the clock's time, rate and whether it is paused, read at one moment. */
+    public Reading read() {
+        synchronized (lock) {
+            return new Reading(toRange((long) clockTime), rate, stopped);
+        }
+    }
+
+    /**
      * Returns true if clock is Paused.
      */
     public boolean isPaused() {
@@ -353,7 +374,8 @@ public final class ClockTimer {
 
     /**
      * Stops the clock for good, as its spreadsheet closes: it ticks no more, its listeners are told the changes made
-     * before closing, such as playback stopping, and then nothing more. Closing waits briefly for them to be told.
+     * before closing, such as playback stopping, and then nothing more. Closing waits briefly for them to be told, and
+     * drops what is left if a listener is slow.
      */
     public void close() {
         synchronized (lock) {
@@ -362,9 +384,12 @@ public final class ClockTimer {
         }
         try {
             if (!clockThread.awaitTermination(CLOSE_WAIT_MILLIS, TimeUnit.MILLISECONDS)) {
-                logger.warn("The clock's listeners were still being told " + CLOSE_WAIT_MILLIS + " ms after closing");
+                logger.warn("The clock's listeners were still being told " + CLOSE_WAIT_MILLIS
+                        + " ms after closing; the rest go untold");
+                clockThread.shutdownNow();
             }
         } catch (InterruptedException e) {
+            clockThread.shutdownNow();
             Thread.currentThread().interrupt();
         }
         clockListeners.clear();
@@ -401,19 +426,23 @@ public final class ClockTimer {
 
     /**
      * Moves the time on by the time elapsed and tells the listeners, on the clock thread: whether the clock has passed
-     * the end of the timeline, which may pause it, then whether it has entered or left a clip, then the time for
-     * players moved by seeking, and then the time itself.
+     * the end of the timeline, which may pause it and move it to the end, then whether it has entered or left a clip,
+     * then the time for players moved by seeking, and then the time itself, each with the time as it is then.
      */
     private void tick() {
-        double time;
         synchronized (lock) {
             updateElapsedTime();
-            time = clockTime;
         }
-        tell(listener -> listener.clockBoundaryCheck(time));
-        tell(listener -> listener.streamsBoundaryCheck(time));
-        tell(listener -> listener.clockSeekPlayback(time));
-        tell(listener -> listener.clockPeriodicSync(time));
+        tellTime(ClockListener::clockBoundaryCheck);
+        tellTime(ClockListener::streamsBoundaryCheck);
+        tellTime(ClockListener::clockSeekPlayback);
+        tellTime(ClockListener::clockPeriodicSync);
+    }
+
+    /** Tells every listener some news with the clock's time now, on the clock thread. */
+    private void tellTime(final ObjDoubleConsumer<ClockListener> news) {
+        double time = getClockTime();
+        tell(listener -> news.accept(listener, time));
     }
 
     /**
@@ -431,40 +460,39 @@ public final class ClockTimer {
     }
 
     /**
-     * Has the clock thread tell the listeners of a change once it has told them of everything before. Called under
-     * the clock's lock, with the news taken from the clock as it is now, so changes are told in the order they were
-     * made.
+     * Has the clock thread tell the listeners of a change, with the clock's time as it is then, once it has told them
+     * of everything before. Called under the clock's lock, so changes are told in the order they were made.
      */
-    private void post(final Consumer<ClockListener> news) {
+    private void post(final ObjDoubleConsumer<ClockListener> news) {
         if (!clockThread.isShutdown()) {
-            clockThread.execute(() -> tell(news));
+            clockThread.execute(() -> tellTime(news));
         }
     }
 
     /** Tells the listeners the time was set, which they must follow at once. */
     private void notifyForceSync() {
-        double time = clockTime;
-        post(listener -> listener.clockForceSync(time));
+        post(ClockListener::clockForceSync);
     }
 
     private void notifyRate() {
-        float now = rate;
-        post(listener -> listener.clockRate(now));
+        if (!clockThread.isShutdown()) {
+            clockThread.execute(() -> {
+                float now = getRate();
+                tell(listener -> listener.clockRate(now));
+            });
+        }
     }
 
     private void notifyStart() {
-        double time = clockTime;
-        post(listener -> listener.clockStart(time));
+        post(ClockListener::clockStart);
     }
 
     private void notifyStop() {
-        double time = clockTime;
-        post(listener -> listener.clockStop(time));
+        post(ClockListener::clockStop);
     }
 
     private void notifyPause() {
-        double time = clockTime;
-        post(listener -> listener.clockPause(time));
+        post(ClockListener::clockPause);
     }
 
     /** Whether the clock has reached a boundary, judged by its time and rate. */
@@ -482,7 +510,8 @@ public final class ClockTimer {
 
     /**
      * Listener for the clock's ticks and changes. Every call comes on the clock's thread, in the order the clock
-     * changed, without the clock's lock held; ticks come every 100 ms, whether or not the clock is running.
+     * changed, without the clock's lock held, and carries the clock's time and rate as they are when it is made;
+     * ticks come every 100 ms, whether or not the clock is running.
      */
     public interface ClockListener {
         /**

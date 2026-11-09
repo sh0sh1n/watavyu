@@ -19,6 +19,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /** The clock ticks on through a failing listener; a closed one, as of a closed tab, has stopped and tells nothing. */
 public class ClockTimerTest {
@@ -173,15 +174,12 @@ public class ClockTimerTest {
         try {
             clock.setMaxTime(10_000);
             List<String> told = new CopyOnWriteArrayList<>();
-            CountDownLatch last = new CountDownLatch(1);
+            CountDownLatch forces = new CountDownLatch(3);
             clock.registerListener(new Quiet() {
                 @Override
                 public void clockForceSync(final double clockTime) {
                     told.add("force");
-                    if (clockTime == 3_000) {
-                        told.add("at 3000");
-                        last.countDown();
-                    }
+                    forces.countDown();
                 }
 
                 @Override
@@ -205,8 +203,8 @@ public class ClockTimerTest {
             clock.pause();
             clock.setForceTime(3_000);
 
-            assertTrue(last.await(5, TimeUnit.SECONDS), "told: " + told);
-            assertEquals(told, List.of("force", "rate 2.0", "start", "pause", "force", "force", "at 3000"));
+            assertTrue(forces.await(5, TimeUnit.SECONDS), "told: " + told);
+            assertEquals(told, List.of("force", "rate 2.0", "start", "pause", "force", "force"));
         } finally {
             clock.close();
         }
@@ -272,6 +270,7 @@ public class ClockTimerTest {
         ClockTimer clock = new ClockTimer();
         clock.setMaxTime(10_000);
         List<String> told = new CopyOnWriteArrayList<>();
+        AtomicLong lastForce = new AtomicLong(-1);
         clock.registerListener(new Quiet() {
             @Override
             public void clockStop(final double clockTime) {
@@ -280,7 +279,8 @@ public class ClockTimerTest {
 
             @Override
             public void clockForceSync(final double clockTime) {
-                told.add(clockTime == 4_000 ? "force 4000" : "force");
+                told.add("force");
+                lastForce.set((long) clockTime);
             }
         });
 
@@ -289,7 +289,9 @@ public class ClockTimerTest {
         clock.setForceTime(4_000);
         clock.close();
 
-        assertEquals(told.subList(told.indexOf("stop"), told.size()), List.of("stop", "force", "force 4000"));
+        assertTrue(told.contains("stop"), "told: " + told);
+        assertEquals(told.subList(told.indexOf("stop"), told.size()), List.of("stop", "force", "force"));
+        assertEquals(lastForce.get(), 4_000L);
     }
 
     /**
@@ -332,6 +334,72 @@ public class ClockTimerTest {
             assertTrue(clock.isPaused());
             assertTrue(clock.getClockTime() <= 3_000.0 && clock.getClockTime() > 2_000.0,
                 "paused where it was: " + clock.getClockTime());
+        } finally {
+            clock.close();
+        }
+    }
+
+    /**
+     * A change is told with the clock's time when it is told, not when it was made: a player told late of a jump
+     * follows a step taken since, rather than going back to the jump.
+     */
+    @Test
+    public void newsCarriesTheTimeWhenItIsTold() throws InterruptedException {
+        ClockTimer clock = new ClockTimer();
+        try {
+            clock.setMaxTime(10_000);
+            CountDownLatch busy = new CountDownLatch(1);
+            CountDownLatch release = new CountDownLatch(1);
+            CountDownLatch bothForces = new CountDownLatch(2);
+            List<Double> forcedTo = new CopyOnWriteArrayList<>();
+            clock.registerListener(new Quiet() {
+                @Override
+                public void clockPeriodicSync(final double clockTime) {
+                    if (busy.getCount() > 0) {
+                        busy.countDown();
+                        try {
+                            release.await(5, TimeUnit.SECONDS);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                        }
+                    }
+                }
+
+                @Override
+                public void clockForceSync(final double clockTime) {
+                    forcedTo.add(clockTime);
+                    bothForces.countDown();
+                }
+            });
+
+            assertTrue(busy.await(5, TimeUnit.SECONDS), "the clock thread is busy with a tick");
+            clock.setForceTime(1_000);
+            clock.setTime(1_033);
+            clock.setForceTime(2_000);
+            clock.setTime(2_033);
+            release.countDown();
+
+            assertTrue(bothForces.await(5, TimeUnit.SECONDS), "told: " + forcedTo);
+            assertEquals(forcedTo, List.of(2_033.0, 2_033.0));
+        } finally {
+            clock.close();
+        }
+    }
+
+    /** The clock's time, rate and pause are read together. */
+    @Test
+    public void aReadingTakesTheClockAtOneMoment() {
+        ClockTimer clock = new ClockTimer();
+        try {
+            clock.setMaxTime(10_000);
+            clock.setForceTime(4_000);
+            clock.setRate(2f);
+            clock.pause();
+
+            ClockTimer.Reading now = clock.read();
+            assertEquals(now.rate(), 2f);
+            assertTrue(now.paused());
+            assertEquals(now.time(), (long) clock.getClockTime());
         } finally {
             clock.close();
         }
