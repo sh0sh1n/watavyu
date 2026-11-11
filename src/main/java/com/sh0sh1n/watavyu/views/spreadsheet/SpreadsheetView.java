@@ -539,10 +539,10 @@ public final class SpreadsheetView extends JPanel implements Scrollable {
 
     /**
      * Follows the clock on the event thread: the cells, drawn and edited, whose place against the needle has changed
-     * are drawn again, and on a periodic tick, in highlight-and-focus mode, a column moves the focus to its cell in
+     * are drawn again, and on a tick, in highlight-and-focus mode, a column moves the focus to its cell in
      * play. A jump leaves the focus where it is, as a new cell made at the needle takes it.
      *
-     * @param moveFocus whether a periodic tick has come since the sheet last followed the clock
+     * @param moveFocus whether a tick has come since the sheet last followed the clock
      */
     private void followClock(final boolean moveFocus) {
         if (closed) {
@@ -640,30 +640,30 @@ public final class SpreadsheetView extends JPanel implements Scrollable {
      * time, skipping ticks that come while one is still waiting there.
      */
     private final class ClockFollower implements ClockTimer.ClockListener {
-        /** Whether a clock tick is waiting to be shown on the event thread. */
-        private final AtomicBoolean tickPending = new AtomicBoolean();
+        /** Whether the sheet is waiting on the event thread to follow the clock. */
+        private final AtomicBoolean waiting = new AtomicBoolean();
 
-        /** Whether a periodic tick has come since the sheet last followed the clock. */
-        private final AtomicBoolean periodicPending = new AtomicBoolean();
+        /** Whether a tick has come since the sheet last followed the clock. */
+        private final AtomicBoolean ticked = new AtomicBoolean();
 
-        private void tick() {
-            if (tickPending.compareAndSet(false, true)) {
+        private void handOver() {
+            if (waiting.compareAndSet(false, true)) {
                 SwingUtilities.invokeLater(() -> {
-                    tickPending.set(false);
-                    followClock(periodicPending.getAndSet(false));
+                    waiting.set(false);
+                    followClock(ticked.getAndSet(false));
                 });
             }
         }
 
         @Override
         public void clockForceSync(final double clockTime) {
-            tick();
+            handOver();
         }
 
         @Override
-        public void clockPeriodicSync(final double clockTime) {
-            periodicPending.set(true);
-            tick();
+        public void clockTick(final double clockTime) {
+            ticked.set(true);
+            handOver();
         }
 
         @Override
@@ -684,21 +684,6 @@ public final class SpreadsheetView extends JPanel implements Scrollable {
         @Override
         public void clockRate(final float rate) {
             // The rate does not change where the needle is.
-        }
-
-        @Override
-        public void clockBoundaryCheck(final double clockTime) {
-            // The sheet has no bounds to check.
-        }
-
-        @Override
-        public void streamsBoundaryCheck(final double clockTime) {
-            // The sheet plays no streams.
-        }
-
-        @Override
-        public void clockSeekPlayback(final double clockTime) {
-            // The ticks that follow a seek move the needle.
         }
     }
 

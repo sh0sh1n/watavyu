@@ -176,8 +176,6 @@ public interface StreamViewer {
 
     boolean isStepEnabled();
 
-    boolean isSeekPlaybackEnabled();
-
     /**
      * Returns false if this viewer cannot play at negative rates; the controller then
      * stops shuttling at zero instead of going into reverse.

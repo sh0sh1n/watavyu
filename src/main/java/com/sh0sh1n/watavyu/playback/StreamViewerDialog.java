@@ -263,11 +263,19 @@ public abstract class StreamViewerDialog extends JDialog implements StreamViewer
 
     @Override
     public void setInPlay(final boolean newInPlay) {
-        if (newInPlay != inPlay) {
-            inPlay = newInPlay;
-            applyVolume();
-            if (!inPlay && isPlaying()) {
-                pause();
+        synchronized (lock) {
+            if (newInPlay != inPlay) {
+                inPlay = newInPlay;
+                applyVolume();
+                if (!inPlay && isPlaying()) {
+                    pause();
+                } else if (inPlay && !isPlaying() && !clockTimer.isPaused() && getCurrentTime() != -1
+                        && holds(clockTimer.getClockTime())) {
+                    // Put in play while the clock runs through the clip, as when the clock enters it: start now,
+                    // rather than at the next tick, whichever the clock tells first.
+                    logger.info("In play, starting " + getIdentifier() + " at clock " + clockTimer.getClockTime());
+                    start();
+                }
             }
         }
     }
@@ -295,29 +303,19 @@ public abstract class StreamViewerDialog extends JDialog implements StreamViewer
         return clockTime >= offset && clockTime < offset + getDuration();
     }
 
+    /**
+     * Starts the clip when the running clock enters it while it is in play, pauses it when the clock leaves it or it
+     * goes out of play, and moves it to the clock's time if it has drifted by the sync threshold or more.
+     */
     @Override
-    public boolean isSeekPlaybackEnabled() { return false; }
-
-    @Override
-    public void clockSeekPlayback(final double clockTime) {
-        synchronized (lock) {
-            if (!clockTimer.isPaused() && isSeekPlaybackEnabled()) {
-                setCurrentTime(clipTime(clockTime));
-            }
-        }
-    }
-
-    @Override
-    public void clockBoundaryCheck(final double clockTime) {
-        // Nothing to do here
-    }
-
-    @Override
-    public void streamsBoundaryCheck(final double clockTime) {
+    public void clockTick(final double clockTime) {
         synchronized (lock) {
             // The clock logs a failure here and goes on.
-            if (!clockTimer.isPaused() && getCurrentTime() != -1) {
-                if (inPlay && holds(clockTime) && !isPlaying() && !isSeekPlaybackEnabled()) {
+            if (getCurrentTime() == -1) {
+                return;
+            }
+            if (!clockTimer.isPaused()) {
+                if (inPlay && holds(clockTime) && !isPlaying()) {
                     logger.info("Stream Boundary Starting " + getIdentifier() + " at clock " + clockTime);
                     start();
                 }
@@ -325,6 +323,12 @@ public abstract class StreamViewerDialog extends JDialog implements StreamViewer
                     logger.info("Stream Boundary Stopping " + getIdentifier() + " at clock " + clockTime);
                     pause();
                 }
+            }
+            long clipTime = clipTime(clockTime);
+            if (Math.abs(clipTime - getCurrentTime()) >= ClockTimer.SYNC_THRESHOLD) {
+                logger.info("Sync stream " + getIdentifier() + " to " + clipTime + " milliseconds; it was at "
+                    + getCurrentTime());
+                setCurrentTime(clipTime);
             }
         }
     }
@@ -337,20 +341,6 @@ public abstract class StreamViewerDialog extends JDialog implements StreamViewer
             if (clipTime != getCurrentTime()) {
                 logger.info("Forced sync stream " + getIdentifier() + " to " + clipTime + " milliseconds");
                 setCurrentTime(clipTime);
-            }
-        }
-    }
-
-    @Override
-    public void clockPeriodicSync(final double clockTime) {
-        synchronized (lock) {
-            if (!isSeekPlaybackEnabled() && getCurrentTime() != -1) {
-                long clipTime = clipTime(clockTime);
-                if (Math.abs(clipTime - getCurrentTime()) >= ClockTimer.SYNC_THRESHOLD) {
-                    logger.info("Sync stream " + getIdentifier() + " to " + clipTime + " milliseconds; it was at "
-                        + getCurrentTime());
-                    setCurrentTime(clipTime);
-                }
             }
         }
     }

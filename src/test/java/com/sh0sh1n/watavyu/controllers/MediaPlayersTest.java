@@ -392,7 +392,7 @@ public class MediaPlayersTest {
         Cell first = addClip(media, 0, "a.mp4");
         Cell second = addClip(media, 5_000, "b.mp4");
 
-        players.clockPeriodicSync(7_000);
+        players.clockTick(7_000);
 
         assertSame(windows.get(media).showing, second);
         verify(players.getPlayer(first), org.mockito.Mockito.atLeastOnce()).setInPlay(false);
@@ -738,12 +738,12 @@ public class MediaPlayersTest {
         StreamViewer player = players.getPlayer(clip);
 
         media.setHidden(true);
-        players.clockPeriodicSync(1_000);
+        players.clockTick(1_000);
         verify(player, org.mockito.Mockito.atLeastOnce()).setInPlay(false);
 
         media.setHidden(false);
         org.mockito.Mockito.clearInvocations(player);
-        players.clockPeriodicSync(1_000);
+        players.clockTick(1_000);
         verify(player).setInPlay(true);
     }
 

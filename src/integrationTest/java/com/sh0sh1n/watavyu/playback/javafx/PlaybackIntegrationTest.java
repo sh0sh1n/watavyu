@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
@@ -275,6 +276,58 @@ public class PlaybackIntegrationTest {
                 Thread.sleep(10);
             }
             assertFalse(viewer.isPlaying(), "a clip out of play pauses");
+        } finally {
+            JavaFxToolkit.onEdtAndWait(() -> {
+                viewer.close();
+                return null;
+            });
+        }
+    }
+
+    /**
+     * A clip put in play while the clock runs through it starts at once, whether the clock told its media columns or
+     * its players of the tick first; while the clock is paused it does not.
+     */
+    @Test
+    public void aClipPutInPlayWhileTheClockRunsThroughItStarts() throws Exception {
+        ClockTimer clock = mock(ClockTimer.class);
+        when(clock.getClockTime()).thenReturn(500.0);
+        when(clock.isPaused()).thenReturn(true);
+        StreamViewer viewer = JavaFxVideoPlugin.open(Identifier.generateIdentifier(), mp4, null, clock, false);
+        try {
+            viewer.setInPlay(false);
+            viewer.setInPlay(true);
+            assertFalse(viewer.isPlaying(), "a paused clock starts no clip");
+
+            when(clock.isPaused()).thenReturn(false);
+            viewer.setInPlay(false);
+            viewer.setInPlay(true);
+            assertTrue(viewer.isPlaying(), "a running clock starts the clip put in play");
+        } finally {
+            JavaFxToolkit.onEdtAndWait(() -> {
+                viewer.close();
+                return null;
+            });
+        }
+    }
+
+    /** On a tick, a clip in play starts as the running clock enters it and pauses as the clock leaves it. */
+    @Test
+    public void aTickStartsAClipAsTheClockEntersItAndPausesItAsTheClockLeaves() throws Exception {
+        ClockTimer clock = mock(ClockTimer.class);
+        when(clock.isPaused()).thenReturn(false);
+        JavaFxVideoViewer viewer = (JavaFxVideoViewer) JavaFxVideoPlugin.open(Identifier.generateIdentifier(), mp4,
+                null, clock, false);
+        try {
+            viewer.setOffset(1_000);
+            viewer.clockTick(500);
+            assertFalse(viewer.isPlaying(), "the clock has not reached the clip");
+
+            viewer.clockTick(1_500);
+            assertTrue(viewer.isPlaying(), "the clock entered the clip");
+
+            viewer.clockTick(1_000 + SECONDS * 1_000L + 100);
+            assertFalse(viewer.isPlaying(), "the clock left the clip");
         } finally {
             JavaFxToolkit.onEdtAndWait(() -> {
                 viewer.close();

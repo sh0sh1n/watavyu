@@ -110,7 +110,7 @@ public final class VideoController implements ClockListener {
     private final Object showing = new Object();
 
     /** Keeps the players and the spreadsheet's media columns in step; null until a spreadsheet is set. */
-    private MediaPlayers mediaPlayers;
+    private volatile MediaPlayers mediaPlayers;
 
     /** Set once the spreadsheet's tab has closed. */
     private volatile boolean closed;
@@ -168,6 +168,10 @@ public final class VideoController implements ClockListener {
         initComponents();
         clockTimer.setMinTime(0);
         clockTimer.setMaxTime(MINIMUM_TIMELINE_END);
+        clockTimer.setPlaybackEnd(() -> {
+            MediaPlayers players = mediaPlayers;
+            return players == null ? -1 : players.stopTime(Settings.get().isStopAtEndOfMedia());
+        });
     }
 
     /**
@@ -305,47 +309,7 @@ public final class VideoController implements ClockListener {
     }
 
     @Override
-    public void clockBoundaryCheck(double clockTime) {
-        if (!clockTimer.isPaused()) {
-            long stop = mediaPlayers == null ? -1 : mediaPlayers.stopTime(Settings.get().isStopAtEndOfMedia());
-            long end = getTimelineEnd();
-            if (stop >= 0 && clockTimer.pauseIf((time, rate) -> rate > 0 && time >= stop, stop)) {
-                logger.info("Pausing at the end of the media, " + stop);
-            } else if (clockTimer.pauseIf((time, rate) -> atTimelineEdge(time, rate, end))) {
-                logger.info("Clock Boundary Pausing Master Clock at " + clockTimer.getClockTime());
-            }
-        }
-        showClock();
-    }
-
-    /**
-     * Returns whether playback has run into the end it is heading for: the timeline's end going forward, or time
-     * zero going backward. Playback starting at either edge and heading away from it carries on.
-     * @param clockTime   the clock's time
-     * @param rate        the clock's rate
-     * @param timelineEnd the end of the timeline
-     */
-    static boolean atTimelineEdge(final double clockTime, final float rate, final long timelineEnd) {
-        return rate > 0 ? clockTime >= timelineEnd : rate < 0 && clockTime <= 0;
-    }
-
-    @Override
-    public void streamsBoundaryCheck(double clockTime) {
-        // Nothing to do here
-    }
-
-    @Override
-    public void clockSeekPlayback(double clockTime) {
-        // Nothing to do here
-    }
-
-    /**
-     * This method is used only for the JavaFx player, and Native OSX
-     * @param clockTime Current clockTimer time in milliseconds.
-     */
-    @Override
-    public void clockPeriodicSync(double clockTime) {
-        // Updates the position of the needle and label
+    public void clockTick(final double clockTime) {
         showClock();
     }
 
