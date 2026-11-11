@@ -18,6 +18,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -137,6 +138,13 @@ public final class ClockTimer {
         synchronized (lock) {
             logger.debug("Setting Clock maximum time");
             this.maxTime = maxTime;
+        }
+    }
+
+    /** Returns the end of the clock's range, in milliseconds. */
+    public long getMaxTime() {
+        synchronized (lock) {
+            return maxTime;
         }
     }
 
@@ -439,13 +447,24 @@ public final class ClockTimer {
      * listeners the time, on the clock thread.
      */
     private void tick() {
-        // Asked outside the lock, as it reads the media columns.
-        long end = playbackEnd.getAsLong();
+        boolean forward;
+        synchronized (lock) {
+            forward = !stopped && rate > 0;
+        }
+        // Asked outside the lock, as it reads the media columns, and only while playing forward.
+        long end = forward ? askPlaybackEnd() : -1;
         synchronized (lock) {
             updateElapsedTime();
             pauseAtEnd(end);
         }
         tellTime(ClockListener::clockTick);
+    }
+
+    /** Returns where playback going forward ends, or -1 for the end of the range if it cannot be found. */
+    private long askPlaybackEnd() {
+        AtomicLong end = new AtomicLong(-1);
+        guarded(() -> end.set(playbackEnd.getAsLong()), "The end of playback could not be found");
+        return end.get();
     }
 
     /** Tells every listener some news with the clock's time now, on the clock thread. */
@@ -460,11 +479,19 @@ public final class ClockTimer {
      */
     private void tell(final Consumer<ClockListener> news) {
         for (ClockListener listener : clockListeners) {
-            try {
-                news.accept(listener);
-            } catch (RuntimeException e) {
-                logger.error("A clock listener failed", e);
-            }
+            guarded(() -> news.accept(listener), "A clock listener failed");
+        }
+    }
+
+    /**
+     * Runs work on the clock thread that calls out of the clock, logging a failure rather than letting it escape: an
+     * exception on the clock thread would cancel every later tick.
+     */
+    private static void guarded(final Runnable work, final String failure) {
+        try {
+            work.run();
+        } catch (RuntimeException e) {
+            logger.error(failure, e);
         }
     }
 

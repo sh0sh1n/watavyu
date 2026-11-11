@@ -349,6 +349,65 @@ public class ClockTimerTest {
         }
     }
 
+    /**
+     * A paused clock past the end of playback stays where it is, as after a jump there, and is not asked where
+     * playback ends.
+     */
+    @Test
+    public void aPausedClockPastTheEndStaysWhereItIs() throws InterruptedException {
+        ClockTimer clock = new ClockTimer();
+        try {
+            clock.setMaxTime(10_000);
+            AtomicInteger asked = new AtomicInteger();
+            clock.setPlaybackEnd(() -> {
+                asked.incrementAndGet();
+                return 2_150;
+            });
+            CountDownLatch ticks = new CountDownLatch(3);
+            clock.registerListener(new Quiet() {
+                @Override
+                public void clockTick(final double clockTime) {
+                    ticks.countDown();
+                }
+            });
+            clock.setForceTime(5_000);
+
+            assertTrue(ticks.await(5, TimeUnit.SECONDS));
+            assertTrue(clock.isPaused());
+            assertEquals(clock.getClockTime(), 5_000.0);
+            assertEquals(asked.get(), 0, "asked while paused");
+        } finally {
+            clock.close();
+        }
+    }
+
+    /** If the end of playback cannot be found, the failure is logged and the clock goes on ticking. */
+    @Test
+    public void aFailingPlaybackEndKeepsTheClockTicking() throws InterruptedException {
+        ClockTimer clock = new ClockTimer();
+        try {
+            clock.setMaxTime(60_000);
+            AtomicInteger asked = new AtomicInteger();
+            clock.setPlaybackEnd(() -> {
+                asked.incrementAndGet();
+                throw new IllegalStateException("no end");
+            });
+            CountDownLatch ticks = new CountDownLatch(3);
+            clock.registerListener(new Quiet() {
+                @Override
+                public void clockTick(final double clockTime) {
+                    ticks.countDown();
+                }
+            });
+            clock.setRate(1f);
+
+            assertTrue(ticks.await(5, TimeUnit.SECONDS), "ticks after the failure");
+            assertTrue(asked.get() >= 2, "asked " + asked.get() + " times");
+        } finally {
+            clock.close();
+        }
+    }
+
     /** Playback starting at time zero or at the end runs on when it heads away from that edge (B7). */
     @Test
     public void playbackStopsAtTheEdgeItIsHeadingFor() {

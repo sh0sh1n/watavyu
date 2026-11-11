@@ -100,9 +100,6 @@ public final class VideoController implements ClockListener {
     /** Clock timer */
     private final ClockTimer clockTimer = new ClockTimer();
 
-    /** Where the timeline ends: the end of the media, or a minute if that is sooner. */
-    private volatile long timelineEnd = MINIMUM_TIMELINE_END;
-
     /** Shows the clock's time; nothing until the spreadsheet sets one. */
     private volatile Playhead playhead = (time, rate, playing) -> { };
 
@@ -343,13 +340,6 @@ public final class VideoController implements ClockListener {
     }
 
     /**
-     * @return The end of the timeline, the latest end of any track, in milliseconds.
-     */
-    private long getTimelineEnd() {
-        return timelineEnd;
-    }
-
-    /**
      * Shows the clock's time and rate as they are now, read together. The clock thread and the EDT both show them,
      * and the playhead keeps the last it is given, so they are read and shown under one lock: otherwise a reading the
      * clock thread took before the EDT jogged could be shown after it, and the needle would jump back until the next
@@ -406,7 +396,6 @@ public final class VideoController implements ClockListener {
             }
         }
 
-        timelineEnd = maxDuration;
         clockTimer.setMaxTime(maxDuration);
         showClock();
     }
@@ -979,7 +968,7 @@ public final class VideoController implements ClockListener {
 
                     // Notice that the new time is in jogs to frame markers by being modulo step size
                     long newStreamTime = Math.min(Math.min(Math.max(trackTime, 0), streamViewer.getDuration()),
-                            getTimelineEnd());
+                            clockTimer.getMaxTime());
 
                     logger.info("Stream " + streamViewer.getIdentifier()
                         + " - Jog forward from " + trackTime + " milliseconds to " + newStreamTime + " milliseconds.");

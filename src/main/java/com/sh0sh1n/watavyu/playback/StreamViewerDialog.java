@@ -269,12 +269,10 @@ public abstract class StreamViewerDialog extends JDialog implements StreamViewer
                 applyVolume();
                 if (!inPlay && isPlaying()) {
                     pause();
-                } else if (inPlay && !isPlaying() && !clockTimer.isPaused() && getCurrentTime() != -1
-                        && holds(clockTimer.getClockTime())) {
+                } else if (getCurrentTime() != -1) {
                     // Put in play while the clock runs through the clip, as when the clock enters it: start now,
                     // rather than at the next tick, whichever the clock tells first.
-                    logger.info("In play, starting " + getIdentifier() + " at clock " + clockTimer.getClockTime());
-                    start();
+                    startIfRunningThrough(clockTimer.getClockTime());
                 }
             }
         }
@@ -298,6 +296,18 @@ public abstract class StreamViewerDialog extends JDialog implements StreamViewer
         return (long) Math.min(Math.max(clockTime - (double) offset, 0), (double) getDuration());
     }
 
+    /**
+     * Starts the clip if it is in play, not playing, and the running clock is within it. Called holding the lock.
+     *
+     * @param clockTime the clock's time
+     */
+    private void startIfRunningThrough(final double clockTime) {
+        if (inPlay && !isPlaying() && !clockTimer.isPaused() && holds(clockTime)) {
+            logger.info("Starting " + getIdentifier() + " at clock " + clockTime);
+            start();
+        }
+    }
+
     /** @return whether a clock time falls within the clip */
     private boolean holds(final double clockTime) {
         return clockTime >= offset && clockTime < offset + getDuration();
@@ -314,15 +324,10 @@ public abstract class StreamViewerDialog extends JDialog implements StreamViewer
             if (getCurrentTime() == -1) {
                 return;
             }
-            if (!clockTimer.isPaused()) {
-                if (inPlay && holds(clockTime) && !isPlaying()) {
-                    logger.info("Stream Boundary Starting " + getIdentifier() + " at clock " + clockTime);
-                    start();
-                }
-                if ((!inPlay || !holds(clockTime)) && isPlaying()) {
-                    logger.info("Stream Boundary Stopping " + getIdentifier() + " at clock " + clockTime);
-                    pause();
-                }
+            startIfRunningThrough(clockTime);
+            if (!clockTimer.isPaused() && (!inPlay || !holds(clockTime)) && isPlaying()) {
+                logger.info("Stream Boundary Stopping " + getIdentifier() + " at clock " + clockTime);
+                pause();
             }
             long clipTime = clipTime(clockTime);
             if (Math.abs(clipTime - getCurrentTime()) >= ClockTimer.SYNC_THRESHOLD) {
