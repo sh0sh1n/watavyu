@@ -269,7 +269,7 @@ public abstract class StreamViewerDialog extends JDialog implements StreamViewer
                 applyVolume();
                 if (!inPlay && isPlaying()) {
                     pause();
-                } else if (getCurrentTime() != -1) {
+                } else if (inPlay && getCurrentTime() != -1) {
                     // Put in play while the clock runs through the clip, as when the clock enters it: start now,
                     // rather than at the next tick, whichever the clock tells first.
                     startIfRunningThrough(clockTimer.getClockTime());

@@ -30,7 +30,7 @@ import java.util.function.ObjDoubleConsumer;
 
 
 /**
- * Keeps multiple streams in periodic sync, and pauses where playback ends: going forward, at the end of playback it is
+ * Keeps multiple streams in sync, and pauses where playback ends: going forward, at the end of playback it is
  * given (the end of the media) or else at the end of its range; going backward, at the start of its range.
  *
  * <p>The clock has one thread of its own, the clock thread. It ticks there, and tells its listeners of every tick and
@@ -174,7 +174,7 @@ public final class ClockTimer {
     }
 
     /**
-     * Get the current Clock time, within the tolerance of the periodic sync.
+     * Get the current Clock time.
      *
      * @return Current clock time
      */
@@ -196,7 +196,7 @@ public final class ClockTimer {
     /**
      * Set the time but don't activate any of the listeners
      *
-     * All listeners will be updated through the auto sync to the new time
+     * All listeners follow the new time at the next tick
      *
      * Use this method if eventual synchronization is enough
      *
@@ -208,7 +208,7 @@ public final class ClockTimer {
                 logger.debug("Setting Clock time to: " + time);
                 clockTime = time;
                 // Don't notify a sync or force a sync
-                // The time will be updated by a periodic sync
+                // The listeners follow at the next tick
             }
         }
     }
@@ -294,14 +294,20 @@ public final class ClockTimer {
     public void pause() {
         synchronized (lock) {
             if (!stopped) {
-                logger.debug("Pausing Clock");
                 updateElapsedTime();
-                stopped = true;
-                notifyPause();
-                // Force sync after a stop
-                notifyForceSync();
+                pauseAt(clockTime);
             }
         }
+    }
+
+    /** Pauses the running clock at a time, and tells the listeners once. Called under the lock. */
+    private void pauseAt(final double time) {
+        logger.debug("Pausing Clock at " + time);
+        stopped = true;
+        clockTime = time;
+        notifyPause();
+        // Force sync after a stop
+        notifyForceSync();
     }
 
     /**
@@ -325,11 +331,10 @@ public final class ClockTimer {
         }
         if (rate > 0 && end >= 0 && clockTime >= end) {
             logger.info("Pausing at the end of the media, " + end);
-            pause();
-            setForceTime(end);
+            pauseAt((double) end);
         } else if (atEdge(clockTime, rate, minTime, maxTime)) {
             logger.info("Pausing at the edge of the timeline, " + clockTime);
-            pause();
+            pauseAt(clockTime);
         }
     }
 
@@ -447,15 +452,20 @@ public final class ClockTimer {
      * listeners the time, on the clock thread.
      */
     private void tick() {
-        boolean forward;
-        synchronized (lock) {
-            forward = !stopped && rate > 0;
-        }
-        // Asked outside the lock, as it reads the media columns, and only while playing forward.
-        long end = forward ? askPlaybackEnd() : -1;
-        synchronized (lock) {
-            updateElapsedTime();
-            pauseAtEnd(end);
+        long end = -1;
+        boolean asked = false;
+        while (true) {
+            synchronized (lock) {
+                updateElapsedTime();
+                if (asked || stopped || rate <= 0) {
+                    pauseAtEnd(end);
+                    break;
+                }
+            }
+            // Playing forward: ask where playback ends, outside the lock as it reads the media columns, then judge
+            // again, as the clock may have changed meanwhile. Not asked while paused, as it mostly is.
+            end = askPlaybackEnd();
+            asked = true;
         }
         tellTime(ClockListener::clockTick);
     }

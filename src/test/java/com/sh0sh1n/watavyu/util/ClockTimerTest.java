@@ -290,7 +290,7 @@ public class ClockTimerTest {
 
     /**
      * Playing forward, the clock pauses at the end of playback it is given and moves to it, before any listener hears
-     * the tick, so none hears a time past the end.
+     * the tick, so none hears a time past the end; the listeners are told of the pause once.
      */
     @Test
     public void playingForwardPausesAtTheEndOfPlayback() throws InterruptedException {
@@ -299,18 +299,31 @@ public class ClockTimerTest {
             clock.setMaxTime(10_000);
             clock.setPlaybackEnd(() -> 2_150);
             List<Double> ticks = new CopyOnWriteArrayList<>();
+            List<String> changes = new CopyOnWriteArrayList<>();
             clock.registerListener(new Quiet() {
                 @Override
                 public void clockTick(final double clockTime) {
                     ticks.add(clockTime);
+                }
+
+                @Override
+                public void clockForceSync(final double clockTime) {
+                    changes.add("force");
+                }
+
+                @Override
+                public void clockPause(final double clockTime) {
+                    changes.add("pause");
                 }
             });
             clock.setForceTime(2_000);
             clock.setRate(2f);
 
             awaitPause(clock);
+            clock.close();
             assertEquals(clock.getClockTime(), 2_150.0);
             assertTrue(ticks.stream().allMatch(time -> time <= 2_150), "ticks: " + ticks);
+            assertEquals(changes, List.of("force", "pause", "force"), "the jump to 2000, then the pause at the end");
         } finally {
             clock.close();
         }
