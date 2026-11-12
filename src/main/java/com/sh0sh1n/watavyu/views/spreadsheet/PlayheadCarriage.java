@@ -57,7 +57,7 @@ public final class PlayheadCarriage extends JComponent implements VideoControlle
     private record Reading(long time, String rate, boolean playing) {
     }
 
-    /** What the playhead shows, set by the clock's threads as one, so a time never shows with another tick's rate. */
+    /** What the playhead shows, set by the clock thread and the EDT as one, so a time never shows with another's rate. */
     private volatile Reading reading = new Reading(0, "stopped", false);
 
     /**

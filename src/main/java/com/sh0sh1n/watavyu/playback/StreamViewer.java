@@ -78,7 +78,7 @@ public interface StreamViewer {
 
     /**
      * Marks whether this clip is the one its media column plays at the clock's time. A clip not in play is paused
-     * and silent. Safe to call from the clock's threads.
+     * and silent. Safe to call from the clock thread.
      *
      * @param inPlay whether the clip is in play
      */

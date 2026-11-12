@@ -106,6 +106,9 @@ public final class VideoController implements ClockListener {
     /** Shows the clock's time; nothing until the spreadsheet sets one. */
     private volatile Playhead playhead = (time, rate, playing) -> { };
 
+    /** Held while the clock is read and shown, so a reading taken earlier on one thread is never shown last. */
+    private final Object showing = new Object();
+
     /** Keeps the players and the spreadsheet's media columns in step; null until a spreadsheet is set. */
     private MediaPlayers mediaPlayers;
 
@@ -177,11 +180,11 @@ public final class VideoController implements ClockListener {
     /**
      * Sets what shows the clock's time, and shows it the time now.
      *
-     * @param playhead shows the time; called from the clock's threads as well as the EDT
+     * @param playhead shows the time; called from the clock thread as well as the EDT
      */
     public void setPlayhead(final Playhead playhead) {
         this.playhead = playhead;
-        showPlayhead(getCurrentTime());
+        showClock();
     }
 
     /**
@@ -291,31 +294,28 @@ public final class VideoController implements ClockListener {
     @Override
     public void clockStart(double clockTime) {
         logger.info("Start");
-        updateCurrentTimeLabelAndNeedle((long) clockTime);
+        showClock();
     }
 
     @Override
     public void clockForceSync(double clockTime) {
         logger.debug("Forced sync to " + clockTime + " milliseconds.");
         // Updates the position of the needle and label
-        updateCurrentTimeLabelAndNeedle((long) clockTime);
+        showClock();
     }
 
     @Override
     public void clockBoundaryCheck(double clockTime) {
         if (!clockTimer.isPaused()) {
             long stop = mediaPlayers == null ? -1 : mediaPlayers.stopTime(Settings.get().isStopAtEndOfMedia());
-            float rate = clockTimer.getRate();
-            if (stop >= 0 && rate > 0 && clockTime >= stop) {
+            long end = getTimelineEnd();
+            if (stop >= 0 && clockTimer.pauseIf((time, rate) -> rate > 0 && time >= stop, stop)) {
                 logger.info("Pausing at the end of the media, " + stop);
-                clockTimer.pause();
-                clockTimer.setForceTime(stop);
-            } else if (atTimelineEdge(clockTime, rate, getTimelineEnd())) {
-                logger.info("Clock Boundary Pausing Master Clock at " + clockTime);
-                clockTimer.pause();
+            } else if (clockTimer.pauseIf((time, rate) -> atTimelineEdge(time, rate, end))) {
+                logger.info("Clock Boundary Pausing Master Clock at " + clockTimer.getClockTime());
             }
         }
-        updateCurrentTimeLabelAndNeedle((long) clockTime);
+        showClock();
     }
 
     /**
@@ -346,7 +346,7 @@ public final class VideoController implements ClockListener {
     @Override
     public void clockPeriodicSync(double clockTime) {
         // Updates the position of the needle and label
-        updateCurrentTimeLabelAndNeedle((long) clockTime);
+        showClock();
     }
 
     /**
@@ -356,7 +356,7 @@ public final class VideoController implements ClockListener {
     public void clockStop(double clockTime) {
         logger.debug("Stop Clock at " + clockTime + " milliseconds.");
         // Updates the position of the needle and label
-        updateCurrentTimeLabelAndNeedle((long) clockTime);
+        showClock();
     }
 
     /**
@@ -366,7 +366,7 @@ public final class VideoController implements ClockListener {
     public void clockPause(double clockTime) {
         logger.debug("Pause Clock at " + clockTime + " milliseconds.");
         // Updates the position of the needle and label
-        updateCurrentTimeLabelAndNeedle((long) clockTime);
+        showClock();
     }
 
     /**
@@ -375,7 +375,7 @@ public final class VideoController implements ClockListener {
     @Override
     public void clockRate(float rate) {
         logger.debug("Update rate speed to " + rate);
-        updateCurrentTimeLabelAndNeedle(getCurrentTime());
+        showClock();
     }
 
     /**
@@ -385,13 +385,17 @@ public final class VideoController implements ClockListener {
         return timelineEnd;
     }
 
-    private void updateCurrentTimeLabelAndNeedle(long currentTime) {
-        showPlayhead(clockTimer.toRange(currentTime));
-    }
-
-    private void showPlayhead(final long time) {
-        playhead.show(time, rateText(clockTimer.getRate(), clockTimer.isPaused()),
-                !clockTimer.isPaused() && clockTimer.getRate() != 0F);
+    /**
+     * Shows the clock's time and rate as they are now, read together. The clock thread and the EDT both show them,
+     * and the playhead keeps the last it is given, so they are read and shown under one lock: otherwise a reading the
+     * clock thread took before the EDT jogged could be shown after it, and the needle would jump back until the next
+     * tick.
+     */
+    private void showClock() {
+        synchronized (showing) {
+            ClockTimer.Reading now = clockTimer.read();
+            playhead.show(now.time(), rateText(now.rate(), now.paused()), !now.paused() && now.rate() != 0F);
+        }
     }
 
     /**
@@ -440,7 +444,7 @@ public final class VideoController implements ClockListener {
 
         timelineEnd = maxDuration;
         clockTimer.setMaxTime(maxDuration);
-        updateCurrentTimeLabelAndNeedle(getCurrentTime());
+        showClock();
     }
 
     /**
@@ -930,7 +934,7 @@ public final class VideoController implements ClockListener {
             //Force the time in order to update the cell highlighting
             clockTimer.setTime(newTime);
 
-            updateCurrentTimeLabelAndNeedle(newTime);
+            showClock();
         }
     }
 
@@ -1025,7 +1029,7 @@ public final class VideoController implements ClockListener {
             }
             //Force the time in order to update the cell highlighting
             clockTimer.setTime(newTime);
-            updateCurrentTimeLabelAndNeedle(newTime);
+            showClock();
         }
     }
 

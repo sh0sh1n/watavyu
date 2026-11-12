@@ -1,13 +1,16 @@
 package com.sh0sh1n.watavyu.views;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertTrue;
 
 import com.sh0sh1n.watavyu.TestSpreadsheets;
 import com.sh0sh1n.watavyu.models.DataStoreFactory;
 import org.testng.annotations.Test;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 public class VideoControllerTimeTest {
 
@@ -20,17 +23,24 @@ public class VideoControllerTimeTest {
         assertEquals(VideoController.rateText(0F, true), "stopped");
     }
 
-    /** Moving the clock moves the playhead. */
+    /** Moving the clock moves the playhead, as soon as the clock's thread tells it the new time. */
     @Test
-    public void movingTheClockMovesThePlayhead() {
+    public void movingTheClockMovesThePlayhead() throws InterruptedException {
         VideoController controller = TestSpreadsheets.withPlayback(DataStoreFactory.newDataStore()).getVideoController();
-        List<String> shown = new ArrayList<>();
-        controller.setPlayhead((time, rate, playing) -> shown.add(time + " " + rate + (playing ? " playing" : "")));
-        assertEquals(shown, List.of("0 paused 1×"), "a new clock is paused at the normal rate");
+        List<String> shown = new CopyOnWriteArrayList<>();
+        CountDownLatch moved = new CountDownLatch(1);
+        controller.setPlayhead((time, rate, playing) -> {
+            String reading = time + " " + rate + (playing ? " playing" : "");
+            shown.add(reading);
+            if (reading.equals("5000 paused 1×")) {
+                moved.countDown();
+            }
+        });
+        assertEquals(shown.get(0), "0 paused 1×", "a new clock is paused at the normal rate");
 
         controller.setCurrentTime(5_000);
 
-        assertEquals(shown.get(shown.size() - 1), "5000 paused 1×");
+        assertTrue(moved.await(5, TimeUnit.SECONDS), "shown: " + shown);
     }
 
     /** Shuttling forward at time zero plays faster, as it does anywhere else (B7). */

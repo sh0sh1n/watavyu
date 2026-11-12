@@ -21,13 +21,25 @@ import java.util.concurrent.TimeUnit;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.List;
+import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.function.Consumer;
+import java.util.function.ObjDoubleConsumer;
 
 
 /**
  * Keeps multiple streams in periodic sync and does not play beyond the boundaries of a stream.
+ *
+ * <p>The clock has one thread of its own, the clock thread. It ticks there, and tells its listeners of every tick and
+ * every change there too, in the order the clock changed, and never while holding the clock's lock: a change made on
+ * another thread, such as a rate set on the Swing event thread, is told to the listeners on the clock thread soon
+ * after. So a listener may call the clock and may wait on another thread without deadlocking it, and one listener is
+ * never called on two threads at once. Listeners hand Swing work to the event thread themselves.
+ *
+ * <p>Each call carries the clock's time as it is when the call is made, not when the change was: a listener told of a
+ * jump made before a step follows the step too. A listener that would change the clock in answer, as by pausing at an
+ * end, still asks the clock to judge the time as it is then ({@link #pauseIf}), as the clock may move meanwhile.
  */
 public final class ClockTimer {
 
@@ -70,13 +82,18 @@ public final class ClockTimer {
     /** How long closing waits for a tick already running to finish. */
     private static final long CLOSE_WAIT_MILLIS = 500;
 
-    private final ScheduledExecutorService execService = Executors.newScheduledThreadPool(4);
+    /** The clock thread, which ticks and tells the listeners of each tick and change in turn. */
+    private final ScheduledExecutorService clockThread = Executors.newSingleThreadScheduledExecutor(task -> {
+        Thread thread = new Thread(task, "clock");
+        thread.setDaemon(true);
+        return thread;
+    });
 
     /** Listeners of this clock */
     private final Set<ClockListener> clockListeners = new CopyOnWriteArraySet<>();
 
-    /** The ticks that notify the listeners, which closing cancels */
-    private final List<ScheduledFuture<?>> ticks;
+    /** The repeating tick, which closing cancels */
+    private final ScheduledFuture<?> ticking;
 
     /**
      * Default constructor.
@@ -90,22 +107,9 @@ public final class ClockTimer {
         maxTime = 0;
         stopped = true;
 
-        ticks = List.of(every(this::periodicSync), every(this::checkClockBoundary), every(this::checkStreamsBoundary),
-            every(this::notifySeekPlayback));
-    }
-
-    /**
-     * Runs a tick every {@value #CLOCK_INTERVAL} ms. A listener that fails is logged and the clock goes on, as an
-     * exception would cancel every later run of the tick.
-     */
-    private ScheduledFuture<?> every(final Runnable tick) {
-        return execService.scheduleAtFixedRate(() -> {
-            try {
-                tick.run();
-            } catch (RuntimeException e) {
-                logger.error("A clock listener failed", e);
-            }
-        }, CLOCK_DELAY, CLOCK_INTERVAL, TimeUnit.MILLISECONDS);
+        // A fixed delay, not a fixed rate: ticks missed while a listener was slow are not run back to back, ahead of
+        // the changes made meanwhile.
+        ticking = clockThread.scheduleWithFixedDelay(this::tick, CLOCK_DELAY, CLOCK_INTERVAL, TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -208,11 +212,9 @@ public final class ClockTimer {
         synchronized (lock) {
             if (minTime <= time && time <= maxTime) {
                 clockTime = time;
-                // Notify a force sync
                 notifyForceSync();
-            }else if (time < minTime){
+            } else if (time < minTime) {
                 clockTime = minTime;
-                // Notify a force sync
                 notifyForceSync();
             }
         }
@@ -291,6 +293,59 @@ public final class ClockTimer {
     }
 
     /**
+     * Pauses the clock where it is, if it is running and has reached a boundary.
+     *
+     * @param boundary whether the clock has reached the boundary, judged by its time and rate now
+     * @return whether the clock paused
+     * @see #pauseIf(Boundary, long)
+     */
+    public boolean pauseIf(final Boundary boundary) {
+        return pauseIf(boundary, OptionalLong.empty());
+    }
+
+    /**
+     * Pauses the clock at a time, if it is running and has reached a boundary. The boundary is judged under the
+     * clock's lock, by its time and rate as they are now rather than as the tick that prompted the check saw them, so
+     * a jump or a pause made on another thread since that tick is not undone.
+     *
+     * @param boundary whether the clock has reached the boundary, judged by its time and rate now
+     * @param at       where the clock pauses
+     * @return whether the clock paused
+     */
+    public boolean pauseIf(final Boundary boundary, final long at) {
+        return pauseIf(boundary, OptionalLong.of(at));
+    }
+
+    private boolean pauseIf(final Boundary boundary, final OptionalLong at) {
+        synchronized (lock) {
+            updateElapsedTime();
+            if (stopped || !boundary.reached(clockTime, rate)) {
+                return false;
+            }
+            pause();
+            at.ifPresent(this::setForceTime);
+            return true;
+        }
+    }
+
+    /**
+     * The clock's time, rate and whether it is paused, read together.
+     *
+     * @param time   the time, within the clock's range, in milliseconds
+     * @param rate   the rate
+     * @param paused whether the clock is paused
+     */
+    public record Reading(long time, float rate, boolean paused) {
+    }
+
+    /** Returns the clock's time, rate and whether it is paused, read at one moment. */
+    public Reading read() {
+        synchronized (lock) {
+            return new Reading(toRange((long) clockTime), rate, stopped);
+        }
+    }
+
+    /**
      * Returns true if clock is Paused.
      */
     public boolean isPaused() {
@@ -318,32 +373,39 @@ public final class ClockTimer {
     }
 
     /**
-     * Stops the clock for good, as its spreadsheet closes: its threads stop, waiting briefly for a tick already
-     * running, and its listeners are told nothing more.
+     * Stops the clock for good, as its spreadsheet closes: it ticks no more, its listeners are told the changes made
+     * before closing, such as playback stopping, and then nothing more. Closing waits briefly for them to be told, and
+     * drops what is left if a listener is slow.
      */
     public void close() {
-        ticks.forEach(tick -> tick.cancel(false));
-        execService.shutdownNow();
-        clockListeners.clear();
+        synchronized (lock) {
+            ticking.cancel(false);
+            clockThread.shutdown();
+        }
         try {
-            if (!execService.awaitTermination(CLOSE_WAIT_MILLIS, TimeUnit.MILLISECONDS)) {
-                logger.warn("A clock tick was still running " + CLOSE_WAIT_MILLIS + " ms after closing");
+            if (!clockThread.awaitTermination(CLOSE_WAIT_MILLIS, TimeUnit.MILLISECONDS)) {
+                logger.warn("The clock's listeners were still being told " + CLOSE_WAIT_MILLIS
+                        + " ms after closing; the rest go untold");
+                clockThread.shutdownNow();
             }
         } catch (InterruptedException e) {
+            clockThread.shutdownNow();
             Thread.currentThread().interrupt();
         }
+        clockListeners.clear();
     }
 
-    /** Returns whether {@link #close()} has stopped the clock's threads. */
+    /** Returns whether {@link #close()} has stopped the clock's thread. */
     public boolean isClosed() {
-        return execService.isShutdown();
+        return clockThread.isShutdown();
     }
 
-  /**
-   * Un-Registers a clock listener
-   *
-   * @param listener Listener requiring clockTick updates
-   */
+    /**
+     * Un-Registers a clock listener. The clock thread may be telling the listener something as it is removed, so it
+     * may hear one call more; a listener that has closed ignores it.
+     *
+     * @param listener Listener requiring clockTick updates
+     */
     public void unRegisterListener(final ClockListener listener) {
         synchronized (lock) {
             clockListeners.remove(listener);
@@ -363,110 +425,93 @@ public final class ClockTimer {
     }
 
     /**
-     * The "periodicSync" of the clock - updates listeners of changes in time.
+     * Moves the time on by the time elapsed and tells the listeners, on the clock thread: whether the clock has passed
+     * the end of the timeline, which may pause it and move it to the end, then whether it has entered or left a clip,
+     * then the time for players moved by seeking, and then the time itself, each with the time as it is then.
      */
-    private void periodicSync() {
+    private void tick() {
         synchronized (lock) {
             updateElapsedTime();
-            notifyPeriodicSync();
         }
+        tellTime(ClockListener::clockBoundaryCheck);
+        tellTime(ClockListener::streamsBoundaryCheck);
+        tellTime(ClockListener::clockSeekPlayback);
+        tellTime(ClockListener::clockPeriodicSync);
     }
 
-    private void checkClockBoundary() {
-        synchronized (lock) {
-            updateElapsedTime();
-            notifyCheckClockBoundary();
-        }
+    /** Tells every listener some news with the clock's time now, on the clock thread. */
+    private void tellTime(final ObjDoubleConsumer<ClockListener> news) {
+        double time = getClockTime();
+        tell(listener -> news.accept(listener, time));
     }
 
-    private void checkStreamsBoundary() {
-        synchronized (lock) {
-            updateElapsedTime();
-            notifyCheckStreamsBoundary();
-        }
-    }
-
-    // Notify seek playback could be used if a different interval is need for the
-    // For the fake playback scheduler
-    private void notifySeekPlayback() {
-        // Runs on its own pool thread without the clock's lock, so it reads the time under the lock first.
-        double time;
-        synchronized (lock) {
-            time = clockTime;
-        }
-        for (ClockListener clockListener : clockListeners) {
-            clockListener.clockSeekPlayback(time);
-        }
-    }
-
-    private void notifyCheckClockBoundary() {
-        for (ClockListener clockListener : clockListeners) {
-            clockListener.clockBoundaryCheck(clockTime);
-        }
-    }
-
-    private void notifyCheckStreamsBoundary() {
-        for (ClockListener clockListener : clockListeners) {
-            clockListener.streamsBoundaryCheck(clockTime);
+    /**
+     * Tells every listener some news, on the clock thread. A listener that fails is logged and the others are still
+     * told, as an exception would also cancel every later tick.
+     */
+    private void tell(final Consumer<ClockListener> news) {
+        for (ClockListener listener : clockListeners) {
+            try {
+                news.accept(listener);
+            } catch (RuntimeException e) {
+                logger.error("A clock listener failed", e);
+            }
         }
     }
 
     /**
-     * Notify clock listeners of a force periodicSync -- consumers must act on this
+     * Has the clock thread tell the listeners of a change, with the clock's time as it is then, once it has told them
+     * of everything before. Called under the clock's lock, so changes are told in the order they were made.
      */
+    private void post(final ObjDoubleConsumer<ClockListener> news) {
+        if (!clockThread.isShutdown()) {
+            clockThread.execute(() -> tellTime(news));
+        }
+    }
+
+    /** Tells the listeners the time was set, which they must follow at once. */
     private void notifyForceSync() {
-        for (ClockListener clockListener : clockListeners) {
-            clockListener.clockForceSync(clockTime);
-        }
+        post(ClockListener::clockForceSync);
     }
 
-    /**
-     * Notify clock listeners of a periodic periodicSync -- consumers may act on this
-     */
-    private void notifyPeriodicSync() {
-        for (ClockListener clockListener : clockListeners) {
-            clockListener.clockPeriodicSync(clockTime);
-        }
-    }
-
-    /**
-     * Notify clock listeners of rate update.
-     */
     private void notifyRate() {
-        for (ClockListener clockListener : clockListeners) {
-            clockListener.clockRate(rate);
+        if (!clockThread.isShutdown()) {
+            clockThread.execute(() -> {
+                float now = getRate();
+                tell(listener -> listener.clockRate(now));
+            });
         }
     }
 
-    /**
-     * Notify clock listeners of start event.
-     */
     private void notifyStart() {
-        for (ClockListener clockListener : clockListeners) {
-            clockListener.clockStart(clockTime);
-        }
+        post(ClockListener::clockStart);
     }
 
-    /**
-     * Notify clock listeners of stop event.
-     */
     private void notifyStop() {
-        for (ClockListener clockListener : clockListeners) {
-            clockListener.clockStop(clockTime);
-        }
+        post(ClockListener::clockStop);
+    }
+
+    private void notifyPause() {
+        post(ClockListener::clockPause);
+    }
+
+    /** Whether the clock has reached a boundary, judged by its time and rate. */
+    @FunctionalInterface
+    public interface Boundary {
+        /**
+         * Returns whether the clock has reached the boundary.
+         *
+         * @param time the clock's time, in milliseconds
+         * @param rate the clock's rate
+         * @return whether the clock has reached the boundary
+         */
+        boolean reached(double time, float rate);
     }
 
     /**
-     * Notify clock listeners of pause event.
-     */
-    private void notifyPause() {
-        for (ClockListener clockListener : clockListeners) {
-            clockListener.clockPause(clockTime);
-        }
-    }
-    /**
-     * Listener for the clock's ticks and changes. Ticks come every 100 ms on the clock's pool
-     * threads, whether or not it is running.
+     * Listener for the clock's ticks and changes. Every call comes on the clock's thread, in the order the clock
+     * changed, without the clock's lock held, and carries the clock's time and rate as they are when it is made;
+     * ticks come every 100 ms, whether or not the clock is running.
      */
     public interface ClockListener {
         /**
