@@ -18,18 +18,20 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.OptionalLong;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.function.Consumer;
+import java.util.function.LongSupplier;
 import java.util.function.ObjDoubleConsumer;
 
 
 /**
- * Keeps multiple streams in periodic sync and does not play beyond the boundaries of a stream.
+ * Keeps multiple streams in sync, and pauses where playback ends: going forward, at the end of playback it is
+ * given (the end of the media) or else at the end of its range; going backward, at the start of its range.
  *
  * <p>The clock has one thread of its own, the clock thread. It ticks there, and tells its listeners of every tick and
  * every change there too, in the order the clock changed, and never while holding the clock's lock: a change made on
@@ -38,8 +40,8 @@ import java.util.function.ObjDoubleConsumer;
  * never called on two threads at once. Listeners hand Swing work to the event thread themselves.
  *
  * <p>Each call carries the clock's time as it is when the call is made, not when the change was: a listener told of a
- * jump made before a step follows the step too. A listener that would change the clock in answer, as by pausing at an
- * end, still asks the clock to judge the time as it is then ({@link #pauseIf}), as the clock may move meanwhile.
+ * jump made before a step follows the step too. Each tick, the clock first pauses at any end it has run into, judged
+ * under its lock with the time then, so a jump made since is not undone and no listener hears a time past the end.
  */
 public final class ClockTimer {
 
@@ -78,6 +80,9 @@ public final class ClockTimer {
 
     /** The rate factor for the clock updates */
     private float rate = 1F;
+
+    /** Where playback going forward ends, asked on each tick, or negative to run to the end of the range. */
+    private volatile LongSupplier playbackEnd = () -> -1;
 
     /** How long closing waits for a tick already running to finish. */
     private static final long CLOSE_WAIT_MILLIS = 500;
@@ -136,6 +141,13 @@ public final class ClockTimer {
         }
     }
 
+    /** Returns the end of the clock's range, in milliseconds. */
+    public long getMaxTime() {
+        synchronized (lock) {
+            return maxTime;
+        }
+    }
+
     /**
      * Get the clock time into the range for this clock timer
      *
@@ -162,7 +174,7 @@ public final class ClockTimer {
     }
 
     /**
-     * Get the current Clock time, within the tolerance of the periodic sync.
+     * Get the current Clock time.
      *
      * @return Current clock time
      */
@@ -184,7 +196,7 @@ public final class ClockTimer {
     /**
      * Set the time but don't activate any of the listeners
      *
-     * All listeners will be updated through the auto sync to the new time
+     * All listeners follow the new time at the next tick
      *
      * Use this method if eventual synchronization is enough
      *
@@ -196,7 +208,7 @@ public final class ClockTimer {
                 logger.debug("Setting Clock time to: " + time);
                 clockTime = time;
                 // Don't notify a sync or force a sync
-                // The time will be updated by a periodic sync
+                // The listeners follow at the next tick
             }
         }
     }
@@ -282,50 +294,61 @@ public final class ClockTimer {
     public void pause() {
         synchronized (lock) {
             if (!stopped) {
-                logger.debug("Pausing Clock");
                 updateElapsedTime();
-                stopped = true;
-                notifyPause();
-                // Force sync after a stop
-                notifyForceSync();
+                pauseAt(clockTime);
             }
         }
     }
 
-    /**
-     * Pauses the clock where it is, if it is running and has reached a boundary.
-     *
-     * @param boundary whether the clock has reached the boundary, judged by its time and rate now
-     * @return whether the clock paused
-     * @see #pauseIf(Boundary, long)
-     */
-    public boolean pauseIf(final Boundary boundary) {
-        return pauseIf(boundary, OptionalLong.empty());
+    /** Pauses the running clock at a time, and tells the listeners once. Called under the lock. */
+    private void pauseAt(final double time) {
+        logger.debug("Pausing Clock at " + time);
+        stopped = true;
+        clockTime = time;
+        notifyPause();
+        // Force sync after a stop
+        notifyForceSync();
     }
 
     /**
-     * Pauses the clock at a time, if it is running and has reached a boundary. The boundary is judged under the
-     * clock's lock, by its time and rate as they are now rather than as the tick that prompted the check saw them, so
-     * a jump or a pause made on another thread since that tick is not undone.
+     * Sets where playback going forward ends before the end of the clock's range, asked on each tick from the clock
+     * thread: the clock pauses there and moves to it.
      *
-     * @param boundary whether the clock has reached the boundary, judged by its time and rate now
-     * @param at       where the clock pauses
-     * @return whether the clock paused
+     * @param end returns where playback ends, or a negative time to run to the end of the range
      */
-    public boolean pauseIf(final Boundary boundary, final long at) {
-        return pauseIf(boundary, OptionalLong.of(at));
+    public void setPlaybackEnd(final LongSupplier end) {
+        playbackEnd = end;
     }
 
-    private boolean pauseIf(final Boundary boundary, final OptionalLong at) {
-        synchronized (lock) {
-            updateElapsedTime();
-            if (stopped || !boundary.reached(clockTime, rate)) {
-                return false;
-            }
-            pause();
-            at.ifPresent(this::setForceTime);
-            return true;
+    /**
+     * Pauses the clock if it has run into an end of playback, judged with its time now. Called under the lock.
+     *
+     * @param end where playback going forward ends, or negative for the end of the range
+     */
+    private void pauseAtEnd(final long end) {
+        if (stopped) {
+            return;
         }
+        if (rate > 0 && end >= 0 && clockTime >= end) {
+            logger.info("Pausing at the end of the media, " + end);
+            pauseAt((double) end);
+        } else if (atEdge(clockTime, rate, minTime, maxTime)) {
+            logger.info("Pausing at the edge of the timeline, " + clockTime);
+            pauseAt(clockTime);
+        }
+    }
+
+    /**
+     * Returns whether playback has run into the edge of the range it is heading for: the end going forward, or the
+     * start going backward. Playback starting at either edge and heading away from it carries on.
+     *
+     * @param time the clock's time
+     * @param rate the clock's rate
+     * @param min  the start of the range
+     * @param max  the end of the range
+     */
+    static boolean atEdge(final double time, final float rate, final long min, final long max) {
+        return rate > 0 ? time >= max : rate < 0 && time <= min;
     }
 
     /**
@@ -425,18 +448,33 @@ public final class ClockTimer {
     }
 
     /**
-     * Moves the time on by the time elapsed and tells the listeners, on the clock thread: whether the clock has passed
-     * the end of the timeline, which may pause it and move it to the end, then whether it has entered or left a clip,
-     * then the time for players moved by seeking, and then the time itself, each with the time as it is then.
+     * Moves the time on by the time elapsed, pauses at any end of playback it has run into, and then tells the
+     * listeners the time, on the clock thread.
      */
     private void tick() {
-        synchronized (lock) {
-            updateElapsedTime();
+        long end = -1;
+        boolean asked = false;
+        while (true) {
+            synchronized (lock) {
+                updateElapsedTime();
+                if (asked || stopped || rate <= 0) {
+                    pauseAtEnd(end);
+                    break;
+                }
+            }
+            // Playing forward: ask where playback ends, outside the lock as it reads the media columns, then judge
+            // again, as the clock may have changed meanwhile. Not asked while paused, as it mostly is.
+            end = askPlaybackEnd();
+            asked = true;
         }
-        tellTime(ClockListener::clockBoundaryCheck);
-        tellTime(ClockListener::streamsBoundaryCheck);
-        tellTime(ClockListener::clockSeekPlayback);
-        tellTime(ClockListener::clockPeriodicSync);
+        tellTime(ClockListener::clockTick);
+    }
+
+    /** Returns where playback going forward ends, or -1 for the end of the range if it cannot be found. */
+    private long askPlaybackEnd() {
+        AtomicLong end = new AtomicLong(-1);
+        guarded(() -> end.set(playbackEnd.getAsLong()), "The end of playback could not be found");
+        return end.get();
     }
 
     /** Tells every listener some news with the clock's time now, on the clock thread. */
@@ -451,11 +489,19 @@ public final class ClockTimer {
      */
     private void tell(final Consumer<ClockListener> news) {
         for (ClockListener listener : clockListeners) {
-            try {
-                news.accept(listener);
-            } catch (RuntimeException e) {
-                logger.error("A clock listener failed", e);
-            }
+            guarded(() -> news.accept(listener), "A clock listener failed");
+        }
+    }
+
+    /**
+     * Runs work on the clock thread that calls out of the clock, logging a failure rather than letting it escape: an
+     * exception on the clock thread would cancel every later tick.
+     */
+    private static void guarded(final Runnable work, final String failure) {
+        try {
+            work.run();
+        } catch (RuntimeException e) {
+            logger.error(failure, e);
         }
     }
 
@@ -495,19 +541,6 @@ public final class ClockTimer {
         post(ClockListener::clockPause);
     }
 
-    /** Whether the clock has reached a boundary, judged by its time and rate. */
-    @FunctionalInterface
-    public interface Boundary {
-        /**
-         * Returns whether the clock has reached the boundary.
-         *
-         * @param time the clock's time, in milliseconds
-         * @param rate the clock's rate
-         * @return whether the clock has reached the boundary
-         */
-        boolean reached(double time, float rate);
-    }
-
     /**
      * Listener for the clock's ticks and changes. Every call comes on the clock's thread, in the order the clock
      * changed, without the clock's lock held, and carries the clock's time and rate as they are when it is made;
@@ -515,25 +548,12 @@ public final class ClockTimer {
      */
     public interface ClockListener {
         /**
-         * Called on each tick, for players that are moved by seeking rather than played.
+         * Called on each tick, once the clock has paused at any end of playback it ran into: listeners follow the
+         * time, start or stop the clips it has entered or left, and catch up if they have drifted.
          *
          * @param clockTime Current time in milliseconds
          */
-        void clockSeekPlayback(double clockTime);
-
-        /**
-         * Called on each tick, to check whether the clock has passed the end of the timeline.
-         *
-         * @param clockTime Current time in milliseconds
-         */
-        void clockBoundaryCheck(double clockTime);
-
-        /**
-         * Called on each tick, to check whether the clock has entered or left a clip.
-         *
-         * @param clockTime Current time in milliseconds
-         */
-        void streamsBoundaryCheck(double clockTime);
+        void clockTick(double clockTime);
 
         /**
          * Called when the time is set, as by a jump or a stop, which listeners must follow at once.
@@ -541,13 +561,6 @@ public final class ClockTimer {
          * @param clockTime Current time in milliseconds
          */
         void clockForceSync(double clockTime);
-
-        /**
-         * Called on each tick, which listeners may follow if they have drifted.
-         *
-         * @param clockTime Current time in milliseconds
-         */
-        void clockPeriodicSync(double clockTime);
 
         /**
          * Called when the clock starts running.

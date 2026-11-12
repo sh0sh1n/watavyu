@@ -57,7 +57,7 @@ public class ClockTimerTest {
                 }
                 later.countDown();
                 return null;
-            }).when(failing).clockPeriodicSync(anyDouble());
+            }).when(failing).clockTick(anyDouble());
             clock.registerListener(failing);
 
             assertTrue(later.await(5, TimeUnit.SECONDS), "ticks after the failure: " + (ticks.get() - 1));
@@ -69,27 +69,12 @@ public class ClockTimerTest {
     /** A listener that does nothing, for tests to override the calls they follow. */
     private static class Quiet implements ClockListener {
         @Override
-        public void clockSeekPlayback(final double clockTime) {
-            // Not followed.
-        }
-
-        @Override
-        public void clockBoundaryCheck(final double clockTime) {
-            // Not followed.
-        }
-
-        @Override
-        public void streamsBoundaryCheck(final double clockTime) {
+        public void clockTick(final double clockTime) {
             // Not followed.
         }
 
         @Override
         public void clockForceSync(final double clockTime) {
-            // Not followed.
-        }
-
-        @Override
-        public void clockPeriodicSync(final double clockTime) {
             // Not followed.
         }
 
@@ -124,7 +109,7 @@ public class ClockTimerTest {
             CountDownLatch heard = new CountDownLatch(4);
             clock.registerListener(new Quiet() {
                 @Override
-                public void clockPeriodicSync(final double clockTime) {
+                public void clockTick(final double clockTime) {
                     threads.add(Thread.currentThread());
                 }
 
@@ -246,14 +231,14 @@ public class ClockTimerTest {
         try {
             clock.registerListener(new Quiet() {
                 @Override
-                public void clockBoundaryCheck(final double clockTime) {
+                public void clockTick(final double clockTime) {
                     throw new IllegalStateException("fails on every tick");
                 }
             });
             CountDownLatch ticks = new CountDownLatch(3);
             clock.registerListener(new Quiet() {
                 @Override
-                public void clockBoundaryCheck(final double clockTime) {
+                public void clockTick(final double clockTime) {
                     ticks.countDown();
                 }
             });
@@ -294,49 +279,157 @@ public class ClockTimerTest {
         assertEquals(lastForce.get(), 4_000L);
     }
 
+    /** Waits for a running clock to pause on its own, at a tick. */
+    private static void awaitPause(final ClockTimer clock) throws InterruptedException {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+        while (!clock.isPaused() && System.nanoTime() < deadline) {
+            Thread.sleep(5);
+        }
+        assertTrue(clock.isPaused(), "paused by a tick, at " + clock.getClockTime());
+    }
+
     /**
-     * A boundary is judged by the clock's time as it is when the check is made, so a jump made since the tick that
-     * prompted it is not undone.
+     * Playing forward, the clock pauses at the end of playback it is given and moves to it, before any listener hears
+     * the tick, so none hears a time past the end; the listeners are told of the pause once.
      */
     @Test
-    public void aBoundaryIsJudgedByTheTimeNow() {
+    public void playingForwardPausesAtTheEndOfPlayback() throws InterruptedException {
         ClockTimer clock = new ClockTimer();
         try {
             clock.setMaxTime(10_000);
-            clock.setForceTime(6_000);
-            clock.start();
+            clock.setPlaybackEnd(() -> 2_150);
+            List<Double> ticks = new CopyOnWriteArrayList<>();
+            List<String> changes = new CopyOnWriteArrayList<>();
+            clock.registerListener(new Quiet() {
+                @Override
+                public void clockTick(final double clockTime) {
+                    ticks.add(clockTime);
+                }
+
+                @Override
+                public void clockForceSync(final double clockTime) {
+                    changes.add("force");
+                }
+
+                @Override
+                public void clockPause(final double clockTime) {
+                    changes.add("pause");
+                }
+            });
             clock.setForceTime(2_000);
+            clock.setRate(2f);
 
-            assertFalse(clock.pauseIf((time, rate) -> time >= 5_000, 5_000), "the jump back left the boundary");
-            assertFalse(clock.isPaused());
-
-            clock.setForceTime(7_000);
-            assertTrue(clock.pauseIf((time, rate) -> time >= 5_000, 5_000));
-            assertTrue(clock.isPaused());
-            assertEquals(clock.getClockTime(), 5_000.0);
-
-            assertFalse(clock.pauseIf((time, rate) -> true), "a paused clock is not paused again");
+            awaitPause(clock);
+            clock.close();
+            assertEquals(clock.getClockTime(), 2_150.0);
+            assertTrue(ticks.stream().allMatch(time -> time <= 2_150), "ticks: " + ticks);
+            assertEquals(changes, List.of("force", "pause", "force"), "the jump to 2000, then the pause at the end");
         } finally {
             clock.close();
         }
     }
 
-    /** A boundary may pause the clock where it is. */
+    /** With no end of playback, playing forward pauses at the end of the clock's range. */
     @Test
-    public void aBoundaryWithNoTimePausesTheClockWhereItIs() {
+    public void playingForwardWithNoEndPausesAtTheEndOfTheRange() throws InterruptedException {
         ClockTimer clock = new ClockTimer();
         try {
-            clock.setMaxTime(10_000);
-            clock.setForceTime(3_000);
-            clock.setRate(-1f);
+            clock.setMaxTime(3_000);
+            clock.setForceTime(2_900);
+            clock.setRate(2f);
 
-            assertTrue(clock.pauseIf((time, rate) -> rate < 0));
-            assertTrue(clock.isPaused());
-            assertTrue(clock.getClockTime() <= 3_000.0 && clock.getClockTime() > 2_000.0,
-                "paused where it was: " + clock.getClockTime());
+            awaitPause(clock);
+            assertEquals(clock.getClockTime(), 3_000.0);
         } finally {
             clock.close();
         }
+    }
+
+    /** Playing backward pauses at the start of the clock's range. */
+    @Test
+    public void playingBackwardPausesAtTheStart() throws InterruptedException {
+        ClockTimer clock = new ClockTimer();
+        try {
+            clock.setMaxTime(3_000);
+            clock.setPlaybackEnd(() -> 50);
+            clock.setForceTime(100);
+            clock.setRate(-1f);
+
+            awaitPause(clock);
+            assertEquals(clock.getClockTime(), 0.0);
+        } finally {
+            clock.close();
+        }
+    }
+
+    /**
+     * A paused clock past the end of playback stays where it is, as after a jump there, and is not asked where
+     * playback ends.
+     */
+    @Test
+    public void aPausedClockPastTheEndStaysWhereItIs() throws InterruptedException {
+        ClockTimer clock = new ClockTimer();
+        try {
+            clock.setMaxTime(10_000);
+            AtomicInteger asked = new AtomicInteger();
+            clock.setPlaybackEnd(() -> {
+                asked.incrementAndGet();
+                return 2_150;
+            });
+            CountDownLatch ticks = new CountDownLatch(3);
+            clock.registerListener(new Quiet() {
+                @Override
+                public void clockTick(final double clockTime) {
+                    ticks.countDown();
+                }
+            });
+            clock.setForceTime(5_000);
+
+            assertTrue(ticks.await(5, TimeUnit.SECONDS));
+            assertTrue(clock.isPaused());
+            assertEquals(clock.getClockTime(), 5_000.0);
+            assertEquals(asked.get(), 0, "asked while paused");
+        } finally {
+            clock.close();
+        }
+    }
+
+    /** If the end of playback cannot be found, the failure is logged and the clock goes on ticking. */
+    @Test
+    public void aFailingPlaybackEndKeepsTheClockTicking() throws InterruptedException {
+        ClockTimer clock = new ClockTimer();
+        try {
+            clock.setMaxTime(60_000);
+            AtomicInteger asked = new AtomicInteger();
+            clock.setPlaybackEnd(() -> {
+                asked.incrementAndGet();
+                throw new IllegalStateException("no end");
+            });
+            CountDownLatch ticks = new CountDownLatch(3);
+            clock.registerListener(new Quiet() {
+                @Override
+                public void clockTick(final double clockTime) {
+                    ticks.countDown();
+                }
+            });
+            clock.setRate(1f);
+
+            assertTrue(ticks.await(5, TimeUnit.SECONDS), "ticks after the failure");
+            assertTrue(asked.get() >= 2, "asked " + asked.get() + " times");
+        } finally {
+            clock.close();
+        }
+    }
+
+    /** Playback starting at time zero or at the end runs on when it heads away from that edge (B7). */
+    @Test
+    public void playbackStopsAtTheEdgeItIsHeadingFor() {
+        assertFalse(ClockTimer.atEdge(0, 1F, 0, 60_000), "playing forward from zero");
+        assertTrue(ClockTimer.atEdge(0, -1F, 0, 60_000), "playing backward into zero");
+        assertTrue(ClockTimer.atEdge(60_000, 1F, 0, 60_000), "playing forward into the end");
+        assertFalse(ClockTimer.atEdge(60_000, -1F, 0, 60_000), "playing backward from the end");
+        assertFalse(ClockTimer.atEdge(30_000, 2F, 0, 60_000));
+        assertFalse(ClockTimer.atEdge(0, 0F, 0, 60_000), "stopped");
     }
 
     /**
@@ -354,7 +447,7 @@ public class ClockTimerTest {
             List<Double> forcedTo = new CopyOnWriteArrayList<>();
             clock.registerListener(new Quiet() {
                 @Override
-                public void clockPeriodicSync(final double clockTime) {
+                public void clockTick(final double clockTime) {
                     if (busy.getCount() > 0) {
                         busy.countDown();
                         try {

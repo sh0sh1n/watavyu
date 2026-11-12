@@ -538,27 +538,12 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
     }
 
     @Override
-    public void clockSeekPlayback(final double clockTime) {
-        play((long) clockTime);
-    }
-
-    @Override
-    public void clockBoundaryCheck(final double clockTime) {
-        play((long) clockTime);
-    }
-
-    @Override
-    public void streamsBoundaryCheck(final double clockTime) {
+    public void clockTick(final double clockTime) {
         play((long) clockTime);
     }
 
     @Override
     public void clockForceSync(final double clockTime) {
-        play((long) clockTime);
-    }
-
-    @Override
-    public void clockPeriodicSync(final double clockTime) {
         play((long) clockTime);
     }
 

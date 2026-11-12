@@ -263,11 +263,17 @@ public abstract class StreamViewerDialog extends JDialog implements StreamViewer
 
     @Override
     public void setInPlay(final boolean newInPlay) {
-        if (newInPlay != inPlay) {
-            inPlay = newInPlay;
-            applyVolume();
-            if (!inPlay && isPlaying()) {
-                pause();
+        synchronized (lock) {
+            if (newInPlay != inPlay) {
+                inPlay = newInPlay;
+                applyVolume();
+                if (!inPlay && isPlaying()) {
+                    pause();
+                } else if (inPlay && getCurrentTime() != -1) {
+                    // Put in play while the clock runs through the clip, as when the clock enters it: start now,
+                    // rather than at the next tick, whichever the clock tells first.
+                    startIfRunningThrough(clockTimer.getClockTime());
+                }
             }
         }
     }
@@ -290,41 +296,44 @@ public abstract class StreamViewerDialog extends JDialog implements StreamViewer
         return (long) Math.min(Math.max(clockTime - (double) offset, 0), (double) getDuration());
     }
 
+    /**
+     * Starts the clip if it is in play, not playing, and the running clock is within it. Called holding the lock.
+     *
+     * @param clockTime the clock's time
+     */
+    private void startIfRunningThrough(final double clockTime) {
+        if (inPlay && !isPlaying() && !clockTimer.isPaused() && holds(clockTime)) {
+            logger.info("Starting " + getIdentifier() + " at clock " + clockTime);
+            start();
+        }
+    }
+
     /** @return whether a clock time falls within the clip */
     private boolean holds(final double clockTime) {
         return clockTime >= offset && clockTime < offset + getDuration();
     }
 
+    /**
+     * Starts the clip when the running clock enters it while it is in play, pauses it when the clock leaves it or it
+     * goes out of play, and moves it to the clock's time if it has drifted by the sync threshold or more.
+     */
     @Override
-    public boolean isSeekPlaybackEnabled() { return false; }
-
-    @Override
-    public void clockSeekPlayback(final double clockTime) {
-        synchronized (lock) {
-            if (!clockTimer.isPaused() && isSeekPlaybackEnabled()) {
-                setCurrentTime(clipTime(clockTime));
-            }
-        }
-    }
-
-    @Override
-    public void clockBoundaryCheck(final double clockTime) {
-        // Nothing to do here
-    }
-
-    @Override
-    public void streamsBoundaryCheck(final double clockTime) {
+    public void clockTick(final double clockTime) {
         synchronized (lock) {
             // The clock logs a failure here and goes on.
-            if (!clockTimer.isPaused() && getCurrentTime() != -1) {
-                if (inPlay && holds(clockTime) && !isPlaying() && !isSeekPlaybackEnabled()) {
-                    logger.info("Stream Boundary Starting " + getIdentifier() + " at clock " + clockTime);
-                    start();
-                }
-                if ((!inPlay || !holds(clockTime)) && isPlaying()) {
-                    logger.info("Stream Boundary Stopping " + getIdentifier() + " at clock " + clockTime);
-                    pause();
-                }
+            if (getCurrentTime() == -1) {
+                return;
+            }
+            startIfRunningThrough(clockTime);
+            if (!clockTimer.isPaused() && (!inPlay || !holds(clockTime)) && isPlaying()) {
+                logger.info("Stream Boundary Stopping " + getIdentifier() + " at clock " + clockTime);
+                pause();
+            }
+            long clipTime = clipTime(clockTime);
+            if (Math.abs(clipTime - getCurrentTime()) >= ClockTimer.SYNC_THRESHOLD) {
+                logger.info("Sync stream " + getIdentifier() + " to " + clipTime + " milliseconds; it was at "
+                    + getCurrentTime());
+                setCurrentTime(clipTime);
             }
         }
     }
@@ -337,20 +346,6 @@ public abstract class StreamViewerDialog extends JDialog implements StreamViewer
             if (clipTime != getCurrentTime()) {
                 logger.info("Forced sync stream " + getIdentifier() + " to " + clipTime + " milliseconds");
                 setCurrentTime(clipTime);
-            }
-        }
-    }
-
-    @Override
-    public void clockPeriodicSync(final double clockTime) {
-        synchronized (lock) {
-            if (!isSeekPlaybackEnabled() && getCurrentTime() != -1) {
-                long clipTime = clipTime(clockTime);
-                if (Math.abs(clipTime - getCurrentTime()) >= ClockTimer.SYNC_THRESHOLD) {
-                    logger.info("Sync stream " + getIdentifier() + " to " + clipTime + " milliseconds; it was at "
-                        + getCurrentTime());
-                    setCurrentTime(clipTime);
-                }
             }
         }
     }

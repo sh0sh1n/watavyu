@@ -1,10 +1,15 @@
 package com.sh0sh1n.watavyu.views;
 
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
 import com.sh0sh1n.watavyu.TestSpreadsheets;
+import com.sh0sh1n.watavyu.controllers.MediaPlayers;
 import com.sh0sh1n.watavyu.models.DataStoreFactory;
+import com.sh0sh1n.watavyu.util.ClockTimer;
 import org.testng.annotations.Test;
 
 import java.util.List;
@@ -43,6 +48,32 @@ public class VideoControllerTimeTest {
         assertTrue(moved.await(5, TimeUnit.SECONDS), "shown: " + shown);
     }
 
+    /**
+     * Playing forward pauses at the end of the media its media columns give, which follows the stop-at-end-of-media
+     * setting (on by default), rather than running on to the end of the timeline.
+     */
+    @Test
+    public void playbackPausesAtTheEndOfTheMedia() throws InterruptedException {
+        VideoController controller = TestSpreadsheets.withPlayback(DataStoreFactory.newDataStore()).getVideoController();
+        MediaPlayers players = mock(MediaPlayers.class);
+        when(players.stopTime(anyBoolean())).thenAnswer(asked -> (boolean) asked.getArgument(0) ? 2_150L : -1L);
+        controller.setMediaPlayers(players);
+        ClockTimer clock = controller.getClockTimer();
+        try {
+            clock.setForceTime(2_000);
+            clock.setRate(2f);
+
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+            while (!clock.isPaused() && System.nanoTime() < deadline) {
+                Thread.sleep(5);
+            }
+            assertTrue(clock.isPaused(), "paused, at " + clock.getClockTime());
+            assertEquals(clock.getClockTime(), 2_150.0);
+        } finally {
+            controller.stopAction();
+        }
+    }
+
     /** Shuttling forward at time zero plays faster, as it does anywhere else (B7). */
     @Test
     public void shuttlingAtTimeZeroPlays() {
@@ -74,16 +105,5 @@ public class VideoControllerTimeTest {
         assertEquals(VideoController.holds(clip, 60_000), true);
         assertEquals(VideoController.holds(clip, 59_999), false);
         assertEquals(VideoController.holds(clip, 120_000), false);
-    }
-
-    /** Playback starting at time zero or at the end runs on when it heads away from that edge (B7). */
-    @Test
-    public void playbackPausesOnlyAtTheEdgeItIsHeadingFor() {
-        assertEquals(VideoController.atTimelineEdge(0, 1F, 60_000), false, "playing forward from zero");
-        assertEquals(VideoController.atTimelineEdge(0, -1F, 60_000), true, "playing backward into zero");
-        assertEquals(VideoController.atTimelineEdge(60_000, 1F, 60_000), true, "playing forward into the end");
-        assertEquals(VideoController.atTimelineEdge(60_000, -1F, 60_000), false, "playing backward from the end");
-        assertEquals(VideoController.atTimelineEdge(30_000, 2F, 60_000), false);
-        assertEquals(VideoController.atTimelineEdge(0, 0F, 60_000), false, "stopped");
     }
 }

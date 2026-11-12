@@ -127,7 +127,7 @@ public class ColumnClockTest {
         offTheEventThread.clear();
 
         ClockListener listener = sheetsListener();
-        Thread clockThread = new Thread(() -> listener.clockPeriodicSync(1_000), "clock");
+        Thread clockThread = new Thread(() -> listener.clockTick(1_000), "clock");
         clockThread.start();
         clockThread.join();
         SwingUtilities.invokeAndWait(() -> {
@@ -154,7 +154,7 @@ public class ColumnClockTest {
         });
 
         ClockListener listener = sheetsListener();
-        Thread clockThread = new Thread(() -> listener.clockPeriodicSync(1_000), "clock");
+        Thread clockThread = new Thread(() -> listener.clockTick(1_000), "clock");
         clockThread.start();
         clockThread.join();
         SwingUtilities.invokeAndWait(() -> {
@@ -170,7 +170,7 @@ public class ColumnClockTest {
 
     /**
      * A jump in highlight-and-focus mode restyles the editor but leaves it where it is, as a new cell made at the
-     * needle takes the focus; only a periodic tick moves it.
+     * needle takes the focus; only a tick moves it.
      */
     @Test
     public void aJumpStylesTheEditorButLeavesItWhereItIs() throws Exception {
@@ -210,7 +210,7 @@ public class ColumnClockTest {
 
         ClockListener listener = sheetsListener();
         SwingUtilities.invokeAndWait(() -> {
-            listener.clockPeriodicSync(1_000);
+            listener.clockTick(1_000);
             sheet.close();
         });
         SwingUtilities.invokeAndWait(() -> {
