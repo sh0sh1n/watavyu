@@ -23,6 +23,7 @@ import com.sh0sh1n.watavyu.models.MediaClip;
 import com.sh0sh1n.watavyu.views.spreadsheet.EditorComponent;
 import com.sh0sh1n.watavyu.views.spreadsheet.EditorTracker;
 import com.sh0sh1n.watavyu.views.spreadsheet.SecondaryClick;
+import com.sh0sh1n.watavyu.views.spreadsheet.SpreadsheetView;
 
 import javax.swing.*;
 import java.awt.event.FocusEvent;
@@ -261,7 +262,10 @@ public final class CellValuesView extends JTextArea implements FocusListener {
 
     @Override
     public void focusLost(final FocusEvent fe) {
-        parentCell.setSelected(false);
+        // Going to command mode keeps the cell selected.
+        if (!SpreadsheetView.toCommandMode(fe, this)) {
+            parentCell.setSelected(false);
+        }
     }
 
     // *************************************************************************
