@@ -548,9 +548,17 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
     @Override
     public boolean dispatchKeyEvent(final KeyEvent e) {
         // Every open spreadsheet listens; only the one on screen, in the selected tab, takes keys.
-        if (!isShowing()) {
-            return false;
-        }
+        return isShowing() && takeKey(e);
+    }
+
+    /**
+     * Takes a key for the spreadsheet on screen: a quick key, ahead of the keys that change mode, so in quick-key mode
+     * {@code i} makes a cell as other letters do.
+     *
+     * @param e a key event, from any window
+     * @return whether the spreadsheet took it
+     */
+    boolean takeKey(final KeyEvent e) {
         SpreadsheetColumn selectedColumn = getSelectedColumn();
         // In quick-key mode, a letter or digit typed in a selected annotation column makes a cell holding it. A locked
         // column refuses the cell, and the key is still taken.
@@ -563,7 +571,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
             e.consume();
             return true;
         }
-        return false;
+        return mainView.modeKey(e);
     }
 
     /** Returns how the cells are laid out: in time (temporal) or one after another (ordinal). */

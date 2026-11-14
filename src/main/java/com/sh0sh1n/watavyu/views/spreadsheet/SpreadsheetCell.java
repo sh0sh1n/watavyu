@@ -44,7 +44,6 @@ public final class SpreadsheetCell extends JPanel
      * The logger for this class.
      */
     private static Logger logger = LogManager.getLogger(SpreadsheetCell.class);
-    private boolean brandNew;
     /**
      * The panel that displays the cell.
      */
@@ -101,7 +100,6 @@ public final class SpreadsheetCell extends JPanel
         ord = new JLabel();
         ord.setToolTipText(rMap.getString("ord.tooltip"));
         ord.addMouseListener(this);
-        ord.setFocusable(true);
 
         onset = new TimeStampTextField(controller, model, TimeStampSource.Onset);
         onset.setToolTipText(rMap.getString("onset.tooltip"));
@@ -125,7 +123,6 @@ public final class SpreadsheetCell extends JPanel
         cellPanel.addMouseListener(this);
         parts.top.addMouseListener(this);
 
-        brandNew = true;
     }
 
     /**
@@ -307,20 +304,14 @@ public final class SpreadsheetCell extends JPanel
         // User has clicked in magic spot, without modifier. Clear
         // currently selected cells and select this cell.
         if (!isEditorSrc && !groupSel && !contSel) {
-          logger.debug("User has clicked in magic spot, without modifier");
-            ord.requestFocus();
-            cellSelL.clearCellSelection();
-            model.setHighlighted(!model.isSelected());
-
-            if (model.isSelected()) {
-                cellSelL.addCellToSelection(model);
-            }
+            // A press outside the cell's values and times selects it in command mode.
+            parentColumn.selectInCommandMode(model);
 
             // User has clicked on editor or magic spot with modifier. Add
             // this cell to the current selection.
         } else if (groupSel && !contSel) {
           logger.debug("User has clicked on editor or magic spot with modifier.");
-            ord.requestFocus();
+            parentColumn.getSheet().commandMode();
             model.setHighlighted(!model.isSelected());
 
             if (model.isSelected()) {
@@ -331,7 +322,7 @@ public final class SpreadsheetCell extends JPanel
             // Add this cell and everything in between the current selection.
         } else if (contSel) {
           logger.debug("User has clicked on editor or magic spot with shift modifier");
-            ord.requestFocus();
+            parentColumn.getSheet().commandMode();
             cellSelL.addCellToContinousSelection(model);
 
             // User has clicked somewhere in the cell without modifier. This
@@ -340,8 +331,9 @@ public final class SpreadsheetCell extends JPanel
             // Only change selection if not selected.
             if (!model.isHighlighted()) {
                 logger.debug("Just highlighted");
-                // Deselect cells before selected cell contents.
-                cellSelL.clearCellSelection();
+                // Deselect cells, and other columns, before selected cell contents. From command mode no editor
+                // loses the focus to deselect the column it was in.
+                parentColumn.setExclusiveSelected(true);
                 model.setHighlighted(true);
                 cellSelL.setHighlightedCell(model);
             }
@@ -380,8 +372,6 @@ public final class SpreadsheetCell extends JPanel
 
     @Override
     public void focusLost(final FocusEvent e) {
-        if (brandNew) model.setSelected(false);
-        brandNew = false;
 
         parentColumn.setIndexOfPreviousFocusedCell(getDataView().getEdTracker().indexOfCurrentEditor());
 
@@ -398,8 +388,11 @@ public final class SpreadsheetCell extends JPanel
 
         controller.setLastSelectedCells(newSelectedCell);
 
-        model.setSelected(false);
-        parentColumn.setSelected(false);
+        // Going to command mode keeps the cell and its column selected.
+        if (!SpreadsheetView.toCommandMode(e, this)) {
+            model.setSelected(false);
+            parentColumn.setSelected(false);
+        }
     }
 
     @Override

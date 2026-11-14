@@ -52,6 +52,38 @@ public class SpreadSheetPanelTest {
         assertTrue(notes.getCells().isEmpty());
     }
 
+    /** In quick-key mode, i makes a cell as other letters do, rather than going into the selected cell. */
+    @Test
+    public void inQuickKeyModeIMakesACell() throws Exception {
+        DataStore dataStore = DataStoreFactory.newDataStore();
+        Column notes = dataStore.createColumn("notes");
+        if (notes.getCodes().isEmpty()) {
+            notes.addCode();
+        }
+        Cell selected = notes.createPointCell(0);
+        AtomicBoolean taken = new AtomicBoolean();
+        List<java.awt.Component> focused = new ArrayList<>();
+        SwingUtilities.invokeAndWait(() -> {
+            ProjectController spreadsheet = TestSpreadsheets.withPlayback(dataStore);
+            spreadsheet.setQuickKeyMode(() -> true);
+            SpreadSheetPanel panel = new SpreadSheetPanel(spreadsheet, null);
+            try {
+                SpreadsheetView sheet = panel.getColumns().get(0).getSheet();
+                sheet.setFocus(() -> sheet, focused::add);
+                notes.setSelected(true);
+                selected.setSelected(true);
+                taken.set(panel.takeKey(new KeyEvent(sheet, KeyEvent.KEY_PRESSED, 0, 0, KeyEvent.VK_I, 'i')));
+            } finally {
+                panel.close();
+            }
+        });
+
+        assertTrue(taken.get());
+        assertEquals(focused, List.of(), "the keyboard stays in command mode");
+        assertEquals(notes.getCells().size(), 2);
+        assertTrue(notes.getCells().stream().anyMatch(cell -> "i".equals(cell.getValues().get(0))));
+    }
+
     @Test
     public void closingASpreadsheetStopsItsClock() throws Exception {
         AtomicReference<ProjectController> spreadsheet = new AtomicReference<>();

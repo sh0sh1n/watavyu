@@ -29,6 +29,7 @@ import javax.swing.JPanel;
 import javax.swing.JViewport;
 import javax.swing.Scrollable;
 import javax.swing.SwingConstants;
+import javax.swing.MenuSelectionManager;
 import javax.swing.SwingUtilities;
 import java.awt.Color;
 import java.awt.Component;
@@ -38,6 +39,9 @@ import java.awt.Graphics;
 import java.awt.KeyboardFocusManager;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.event.FocusEvent;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.beans.PropertyChangeListener;
@@ -47,7 +51,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import java.util.function.IntSupplier;
+import java.util.function.Supplier;
 
 /**
  * The sheet of cells, in the spreadsheet's scroll pane: it draws the cells of its shown columns where the layout put
@@ -55,6 +61,11 @@ import java.util.function.IntSupplier;
  * the cell in focus. A press on a drawn cell moves the editor there and hands it the press, so the cell takes the
  * click as its own view would. The sheet follows its cells and the clock, drawing a cell again when it changes or
  * the needle moves past it, and asking to be laid out again when a cell changes in time or size.
+ *
+ * <p>The sheet holds the keyboard's modes (AGENTS.md › Decisions, 2026-11-13). In command mode the sheet itself has
+ * the focus, so keys are commands and the selection is a cell, or a column with no cell; in insert mode a part of
+ * the editor has it, and keys type into the cell. {@code i} goes from command to insert mode in the selected cell,
+ * and Esc or ⌃] back, with the cell still selected.
  */
 public final class SpreadsheetView extends JPanel implements Scrollable {
 
@@ -109,6 +120,16 @@ public final class SpreadsheetView extends JPanel implements Scrollable {
     /** The width the column header has after its columns: its buttons. */
     private IntSupplier trailingWidth = () -> 0;
 
+    /** Returns the component that has the keyboard focus, or null. */
+    private Supplier<Component> focusOwner =
+        () -> KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+
+    /** Gives a component the keyboard focus. */
+    private Consumer<Component> focusTaker = Component::requestFocus;
+
+    /** The key whose press the modes took, until it is released; the characters it types are dropped. */
+    private int takenKey = KeyEvent.VK_UNDEFINED;
+
     /**
      * How tall a cell was measured to be, and for what width, font and values.
      *
@@ -127,6 +148,8 @@ public final class SpreadsheetView extends JPanel implements Scrollable {
         this.controller = controller;
         setLayout(null);
         setDoubleBuffered(true);
+        // Tab in command mode would move the focus into the editor, and so to insert mode without i.
+        setFocusTraversalKeysEnabled(false);
         add(rendererPane);
         MouseAdapter mouse = new PressHandOver();
         addMouseListener(mouse);
@@ -153,6 +176,142 @@ public final class SpreadsheetView extends JPanel implements Scrollable {
      */
     void setTrailingWidth(final IntSupplier trailingWidth) {
         this.trailingWidth = trailingWidth;
+    }
+
+    // *************************************************************************
+    // Modes
+    // *************************************************************************
+
+    /**
+     * Sets how the sheet finds and moves the keyboard focus, for tests, whose components are never shown and so never
+     * take the focus.
+     *
+     * @param owner returns the component that has the focus
+     * @param taker gives a component the focus
+     */
+    void setFocus(final Supplier<Component> owner, final Consumer<Component> taker) {
+        focusOwner = owner;
+        focusTaker = taker;
+    }
+
+    /** Returns whether the keyboard is in command mode here: the sheet itself has the focus. */
+    public boolean inCommandMode() {
+        return equals(focusOwner.get());
+    }
+
+    /**
+     * Returns whether the keyboard is in insert mode here: a part of a cell's editor in this sheet has the focus. That
+     * may be an editor taken off its cell, as when the cell is deleted or its column hidden, which keeps the focus
+     * until it is given elsewhere, so Esc still leaves it.
+     */
+    public boolean inInsertMode() {
+        Component owner = focusOwner.get();
+        Component cellEditor = owner instanceof SpreadsheetCell ? owner
+                : SwingUtilities.getAncestorOfClass(SpreadsheetCell.class, owner);
+        return cellEditor != null && SwingUtilities.isDescendingFrom(cellEditor, this);
+    }
+
+    /** Returns whether the keyboard is in this sheet, in either mode. */
+    public boolean hasKeyboard() {
+        return inCommandMode() || inInsertMode();
+    }
+
+    /** Goes to command mode: the sheet takes the focus, leaving the selection as it is. */
+    public void commandMode() {
+        focusTaker.accept(this);
+    }
+
+    /** Gives the focus to the editor, staying in insert mode in another cell. */
+    void focusEditor(final SpreadsheetCell cellEditor) {
+        focusTaker.accept(cellEditor);
+    }
+
+    /**
+     * Goes to insert mode in the selected cell: the cell under the editor if it is selected, or else the first
+     * selected cell of a shown column. Its first value is selected, as on tabbing into a cell.
+     *
+     * @return whether a cell was selected to go into
+     */
+    public boolean insertMode() {
+        Optional<Cell> selected = getEditor().map(SpreadsheetCell::getCell).filter(Cell::isSelected)
+                .or(() -> controller.getDataStore().getSelectedCells().stream()
+                        .filter(cell -> columnOf(cell.getColumn()).filter(SpreadsheetColumn::isVisible).isPresent())
+                        .findFirst());
+        if (selected.isEmpty()) {
+            return false;
+        }
+        focusTaker.accept(edit(selected.get()));
+        return true;
+    }
+
+    /**
+     * Returns whether focus leaving a part of the editor went to the editor's own sheet, as on going to command mode,
+     * which keeps the cell and its column selected. Focus going to another tab's sheet is focus leaving this one.
+     *
+     * @param lost focus leaving a part of the editor, or null
+     * @param part the part of the editor that lost it
+     */
+    public static boolean toCommandMode(final FocusEvent lost, final Component part) {
+        return lost != null && lost.getOppositeComponent() instanceof SpreadsheetView sheet
+                && SwingUtilities.isDescendingFrom(part, sheet);
+    }
+
+    /**
+     * Takes the keys that change mode, ahead of the component in focus: Esc and ⌃] in insert mode go to command mode,
+     * and {@code i} in command mode goes to insert mode in the selected cell. The characters a taken key types are
+     * dropped, so the {@code i} does not reach the cell it goes into.
+     *
+     * @param e a key event, from any window
+     * @return whether the sheet took it
+     */
+    public boolean modeKey(final KeyEvent e) {
+        return switch (e.getID()) {
+            case KeyEvent.KEY_PRESSED -> modeKeyPressed(e);
+            case KeyEvent.KEY_TYPED -> dropCharacter(e);
+            case KeyEvent.KEY_RELEASED -> {
+                if (e.getKeyCode() == takenKey) {
+                    takenKey = KeyEvent.VK_UNDEFINED;
+                }
+                yield false;
+            }
+            default -> false;
+        };
+    }
+
+    private boolean modeKeyPressed(final KeyEvent e) {
+        int modifiers = e.getModifiersEx() & (InputEvent.SHIFT_DOWN_MASK | InputEvent.CTRL_DOWN_MASK
+                | InputEvent.META_DOWN_MASK | InputEvent.ALT_DOWN_MASK);
+        boolean leave = (e.getKeyCode() == KeyEvent.VK_ESCAPE && modifiers == 0)
+                || (e.getKeyCode() == KeyEvent.VK_CLOSE_BRACKET && modifiers == InputEvent.CTRL_DOWN_MASK);
+        boolean taken;
+        if (leave && inInsertMode() && !menuOpen()) {
+            commandMode();
+            taken = true;
+        } else {
+            taken = e.getKeyCode() == KeyEvent.VK_I && modifiers == 0 && inCommandMode() && insertMode();
+        }
+        takenKey = taken ? e.getKeyCode() : KeyEvent.VK_UNDEFINED;
+        if (taken) {
+            e.consume();
+        }
+        return taken;
+    }
+
+    /** Returns whether a menu is open, which Esc closes rather than leaving insert mode. */
+    private static boolean menuOpen() {
+        return MenuSelectionManager.defaultManager().getSelectedPath().length > 0;
+    }
+
+    /**
+     * Drops the characters of a key whose press the modes took. A held key presses again as it repeats, and the
+     * repeats are not taken, so a held {@code i} goes into the cell and then types, as in vim.
+     */
+    private boolean dropCharacter(final KeyEvent e) {
+        if (takenKey == KeyEvent.VK_UNDEFINED) {
+            return false;
+        }
+        e.consume();
+        return true;
     }
 
     // *************************************************************************
@@ -395,7 +554,7 @@ public final class SpreadsheetView extends JPanel implements Scrollable {
         }
         old.getCell().removeListener(old);
         KeyboardFocusManager focus = KeyboardFocusManager.getCurrentKeyboardFocusManager();
-        Component owner = focus.getFocusOwner();
+        Component owner = focusOwner.get();
         if (owner == null || !SwingUtilities.isDescendingFrom(owner, old)) {
             take(old);
             return;
