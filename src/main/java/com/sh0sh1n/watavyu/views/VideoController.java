@@ -132,6 +132,9 @@ public final class VideoController implements ClockListener {
     /** The drawer's key for each command it has, which {@link #run} presses. */
     private final Map<Command, JButton> keys = new EnumMap<>(Command.class);
 
+    /** The play or pause key, which shows what pressing it does. */
+    private KeypadKey playKey;
+
     /**
      * Whether video controllers start in highlight and focus mode, which highlights the cell at the current time in
      * the selected column and focuses its first uncoded argument. The mode needs cell highlighting, so that starts on
@@ -152,7 +155,7 @@ public final class VideoController implements ClockListener {
     private final Frame owner;
 
     /**
-     * Makes a spreadsheet's player, stopped at time zero, with its controls.
+     * Makes a spreadsheet's player, paused at time zero at the normal rate, with its controls.
      *
      * @param spreadsheet the spreadsheet whose cells the coding commands change
      * @param owner       the window that owns the players' windows and the dialogs; null for none
@@ -207,12 +210,12 @@ public final class VideoController implements ClockListener {
     }
 
     /**
-     * Closes the spreadsheet's playback, as its tab closes: playback stops, the clock stops, and then the players and
+     * Closes the spreadsheet's playback, as its tab closes: playback pauses, the clock stops, and then the players and
      * their windows close, so no tick reaches a player as it closes. A player still opening is closed once it opens.
      */
     public void close() {
         closed = true;
-        stopAction();
+        pause();
         clockTimer.close();
         if (mediaPlayers != null) {
             mediaPlayers.close();
@@ -296,6 +299,7 @@ public final class VideoController implements ClockListener {
     public void clockStart(double clockTime) {
         logger.info("Start");
         showClock();
+        SwingUtilities.invokeLater(this::showPlayKey);
     }
 
     @Override
@@ -314,20 +318,23 @@ public final class VideoController implements ClockListener {
      * @param clockTime Current clockTimer time in milliseconds.
      */
     @Override
-    public void clockStop(double clockTime) {
-        logger.debug("Stop Clock at " + clockTime + " milliseconds.");
-        // Updates the position of the needle and label
-        showClock();
-    }
-
-    /**
-     * @param clockTime Current clockTimer time in milliseconds.
-     */
-    @Override
     public void clockPause(double clockTime) {
         logger.debug("Pause Clock at " + clockTime + " milliseconds.");
         // Updates the position of the needle and label
         showClock();
+        SwingUtilities.invokeLater(this::showPlayKey);
+    }
+
+    /**
+     * Shows on the play key what pressing it does: pause while the clock runs, play while it is paused. It reads the
+     * clock as it is when run, so of the calls queued by a start and a pause, the last shows the truth.
+     */
+    private void showPlayKey() {
+        if (clockTimer.isPaused()) {
+            playKey.show(Glyph.Shape.PLAY, "play");
+        } else {
+            playKey.show(Glyph.Shape.PAUSE, "pause");
+        }
     }
 
     /**
@@ -348,20 +355,17 @@ public final class VideoController implements ClockListener {
     private void showClock() {
         synchronized (showing) {
             ClockTimer.Reading now = clockTimer.read();
-            playhead.show(now.time(), rateText(now.rate(), now.paused()), !now.paused() && now.rate() != 0F);
+            playhead.show(now.time(), rateText(now.rate(), now.paused()), !now.paused());
         }
     }
 
     /**
-     * Returns the rate as the playhead shows it: {@code 1.25×} while playing, {@code paused 1.25×} while paused at a
-     * rate, and {@code stopped} at rate zero.
+     * Returns the rate as the playhead shows it: {@code 1.25×} while playing, and {@code paused 1.25×} while paused at
+     * the rate it resumes at.
      * @param rate   the clock's rate
      * @param paused whether the clock is paused
      */
     static String rateText(final float rate, final boolean paused) {
-        if (rate == 0F) {
-            return "stopped";
-        }
         String text = new java.math.BigDecimal(Float.toString(rate)).stripTrailingZeros().toPlainString() + "×";
         return paused ? "paused " + text : text;
     }
@@ -467,9 +471,9 @@ public final class VideoController implements ClockListener {
      * @param action  what the key does
      * @return the key
      */
-    private JButton buildButton(final Command command, final String name, final Glyph.Shape glyph, final String label,
-                                final String key, final Runnable action) {
-        JButton jButton = new KeypadKey(glyph, label, key);
+    private KeypadKey buildButton(final Command command, final String name, final Glyph.Shape glyph,
+                                  final String label, final String key, final Runnable action) {
+        KeypadKey jButton = new KeypadKey(glyph, label, key);
         jButton.addActionListener(e -> action.run());
         jButton.setName(name + "Button");
         if (command != null) {
@@ -535,10 +539,11 @@ public final class VideoController implements ClockListener {
         JButton setCellOnsetButton = buildButton(Command.SET_ONSET, "setCellOnset", Glyph.Shape.SET_ONSET, "onset", "7", this::setCellOnsetAction);
         gridButtonPanel.add(setCellOnsetButton, NUM_PAD_KEY_SIZE);
 
-        // Play video button with 8
-        JButton playButton = buildButton(Command.PLAY, "start", Glyph.Shape.PLAY, "play", "8", this::startAction);
-        playButton.setRequestFocusEnabled(false);
-        gridButtonPanel.add(playButton, NUM_PAD_KEY_SIZE);
+        // Play or pause with 8; it shows the pause glyph while playing
+        playKey = buildButton(Command.PLAY_PAUSE, "playPause", Glyph.Shape.PLAY, "play", "8", this::playPauseAction);
+        showPlayKey();
+        playKey.setRequestFocusEnabled(false);
+        gridButtonPanel.add(playKey, NUM_PAD_KEY_SIZE);
 
         // Set cell offset button with 9
         JButton setCellOffsetButton = buildButton(Command.SET_OFFSET, "setCellOffset", Glyph.Shape.SET_OFFSET, "offset", "9", this::setCellOffsetAction);
@@ -550,9 +555,10 @@ public final class VideoController implements ClockListener {
         JButton shuttleBackButton = buildButton(Command.SHUTTLE_BACK, "shuttleBack", Glyph.Shape.SHUTTLE_BACK, "shuttle", "4", this::shuttleBackAction);
         gridButtonPanel.add(shuttleBackButton, NUM_PAD_KEY_SIZE);
 
-        // Stop button with 5
-        JButton stopButton = buildButton(Command.STOP, "stop", Glyph.Shape.STOP, "stop", "5", this::stopAction);
-        gridButtonPanel.add(stopButton, NUM_PAD_KEY_SIZE);
+        // Reset the rate to 1x with 5
+        JButton resetRateButton = buildButton(Command.RESET_RATE, "resetRate", Glyph.Shape.RESET_RATE, "reset", "5",
+            this::resetRateAction);
+        gridButtonPanel.add(resetRateButton, NUM_PAD_KEY_SIZE);
 
         // Shuttle forward button with 6
         JButton shuttleForwardButton = buildButton(Command.SHUTTLE_FORWARD, "shuttleForward", Glyph.Shape.SHUTTLE_FORWARD, "shuttle", "6", this::shuttleForwardAction);
@@ -569,9 +575,8 @@ public final class VideoController implements ClockListener {
         JButton jogBackButton = buildButton(null, "jogBack", Glyph.Shape.JOG_BACK, "jog", "1", this::jogBackAction);
         gridButtonPanel.add(jogBackButton, NUM_PAD_KEY_SIZE);
 
-        // Pause button with 2
-        JButton pauseButton = buildButton(Command.PAUSE, "pause", Glyph.Shape.PAUSE, "pause", "2", this::pauseAction);
-        gridButtonPanel.add(pauseButton, NUM_PAD_KEY_SIZE);
+        // Placeholder at 2, which paused before play and pause became one key
+        gridButtonPanel.add(makePlaceholderButton(), NUM_PAD_KEY_SIZE);
 
         // Jog forward button with 3
         JButton jogForwardButton = buildButton(null, "jogForward", Glyph.Shape.JOG_FORWARD, "jog", "3", this::jogForwardAction);
@@ -715,35 +720,27 @@ public final class VideoController implements ClockListener {
     }
 
     /**
-     * Action to invoke when the user clicks on the start button.
+     * Play or pause: pauses playback, or resumes it at the rate it paused at. A new spreadsheet plays at 1×.
      */
-    public void startAction() {
-        logger.info("Play");
-        clockTimer.setRate(1f);
-    }
-
-    /**
-     * Action to invoke when the user clicks on the pause button.
-     */
-    public void pauseAction() {
-        // Toggle between isPlaying and not isPlaying
-        if (clockTimer.isPaused() && !clockTimer.isStopped()) {
-            logger.info("Resume playback at rate: " + clockTimer.getRate());
+    public void playPauseAction() {
+        if (clockTimer.isPaused()) {
+            logger.info("Play at rate: " + clockTimer.getRate());
             clockTimer.start();
         } else {
-            logger.info("Pause playback at rate: " + clockTimer.getRate());
-            clockTimer.pause();
-            clockTimer.setForceTime((long) clockTimer.getStreamTime());
+            pause();
         }
     }
 
-    /**
-     * Action to invoke when the user clicks on the stop button.
-     */
-    public void stopAction() {
-        logger.info("Stop.");
-        clockTimer.setRate(0f);
-        clockTimer.setForceTime((long) clockTimer.getClockTime());
+    /** Pauses playback where it is, keeping the rate it resumes at. */
+    public void pause() {
+        logger.info("Pause playback at rate: " + clockTimer.getRate());
+        clockTimer.pause();
+    }
+
+    /** Sets the rate back to 1×; playback carries on if playing and stays paused if paused. */
+    public void resetRateAction() {
+        logger.info("Reset the rate to 1x");
+        clockTimer.setRate(1F);
     }
 
     /**
@@ -842,53 +839,70 @@ public final class VideoController implements ClockListener {
         }
     }
 
-    /**
-     * Action to invoke when the user clicks on the jog backwards button.
-     */
+    /** Jog back: steps back one frame, pausing first if playing. */
     public void jogBackAction() {
-        logger.info("Jog back");
-        if (!clockTimer.isStopped()) {
-            clockTimer.setRate(0f);
-        } else {
-            syncStreams();
-            double frameRate = jogFrameRate();
-            long clockTime = (long) clockTimer.getClockTime();
-            long stepSize = (long) Math.ceil(MILLI_IN_SEC / frameRate); // step size is in milliseconds
-            // Update the clock timer with the new time
-            long newTime = clockTime - (clockTime % stepSize) - stepSize;
-            // A viewer that steps by frame lands on an exact frame time; the clock follows it
-            Long steppedTime = null;
-            for (StreamViewer streamViewer : streamViewers) {
-                if (streamViewer.isStepEnabled()
+        jog(-1);
+    }
+
+    /** Jog forward: steps forward one frame, pausing first if playing. */
+    public void jogForwardAction() {
+        jog(1);
+    }
+
+    /**
+     * Steps one frame of the open video, or a 30th of a second with none: playing, it pauses and steps; paused, it
+     * steps.
+     *
+     * @param direction 1 to step forward, -1 to step back
+     */
+    private void jog(final int direction) {
+        logger.info(direction > 0 ? "Jog forward" : "Jog back");
+        boolean wasPlaying = !clockTimer.isPaused();
+        clockTimer.pause();
+        syncStreams();
+        double frameRate = jogFrameRate();
+        long clockTime = (long) clockTimer.getClockTime();
+        long stepSize = (long) Math.ceil(MILLI_IN_SEC / frameRate); // step size is in milliseconds
+        // The time a frame marker away, as the time is rounded down to one
+        long newTime = clockTime - (clockTime % stepSize) + direction * stepSize;
+        // A viewer that steps by frame lands on an exact frame time; the clock follows it
+        Long steppedTime = null;
+        for (StreamViewer streamViewer : streamViewers) {
+            if (streamViewer.isStepEnabled()
                     && streamViewer.getFramesPerSecond() == frameRate
                     && holds(streamViewer, clockTime)) {
-                    streamViewer.stepBackward();
-                    if (steppedTime == null) {
-                        steppedTime = streamViewer.getCurrentTime() + streamViewer.getOffset();
-                    }
+                if (direction > 0) {
+                    streamViewer.stepForward();
                 } else {
-                    // Get the stream time
-                    long trackTime = newTime - streamViewer.getOffset();
-
-                    // Notice that the new time is in jogs to frame markers by being modulo step size
-                    long newStreamTime = Math.min(Math.max(trackTime, 0), streamViewer.getDuration());
-
-                    logger.info("Stream " + streamViewer.getIdentifier()
-                        + " - Jog back from " + trackTime + " milliseconds to " + newStreamTime + " milliseconds");
-
-                    streamViewer.setCurrentTime(newStreamTime);
+                    streamViewer.stepBackward();
                 }
-                // otherwise we can't step
+                if (steppedTime == null) {
+                    steppedTime = streamViewer.getCurrentTime() + streamViewer.getOffset();
+                }
+            } else {
+                long trackTime = newTime - streamViewer.getOffset();
+                long newStreamTime = Math.min(Math.min(Math.max(trackTime, 0), streamViewer.getDuration()),
+                        clockTimer.getMaxTime());
+                logger.info("Stream " + streamViewer.getIdentifier()
+                    + " - Jog from " + trackTime + " milliseconds to " + newStreamTime + " milliseconds");
+                streamViewer.setCurrentTime(newStreamTime);
             }
-            if (steppedTime != null) {
-                newTime = steppedTime;
-            }
-
-            //Force the time in order to update the cell highlighting
-            clockTimer.setTime(newTime);
-
-            showClock();
         }
+        if (steppedTime != null) {
+            newTime = steppedTime;
+        }
+        // A step past an end of the timeline stops at it, as the players' do.
+        newTime = clockTimer.toRange(newTime);
+        if (wasPlaying) {
+            // The pause's news reaches the players on the clock thread, perhaps after the step, and would take them
+            // back to where it paused. News carries the time when it is told, so a forced time told after it takes
+            // every player to the step.
+            clockTimer.setForceTime(newTime);
+        } else {
+            // Force the time in order to update the cell highlighting
+            clockTimer.setTime(newTime);
+        }
+        showClock();
     }
 
     /**
@@ -937,63 +951,15 @@ public final class VideoController implements ClockListener {
         }
     }
 
-    /**
-     * Action to invoke when the user clicks on the jog forwards button.
-     */
-    public void jogForwardAction() {
-        logger.info("Jog forward");
-        if (!clockTimer.isStopped()) {
-            clockTimer.setRate(0);
-        } else {
-            syncStreams();
-            double frameRate = jogFrameRate();
-            long clockTime = (long) clockTimer.getClockTime();
-            long stepSize = (long) Math.ceil(MILLI_IN_SEC / frameRate); // step size is in milliseconds
-
-            // Update the clock timer with the new time
-            long newTime = clockTime - (clockTime % stepSize) + stepSize;
-            // A viewer that steps by frame lands on an exact frame time; the clock follows it
-            Long steppedTime = null;
-            for (StreamViewer streamViewer : streamViewers) {
-                if (streamViewer.isStepEnabled()
-                        && streamViewer.getFramesPerSecond() == frameRate
-                        && holds(streamViewer, clockTime)) {
-                    streamViewer.stepForward();
-                    if (steppedTime == null) {
-                        steppedTime = streamViewer.getCurrentTime() + streamViewer.getOffset();
-                    }
-                } else {
-                    // Get the stream time
-                    long trackTime = newTime - streamViewer.getOffset();
-
-                    // Notice that the new time is in jogs to frame markers by being modulo step size
-                    long newStreamTime = Math.min(Math.min(Math.max(trackTime, 0), streamViewer.getDuration()),
-                            clockTimer.getMaxTime());
-
-                    logger.info("Stream " + streamViewer.getIdentifier()
-                        + " - Jog forward from " + trackTime + " milliseconds to " + newStreamTime + " milliseconds.");
-
-                    streamViewer.setCurrentTime(newStreamTime);
-                }
-                // otherwise we can't step
-            }
-            if (steppedTime != null) {
-                newTime = steppedTime;
-            }
-            //Force the time in order to update the cell highlighting
-            clockTimer.setTime(newTime);
-            showClock();
-        }
-    }
 
     /**
      * @param shuttleJump The required rate and direction of the shuttle.
      */
     private void shuttle(int shuttleJump) {
         float currentRate = clockTimer.getRate();
-        boolean reverseAllowed = streamViewers.stream().allMatch(StreamViewer::isReversePlaybackSupported);
-        float nextRate = shuttleRates.nextRate(currentRate, shuttleJump, reverseAllowed);
+        float nextRate = shuttleRates.nextRate(currentRate, shuttleJump);
         clockTimer.setRate(nextRate);
+        clockTimer.start();
         logger.info("Changed rate from " + currentRate + " to " + nextRate + " for " + shuttleJump + " jumps.");
     }
 

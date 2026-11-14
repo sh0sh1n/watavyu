@@ -42,7 +42,7 @@ public class GlyphTest {
     public void aGlyphTakesTheColourOfItsComponent() {
         JLabel label = new JLabel();
         label.setForeground(Color.MAGENTA);
-        BufferedImage image = paint(Glyph.of(Glyph.Shape.STOP, SIZE), label);
+        BufferedImage image = paint(Glyph.of(Glyph.Shape.PAUSE, SIZE), label);
         assertTrue(count(image, Color.MAGENTA.getRGB()) > 0);
     }
 

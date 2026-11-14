@@ -37,7 +37,7 @@ Updated 2026-11-08. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 ## Features
 
-**F7. Configurable key mapping for playback.** ready. The numpad shortcuts (`Shortcuts`, the keypad section) are condensed into a smaller set of playback and coding keys that the user can map, so coding works on laptops without a numpad. Settings would hold the mapping. ⌃H, ⌃D, ⌃W, ⌥⌫ and ⌥⌦ are reserved for it (`Shortcuts.RESERVED`). Goes with F16 and with finding, by trial, which buttons the controls drawer keeps.
+**F7. Configurable key mapping for playback.** ready. The numpad shortcuts (`Shortcuts`, the keypad section) are condensed into a smaller set of playback and coding keys that the user can map, so coding works on laptops without a numpad. Settings would hold the mapping. ⌃H, ⌃D, ⌃W, ⌥⌫ and ⌥⌦ are reserved for it (`Shortcuts.RESERVED`). Goes with finding, by trial, which buttons the controls drawer keeps.
 
 **F12. Edit history in the controls drawer.** ready, medium priority (owner). Below the controls, a list of the edits that can be undone and redone, newest first, from the spreadsheet's undo history (`SpreadsheetUndoManager`; each edit has a presentation name, and `SpreadSheetEdit.toString` already formats one with its time). Hiding the drawer hides both, so the space can be reclaimed with one toggle. Datavyu's separate Undo History window was removed in the cleanup; this replaces it.
 
@@ -56,8 +56,6 @@ Updated 2026-11-08. Re-measure with the commands in [BUILDING.md › Analysis Re
 - Tests: how a setting and the Mac's appearance resolve to a palette, and that a switch re-colours a sample component tree (headless). The rest is checked in the running app.
 
 **F14. A clearer selected column header in Paper.** ready, low priority, *verified* (contrast measured). A selected column's header has a bar in the selection colour along its bottom (`SpreadsheetColumn.headerBorder`), at 2.7:1 against Paper's chrome, under the 3:1 the other marks keep (`PaletteTest`). Use the accent, a thicker bar, or a selection colour tuned for chrome.
-
-**F16. One play/pause key, and stop becomes reset to 1×.** ready (owner to confirm the details below), *from reading*. Owner's proposal, evaluated: it is small (about half a day with tests) and loses nothing. Today play (keypad 8) sets 1× and plays; pause (2) already toggles, resuming at the rate it paused at; stop (5) sets the rate to 0, after which only play resumes (`VideoController.startAction`, `pauseAction`, `stopAction`, `ClockTimer`). Stop differs from pause only in forgetting the rate, and the end of media and of the timeline already pause rather than stop. Merged: 8 plays or pauses, resuming at the paused rate; 5 sets the rate back to 1×; 2 is freed. The play key shows the pause glyph while playing, so it listens to the clock. The clock's two meanings of stopped (paused, and a rate of 0) could then become one. To settle: whether reset also starts playback when paused (suggested: no, it only sets the rate), and what 2 becomes, if anything. Do before or with F7, which maps these keys.
 
 ## Research
 

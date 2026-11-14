@@ -74,7 +74,7 @@ public class SpreadsheetThemeTest {
     /** Bundled fonts fall back to nothing, so a character they lack shows as a box. */
     @Test
     public void theFontsHaveEveryCharacterTheyAreGiven() {
-        assertEquals(SpreadsheetTheme.labelFont().canDisplayUpTo("00:00:40:000 paused 0.25× 1.5× stopped"), -1);
+        assertEquals(SpreadsheetTheme.labelFont().canDisplayUpTo("00:00:40:000 paused 0.25× 1.5×"), -1);
         assertEquals(SpreadsheetTheme.uiFont(9.5F).canDisplayUpTo("new + prev offset · Jump by Onset"), -1);
         assertEquals(SpreadsheetTheme.headerFont().canDisplayUpTo("media_1 infant_gaze"), -1);
     }

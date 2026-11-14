@@ -44,6 +44,24 @@ public final class KeypadKey extends JButton {
         getAccessibleContext().setAccessibleDescription("Keypad " + key);
     }
 
+    /** Returns what the key shows. */
+    public Glyph.Shape getGlyph() {
+        return ((Glyph) getIcon()).shape();
+    }
+
+    /**
+     * Shows another glyph and label, as a key that does one of two things shows the one it will do.
+     *
+     * @param shape what the key shows
+     * @param label what it does, in a word or two
+     */
+    public void show(final Glyph.Shape shape, final String label) {
+        if (shape != getGlyph()) {
+            setIcon(Glyph.of(shape, GLYPH_SIZE));
+        }
+        setText(label);
+    }
+
     /** Returns the keypad key shown in the corner. */
     public String getKey() {
         return key;

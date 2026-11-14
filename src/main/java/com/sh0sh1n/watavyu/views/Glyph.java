@@ -40,8 +40,9 @@ public record Glyph(Shape shape, int size, Color colour) implements Icon {
         /** Set offset: a line into a closing bracket. */
         SET_OFFSET,
         PLAY,
-        STOP,
         PAUSE,
+        /** Reset the rate: 1×. */
+        RESET_RATE,
         SHUTTLE_BACK,
         SHUTTLE_FORWARD,
         /** Jog back: a bar and a triangle pointing at it. */
@@ -134,7 +135,7 @@ public record Glyph(Shape shape, int size, Color colour) implements Icon {
             case SET_ONSET -> List.of(path(8, 3, 4, 3, 4, 15, 8, 15), line(8, 9, 15, 9));
             case SET_OFFSET -> List.of(path(10, 3, 14, 3, 14, 15, 10, 15), line(3, 9, 10, 9));
             case PLAY -> List.of(closed(5, 3, 15, 9, 5, 15));
-            case STOP -> List.of(new Rectangle2D.Double(4, 4, 10, 10));
+            case RESET_RATE -> List.of(path(3, 6, 6, 4, 6, 14), line(10, 8, 15, 14), line(15, 8, 10, 14));
             case PAUSE -> List.of(line(6, 4, 6, 14), line(12, 4, 12, 14));
             case SHUTTLE_BACK -> List.of(closed(9, 4, 3, 9, 9, 14), closed(16, 4, 10, 9, 16, 14));
             case SHUTTLE_FORWARD -> List.of(closed(2, 4, 8, 9, 2, 14), closed(9, 4, 15, 9, 9, 14));

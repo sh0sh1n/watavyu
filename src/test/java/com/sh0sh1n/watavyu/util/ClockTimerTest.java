@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotEquals;
+import static org.testng.Assert.assertThrows;
 import static org.testng.Assert.assertTrue;
 
 import com.sh0sh1n.watavyu.util.ClockTimer.ClockListener;
@@ -84,11 +85,6 @@ public class ClockTimerTest {
         }
 
         @Override
-        public void clockStop(final double clockTime) {
-            // Not followed.
-        }
-
-        @Override
         public void clockPause(final double clockTime) {
             // Not followed.
         }
@@ -139,6 +135,7 @@ public class ClockTimerTest {
             });
 
             clock.setRate(1f);
+            clock.start();
             clock.pause();
 
             assertTrue(heard.await(5, TimeUnit.SECONDS));
@@ -185,6 +182,7 @@ public class ClockTimerTest {
 
             clock.setForceTime(1_000);
             clock.setRate(2f);
+            clock.start();
             clock.pause();
             clock.setForceTime(3_000);
 
@@ -249,7 +247,7 @@ public class ClockTimerTest {
         }
     }
 
-    /** Closing stops the ticks but still tells the listeners what changed before it, such as playback stopping. */
+    /** Closing stops the ticks but still tells the listeners what changed before it, such as playback pausing. */
     @Test
     public void closingStillTellsTheChangesMadeBeforeIt() {
         ClockTimer clock = new ClockTimer();
@@ -258,8 +256,8 @@ public class ClockTimerTest {
         AtomicLong lastForce = new AtomicLong(-1);
         clock.registerListener(new Quiet() {
             @Override
-            public void clockStop(final double clockTime) {
-                told.add("stop");
+            public void clockPause(final double clockTime) {
+                told.add("pause");
             }
 
             @Override
@@ -269,13 +267,13 @@ public class ClockTimerTest {
             }
         });
 
-        clock.setRate(1f);
-        clock.setRate(0f);
+        clock.start();
+        clock.pause();
         clock.setForceTime(4_000);
         clock.close();
 
-        assertTrue(told.contains("stop"), "told: " + told);
-        assertEquals(told.subList(told.indexOf("stop"), told.size()), List.of("stop", "force", "force"));
+        assertTrue(told.contains("pause"), "told: " + told);
+        assertEquals(told.subList(told.indexOf("pause"), told.size()), List.of("pause", "force", "force"));
         assertEquals(lastForce.get(), 4_000L);
     }
 
@@ -318,6 +316,7 @@ public class ClockTimerTest {
             });
             clock.setForceTime(2_000);
             clock.setRate(2f);
+            clock.start();
 
             awaitPause(clock);
             clock.close();
@@ -337,26 +336,10 @@ public class ClockTimerTest {
             clock.setMaxTime(3_000);
             clock.setForceTime(2_900);
             clock.setRate(2f);
+            clock.start();
 
             awaitPause(clock);
             assertEquals(clock.getClockTime(), 3_000.0);
-        } finally {
-            clock.close();
-        }
-    }
-
-    /** Playing backward pauses at the start of the clock's range. */
-    @Test
-    public void playingBackwardPausesAtTheStart() throws InterruptedException {
-        ClockTimer clock = new ClockTimer();
-        try {
-            clock.setMaxTime(3_000);
-            clock.setPlaybackEnd(() -> 50);
-            clock.setForceTime(100);
-            clock.setRate(-1f);
-
-            awaitPause(clock);
-            assertEquals(clock.getClockTime(), 0.0);
         } finally {
             clock.close();
         }
@@ -412,7 +395,7 @@ public class ClockTimerTest {
                     ticks.countDown();
                 }
             });
-            clock.setRate(1f);
+            clock.start();
 
             assertTrue(ticks.await(5, TimeUnit.SECONDS), "ticks after the failure");
             assertTrue(asked.get() >= 2, "asked " + asked.get() + " times");
@@ -421,15 +404,56 @@ public class ClockTimerTest {
         }
     }
 
-    /** Playback starting at time zero or at the end runs on when it heads away from that edge (B7). */
+    /** A new clock is paused at the normal rate. */
     @Test
-    public void playbackStopsAtTheEdgeItIsHeadingFor() {
-        assertFalse(ClockTimer.atEdge(0, 1F, 0, 60_000), "playing forward from zero");
-        assertTrue(ClockTimer.atEdge(0, -1F, 0, 60_000), "playing backward into zero");
-        assertTrue(ClockTimer.atEdge(60_000, 1F, 0, 60_000), "playing forward into the end");
-        assertFalse(ClockTimer.atEdge(60_000, -1F, 0, 60_000), "playing backward from the end");
-        assertFalse(ClockTimer.atEdge(30_000, 2F, 0, 60_000));
-        assertFalse(ClockTimer.atEdge(0, 0F, 0, 60_000), "stopped");
+    public void aNewClockIsPausedAtTheNormalRate() {
+        ClockTimer clock = new ClockTimer();
+        try {
+            assertTrue(clock.isPaused());
+            assertEquals(clock.getRate(), 1f);
+        } finally {
+            clock.close();
+        }
+    }
+
+    /**
+     * The clock plays forward only, and its rate is never 0: a clock that should not move is paused, and keeps the
+     * rate it resumes at.
+     */
+    @Test
+    public void theRateIsAlwaysForward() {
+        ClockTimer clock = new ClockTimer();
+        try {
+            clock.setRate(2f);
+            assertThrows(IllegalArgumentException.class, () -> clock.setRate(0f));
+            assertThrows(IllegalArgumentException.class, () -> clock.setRate(-1f));
+            assertThrows(IllegalArgumentException.class, () -> clock.setRate(Float.NaN));
+            assertEquals(clock.getRate(), 2f);
+        } finally {
+            clock.close();
+        }
+    }
+
+    /** Setting the rate leaves a paused clock paused, and a running one running at the new rate. */
+    @Test
+    public void settingTheRateNeitherStartsNorPauses() {
+        ClockTimer clock = new ClockTimer();
+        try {
+            clock.setMaxTime(60_000);
+            clock.setRate(2f);
+            assertTrue(clock.isPaused(), "a paused clock stays paused");
+
+            clock.start();
+            clock.setRate(0.5f);
+            assertFalse(clock.isPaused(), "a running clock keeps running");
+            assertEquals(clock.getRate(), 0.5f);
+
+            clock.pause();
+            clock.start();
+            assertEquals(clock.getRate(), 0.5f, "a clock resumes at the rate it paused at");
+        } finally {
+            clock.close();
+        }
     }
 
     /**
@@ -487,6 +511,7 @@ public class ClockTimerTest {
             clock.setMaxTime(10_000);
             clock.setForceTime(4_000);
             clock.setRate(2f);
+            clock.start();
             clock.pause();
 
             ClockTimer.Reading now = clock.read();

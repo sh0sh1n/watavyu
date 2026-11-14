@@ -58,14 +58,14 @@ public class ShortcutsTest {
         actions.clear();
         actions.put(Command.SAVE, save);
         actions.put(Command.NEW_CELL_LEFT, action("left"));
-        actions.put(Command.PLAY, action("play"));
+        actions.put(Command.PLAY_PAUSE, action("play"));
         actions.put(Command.JUMP_BACK, action("back"));
         actions.put(Command.JUMP_FORWARD, action("forward"));
         actions.put(Command.TEMPORAL_LAYOUT, action("ordering"));
         shortcuts = Shortcuts.builder(actions())
             .menu("File", Command.SAVE, KeyStroke.getKeyStroke(KeyEvent.VK_S, Shortcuts.COMMAND))
             .global("Spreadsheet", Command.NEW_CELL_LEFT, KeyStroke.getKeyStroke(KeyEvent.VK_L, Shortcuts.COMMAND))
-            .keypad(Command.PLAY, KeyEvent.VK_NUMPAD8, 0)
+            .keypad(Command.PLAY_PAUSE, KeyEvent.VK_NUMPAD8, 0)
             .keypad(Command.JUMP_BACK, KeyEvent.VK_SUBTRACT, 0)
             .keypad(Command.JUMP_FORWARD, KeyEvent.VK_SUBTRACT, InputEvent.SHIFT_DOWN_MASK)
             .build(() -> mainWindowFocused, shift::add, () -> refreshed++);
@@ -151,7 +151,7 @@ public class ShortcutsTest {
     @Test
     public void aDisabledGlobalOrKeypadShortcutDoesNothing() {
         actions.get(Command.NEW_CELL_LEFT).setEnabled(false);
-        actions.get(Command.PLAY).setEnabled(false);
+        actions.get(Command.PLAY_PAUSE).setEnabled(false);
         mainWindowFocused = false;
 
         KeyEvent left = press(KeyEvent.VK_L, Shortcuts.COMMAND, STANDARD);
@@ -168,9 +168,9 @@ public class ShortcutsTest {
     @Test
     public void aShortcutNamesItsCommand() {
         Shortcuts.Shortcut play = shortcuts.all().stream()
-            .filter(shortcut -> shortcut.getCommand() == Command.PLAY).findFirst().orElseThrow();
+            .filter(shortcut -> shortcut.getCommand() == Command.PLAY_PAUSE).findFirst().orElseThrow();
 
-        assertEquals(play.getName(), "Play");
+        assertEquals(play.getName(), "Play or pause");
         assertEquals(play.getKeyText(), "Keypad 8");
     }
 
@@ -266,7 +266,7 @@ public class ShortcutsTest {
     @Test
     public void aShortcutOnAReservedKeyRuns() {
         Shortcuts mapped = Shortcuts.builder(actions())
-            .global("Video controller", Command.PLAY, KeyStroke.getKeyStroke(KeyEvent.VK_H, InputEvent.CTRL_DOWN_MASK))
+            .global("Video controller", Command.PLAY_PAUSE, KeyStroke.getKeyStroke(KeyEvent.VK_H, InputEvent.CTRL_DOWN_MASK))
             .build(() -> mainWindowFocused, shift::add, () -> { });
 
         assertTrue(mapped.dispatchKeyEvent(press(KeyEvent.VK_H, InputEvent.CTRL_DOWN_MASK, STANDARD)));

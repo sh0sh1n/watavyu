@@ -107,11 +107,6 @@ public interface StreamViewer {
     void start();
 
     /**
-     * Stops the play back of the data stream
-     */
-    void stop();
-
-    /**
      * Pauses the play back of the data stream
      */
     void pause();
@@ -134,7 +129,7 @@ public interface StreamViewer {
     /**
      * Set rate
      *
-     * @param speed Positive implies forwards, while negative implies reverse.
+     * @param speed The rate, always forward.
      */
     void setRate(float speed);
 
@@ -175,12 +170,4 @@ public interface StreamViewer {
     void close();
 
     boolean isStepEnabled();
-
-    /**
-     * Returns false if this viewer cannot play at negative rates; the controller then
-     * stops shuttling at zero instead of going into reverse.
-     */
-    default boolean isReversePlaybackSupported() {
-        return true;
-    }
 }

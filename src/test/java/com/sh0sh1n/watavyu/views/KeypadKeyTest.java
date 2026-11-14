@@ -53,7 +53,7 @@ public class KeypadKeyTest {
         collect(controls, keys);
 
         assertEquals(keys.stream().map(KeypadKey::getKey).toList(),
-                List.of("7", "8", "9", "−", "4", "5", "6", "+", "1", "2", "3", "enter", "0"));
+                List.of("7", "8", "9", "−", "4", "5", "6", "+", "1", "3", "enter", "0"));
         for (KeypadKey key : keys) {
             assertTrue(key.getIcon() instanceof Glyph, key.getName());
             assertTrue(!key.getKey().isEmpty(), key.getName());
@@ -68,7 +68,7 @@ public class KeypadKeyTest {
 
     /**
      * The keys sit as on a Mac's keypad: 45-pixel squares 5 pixels apart in rows and columns, enter two rows high and 0
-     * two wide. The size includes the focus ring, as in Datavyu: MigLayout's visual padding, which would widen each key
+     * two wide. 2 is a blank, as play and pause are one key. The size includes the focus ring, as in Datavyu: MigLayout's visual padding, which would widen each key
      * by its ring, is off.
      */
     @Test
@@ -83,13 +83,12 @@ public class KeypadKeyTest {
             at.put(key.getKey(), key.getBounds());
         }
 
-        for (String key : List.of("7", "8", "9", "−", "4", "5", "6", "+", "1", "2", "3")) {
+        for (String key : List.of("7", "8", "9", "−", "4", "5", "6", "+", "1", "3")) {
             assertEquals(at.get(key).getSize(), new Dimension(45, 45), key);
         }
         assertEquals(at.get("enter").getSize(), new Dimension(45, 95));
         assertEquals(at.get("0").getSize(), new Dimension(95, 45));
-        for (List<String> row : List.of(List.of("7", "8", "9"), List.of("4", "5", "6", "+"), List.of("1", "2", "3",
-                "enter"))) {
+        for (List<String> row : List.of(List.of("7", "8", "9"), List.of("4", "5", "6", "+"), List.of("3", "enter"))) {
             for (int i = 1; i < row.size(); i++) {
                 assertEquals(at.get(row.get(i)).y, at.get(row.get(0)).y, row.get(i) + " in the row of " + row.get(0));
                 String key = row.get(i);
@@ -97,7 +96,7 @@ public class KeypadKeyTest {
                 assertEquals(at.get(key).x, at.get(left).x + 50, key + " right of " + left);
             }
         }
-        for (List<String> column : List.of(List.of("7", "4", "1", "0"), List.of("8", "5", "2"), List.of("9", "6",
+        for (List<String> column : List.of(List.of("7", "4", "1", "0"), List.of("8", "5"), List.of("9", "6",
                 "3"), List.of("−", "+", "enter"))) {
             for (int i = 1; i < column.size(); i++) {
                 String key = column.get(i);
@@ -106,6 +105,8 @@ public class KeypadKeyTest {
                 assertEquals(at.get(key).y, at.get(above).y + 50, key + " below " + above);
             }
         }
+        assertEquals(at.get("3").y, at.get("1").y, "3 in the row of 1");
+        assertEquals(at.get("3").x, at.get("1").x + 100, "3 two keys right of 1");
         assertEquals(at.get("enter").y + at.get("enter").height, at.get("0").y + at.get("0").height,
                 "enter reaches the row of 0");
     }

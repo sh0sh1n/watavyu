@@ -150,11 +150,6 @@ public final class JavaFxVideoViewer extends StreamViewerDialog {
     }
 
     @Override
-    public void stop() {
-        playback.pause();
-    }
-
-    @Override
     public void pause() {
         playback.pause();
     }
@@ -183,11 +178,6 @@ public final class JavaFxVideoViewer extends StreamViewerDialog {
     @Override
     public boolean isStepEnabled() {
         return playback.isStepEnabled();
-    }
-
-    @Override
-    public boolean isReversePlaybackSupported() {
-        return false;
     }
 
     @Override

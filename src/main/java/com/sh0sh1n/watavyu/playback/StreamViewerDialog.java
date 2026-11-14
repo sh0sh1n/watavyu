@@ -215,7 +215,7 @@ public abstract class StreamViewerDialog extends JDialog implements StreamViewer
     }
 
     /**
-     * Hides the window when it is closed, stopping and silencing the clip. A subclass calls this at the start of its
+     * Hides the window when it is closed, pausing and silencing the clip. A subclass calls this at the start of its
      * constructor; this class's constructor does not, so that no overridable method runs before the subclass is built.
      */
     protected final void initComponents() {
@@ -223,7 +223,7 @@ public abstract class StreamViewerDialog extends JDialog implements StreamViewer
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(final WindowEvent evt) {
-                stop();
+                pause();
                 isVisible = false;
                 setVolume();
             }
@@ -238,7 +238,7 @@ public abstract class StreamViewerDialog extends JDialog implements StreamViewer
 
     @Override
     public void close() {
-        stop();
+        pause();
         cleanUp();
         dispose();
     }
@@ -357,14 +357,6 @@ public abstract class StreamViewerDialog extends JDialog implements StreamViewer
                 logger.info("Clock Start Starts " + getIdentifier() + " at clock " + clockTime);
                 start();
             }
-        }
-    }
-
-    @Override
-    public void clockStop(double clockTime) {
-        synchronized (lock) {
-            logger.debug("Clock stop Stops track: " + getIdentifier() + " at time: " + clockTime);
-            stop();
         }
     }
 
