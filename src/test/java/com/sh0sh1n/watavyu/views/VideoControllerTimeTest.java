@@ -75,12 +75,13 @@ public class VideoControllerTimeTest {
         }
     }
 
-    /** Shuttling forward at time zero plays faster, as it does anywhere else (B7). */
+    /** Shuttling forward at time zero, then playing, plays faster, as it does anywhere else (B7). */
     @Test
-    public void shuttlingAtTimeZeroPlays() {
+    public void shuttlingAtTimeZeroPlaysFaster() {
         VideoController controller = TestSpreadsheets.withPlayback(DataStoreFactory.newDataStore()).getVideoController();
         try {
             controller.shuttleForwardAction();
+            controller.playPauseAction();
             assertEquals(controller.getClockTimer().getRate(), 1.25F);
             assertEquals(controller.getClockTimer().isPaused(), false);
         } finally {
@@ -117,6 +118,7 @@ public class VideoControllerTimeTest {
         VideoController controller = TestSpreadsheets.withPlayback(DataStoreFactory.newDataStore()).getVideoController();
         ClockTimer clock = controller.getClockTimer();
         try {
+            controller.playPauseAction();
             controller.shuttleForwardAction();
             controller.shuttleForwardAction();
             controller.resetRateAction();
@@ -133,15 +135,20 @@ public class VideoControllerTimeTest {
         }
     }
 
-    /** Shuttling while paused plays at the next rate. */
+    /** Shuttling changes the rate only: paused stays paused, and playing carries on at the new rate. */
     @Test
-    public void shuttlingWhilePausedPlays() {
+    public void shuttlingOnlyChangesTheRate() {
         VideoController controller = TestSpreadsheets.withPlayback(DataStoreFactory.newDataStore()).getVideoController();
         ClockTimer clock = controller.getClockTimer();
         try {
             controller.shuttleBackAction();
-            assertEquals(clock.isPaused(), false);
+            assertEquals(clock.isPaused(), true, "paused stays paused");
             assertEquals(clock.getRate(), 0.75F);
+
+            controller.playPauseAction();
+            controller.shuttleForwardAction();
+            assertEquals(clock.isPaused(), false, "playing carries on");
+            assertEquals(clock.getRate(), 1F);
         } finally {
             controller.pause();
         }
@@ -246,7 +253,7 @@ public class VideoControllerTimeTest {
             awaitGlyph(play, Glyph.Shape.PLAY);
 
             controller.setCurrentTime(VideoController.MINIMUM_TIMELINE_END - 100);
-            controller.shuttleForwardAction();
+            controller.playPauseAction();
             awaitGlyph(play, Glyph.Shape.PAUSE);
             awaitGlyph(play, Glyph.Shape.PLAY);
             assertTrue(controller.getClockTimer().isPaused(), "paused at the end of the timeline");

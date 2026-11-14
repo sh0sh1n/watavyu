@@ -953,13 +953,15 @@ public final class VideoController implements ClockListener {
 
 
     /**
+     * Steps the rate up or down the shuttle's ladder, leaving playback running or paused; paused, the next play goes
+     * at the new rate.
+     *
      * @param shuttleJump The required rate and direction of the shuttle.
      */
     private void shuttle(int shuttleJump) {
         float currentRate = clockTimer.getRate();
         float nextRate = shuttleRates.nextRate(currentRate, shuttleJump);
         clockTimer.setRate(nextRate);
-        clockTimer.start();
         logger.info("Changed rate from " + currentRate + " to " + nextRate + " for " + shuttleJump + " jumps.");
     }
 
