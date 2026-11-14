@@ -16,6 +16,7 @@ package com.sh0sh1n.watavyu.views.spreadsheet;
 
 import com.sh0sh1n.watavyu.controllers.ProjectController;
 import com.sh0sh1n.watavyu.models.Cell;
+import com.sh0sh1n.watavyu.views.Shortcuts;
 import com.sh0sh1n.watavyu.models.CellListener;
 import com.sh0sh1n.watavyu.models.Column;
 import com.sh0sh1n.watavyu.util.ClockTimer;
@@ -215,6 +216,16 @@ public final class SpreadsheetView extends JPanel implements Scrollable {
         return inCommandMode() || inInsertMode();
     }
 
+    /** Returns the component with the keyboard focus, as the sheet finds it. */
+    Component keyboardOwner() {
+        return focusOwner.get();
+    }
+
+    /** Gives the focus to a part of the editor, staying in insert mode, such as a cell's onset. */
+    void focusPart(final Component part) {
+        focusTaker.accept(part);
+    }
+
     /** Goes to command mode: the sheet takes the focus, leaving the selection as it is. */
     public void commandMode() {
         focusTaker.accept(this);
@@ -234,7 +245,7 @@ public final class SpreadsheetView extends JPanel implements Scrollable {
     public boolean insertMode() {
         Optional<Cell> selected = getEditor().map(SpreadsheetCell::getCell).filter(Cell::isSelected)
                 .or(() -> controller.getDataStore().getSelectedCells().stream()
-                        .filter(cell -> columnOf(cell.getColumn()).filter(SpreadsheetColumn::isVisible).isPresent())
+                        .filter(cell -> shownColumnOf(cell.getColumn()).isPresent())
                         .findFirst());
         if (selected.isEmpty()) {
             return false;
@@ -266,8 +277,7 @@ public final class SpreadsheetView extends JPanel implements Scrollable {
     }
 
     private boolean modeKeyPressed(final KeyEvent e) {
-        int modifiers = e.getModifiersEx() & (InputEvent.SHIFT_DOWN_MASK | InputEvent.CTRL_DOWN_MASK
-                | InputEvent.META_DOWN_MASK | InputEvent.ALT_DOWN_MASK);
+        int modifiers = e.getModifiersEx() & Shortcuts.MODIFIERS;
         boolean leave = (e.getKeyCode() == KeyEvent.VK_ESCAPE && modifiers == 0)
                 || (e.getKeyCode() == KeyEvent.VK_CLOSE_BRACKET && modifiers == InputEvent.CTRL_DOWN_MASK);
         boolean taken;
@@ -285,7 +295,7 @@ public final class SpreadsheetView extends JPanel implements Scrollable {
     }
 
     /** Returns whether a menu is open, which Esc closes rather than leaving insert mode. */
-    private static boolean menuOpen() {
+    static boolean menuOpen() {
         return MenuSelectionManager.defaultManager().getSelectedPath().length > 0;
     }
 
@@ -357,6 +367,11 @@ public final class SpreadsheetView extends JPanel implements Scrollable {
             }
         }
         return shown;
+    }
+
+    /** Returns the shown view of a column, or empty if the column is hidden or not in this sheet. */
+    Optional<SpreadsheetColumn> shownColumnOf(final Column column) {
+        return columnOf(column).filter(SpreadsheetColumn::isVisible);
     }
 
     Optional<SpreadsheetColumn> columnOf(final Column column) {

@@ -18,6 +18,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import com.sh0sh1n.watavyu.controllers.ColumnCommands;
 import com.sh0sh1n.watavyu.controllers.ProjectController;
+import com.sh0sh1n.watavyu.controllers.CellNavigation;
 import com.sh0sh1n.watavyu.models.*;
 import com.sh0sh1n.watavyu.util.Constants;
 import com.sh0sh1n.watavyu.views.LockMark;
@@ -28,14 +29,14 @@ import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.util.List;
+import java.util.Optional;
 import java.util.ListIterator;
 
 /**
  * This class maintains the visual representation of the column in the
  * Spreadsheet window.
  */
-public final class SpreadsheetColumn extends JLabel implements ColumnListener, MouseListener, MouseMotionListener,
-        KeyEventDispatcher {
+public final class SpreadsheetColumn extends JLabel implements ColumnListener, MouseListener, MouseMotionListener {
 
     /** The logger for this class */
     private static Logger logger = LogManager.getLogger(SpreadsheetColumn.class);
@@ -325,7 +326,6 @@ public final class SpreadsheetColumn extends JLabel implements ColumnListener, M
         for (Cell cell : dataColumn.getCells()) {
             sheet.watch(cell);
         }
-        KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(this);
     }
 
     /**
@@ -336,7 +336,6 @@ public final class SpreadsheetColumn extends JLabel implements ColumnListener, M
         removeMouseListener(this);
         removeMouseMotionListener(this);
         dataColumn.removeListener(this);
-        KeyboardFocusManager.getCurrentKeyboardFocusManager().removeKeyEventDispatcher(this);
         for (Cell cell : dataColumn.getCells()) {
             sheet.unwatch(cell);
         }
@@ -436,14 +435,7 @@ public final class SpreadsheetColumn extends JLabel implements ColumnListener, M
      * @return the nearest cell, or null for a column without cells
      */
     public Cell getNearestCellTemporally(final Cell cell) {
-        Cell closestCell = null;
-        for (Cell c : getCellsTemporally()) {
-            if (closestCell == null
-                    || Math.abs(cell.getOnset() - c.getOnset()) < Math.abs(cell.getOnset() - closestCell.getOnset())) {
-                closestCell = c;
-            }
-        }
-        return closestCell;
+        return CellNavigation.nearest(getCellsTemporally(), cell.getOnset()).orElse(null);
     }
 
     /**
@@ -484,45 +476,56 @@ public final class SpreadsheetColumn extends JLabel implements ColumnListener, M
     }
 
     /**
-     * ↑ and ↓ move the selection to the cell before or after the selected one in time, in this column, keeping the
-     * caret in the same value; the first and last cells go no further.
+     * Goes to a cell of this column, selected alone, in the mode the keyboard is in: in insert mode into the same
+     * value, as near as the cell has one; in command mode staying there; with the keyboard in another window, leaving
+     * it there.
      *
-     * @param e The key event to dispatch.
-     * @return true if the event has been consumed by this dispatch, false
-     * otherwise
+     * @param cell a cell of this column
      */
-    @Override
-    public boolean dispatchKeyEvent(final KeyEvent e) {
-        if (e.getID() != KeyEvent.KEY_PRESSED
-                || (e.getKeyCode() != KeyEvent.VK_UP && e.getKeyCode() != KeyEvent.VK_DOWN)) {
-            return false;
+    void goTo(final Cell cell) {
+        if (sheet.inInsertMode()) {
+            Component owner = sheet.keyboardOwner();
+            Optional<SpreadsheetCell> from = sheet.getEditor();
+            boolean onset = from.filter(editor -> isPart(owner, editor.getOnset())).isPresent();
+            boolean offset = from.filter(editor -> isPart(owner, editor.getOffset())).isPresent();
+            // The value's place among the values, not counting the separators between them.
+            int place = from.map(editor -> editor.getDataView().getEdTracker().editableIndexOfCurrentEditor())
+                    .orElse(0);
+            select(cell);
+            SpreadsheetCell editor = sheet.getEditor().orElseThrow();
+            if (onset || offset) {
+                sheet.focusPart(onset ? editor.getOnset() : editor.getOffset());
+                return;
+            }
+            EditorTracker tracker = editor.getDataView().getEdTracker();
+            EditorComponent value = tracker.getEditorAtArgIndex(Math.max(place, 0));
+            // A cell with fewer values goes to its last; one with none takes the focus as it is.
+            tracker.setEditor(value.isEditable() ? value : tracker.lastEditor());
+            sheet.focusEditor(editor);
+        } else if (sheet.inCommandMode()) {
+            selectInCommandMode(cell);
+        } else {
+            select(cell);
         }
-        Cell selected = getSelectedCell();
-        // A cell stays selected in command mode with the focus gone elsewhere; the keys are then not this sheet's.
-        if (selected == null || !sheet.hasKeyboard()) {
-            return false;
+    }
+
+    /** Returns whether a component is a part, or is inside a part, of a cell's editor. */
+    private static boolean isPart(final Component owner, final Component part) {
+        return owner != null && SwingUtilities.isDescendingFrom(owner, part);
+    }
+
+    /**
+     * Selects this column alone, with no cell, scrolled into sight. The keyboard goes to command mode if it was in
+     * insert mode, as there is no cell to type in.
+     */
+    void goToColumn() {
+        setExclusiveSelected(true);
+        if (controller.getSpreadSheetPanel() != null) {
+            controller.getSpreadSheetPanel().reorientView(this);
         }
-        List<Cell> cells = getCellsTemporally();
-        int target = cells.indexOf(selected) + (e.getKeyCode() == KeyEvent.VK_UP ? -1 : 1);
-        if (target < 0 || target >= cells.size()) {
-            return false;
+        if (sheet.inInsertMode()) {
+            sheet.commandMode();
         }
-        Cell next = cells.get(target);
-        if (sheet.inCommandMode()) {
-            // Command mode stays.
-            selectInCommandMode(next);
-            e.consume();
-            return true;
-        }
-        int pos = sheet.getEditor().filter(editor -> editor.getCell().equals(selected))
-                .map(editor -> editor.getDataView().getEdTracker().indexOfCurrentEditor()).orElse(-1);
-        selectInColumn(next);
-        SpreadsheetCell editor = sheet.edit(next);
-        EditorTracker tracker = editor.getDataView().getEdTracker();
-        tracker.setEditor(tracker.getEditorAtIndex(Math.max(pos, 0)));
-        sheet.focusEditor(editor);
-        e.consume();
-        return true;
     }
 
     // *************************************************************************
