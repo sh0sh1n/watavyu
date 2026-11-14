@@ -10,28 +10,30 @@ public class RateControllerTest {
 
     @Test
     public void shuttlesThroughTheRateLadder() {
-        float[] ladder = {0F, 0.25F, 0.5F, 0.75F, 1F, 1.25F, 1.5F, 2F, 3F, 4F};
+        float[] ladder = {0.25F, 0.5F, 0.75F, 1F, 1.25F, 1.5F, 2F, 3F, 4F};
         for (int i = 1; i < ladder.length; i++) {
             assertEquals(rates.nextRate(ladder[i - 1], 1), ladder[i]);
             assertEquals(rates.nextRate(ladder[i], -1), ladder[i - 1]);
         }
-        assertEquals(rates.nextRate(4F, 1), 4F, "the fastest rate is the limit");
-        assertEquals(rates.nextRate(0F, -1), -0.25F);
-        assertEquals(rates.nextRate(-4F, -1), -4F, "the fastest reverse rate is the limit");
+    }
+
+    /** There is no rate 0 and no reverse: shuttling goes no slower than a quarter and no faster than 4×. */
+    @Test
+    public void staysBetweenAQuarterAndFour() {
+        assertEquals(rates.nextRate(0.25F, -1), 0.25F);
+        assertEquals(rates.nextRate(4F, 1), 4F);
     }
 
     @Test
     public void jumpsSeveralRatesAtOnce() {
-        assertEquals(rates.nextRate(0F, 4), 1F);
-        assertEquals(rates.nextRate(1F, -20), -4F);
+        assertEquals(rates.nextRate(0.25F, 3), 1F);
+        assertEquals(rates.nextRate(1F, -20), 0.25F);
     }
 
+    /** A rate between two of the ladder's goes to the next one either way. */
     @Test
-    public void stopsAtZeroWhenReverseIsNotAllowed() {
-        assertEquals(rates.nextRate(0.25F, -1, false), 0F);
-        assertEquals(rates.nextRate(0F, -1, false), 0F);
-        assertEquals(rates.nextRate(0F, -3, false), 0F);
-        assertEquals(rates.nextRate(1F, -1, false), 0.75F, "forward rates are unaffected");
-        assertEquals(rates.nextRate(0F, 1, false), 0.25F);
+    public void aRateOffTheLadderGoesToTheNextOnIt() {
+        assertEquals(rates.nextRate(1.1F, 1), 1.25F);
+        assertEquals(rates.nextRate(1.1F, -1), 1F);
     }
 }

@@ -30,8 +30,8 @@ import java.util.function.ObjDoubleConsumer;
 
 
 /**
- * Keeps multiple streams in sync, and pauses where playback ends: going forward, at the end of playback it is
- * given (the end of the media) or else at the end of its range; going backward, at the start of its range.
+ * Keeps multiple streams in sync, and pauses where playback ends: at the end of playback it is given (the end of the
+ * media), or else at the end of its range. It plays forward only.
  *
  * <p>The clock has one thread of its own, the clock thread. It ticks there, and tells its listeners of every tick and
  * every change there too, in the order the clock changed, and never while holding the clock's lock: a change made on
@@ -75,10 +75,10 @@ public final class ClockTimer {
     /** Last time in nanoseconds; it is used to calculate the elapsed */
     private double lastTime;
 
-    /** Is the clock stopped */
-    private volatile boolean stopped;
+    /** Whether the clock is paused. */
+    private volatile boolean paused;
 
-    /** The rate factor for the clock updates */
+    /** The rate the clock runs at, or resumes at while paused; never 0. */
     private float rate = 1F;
 
     /** Where playback going forward ends, asked on each tick, or negative to run to the end of the range. */
@@ -110,7 +110,7 @@ public final class ClockTimer {
         lastTime = 0;
         minTime = 0;
         maxTime = 0;
-        stopped = true;
+        paused = true;
 
         // A fixed delay, not a fixed rate: ticks missed while a listener was slow are not run back to back, ahead of
         // the changes made meanwhile.
@@ -232,28 +232,24 @@ public final class ClockTimer {
         }
     }
 
-  /**
-   * Sets the update rate for the clock.
-   *
-   * <p>IMPORTANT: Setting the rate to 0 will stop the clock and fires a
-   * notify stop event.
-   *
-   * @param newRate New update rate
-   */
-  public void setRate(float newRate) {
-      synchronized (lock) {
+    /**
+     * Sets the rate: a running clock carries on at it, and a paused one stays paused until started. The clock plays
+     * forward only, so the rate is never 0 or negative; a clock that should not move is paused, and keeps the rate it
+     * resumes at.
+     *
+     * @param newRate the rate, above 0
+     * @throws IllegalArgumentException if the rate is 0 or negative
+     */
+    public void setRate(final float newRate) {
+        if (!(newRate > 0)) {
+            throw new IllegalArgumentException("The clock plays forward only, not at " + newRate + "x; pause it to stop");
+        }
+        synchronized (lock) {
             logger.debug("Setting Clock Rate to " + newRate + "X");
             updateElapsedTime();
             rate = newRate;
-            // FIRST notify about the rate change
             notifyRate();
-            // SECOND start or stop
-            if (Math.abs(rate) < Math.ulp(1f)) {
-                stop();
-            } else {
-                start();
-            }
-      }
+        }
     }
 
     /**
@@ -262,38 +258,22 @@ public final class ClockTimer {
      */
     public void start() {
         synchronized (lock) {
-            if (stopped) {
+            if (paused) {
                 logger.debug("Starting Clock");
-                stopped = false;
+                paused = false;
                 lastTime = System.nanoTime();
                 notifyStart();
             }
         }
     }
 
-    private void stop() {
-        synchronized (lock) {
-            if (!stopped) {
-                logger.debug("Stopping Clock");
-                updateElapsedTime();
-                stopped = true;
-                notifyStop();
-                // Force sync after a stop
-                notifyForceSync();
-            }
-        }
-    }
-
     /**
-     * If the clock is not stopped, then this pause the clock and fires a notify
-     * pause event with the current clock time
-     *
-     * WARNING: If you want to influence the rate as well you need to set the rate to 0
-     * instead of calling stop directly!
+     * If the clock is running, pauses it where it is and tells the listeners; it keeps its rate, which starting it
+     * again resumes at.
      */
     public void pause() {
         synchronized (lock) {
-            if (!stopped) {
+            if (!paused) {
                 updateElapsedTime();
                 pauseAt(clockTime);
             }
@@ -303,10 +283,10 @@ public final class ClockTimer {
     /** Pauses the running clock at a time, and tells the listeners once. Called under the lock. */
     private void pauseAt(final double time) {
         logger.debug("Pausing Clock at " + time);
-        stopped = true;
+        paused = true;
         clockTime = time;
         notifyPause();
-        // Force sync after a stop
+        // Force sync after a pause
         notifyForceSync();
     }
 
@@ -326,29 +306,16 @@ public final class ClockTimer {
      * @param end where playback going forward ends, or negative for the end of the range
      */
     private void pauseAtEnd(final long end) {
-        if (stopped) {
+        if (paused) {
             return;
         }
-        if (rate > 0 && end >= 0 && clockTime >= end) {
+        if (end >= 0 && clockTime >= end) {
             logger.info("Pausing at the end of the media, " + end);
             pauseAt((double) end);
-        } else if (atEdge(clockTime, rate, minTime, maxTime)) {
-            logger.info("Pausing at the edge of the timeline, " + clockTime);
+        } else if (clockTime >= maxTime) {
+            logger.info("Pausing at the end of the timeline, " + clockTime);
             pauseAt(clockTime);
         }
-    }
-
-    /**
-     * Returns whether playback has run into the edge of the range it is heading for: the end going forward, or the
-     * start going backward. Playback starting at either edge and heading away from it carries on.
-     *
-     * @param time the clock's time
-     * @param rate the clock's rate
-     * @param min  the start of the range
-     * @param max  the end of the range
-     */
-    static boolean atEdge(final double time, final float rate, final long min, final long max) {
-        return rate > 0 ? time >= max : rate < 0 && time <= min;
     }
 
     /**
@@ -364,22 +331,13 @@ public final class ClockTimer {
     /** Returns the clock's time, rate and whether it is paused, read at one moment. */
     public Reading read() {
         synchronized (lock) {
-            return new Reading(toRange((long) clockTime), rate, stopped);
+            return new Reading(toRange((long) clockTime), rate, paused);
         }
     }
 
-    /**
-     * Returns true if clock is Paused.
-     */
+    /** Returns whether the clock is paused, as a new clock is. */
     public boolean isPaused() {
-        return stopped;
-    }
-
-    /**
-     * Returns true if clock is stopped.
-     */
-    public boolean isStopped() {
-        return getRate() == 0f;
+        return paused;
     }
 
     /**
@@ -397,7 +355,7 @@ public final class ClockTimer {
 
     /**
      * Stops the clock for good, as its spreadsheet closes: it ticks no more, its listeners are told the changes made
-     * before closing, such as playback stopping, and then nothing more. Closing waits briefly for them to be told, and
+     * before closing, such as playback pausing, and then nothing more. Closing waits briefly for them to be told, and
      * drops what is left if a listener is slow.
      */
     public void close() {
@@ -441,7 +399,7 @@ public final class ClockTimer {
     private void updateElapsedTime() {
         synchronized (lock) {
             double newTime = (double) System.nanoTime();
-            clockTime = stopped ? clockTime : Math.min(Math.max(
+            clockTime = paused ? clockTime : Math.min(Math.max(
                     clockTime + rate * (newTime - lastTime) / NANO_IN_MILLI, (double) minTime), (double) maxTime);
             lastTime = newTime;
         }
@@ -457,12 +415,12 @@ public final class ClockTimer {
         while (true) {
             synchronized (lock) {
                 updateElapsedTime();
-                if (asked || stopped || rate <= 0) {
+                if (asked || paused) {
                     pauseAtEnd(end);
                     break;
                 }
             }
-            // Playing forward: ask where playback ends, outside the lock as it reads the media columns, then judge
+            // Playing: ask where playback ends, outside the lock as it reads the media columns, then judge
             // again, as the clock may have changed meanwhile. Not asked while paused, as it mostly is.
             end = askPlaybackEnd();
             asked = true;
@@ -533,10 +491,6 @@ public final class ClockTimer {
         post(ClockListener::clockStart);
     }
 
-    private void notifyStop() {
-        post(ClockListener::clockStop);
-    }
-
     private void notifyPause() {
         post(ClockListener::clockPause);
     }
@@ -556,7 +510,7 @@ public final class ClockTimer {
         void clockTick(double clockTime);
 
         /**
-         * Called when the time is set, as by a jump or a stop, which listeners must follow at once.
+         * Called when the time is set, as by a jump or a pause, which listeners must follow at once.
          *
          * @param clockTime Current time in milliseconds
          */
@@ -568,13 +522,6 @@ public final class ClockTimer {
          * @param clockTime Current time in milliseconds
          */
         void clockStart(double clockTime);
-
-        /**
-         * Called when the clock stops.
-         *
-         * @param clockTime Current time in milliseconds
-         */
-        void clockStop(double clockTime);
 
         /**
          * Called when the clock pauses.

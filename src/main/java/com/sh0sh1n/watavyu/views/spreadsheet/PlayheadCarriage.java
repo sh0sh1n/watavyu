@@ -58,7 +58,7 @@ public final class PlayheadCarriage extends JComponent implements VideoControlle
     }
 
     /** What the playhead shows, set by the clock thread and the EDT as one, so a time never shows with another's rate. */
-    private volatile Reading reading = new Reading(0, "stopped", false);
+    private volatile Reading reading = new Reading(0, "paused 1×", false);
 
     /**
      * Whether the user holds the needle. The sheet does not follow it meanwhile: the time under the pointer depends on

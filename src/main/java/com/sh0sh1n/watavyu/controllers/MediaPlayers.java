@@ -553,11 +553,6 @@ public final class MediaPlayers implements DataStoreListener, ClockTimer.ClockLi
     }
 
     @Override
-    public void clockStop(final double clockTime) {
-        play((long) clockTime);
-    }
-
-    @Override
     public void clockPause(final double clockTime) {
         play((long) clockTime);
     }

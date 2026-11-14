@@ -22,8 +22,10 @@ import java.util.function.Consumer;
 /**
  * Watavyu's playback contract on top of a {@link PlaybackEngine}.
  *
- * Methods may be called from any thread (Swing EDT, clock timer threads) and never block:
- * engine commands are queued on {@code engineThread}. While paused, the position is a frame
+ * Methods may be called from any thread (Swing EDT, clock timer threads) and never wait on the
+ * engine: engine commands are queued on {@code engineThread}. Playing, pausing, stepping and seeking
+ * take a lock of their own for the moment they change the position, so a step on one thread and a
+ * pause on another, as a jog while playing makes, cannot interleave and lose the step. While paused, the position is a frame
  * of the {@link FrameIndex}, reported in whole milliseconds. Seeks requested faster than the
  * engine thread runs them are coalesced so that only the latest target is decoded.
  *
@@ -38,6 +40,9 @@ public final class JavaFxPlayback {
 
     /** Increments whenever the paused position is set explicitly. */
     private final AtomicLong positionVersion = new AtomicLong();
+
+    /** Held by callers while they play, pause, step or seek, so those changes happen one at a time. */
+    private final Object lock = new Object();
 
     private volatile boolean playing;
     private volatile boolean disposed;
@@ -121,36 +126,42 @@ public final class JavaFxPlayback {
 
     /** Shows the frame on screen at the given time, clamped to the stream. */
     public void seek(final long millis) {
-        seekFrame(frames.frameAt((double) millis));
+        synchronized (lock) {
+            seekFrame(frames.frameAt((double) millis));
+        }
     }
 
     public void play() {
-        if (disposed || playing) {
-            return;
+        synchronized (lock) {
+            if (disposed || playing) {
+                return;
+            }
+            playing = true;
+            float playRate = requestedRate;
+            // AVFoundation resets the rate to 1 when playback starts, so set it afterwards.
+            onEngine(() -> {
+                engine.play();
+                engine.setRate(playRate);
+            });
         }
-        playing = true;
-        float playRate = requestedRate;
-        // AVFoundation resets the rate to 1 when playback starts, so set it afterwards.
-        onEngine(() -> {
-            engine.play();
-            engine.setRate(playRate);
-        });
     }
 
     public void pause() {
-        if (disposed || !playing) {
-            return;
-        }
-        playing = false;
-        long version = positionVersion.incrementAndGet();
-        frame = frames.frameAt(engine.currentTimeMillis());
-        onEngine(() -> {
-            engine.pause();
-            // Keep a seek requested after this pause; otherwise record where playback stopped.
-            if (!playing && positionVersion.get() == version) {
-                frame = frames.frameAt(engine.currentTimeMillis());
+        synchronized (lock) {
+            if (disposed || !playing) {
+                return;
             }
-        });
+            playing = false;
+            long version = positionVersion.incrementAndGet();
+            frame = frames.frameAt(engine.currentTimeMillis());
+            onEngine(() -> {
+                engine.pause();
+                // Keep a seek requested after this pause; otherwise record where playback stopped.
+                if (!playing && positionVersion.get() == version) {
+                    frame = frames.frameAt(engine.currentTimeMillis());
+                }
+            });
+        }
     }
 
     /**
@@ -171,13 +182,17 @@ public final class JavaFxPlayback {
     }
 
     public void stepForward() {
-        pause();
-        seekFrame(frame + 1);
+        synchronized (lock) {
+            pause();
+            seekFrame(frame + 1);
+        }
     }
 
     public void stepBackward() {
-        pause();
-        seekFrame(frame - 1);
+        synchronized (lock) {
+            pause();
+            seekFrame(frame - 1);
+        }
     }
 
     /**
@@ -199,6 +214,7 @@ public final class JavaFxPlayback {
         engineThread.execute(engine::dispose);
     }
 
+    /** Shows a frame, clamped to the stream. Called with the lock held. */
     private void seekFrame(final int requested) {
         if (disposed) {
             return;

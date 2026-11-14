@@ -13,19 +13,19 @@ import com.sh0sh1n.watavyu.util.ClockTimer;
 import org.testng.annotations.Test;
 
 import java.util.List;
+import javax.swing.SwingUtilities;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 public class VideoControllerTimeTest {
 
-    /** The playhead shows the rate as a decimal while playing, and says when playback is paused or stopped. */
+    /** The playhead shows the rate as a decimal while playing, and says when playback is paused. */
     @Test
     public void thePlayheadShowsTheRate() {
         assertEquals(VideoController.rateText(1F, false), "1×");
         assertEquals(VideoController.rateText(1.25F, false), "1.25×");
         assertEquals(VideoController.rateText(0.75F, true), "paused 0.75×");
-        assertEquals(VideoController.rateText(0F, true), "stopped");
     }
 
     /** Moving the clock moves the playhead, as soon as the clock's thread tells it the new time. */
@@ -62,6 +62,7 @@ public class VideoControllerTimeTest {
         try {
             clock.setForceTime(2_000);
             clock.setRate(2f);
+            clock.start();
 
             long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
             while (!clock.isPaused() && System.nanoTime() < deadline) {
@@ -70,21 +71,229 @@ public class VideoControllerTimeTest {
             assertTrue(clock.isPaused(), "paused, at " + clock.getClockTime());
             assertEquals(clock.getClockTime(), 2_150.0);
         } finally {
-            controller.stopAction();
+            controller.pause();
         }
     }
 
-    /** Shuttling forward at time zero plays faster, as it does anywhere else (B7). */
+    /** Shuttling forward at time zero, then playing, plays faster, as it does anywhere else (B7). */
     @Test
-    public void shuttlingAtTimeZeroPlays() {
+    public void shuttlingAtTimeZeroPlaysFaster() {
         VideoController controller = TestSpreadsheets.withPlayback(DataStoreFactory.newDataStore()).getVideoController();
         try {
             controller.shuttleForwardAction();
+            controller.playPauseAction();
             assertEquals(controller.getClockTimer().getRate(), 1.25F);
             assertEquals(controller.getClockTimer().isPaused(), false);
         } finally {
-            controller.stopAction();
+            controller.pause();
         }
+    }
+
+    /** Play or pause pauses playback, and resumes it at the rate it paused at; a new spreadsheet plays at 1×. */
+    @Test
+    public void playOrPauseResumesAtThePausedRate() {
+        VideoController controller = TestSpreadsheets.withPlayback(DataStoreFactory.newDataStore()).getVideoController();
+        ClockTimer clock = controller.getClockTimer();
+        try {
+            controller.playPauseAction();
+            assertEquals(clock.isPaused(), false);
+            assertEquals(clock.getRate(), 1F, "a new spreadsheet plays at 1×");
+
+            controller.shuttleForwardAction();
+            controller.playPauseAction();
+            assertEquals(clock.isPaused(), true);
+            assertEquals(clock.getRate(), 1.25F, "pausing keeps the rate");
+
+            controller.playPauseAction();
+            assertEquals(clock.isPaused(), false);
+            assertEquals(clock.getRate(), 1.25F, "playing resumes at it");
+        } finally {
+            controller.pause();
+        }
+    }
+
+    /** Reset sets the rate back to 1×, and neither starts nor pauses playback. */
+    @Test
+    public void resetSetsTheRateToOneWithoutStartingOrPausing() {
+        VideoController controller = TestSpreadsheets.withPlayback(DataStoreFactory.newDataStore()).getVideoController();
+        ClockTimer clock = controller.getClockTimer();
+        try {
+            controller.playPauseAction();
+            controller.shuttleForwardAction();
+            controller.shuttleForwardAction();
+            controller.resetRateAction();
+            assertEquals(clock.getRate(), 1F);
+            assertEquals(clock.isPaused(), false, "playing carries on");
+
+            controller.shuttleForwardAction();
+            controller.pause();
+            controller.resetRateAction();
+            assertEquals(clock.getRate(), 1F);
+            assertEquals(clock.isPaused(), true, "paused stays paused");
+        } finally {
+            controller.pause();
+        }
+    }
+
+    /** Shuttling changes the rate only: paused stays paused, and playing carries on at the new rate. */
+    @Test
+    public void shuttlingOnlyChangesTheRate() {
+        VideoController controller = TestSpreadsheets.withPlayback(DataStoreFactory.newDataStore()).getVideoController();
+        ClockTimer clock = controller.getClockTimer();
+        try {
+            controller.shuttleBackAction();
+            assertEquals(clock.isPaused(), true, "paused stays paused");
+            assertEquals(clock.getRate(), 0.75F);
+
+            controller.playPauseAction();
+            controller.shuttleForwardAction();
+            assertEquals(clock.isPaused(), false, "playing carries on");
+            assertEquals(clock.getRate(), 1F);
+        } finally {
+            controller.pause();
+        }
+    }
+
+    /**
+     * A jog while playing pauses and steps a frame, as one while paused steps: with no video open, by a 30th of a
+     * second, to a frame marker (a multiple of 34 ms).
+     */
+    @Test
+    public void joggingWhilePlayingPausesAndSteps() {
+        VideoController controller = TestSpreadsheets.withPlayback(DataStoreFactory.newDataStore()).getVideoController();
+        ClockTimer clock = controller.getClockTimer();
+        try {
+            controller.setCurrentTime(10_000);
+            controller.playPauseAction();
+            controller.jogForwardAction();
+            assertEquals(clock.isPaused(), true);
+            long forward = controller.getCurrentTime();
+            assertEquals(forward % 34, 0L);
+            assertTrue(forward > 10_000L, "stepped forward to " + forward);
+
+            controller.playPauseAction();
+            controller.jogBackAction();
+            assertEquals(clock.isPaused(), true);
+            long back = controller.getCurrentTime();
+            assertEquals(back % 34, 0L);
+            assertTrue(back < forward + 1_000L, "stepped back to " + back);
+
+            controller.jogBackAction();
+            assertEquals(controller.getCurrentTime(), back - 34, "paused, a jog steps");
+        } finally {
+            controller.pause();
+        }
+    }
+
+    /**
+     * A jog while playing ends with a forced time at the step, told after the pause's own, so a player told of the
+     * pause after it stepped is taken to the step rather than left where playback paused.
+     */
+    @Test
+    public void aJogWhilePlayingTellsThePlayersTheStepLast() throws InterruptedException {
+        VideoController controller = TestSpreadsheets.withPlayback(DataStoreFactory.newDataStore()).getVideoController();
+        ClockTimer clock = controller.getClockTimer();
+        List<Long> forced = new CopyOnWriteArrayList<>();
+        CountDownLatch told = new CountDownLatch(1);
+        try {
+            controller.setCurrentTime(10_000);
+            controller.playPauseAction();
+            clock.registerListener(new ClockTimer.ClockListener() {
+                @Override
+                public void clockTick(final double clockTime) {
+                    // Not followed.
+                }
+
+                @Override
+                public void clockForceSync(final double clockTime) {
+                    forced.add((long) clockTime);
+                    if (forced.size() == 2) {
+                        told.countDown();
+                    }
+                }
+
+                @Override
+                public void clockStart(final double clockTime) {
+                    // Not followed.
+                }
+
+                @Override
+                public void clockPause(final double clockTime) {
+                    // Not followed.
+                }
+
+                @Override
+                public void clockRate(final float rate) {
+                    // Not followed.
+                }
+            });
+
+            controller.jogForwardAction();
+
+            assertTrue(told.await(5, TimeUnit.SECONDS), "forced: " + forced);
+            // The pause's may be told before the step is made, with the time it paused at; the last is the step's.
+            assertEquals(forced.get(forced.size() - 1), (Long) controller.getCurrentTime(), "forced: " + forced);
+        } finally {
+            controller.pause();
+        }
+    }
+
+    /** The play key shows pause while playing, and play once paused, however the clock paused. */
+    @Test
+    public void thePlayKeyShowsWhatPressingItDoes() throws Exception {
+        VideoController controller = TestSpreadsheets.withPlayback(DataStoreFactory.newDataStore()).getVideoController();
+        KeypadKey play = (KeypadKey) find(controller.getControls(), "playPauseButton");
+        try {
+            assertEquals(play.getGlyph(), Glyph.Shape.PLAY);
+
+            controller.playPauseAction();
+            awaitGlyph(play, Glyph.Shape.PAUSE);
+
+            controller.playPauseAction();
+            awaitGlyph(play, Glyph.Shape.PLAY);
+
+            controller.setCurrentTime(VideoController.MINIMUM_TIMELINE_END - 100);
+            controller.playPauseAction();
+            awaitGlyph(play, Glyph.Shape.PAUSE);
+            awaitGlyph(play, Glyph.Shape.PLAY);
+            assertTrue(controller.getClockTimer().isPaused(), "paused at the end of the timeline");
+        } finally {
+            controller.pause();
+        }
+    }
+
+    private static void awaitGlyph(final KeypadKey key, final Glyph.Shape shape) throws Exception {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+        String label = shape == Glyph.Shape.PLAY ? "play" : "pause";
+        Glyph.Shape[] shown = new Glyph.Shape[1];
+        String[] text = new String[1];
+        do {
+            SwingUtilities.invokeAndWait(() -> {
+                shown[0] = key.getGlyph();
+                text[0] = key.getText();
+            });
+            if (shown[0] == shape && label.equals(text[0])) {
+                return;
+            }
+            Thread.sleep(5);
+        } while (System.nanoTime() < deadline);
+        assertEquals(shown[0], shape);
+        assertEquals(text[0], label);
+    }
+
+    private static java.awt.Component find(final java.awt.Container container, final String name) {
+        for (java.awt.Component child : container.getComponents()) {
+            if (name.equals(child.getName())) {
+                return child;
+            }
+            if (child instanceof java.awt.Container inner) {
+                java.awt.Component found = find(inner, name);
+                if (found != null) {
+                    return found;
+                }
+            }
+        }
+        return null;
     }
 
     /** Jogging steps by the highest frame rate of the open video; with only audio open, by 30 frames a second. */
