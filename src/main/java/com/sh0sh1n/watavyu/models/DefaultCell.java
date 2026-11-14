@@ -58,9 +58,14 @@ public class DefaultCell implements Cell {
         }
     }
 
-    /** A media column's cell, which plays a clip from its onset for the clip's duration. */
+    /**
+     * A media column's cell, which plays a clip from its onset for the clip's duration. A new clip is not selected, so
+     * adding media leaves the selection as it was.
+     */
     DefaultCell(final Column parent, final long onset, final MediaClip clip) {
         this(parent, 0);
+        this.selected = false;
+        this.highlighted = false;
         this.clip = clip;
         this.onset = Timestamp.requireNotNegative(onset);
         this.offset = onset + clip.duration();

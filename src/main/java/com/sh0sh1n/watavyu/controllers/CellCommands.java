@@ -66,8 +66,8 @@ public final class CellCommands {
     /**
      * Tells whether the cell commands act on a column. They act only on shown columns (owner, B22). Hiding deselects
      * a column and its cells, so the selection is always shown; what the spreadsheet remembers is checked here: a
-     * hidden column takes no new cell though it was the one last given a cell, and the cells last selected in it are
-     * not timed or closed.
+     * hidden column takes no new cell though it was the one last given a cell, and the cell last selected in it is
+     * not closed.
      *
      * @param column a column
      * @return whether it is shown
@@ -168,11 +168,17 @@ public final class CellCommands {
 
     /** Makes a point cell in a column, which is then the one last given a cell, and records it; null if refused. */
     private Cell newCellIn(final Column column, final long time) {
-        Cell cell = createPointCell(column, time);
-        if (cell != null) {
-            dataStore().deselectAll();
-            cell.setHighlighted(true);
-        }
+        return refusesCells(column) ? null : selectNewCell(column, time);
+    }
+
+    /** Makes a point cell in a column that takes it, selected alone with its column, and records it. */
+    private Cell selectNewCell(final Column column, final long time) {
+        // The selection is cleared first, so the views see the new cell selected alone, in its selected column, when
+        // it is made.
+        dataStore().deselectAll();
+        column.setSelected(true);
+        Cell cell = addPointCell(column, time);
+        cell.setHighlighted(true);
         return cell;
     }
 
@@ -186,11 +192,16 @@ public final class CellCommands {
         return dataStore().contains(cell);
     }
 
-    private Cell createPointCell(final Column column, final long time) {
-        // A hidden column refuses quietly: it cannot be seen to.
-        if (!inSpreadsheet(column) || !takesCells(column) || column.refusesEdits()) {
-            return null;
-        }
+    /**
+     * Tells whether a column refuses a new cell: it has gone from the spreadsheet, is a media column or hidden, which
+     * refuse quietly, as they cannot be seen to, or is locked, which shows its lock.
+     */
+    private boolean refusesCells(final Column column) {
+        return !inSpreadsheet(column) || !takesCells(column) || column.refusesEdits();
+    }
+
+    /** Makes a point cell in a column that takes it, which is then the one last given a cell, and records it. */
+    private Cell addPointCell(final Column column, final long time) {
         logger.info("New cell in " + column.getName() + " at " + time);
         Cell cell = column.createPointCell(time);
         spreadsheet.setLastCreatedCell(cell);
@@ -219,6 +230,12 @@ public final class CellCommands {
             if (column.isMedia() || column.refusesEdits()) {
                 continue;
             }
+            if (made.isEmpty()) {
+                // The new cells are selected in place of their sources, each with its column; making none leaves
+                // the selection as it was.
+                dataStore().deselectAll();
+            }
+            column.setSelected(true);
             Cell cell = column.createPointCell(source.getOnset());
             cell.setOffset(source.getOffset());
             spreadsheet.setLastCreatedCell(cell);
@@ -238,51 +255,37 @@ public final class CellCommands {
      * @return the new cell, or null in a media column, a hidden or locked one or one with no codes
      */
     public Cell newCellTyped(final Column column, final char typed, final long time) {
-        if (!inSpreadsheet(column) || !takesCells(column) || column.refusesEdits()) {
-            return null;
-        }
-        if (column.getCodes().isEmpty()) {
+        if (refusesCells(column) || column.getCodes().isEmpty()) {
             // A column with no codes holds timing only, with nowhere to put the key.
             return null;
         }
-        Cell cell = createPointCell(column, time);
-        if (cell != null) {
-            cell.setValue(0, String.valueOf(typed));
-        }
+        Cell cell = selectNewCell(column, time);
+        cell.setValue(0, String.valueOf(typed));
         return cell;
     }
 
     /**
-     * Set Onset: sets the onset of the selected cells, or with none selected the cells last selected, except those in
-     * locked columns; each is an edit of its own in the undo history.
+     * Set Onset: sets the onset of the selected cells, except those in locked columns; with none selected, nothing
+     * changes. Each is an edit of its own in the undo history.
      *
      * @param time the new onset
      */
     public void setOnsets(final long time) {
-        for (Cell cell : cellsToTime()) {
+        for (Cell cell : selectedCells()) {
             CellTimes.setOnset(spreadsheet, cell, time);
         }
     }
 
     /**
-     * Set Offset: sets the offset of the selected cells, or with none selected the cells last selected, except those in
-     * locked columns and clips, whose offset follows from their onset and length; each is an edit of its own.
+     * Set Offset: sets the offset of the selected cells, except those in locked columns and clips, whose offset
+     * follows from their onset and length; with none selected, nothing changes. Each is an edit of its own.
      *
      * @param time the new offset
      */
     public void setOffsets(final long time) {
-        for (Cell cell : cellsToTime()) {
+        for (Cell cell : selectedCells()) {
             CellTimes.setOffset(spreadsheet, cell, time);
         }
-    }
-
-    private List<Cell> cellsToTime() {
-        List<Cell> selected = selectedCells();
-        if (!selected.isEmpty()) {
-            return selected;
-        }
-        return spreadsheet.getLastSelectedCells().stream().filter(this::inSpreadsheet)
-            .filter(cell -> shown(cell.getColumn())).distinct().toList();
     }
 
     /** Delete Cells: deletes the selected cells, except those in locked columns, as one edit in the undo history. */
@@ -298,7 +301,8 @@ public final class CellCommands {
         }
         logger.info("Delete cells: " + deleted);
         RemoveCellEdit edit = new RemoveCellEdit(spreadsheet, deleted);
-        dataStore().deselectAll();
+        // The deleted cells' columns stay selected, with no cell (owner, 2026-11-13).
+        dataStore().clearCellSelection();
         spreadsheet.removeCells(deleted);
         record(edit);
     }

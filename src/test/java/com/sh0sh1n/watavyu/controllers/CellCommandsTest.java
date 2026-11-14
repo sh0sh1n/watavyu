@@ -180,7 +180,6 @@ public class CellCommandsTest {
     public void aDeletedColumnsCellsAreNotTimed() {
         Cell gone = speech.createPointCell(1_000);
         spreadsheet.setLastSelectedCell(gone);
-        spreadsheet.setLastSelectedCells(List.of(gone));
         dataStore.removeColumn(speech);
         dataStore.deselectAll();
 
@@ -196,13 +195,11 @@ public class CellCommandsTest {
         spreadsheet.setLastCreatedColumn(gaze);
         Cell cell = cells.newCell(1_000);
         spreadsheet.setLastSelectedCell(cell);
-        spreadsheet.setLastSelectedCells(List.of(cell));
 
         undo();
 
         assertNull(spreadsheet.getLastCreatedCell());
         assertNull(spreadsheet.getLastSelectedCell());
-        assertTrue(spreadsheet.getLastSelectedCells().isEmpty());
     }
 
     @Test
@@ -359,6 +356,47 @@ public class CellCommandsTest {
         assertTrue(speech.getCells().isEmpty());
     }
 
+    /** New Cell to Left or Right selects the new cells, each with its column, in place of their sources. */
+    @Test
+    public void newCellsBesideAreSelectedInPlaceOfTheirSources() {
+        Cell source = gaze.createPointCell(1_000);
+        dataStore.deselectAll();
+        source.setSelected(true);
+        gaze.setSelected(true);
+
+        Cell made = cells.newCellsBeside(ArrayDirection.RIGHT).get(0);
+
+        assertTrue(made.isSelected());
+        assertTrue(speech.isSelected(), "with its column");
+        assertFalse(source.isSelected());
+        assertFalse(gaze.isSelected());
+    }
+
+    /** New Cell selects the new cell alone, with its column; Delete leaves the column selected, with no cell. */
+    @Test
+    public void aNewCellIsSelectedWithItsColumnAndDeletingItLeavesTheColumn() {
+        Cell other = speech.createPointCell(500);
+        other.setSelected(true);
+        speech.setSelected(true);
+        spreadsheet.setLastCreatedColumn(gaze);
+
+        Cell made = cells.newCell(1_000);
+
+        assertTrue(made.isSelected());
+        assertTrue(gaze.isSelected());
+        assertFalse(other.isSelected());
+        assertFalse(speech.isSelected());
+
+        cells.deleteSelected();
+        assertTrue(gaze.getCells().isEmpty());
+        assertTrue(gaze.isSelected(), "the column stays selected");
+
+        undo();
+        spreadsheet.getUndoManager().redo();
+        assertTrue(gaze.getCells().isEmpty());
+        assertTrue(gaze.isSelected(), "redoing the delete leaves it selected too");
+    }
+
     @Test
     public void newCellsBesideStopAtTheEdgeAndAtLockedAndMediaColumns() throws Exception {
         Cell source = gaze.createPointCell(1_000);
@@ -479,7 +517,6 @@ public class CellCommandsTest {
         Cell cell = gaze.createPointCell(1_000);
         dataStore.deselectAll();
         cell.setSelected(true);
-        spreadsheet.setLastSelectedCells(List.of(cell));
         cells.deleteSelected();
 
         cells.setOnsets(3_000);
@@ -489,33 +526,18 @@ public class CellCommandsTest {
         assertFalse(spreadsheet.getUndoManager().canUndo());
     }
 
+    /** Set Onset and Set Offset time the selected cells only; with none selected, nothing is timed. */
     @Test
-    public void withNothingSelectedTheCellsLastSelectedAreTimed() {
+    public void withNothingSelectedNothingIsTimed() {
         Cell cell = gaze.createPointCell(1_000);
-        spreadsheet.setLastSelectedCells(List.of(cell));
+        cell.setSelected(false);
 
         cells.setOnsets(3_000);
+        cells.setOffsets(4_000);
 
-        assertEquals(cell.getOnset(), 3_000);
-    }
-
-    /** B22: the cells last selected in a column hidden since are not timed, as they cannot be seen. */
-    @Test
-    public void cellsLastSelectedInAHiddenColumnAreNotTimed() {
-        Cell hidden = gaze.createPointCell(1_000);
-        Cell shown = speech.createPointCell(1_000);
-        spreadsheet.setLastSelectedCells(List.of(hidden, shown));
-        spreadsheet.columns().hide(List.of(gaze));
-        // A new cell starts selected; with nothing selected, the cells last selected are timed.
-        shown.setSelected(false);
-
-        cells.setOnsets(5_000);
-        cells.setOffsets(6_000);
-
-        assertEquals(hidden.getOnset(), 1_000);
-        assertEquals(hidden.getOffset(), 1_000);
-        assertEquals(shown.getOnset(), 5_000);
-        assertEquals(shown.getOffset(), 6_000);
+        assertEquals(cell.getOnset(), 1_000);
+        assertEquals(cell.getOffset(), 1_000);
+        assertFalse(spreadsheet.getUndoManager().canUndo(), "nothing was recorded");
     }
 
     /** Redoing a new column puts it back selected; hidden since, it is not where the keypad's New Cell goes. */
