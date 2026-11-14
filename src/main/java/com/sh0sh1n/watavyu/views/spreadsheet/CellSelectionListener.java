@@ -44,6 +44,14 @@ public interface CellSelectionListener {
     void setHighlightedCell(Cell cell);
 
     /**
+     * Takes a cell out of the selection, and out of what the spreadsheet remembers as selected, as on a ⌘-click on a
+     * selected cell or on deleting it.
+     *
+     * @param cell the cell
+     */
+    void removeCellFromSelection(Cell cell);
+
+    /**
      * Notifiers the listeners to clear all the currently selected cells.
      */
     void clearCellSelection();

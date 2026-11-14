@@ -187,4 +187,12 @@ public class CellTest {
         verify(listener, times(1)).contentChanged();
         assertThrows(IllegalStateException.class, () -> model.setClipFile(Cell.ClipFile.FAILED));
     }
+
+    /** A new clip is not selected, so adding media leaves the selection as it was; a new cell is. */
+    @Test
+    public void aNewClipIsNotSelected() throws Exception {
+        Cell clip = ds.createMediaColumn("media_1").createClip(0, MediaClip.of("/study/cam.mp4"));
+        assertFalse(clip.isSelected());
+        assertFalse(clip.isHighlighted());
+    }
 }

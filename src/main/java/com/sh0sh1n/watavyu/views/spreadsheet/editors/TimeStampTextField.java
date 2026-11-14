@@ -16,7 +16,6 @@ package com.sh0sh1n.watavyu.views.spreadsheet.editors;
 
 import com.sh0sh1n.watavyu.controllers.ProjectController;
 import com.sh0sh1n.watavyu.models.Cell;
-import com.sh0sh1n.watavyu.models.Column;
 import com.sh0sh1n.watavyu.views.spreadsheet.SecondaryClick;
 import com.sh0sh1n.watavyu.views.spreadsheet.editors.TimeStampDataValueEditor.TimeStampSource;
 
@@ -35,16 +34,9 @@ public final class TimeStampTextField extends JTextField
         implements FocusListener, KeyListener {
 
     /**
-     * The parent cell for this JPanel.
-     */
-    private Cell parentCell;
-    /**
      * The editors that make up the representation of the data.
      */
     private TimeStampDataValueEditor myEditor;
-
-    /** The spreadsheet the cell is in */
-    private final ProjectController controller;
 
     /**
      * Creates a new instance of MatrixV.
@@ -56,8 +48,6 @@ public final class TimeStampTextField extends JTextField
     public TimeStampTextField(final ProjectController controller, final Cell cell, final TimeStampSource tsType) {
         super();
 
-        this.controller = controller;
-        parentCell = cell;
         myEditor = new TimeStampDataValueEditor(controller, this, cell, tsType);
 
         setValue();
@@ -132,17 +122,6 @@ public final class TimeStampTextField extends JTextField
     // *************************************************************************
     @Override
     public void focusGained(final FocusEvent fe) {
-        // We need to remember which cell should be duplicated if the user
-        // presses the enter key or selects New Cell from the menu.
-        if (parentCell != null) {
-            // method names don't reflect usage - we didn't really create this
-            // cell just now.
-            Column var = controller.getDataStore().getColumn(parentCell);
-
-            controller.setLastCreatedColumn(var);
-            controller.setLastSelectedCell(parentCell);
-        }
-
         myEditor.focusGained(fe);
     }
 

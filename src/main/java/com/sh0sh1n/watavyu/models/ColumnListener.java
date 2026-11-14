@@ -82,4 +82,12 @@ public interface ColumnListener {
     /** A change to the column was refused because it is locked. */
     default void editRefused() {
     }
+
+    /**
+     * The column has been selected or deselected.
+     *
+     * @param selected whether the column is now selected
+     */
+    default void selectionChanged(final boolean selected) {
+    }
 }

@@ -136,7 +136,8 @@ public final class SpreadsheetColumn extends JLabel implements ColumnListener, M
         setFont(SpreadsheetTheme.headerFont());
         setBackground(SpreadsheetTheme.PALETTE.chrome());
         setForeground(SpreadsheetTheme.PALETTE.text());
-        setBorder(headerBorder(false));
+        selected = var.isSelected();
+        setBorder(headerBorder(selected));
         setMinimumSize(this.getHeaderSize());
         setPreferredSize(this.getHeaderSize());
         setMaximumSize(this.getHeaderSize());
@@ -164,12 +165,13 @@ public final class SpreadsheetColumn extends JLabel implements ColumnListener, M
     }
 
     /**
-     * Selects a cell of this column, and only it and this column, in command mode: the sheet takes the focus, and the
-     * editor goes over the cell without it. New Cell from the menu then goes to this column.
+     * Selects a cell of this column, and only it and this column, scrolled into sight, with the editor waiting over
+     * it; the keyboard stays where it is. New Cell from the menu then goes to this column. The selection is the
+     * sheet's to change, as here, and does not follow the focus.
      *
      * @param cell a cell of this column
      */
-    void selectInCommandMode(final Cell cell) {
+    void select(final Cell cell) {
         columnSelList.clearColumnSelection();
         cellSelList.clearCellSelection();
         setSelected(true);
@@ -178,6 +180,15 @@ public final class SpreadsheetColumn extends JLabel implements ColumnListener, M
         if (controller.getSpreadSheetPanel() != null) {
             controller.getSpreadSheetPanel().reorientView(cell);
         }
+    }
+
+    /**
+     * Selects a cell of this column, as {@link #select}, in command mode: the sheet takes the focus.
+     *
+     * @param cell a cell of this column
+     */
+    void selectInCommandMode(final Cell cell) {
+        select(cell);
         sheet.commandMode();
     }
 
@@ -389,12 +400,8 @@ public final class SpreadsheetColumn extends JLabel implements ColumnListener, M
      * @param isSelected Selected state.
      */
     public void setSelected(final boolean isSelected) {
-        LOGGER.info("select column");
+        // The model tells the header of a change.
         dataColumn.setSelected(isSelected);
-        this.selected = isSelected;
-
-        setBorder(headerBorder(selected));
-        repaint();
     }
 
     /**
@@ -448,15 +455,16 @@ public final class SpreadsheetColumn extends JLabel implements ColumnListener, M
 
     private void focusNextCell() {
         long time = controller.getVideoController().getCurrentTime();
-        for (Cell c : getCellsTemporally()) {
+        List<Cell> cells = getCellsTemporally();
+        for (Cell c : cells) {
             if (c.isInTimeWindow(time)) {
+                // The cell in play is selected alone in this column. The other columns, and where the sheet is
+                // scrolled, are left as they are.
+                if (!c.isSelected() || cells.stream().filter(Cell::isSelected).count() > 1) {
+                    selectInColumn(c);
+                }
                 if (!sheet.inInsertMode()) {
-                    // Outside insert mode the keyboard is left where it is, in command mode or another window: the
-                    // cell in play is selected alone in this column. The other columns, and where the sheet is
-                    // scrolled, are left as they are.
-                    if (!c.isSelected() || getCellsTemporally().stream().filter(Cell::isSelected).count() > 1) {
-                        selectInColumn(c);
-                    }
+                    // Outside insert mode the keyboard is left where it is, in command mode or another window.
                     break;
                 }
                 SpreadsheetCell editor = sheet.edit(c);
@@ -508,10 +516,7 @@ public final class SpreadsheetColumn extends JLabel implements ColumnListener, M
         }
         int pos = sheet.getEditor().filter(editor -> editor.getCell().equals(selected))
                 .map(editor -> editor.getDataView().getEdTracker().indexOfCurrentEditor()).orElse(-1);
-        selected.setHighlighted(false);
-        selected.setSelected(false);
-        next.setHighlighted(true);
-        next.setSelected(true);
+        selectInColumn(next);
         SpreadsheetCell editor = sheet.edit(next);
         EditorTracker tracker = editor.getDataView().getEdTracker();
         tracker.setEditor(tracker.getEditorAtIndex(Math.max(pos, 0)));
@@ -586,23 +591,56 @@ public final class SpreadsheetColumn extends JLabel implements ColumnListener, M
         sheet.redrawColumn(this);
     }
 
-    /** A new cell is drawn, and takes the focus. */
+    /**
+     * A new cell is drawn. The command that made it chose the selection, and the view follows it. The keyboard, the
+     * editor and the scrolling stay where they are, as the cell has no time yet; the commands that go into a new cell
+     * or show it do so themselves ({@link SpreadSheetPanel#editCell}). A hidden column takes no selection (owner,
+     * B22).
+     */
     @Override
     public void cellInserted(final Cell newCell) {
         sheet.watch(newCell);
         sheet.revalidate();
-        sheet.edit(newCell).requestFocus();
+        if (!isVisible() || !newCell.isSelected()) {
+            return;
+        }
+        if (newCell.isHighlighted()) {
+            cellSelList.setHighlightedCell(newCell);
+        }
+        controller.setLastSelectedCell(newCell);
     }
 
-    /** A deleted cell goes from the sheet, and the cell after it in time takes the focus. */
+    /** Returns whether the header shows the column selected. */
+    boolean showsSelected() {
+        return selected;
+    }
+
+    /**
+     * The header shows the column's selection, however it changed. A column selected is the one New Cell from the menu
+     * then goes to.
+     */
+    @Override
+    public void selectionChanged(final boolean isSelected) {
+        selected = isSelected;
+        setBorder(headerBorder(selected));
+        repaint();
+        if (isSelected) {
+            controller.setLastCreatedColumn(dataColumn);
+        }
+    }
+
+    /**
+     * A deleted cell goes from the sheet. Its column's selection is left as the command chose: Delete leaves it
+     * selected with no cell (owner, 2026-11-13). Typing in the cell, the keyboard goes to command mode.
+     */
     @Override
     public void cellRemoved(final Cell deletedCell) {
+        boolean editing = sheet.inInsertMode()
+                && sheet.getEditor().filter(editor -> editor.getCell().equals(deletedCell)).isPresent();
         sheet.unwatch(deletedCell);
-        for (Cell c : getCellsTemporally()) {
-            if (c.getOnset() >= deletedCell.getOnset()) {
-                sheet.edit(c).requestFocus();
-                break;
-            }
+        cellSelList.removeCellFromSelection(deletedCell);
+        if (editing) {
+            sheet.commandMode();
         }
     }
 
