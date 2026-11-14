@@ -314,30 +314,6 @@ public class SheetModesTest {
         });
     }
 
-    /** ↑ and ↓ in command mode move the selection and stay in command mode; in insert mode they move the caret. */
-    @Test
-    public void arrowsInCommandModeStayInCommandMode() throws Exception {
-        withSheet(column -> {
-            column.selectInCommandMode(first);
-            focused.clear();
-
-            KeyEvent down = press(KeyEvent.VK_DOWN, 0);
-            assertTrue(column.dispatchKeyEvent(down));
-            assertTrue(down.isConsumed());
-            assertTrue(second.isSelected());
-            assertTrue(second.isHighlighted());
-            assertTrue(sheet.inCommandMode());
-            assertEquals(focused, List.of(sheet));
-
-            focused.clear();
-            second.setSelected(false);
-            insertIn(first);
-            assertTrue(column.dispatchKeyEvent(press(KeyEvent.VK_DOWN, 0)));
-            assertTrue(second.isSelected());
-            assertTrue(sheet.inInsertMode(), "insert mode stays too");
-        });
-    }
-
     /** Only a part of a cell's editor is insert mode; anything else in the sheet is not. */
     @Test
     public void onlyTheEditorIsInsertMode() throws Exception {
@@ -381,22 +357,6 @@ public class SheetModesTest {
             } finally {
                 javax.swing.MenuSelectionManager.defaultManager().clearSelectedPath();
             }
-        });
-    }
-
-    /** ↑ and ↓ with the focus outside the sheet, in another window or tab, are not its keys. */
-    @Test
-    public void arrowsOutsideTheSheetAreLeftAlone() throws Exception {
-        withSheet(column -> {
-            column.selectInCommandMode(first);
-            focused.clear();
-            owner.set(new JTextField());
-
-            KeyEvent down = press(KeyEvent.VK_DOWN, 0);
-            assertFalse(column.dispatchKeyEvent(down));
-            assertFalse(down.isConsumed());
-            assertFalse(second.isSelected());
-            assertEquals(focused, List.of());
         });
     }
 

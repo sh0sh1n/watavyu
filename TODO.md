@@ -37,14 +37,13 @@ Updated 2026-11-08. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 ## Features
 
-**F7. A vim-like key mapping for laptops.** ready. Replaces the numpad shortcuts so playback, navigation and coding work on a laptop keyboard; the rules are in AGENTS.md › Decisions (2026-11-13, the key mapping). Command and insert modes are in, and the selection no longer follows the focus (BUILDING.md › Application Structure); the rest is a stack, each part pinned by tests:
-1. Navigation: ⌃J ⌃K ⌃H ⌃L, worked out by pure functions over model cells and the playhead's time (`CellNavigation`), with ↑ and ↓ (`SpreadsheetColumn.dispatchKeyEvent`) folded into the same commands.
-2. A key map (`KeyMap`: layer and key to `Command`, defaults in code, checked for conflicts when built) and the default command layer, taking in `i`, Esc and ⌃] (hard-coded for now in `SpreadsheetView.modeKey`, with their own copy of `Shortcuts`' held-key bookkeeping); the Keyboard Shortcuts dialog and the drawer's key labels read it. Command-mode keys act only while the spreadsheet or a media window has the focus, so letters still type in the drawer's fields and the Code Editor; chords act in every window.
-3. Quick mode, replacing the ⌘⇧K toggle and its window title text (`MainWindow.toggleQuickKeys`, `SpreadSheetPanel.dispatchKeyEvent`), with the mode shown in the playhead strip.
-4. Remapping by overrides in Settings, with validation (BUILDING.md › Settings).
-5. Removing the numpad map (`MainWindow.createShortcuts`, the keypad scope in `Shortcuts`).
+**F7. A vim-like key mapping for laptops.** ready. Replaces the numpad shortcuts so playback, navigation and coding work on a laptop keyboard; the rules are in AGENTS.md › Decisions (2026-11-13, the key mapping). Command and insert modes are in, the selection no longer follows the focus, and ⌃J ⌃K ⌃H ⌃L navigate (BUILDING.md › Application Structure); the rest is a stack, each part pinned by tests:
+1. A key map (`KeyMap`: layer and key to `Command`, defaults in code, checked for conflicts when built) and the default command layer, taking in `i`, Esc and ⌃] (hard-coded for now in `SpreadsheetView.modeKey`) and ↑ and ↓ (in `SpreadSheetPanel.takeKey`, as ⌃J and ⌃K while the keyboard is in the sheet), so the dialog lists them (the mode keys, with their own copy of `Shortcuts`' held-key bookkeeping); the Keyboard Shortcuts dialog and the drawer's key labels read it. Command-mode keys act only while the spreadsheet or a media window has the focus, so letters still type in the drawer's fields and the Code Editor; chords act in every window.
+2. Quick mode, replacing the ⌘⇧K toggle and its window title text (`MainWindow.toggleQuickKeys`, `SpreadSheetPanel.dispatchKeyEvent`), with the mode shown in the playhead strip.
+3. Remapping by overrides in Settings, with validation (BUILDING.md › Settings).
+4. Removing the numpad map (`MainWindow.createShortcuts`, the keypad scope in `Shortcuts`).
 
-Holding a navigation chord needs key repeat, so settle B2 alongside. ⌃H is reserved for it (`Shortcuts.RESERVED`); ⌃D, ⌃W, ⌥⌫ and ⌥⌦ stay reserved.
+Holding a navigation chord needs key repeat, so settle B2 alongside. ⌃D, ⌃W, ⌥⌫ and ⌥⌦ stay reserved (`Shortcuts.RESERVED`). Select Column to Left/Right (⌘←, ⌘→) overlaps ⌃H and ⌃L but comes round from the edge and lands on the first cell or keeps the ordinal place: fold it into them or cut it (owner).
 
 **F12. Edit history in the controls drawer.** ready, medium priority (owner). Below the controls, a list of the edits that can be undone and redone, newest first, from the spreadsheet's undo history (`SpreadsheetUndoManager`; each edit has a presentation name, and `SpreadSheetEdit.toString` already formats one with its time). Hiding the drawer hides both, so the space can be reclaimed with one toggle. Datavyu's separate Undo History window was removed in the cleanup; this replaces it.
 

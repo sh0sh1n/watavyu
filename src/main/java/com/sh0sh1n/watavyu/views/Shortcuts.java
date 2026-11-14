@@ -24,12 +24,14 @@ public final class Shortcuts implements KeyEventDispatcher {
     /** Command key, the menu shortcut modifier on macOS. */
     public static final int COMMAND = InputEvent.META_DOWN_MASK;
 
-    private static final int MODIFIERS = InputEvent.SHIFT_DOWN_MASK | InputEvent.CTRL_DOWN_MASK
+    /** The modifiers a key is told apart by. */
+    public static final int MODIFIERS = InputEvent.SHIFT_DOWN_MASK | InputEvent.CTRL_DOWN_MASK
             | InputEvent.META_DOWN_MASK | InputEvent.ALT_DOWN_MASK;
 
     /**
-     * Keys kept free for the configurable key mapping (F7). macOS text fields delete with them (⌃H, ⌃D, ⌃W, ⌥⌫ and
-     * ⌥⌦), so until a shortcut uses one, this dispatcher drops it in every window, with the character it types.
+     * Keys macOS text fields delete with (⌃H, ⌃D, ⌃W, ⌥⌫ and ⌥⌦), which in a cell got past the column lock. Unless a
+     * shortcut uses one, as ⌃H goes to the column to the left, this dispatcher drops it in every window, with the
+     * character it types.
      */
     public static final Set<KeyStroke> RESERVED = Set.of(
             KeyStroke.getKeyStroke(KeyEvent.VK_H, InputEvent.CTRL_DOWN_MASK),
