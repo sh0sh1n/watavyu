@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import javax.swing.JComponent;
 import javax.swing.LookAndFeel;
 import javax.swing.UIManager;
@@ -164,6 +165,34 @@ public class DrawerKeyTest {
         expected.put("createNewCellButton", "");
         expected.put("createNewCellAndSetOffsetButton", "");
         assertEquals(shown, expected);
+    }
+
+    /**
+     * The find key, which with Shift finds the offset field's time, shows the key that finds the offset if none finds
+     * the onset.
+     */
+    @Test
+    public void theFindKeyShowsFindOffsetsKeyWhenFindOnsetHasNone() throws Exception {
+        Map<String, String> shown = new HashMap<>();
+        javax.swing.SwingUtilities.invokeAndWait(() -> {
+            javax.swing.JFrame frame = new javax.swing.JFrame();
+            try {
+                VideoController controller = TestSpreadsheets.mainWindow(frame).selectedController()
+                    .getVideoController();
+                controller.showKeys(command -> command == Command.FIND_OFFSET ? Optional.of("f") : Optional.empty());
+                List<DrawerKey> keys = new ArrayList<>();
+                collect(controller.getControls(), keys);
+                keys.forEach(key -> shown.put(key.getName(), key.getKey()));
+                controller.showKeys(command -> command == Command.FIND_OFFSET ? Optional.of("f")
+                    : command == Command.FIND_ONSET ? Optional.of("g") : Optional.empty());
+                keys.forEach(key -> shown.put(key.getName() + " with both", key.getKey()));
+            } finally {
+                frame.dispose();
+            }
+        });
+        assertEquals(shown.get("findButton"), "f");
+        assertEquals(shown.get("findButton with both"), "g", "the onset's key wins");
+        assertEquals(shown.get("playPauseButton"), "");
     }
 
     private static void layOut(final Component component) {

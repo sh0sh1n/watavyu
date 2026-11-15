@@ -209,7 +209,7 @@ public final class MainWindow implements FileDropEventListener {
      */
     private SpreadSheetPanel addTab(final ProjectController pc) {
         pc.setVideoController(new VideoController(pc, frame));
-        pc.getVideoController().showKeys(command -> keyMap.keyText(command).orElse(""));
+        pc.getVideoController().showKeys(command -> keyMap.keyText(command));
         pc.setTitleListener(() -> SwingUtilities.invokeLater(() -> updateTitle(pc)));
         pc.addUndoableEditListener(event -> refreshCommands());
 
