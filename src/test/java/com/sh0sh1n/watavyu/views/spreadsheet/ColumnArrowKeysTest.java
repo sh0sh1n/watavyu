@@ -16,6 +16,7 @@ import com.sh0sh1n.watavyu.util.ClockTimer;
 import com.sh0sh1n.watavyu.views.VideoController;
 import org.testng.annotations.Test;
 
+import java.awt.Component;
 import java.awt.event.KeyEvent;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -52,6 +53,9 @@ public class ColumnArrowKeysTest {
         SwingUtilities.invokeAndWait(() -> {
             try {
                 sheet = new SpreadsheetView(spreadsheet);
+                // Insert mode: the editor's values have the focus, wherever the editor is.
+                sheet.setFocus(() -> sheet.getEditor().map(editor -> (Component) editor.getDataView()).orElse(null),
+                    component -> { });
                 SpreadsheetColumn column = new SpreadsheetColumn(spreadsheet, notes, sheet,
                     mock(CellSelectionListener.class), mock(ColumnSelectionListener.class),
                     mock(ColumnVisibilityListener.class));
@@ -78,6 +82,7 @@ public class ColumnArrowKeysTest {
     public void upSelectsTheCellBeforeInTime() throws Exception {
         withColumn(column -> {
             second.setSelected(true);
+            sheet.edit(second);
             KeyEvent up = press(column, KeyEvent.VK_UP);
             assertTrue(column.dispatchKeyEvent(up));
             assertTrue(up.isConsumed());
@@ -92,6 +97,7 @@ public class ColumnArrowKeysTest {
     public void downSelectsTheCellAfterInTime() throws Exception {
         withColumn(column -> {
             second.setSelected(true);
+            sheet.edit(second);
             assertTrue(column.dispatchKeyEvent(press(column, KeyEvent.VK_DOWN)));
             assertTrue(third.isSelected());
             assertFalse(second.isSelected());
@@ -115,6 +121,7 @@ public class ColumnArrowKeysTest {
     public void theFirstAndLastCellsGoNoFurther() throws Exception {
         withColumn(column -> {
             first.setSelected(true);
+            sheet.edit(first);
             KeyEvent up = press(column, KeyEvent.VK_UP);
             assertFalse(column.dispatchKeyEvent(up));
             assertFalse(up.isConsumed());
@@ -122,6 +129,7 @@ public class ColumnArrowKeysTest {
 
             first.setSelected(false);
             third.setSelected(true);
+            sheet.edit(third);
             assertFalse(column.dispatchKeyEvent(press(column, KeyEvent.VK_DOWN)));
             assertTrue(third.isSelected());
         });

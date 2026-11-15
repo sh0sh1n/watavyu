@@ -158,6 +158,42 @@ public final class SpreadsheetColumn extends JLabel implements ColumnListener, M
         return cellSelList;
     }
 
+    /** Returns the sheet that draws this column's cells. */
+    SpreadsheetView getSheet() {
+        return sheet;
+    }
+
+    /**
+     * Selects a cell of this column, and only it and this column, in command mode: the sheet takes the focus, and the
+     * editor goes over the cell without it. New Cell from the menu then goes to this column.
+     *
+     * @param cell a cell of this column
+     */
+    void selectInCommandMode(final Cell cell) {
+        columnSelList.clearColumnSelection();
+        cellSelList.clearCellSelection();
+        setSelected(true);
+        selectInColumn(cell);
+        controller.setLastCreatedColumn(dataColumn);
+        if (controller.getSpreadSheetPanel() != null) {
+            controller.getSpreadSheetPanel().reorientView(cell);
+        }
+        sheet.commandMode();
+    }
+
+    /** Selects a cell of this column alone among its cells, with the editor waiting over it. */
+    private void selectInColumn(final Cell cell) {
+        for (Cell other : getCellsTemporally()) {
+            if (other.isSelected() && !other.equals(cell)) {
+                other.setSelected(false);
+            }
+        }
+        sheet.edit(cell);
+        cell.setHighlighted(true);
+        cellSelList.setHighlightedCell(cell);
+        controller.setLastSelectedCell(cell);
+    }
+
     /** The window's glass pane, which shows a column's image while it is dragged. */
     private TransparentPanel transparentPanel() {
         return (TransparentPanel) SwingUtilities.getRootPane(this).getGlassPane();
@@ -414,6 +450,15 @@ public final class SpreadsheetColumn extends JLabel implements ColumnListener, M
         long time = controller.getVideoController().getCurrentTime();
         for (Cell c : getCellsTemporally()) {
             if (c.isInTimeWindow(time)) {
+                if (!sheet.inInsertMode()) {
+                    // Outside insert mode the keyboard is left where it is, in command mode or another window: the
+                    // cell in play is selected alone in this column. The other columns, and where the sheet is
+                    // scrolled, are left as they are.
+                    if (!c.isSelected() || getCellsTemporally().stream().filter(Cell::isSelected).count() > 1) {
+                        selectInColumn(c);
+                    }
+                    break;
+                }
                 SpreadsheetCell editor = sheet.edit(c);
                 if (!editor.isFocusOwner()) {
                     int firstEmpty = c.getValues().indexOf("");
@@ -445,7 +490,8 @@ public final class SpreadsheetColumn extends JLabel implements ColumnListener, M
             return false;
         }
         Cell selected = getSelectedCell();
-        if (selected == null) {
+        // A cell stays selected in command mode with the focus gone elsewhere; the keys are then not this sheet's.
+        if (selected == null || !sheet.hasKeyboard()) {
             return false;
         }
         List<Cell> cells = getCellsTemporally();
@@ -453,10 +499,15 @@ public final class SpreadsheetColumn extends JLabel implements ColumnListener, M
         if (target < 0 || target >= cells.size()) {
             return false;
         }
+        Cell next = cells.get(target);
+        if (sheet.inCommandMode()) {
+            // Command mode stays.
+            selectInCommandMode(next);
+            e.consume();
+            return true;
+        }
         int pos = sheet.getEditor().filter(editor -> editor.getCell().equals(selected))
                 .map(editor -> editor.getDataView().getEdTracker().indexOfCurrentEditor()).orElse(-1);
-        Cell next = cells.get(target);
-
         selected.setHighlighted(false);
         selected.setSelected(false);
         next.setHighlighted(true);
@@ -464,7 +515,7 @@ public final class SpreadsheetColumn extends JLabel implements ColumnListener, M
         SpreadsheetCell editor = sheet.edit(next);
         EditorTracker tracker = editor.getDataView().getEdTracker();
         tracker.setEditor(tracker.getEditorAtIndex(Math.max(pos, 0)));
-        editor.requestFocus();
+        sheet.focusEditor(editor);
         e.consume();
         return true;
     }
@@ -476,12 +527,13 @@ public final class SpreadsheetColumn extends JLabel implements ColumnListener, M
     public void requestFocus() {
         controller.getSpreadSheetPanel().revalidate();
         controller.getSpreadSheetPanel().reorientView(this);
-        // The column's selected cell takes the focus, if it has one; otherwise the sheet does.
+        // The column's selected cell takes the focus, if it has one; otherwise the sheet does, in command mode with
+        // the column selected and no cell.
         Cell selectedCell = getSelectedCell();
         if (selectedCell != null) {
-            sheet.edit(selectedCell).requestFocus();
+            sheet.focusEditor(sheet.edit(selectedCell));
         } else {
-            sheet.requestFocusInWindow();
+            sheet.commandMode();
         }
 
     }
@@ -720,8 +772,8 @@ public final class SpreadsheetColumn extends JLabel implements ColumnListener, M
     }
 
     /**
-     * In highlight-and-focus mode, while the clock runs, puts the focus in the selected column's cell in play. Called
-     * by the sheet on the event thread as the clock ticks.
+     * In highlight-and-focus mode, while the clock runs, puts the focus in the selected column's cell in play, or in
+     * command mode selects it. Called by the sheet on the event thread as the clock ticks.
      */
     void followNeedle() {
         if (isSelected()

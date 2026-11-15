@@ -1,14 +1,15 @@
 package com.sh0sh1n.watavyu.views.spreadsheet;
 
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
 
 import com.sh0sh1n.watavyu.TestSpreadsheets;
 import com.sh0sh1n.watavyu.controllers.ProjectController;
 import com.sh0sh1n.watavyu.models.Cell;
+import com.sh0sh1n.watavyu.models.Column;
 import com.sh0sh1n.watavyu.models.DataStore;
 import com.sh0sh1n.watavyu.models.DataStoreFactory;
 import org.testng.annotations.BeforeMethod;
@@ -34,17 +35,23 @@ public class ModifierClickTest {
     @BeforeMethod
     public void setUp() throws Exception {
         DataStore dataStore = DataStoreFactory.newDataStore();
-        model = dataStore.createColumn("gaze").createPointCell(1_000);
+        Column gaze = dataStore.createColumn("gaze");
+        model = gaze.createPointCell(1_000);
         cells = mock(CellSelectionListener.class);
         columns = mock(ColumnSelectionListener.class);
         SwingUtilities.invokeAndWait(() -> {
             try {
-                SpreadsheetColumn column = mock(SpreadsheetColumn.class);
-                when(column.getProjectController()).thenReturn(TestSpreadsheets.withPlayback(dataStore));
-                cell = new SpreadsheetCell(column, model, cells);
                 ProjectController spreadsheet = TestSpreadsheets.withPlayback(dataStore);
+                SpreadsheetView sheet = new SpreadsheetView(spreadsheet);
+                sheet.setFocus(() -> null, component -> { });
+                SpreadsheetColumn column = new SpreadsheetColumn(spreadsheet, gaze, sheet, cells, columns,
+                    mock(ColumnVisibilityListener.class));
+                sheet.addColumn(column);
+                cell = sheet.edit(model);
                 header = new SpreadsheetColumn(spreadsheet, dataStore.createColumn("speech"),
-                    new SpreadsheetView(spreadsheet), cells, columns, mock(ColumnVisibilityListener.class));
+                    sheet, cells, columns, mock(ColumnVisibilityListener.class));
+                // Adding a column sets its selection; the tests follow the clicks after.
+                clearInvocations(cells, columns);
             } catch (Exception e) {
                 throw new IllegalStateException(e);
             }
