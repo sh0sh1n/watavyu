@@ -98,6 +98,9 @@ public final class MainWindow implements FileDropEventListener {
     /** The user's changes to the key map that it could not make, which the Keyboard Shortcuts dialog lists. */
     private final List<String> keyMapProblems;
 
+    /** The key map in effect, with the user's changes, whose keys the controls drawer shows. */
+    private final KeyMap keyMap;
+
     private JMenu openRecentFileMenu;
 
 
@@ -117,10 +120,11 @@ public final class MainWindow implements FileDropEventListener {
         frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 
         defineCommands();
-        KeyMap.WithChanges keyMap = KeyMap.defaultMap().withChanges(Settings.get().getKeys());
-        keyMapProblems = keyMap.problems();
+        KeyMap.WithChanges changed = KeyMap.defaultMap().withChanges(Settings.get().getKeys());
+        keyMapProblems = changed.problems();
         keyMapProblems.forEach(problem -> logger.warn("Settings' keys: " + problem));
-        shortcuts = createShortcuts(keyMap.map());
+        keyMap = changed.map();
+        shortcuts = createShortcuts(keyMap);
         frame.setJMenuBar(createMenuBar());
         KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(shortcuts);
 
@@ -205,6 +209,7 @@ public final class MainWindow implements FileDropEventListener {
      */
     private SpreadSheetPanel addTab(final ProjectController pc) {
         pc.setVideoController(new VideoController(pc, frame));
+        pc.getVideoController().showKeys(command -> keyMap.keyText(command).orElse(""));
         pc.setTitleListener(() -> SwingUtilities.invokeLater(() -> updateTitle(pc)));
         pc.addUndoableEditListener(event -> refreshCommands());
 
@@ -976,7 +981,7 @@ public final class MainWindow implements FileDropEventListener {
         return commands.get(command);
     }
 
-    /** Returns the main window's shortcuts, which the menu bar's accelerators and the keypad follow. */
+    /** Returns the main window's shortcuts, which the menu bar's accelerators follow. */
     Shortcuts getShortcuts() {
         return shortcuts;
     }
@@ -1069,7 +1074,7 @@ public final class MainWindow implements FileDropEventListener {
         commands.define(Command.CITATION, this::showCitationDialog);
     }
 
-    /** The commands of the controls drawer and the keypad, which the selected spreadsheet's playback runs. */
+    /** The commands of the controls drawer, which the selected spreadsheet's playback runs. */
     private static final List<Command> PLAYBACK = List.of(Command.SET_ONSET, Command.PLAY_PAUSE, Command.SET_OFFSET,
             Command.SHUTTLE_BACK, Command.RESET_RATE, Command.SHUTTLE_FORWARD, Command.JOG_BACK, Command.JOG_FORWARD,
             Command.NEW_CELL_CLOSING_PREVIOUS, Command.JUMP_BACK, Command.JUMP_FORWARD, Command.FIND_ONSET,
@@ -1118,7 +1123,7 @@ public final class MainWindow implements FileDropEventListener {
         return resources.getString(key + (count > 1 ? "Plural" : "Single") + ".text");
     }
 
-    /** @return the selected spreadsheet's playback, which the keypad drives; null when no tab is open */
+    /** @return the selected spreadsheet's playback, which the drawer's commands drive; null when no tab is open */
     private VideoController controller() {
         ProjectController selected = selectedController();
         return selected == null ? null : selected.getVideoController();
@@ -1130,10 +1135,10 @@ public final class MainWindow implements FileDropEventListener {
     }
 
     /**
-     * @param keyMap the key map with the user's changes from Settings
-     * @return Every keyboard shortcut of the application: the fixed ⌘ keys, the keypad, and the key map.
+     * @param map the key map with the user's changes from Settings
+     * @return Every keyboard shortcut of the application: the fixed ⌘ keys and the key map.
      */
-    private Shortcuts createShortcuts(final KeyMap keyMap) {
+    private Shortcuts createShortcuts(final KeyMap map) {
         final int cmd = Shortcuts.COMMAND;
         final int shift = InputEvent.SHIFT_DOWN_MASK;
         return Shortcuts.builder(commands::get)
@@ -1155,22 +1160,7 @@ public final class MainWindow implements FileDropEventListener {
                 .menu("Spreadsheet", Command.HIGHLIGHT_AND_FOCUS, KeyStroke.getKeyStroke(KeyEvent.VK_F, cmd | shift))
                 .global("Spreadsheet", Command.SELECT_COLUMN_LEFT, KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, cmd))
                 .global("Spreadsheet", Command.SELECT_COLUMN_RIGHT, KeyStroke.getKeyStroke(KeyEvent.VK_RIGHT, cmd))
-                .keypad(Command.SHOW_CONTROLS, KeyEvent.VK_MULTIPLY, 0)
-                .keypad(Command.SET_ONSET, KeyEvent.VK_NUMPAD7, 0)
-                .keypad(Command.PLAY_PAUSE, KeyEvent.VK_NUMPAD8, 0)
-                .keypad(Command.SET_OFFSET, KeyEvent.VK_NUMPAD9, 0)
-                .keypad(Command.SHUTTLE_BACK, KeyEvent.VK_NUMPAD4, 0)
-                .keypad(Command.RESET_RATE, KeyEvent.VK_NUMPAD5, 0)
-                .keypad(Command.SHUTTLE_FORWARD, KeyEvent.VK_NUMPAD6, 0)
-                .keypad(Command.JOG_BACK, KeyEvent.VK_NUMPAD1, 0)
-                .keypad(Command.JOG_FORWARD, KeyEvent.VK_NUMPAD3, 0)
-                .keypad(Command.NEW_CELL_CLOSING_PREVIOUS, KeyEvent.VK_NUMPAD0, 0)
-                .keypad(Command.JUMP_BACK, KeyEvent.VK_SUBTRACT, 0)
-                .keypad(Command.JUMP_FORWARD, KeyEvent.VK_SUBTRACT, shift)
-                .keypad(Command.FIND_ONSET, KeyEvent.VK_ADD, 0)
-                .keypad(Command.FIND_OFFSET, KeyEvent.VK_ADD, shift)
-                .keypad(Command.NEW_CELL_IN_SELECTED_COLUMN, KeyEvent.VK_ENTER, 0)
-                .keyMap(keyMap)
+                .keyMap(map)
                 .commandKeysWhen(this::isCommandKey)
                 .build(() -> frame.isFocused(), held -> {
                     if (controller() != null) {

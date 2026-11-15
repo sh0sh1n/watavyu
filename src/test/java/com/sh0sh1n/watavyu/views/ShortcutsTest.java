@@ -59,15 +59,11 @@ public class ShortcutsTest {
         actions.put(Command.SAVE, save);
         actions.put(Command.NEW_CELL_LEFT, action("left"));
         actions.put(Command.PLAY_PAUSE, action("play"));
-        actions.put(Command.JUMP_BACK, action("back"));
-        actions.put(Command.JUMP_FORWARD, action("forward"));
         actions.put(Command.TEMPORAL_LAYOUT, action("ordering"));
         shortcuts = Shortcuts.builder(actions())
             .menu("File", Command.SAVE, KeyStroke.getKeyStroke(KeyEvent.VK_S, Shortcuts.COMMAND))
             .global("Spreadsheet", Command.NEW_CELL_LEFT, KeyStroke.getKeyStroke(KeyEvent.VK_L, Shortcuts.COMMAND))
-            .keypad(Command.PLAY_PAUSE, KeyEvent.VK_NUMPAD8, 0)
-            .keypad(Command.JUMP_BACK, KeyEvent.VK_SUBTRACT, 0)
-            .keypad(Command.JUMP_FORWARD, KeyEvent.VK_SUBTRACT, InputEvent.SHIFT_DOWN_MASK)
+            .global("Spreadsheet", Command.PLAY_PAUSE, KeyStroke.getKeyStroke(KeyEvent.VK_P, Shortcuts.COMMAND))
             .build(() -> mainWindowFocused, shift::add, () -> refreshed++);
     }
 
@@ -85,7 +81,6 @@ public class ShortcutsTest {
     }
 
     private static final int STANDARD = KeyEvent.KEY_LOCATION_STANDARD;
-    private static final int KEYPAD = KeyEvent.KEY_LOCATION_NUMPAD;
 
     @Test
     public void inTheMainWindowTheMenuBarRunsMenuShortcuts() {
@@ -140,22 +135,22 @@ public class ShortcutsTest {
     @Test
     public void commandsAreRefreshedBeforeAShortcutButNotForOtherKeys() {
         shortcuts.dispatchKeyEvent(press(KeyEvent.VK_S, Shortcuts.COMMAND, STANDARD));
-        shortcuts.dispatchKeyEvent(press(KeyEvent.VK_NUMPAD8, 0, KEYPAD));
+        shortcuts.dispatchKeyEvent(press(KeyEvent.VK_P, Shortcuts.COMMAND, STANDARD));
         shortcuts.dispatchKeyEvent(press(KeyEvent.VK_A, 0, STANDARD));
         shortcuts.dispatchKeyEvent(press(KeyEvent.VK_LEFT, Shortcuts.COMMAND, STANDARD));
 
         assertEquals(refreshed, 2);
     }
 
-    /** A global or keypad key whose command cannot run now does nothing, and its key goes no further. */
+    /** A global key whose command cannot run now does nothing, and its key goes no further. */
     @Test
-    public void aDisabledGlobalOrKeypadShortcutDoesNothing() {
+    public void aDisabledGlobalShortcutDoesNothing() {
         actions.get(Command.NEW_CELL_LEFT).setEnabled(false);
         actions.get(Command.PLAY_PAUSE).setEnabled(false);
         mainWindowFocused = false;
 
         KeyEvent left = press(KeyEvent.VK_L, Shortcuts.COMMAND, STANDARD);
-        KeyEvent play = press(KeyEvent.VK_NUMPAD8, 0, KEYPAD);
+        KeyEvent play = press(KeyEvent.VK_P, Shortcuts.COMMAND, STANDARD);
         assertTrue(shortcuts.dispatchKeyEvent(left));
         assertTrue(shortcuts.dispatchKeyEvent(play));
 
@@ -171,7 +166,7 @@ public class ShortcutsTest {
             .filter(shortcut -> shortcut.getCommand() == Command.PLAY_PAUSE).findFirst().orElseThrow();
 
         assertEquals(play.getName(), "Play or pause");
-        assertEquals(play.getKeyText(), "Keypad 8");
+        assertEquals(play.getKeyText(), "⌘P");
     }
 
     @Test
@@ -186,41 +181,6 @@ public class ShortcutsTest {
     public void commandCharactersNeverReachTheMainWindow() {
         assertTrue(shortcuts.dispatchKeyEvent(type('s', Shortcuts.COMMAND)));
         assertFalse(shortcuts.dispatchKeyEvent(type('s', 0)));
-    }
-
-    @Test
-    public void keypadKeysRunTheirShortcutAndTypeNothing() {
-        assertTrue(shortcuts.dispatchKeyEvent(press(KeyEvent.VK_NUMPAD8, 0, KEYPAD)));
-        assertTrue(shortcuts.dispatchKeyEvent(type('8', 0)));
-        assertFalse(shortcuts.dispatchKeyEvent(release(KeyEvent.VK_NUMPAD8, KEYPAD)));
-        assertFalse(shortcuts.dispatchKeyEvent(type('8', 0)), "typing works again after the key is released");
-        assertEquals(ran, List.of("play"));
-    }
-
-    @Test
-    public void anUnassignedKeypadKeyStillTypesNothing() {
-        assertFalse(shortcuts.dispatchKeyEvent(press(KeyEvent.VK_EQUALS, 0, KEYPAD)));
-        assertTrue(shortcuts.dispatchKeyEvent(type('=', 0)));
-        assertTrue(ran.isEmpty());
-    }
-
-    @Test
-    public void shiftChoosesTheShiftedKeypadShortcut() {
-        shortcuts.dispatchKeyEvent(press(KeyEvent.VK_SUBTRACT, InputEvent.SHIFT_DOWN_MASK, KEYPAD));
-        shortcuts.dispatchKeyEvent(press(KeyEvent.VK_SUBTRACT, 0, KEYPAD));
-        assertEquals(ran, List.of("forward", "back"));
-    }
-
-    @Test
-    public void aKeypadKeyWithOtherModifiersRunsItsPlainShortcut() {
-        assertTrue(shortcuts.dispatchKeyEvent(press(KeyEvent.VK_NUMPAD8, InputEvent.ALT_DOWN_MASK, KEYPAD)));
-        assertEquals(ran, List.of("play"));
-    }
-
-    @Test
-    public void keypadShortcutsIgnoreTheMainKeyboard() {
-        assertFalse(shortcuts.dispatchKeyEvent(press(KeyEvent.VK_SUBTRACT, 0, STANDARD)));
-        assertTrue(ran.isEmpty());
     }
 
     @Test
@@ -284,12 +244,11 @@ public class ShortcutsTest {
     @Test
     public void keysAreDescribedTheWayMacMenusShowThem() {
         assertEquals(Shortcuts.describe(KeyStroke.getKeyStroke(KeyEvent.VK_S,
-            Shortcuts.COMMAND | InputEvent.SHIFT_DOWN_MASK), false), "⇧⌘S");
-        assertEquals(Shortcuts.describe(KeyStroke.getKeyStroke(KeyEvent.VK_NUMPAD7, 0), true), "Keypad 7");
-        assertEquals(Shortcuts.describe(KeyStroke.getKeyStroke(KeyEvent.VK_ADD, InputEvent.SHIFT_DOWN_MASK), true),
-            "⇧ Keypad +");
-        assertEquals(Shortcuts.describe(KeyStroke.getKeyStroke(KeyEvent.VK_BACK_SLASH, Shortcuts.COMMAND), false),
-            "⌘\\");
+            Shortcuts.COMMAND | InputEvent.SHIFT_DOWN_MASK)), "⇧⌘S");
+        assertEquals(Shortcuts.describe(KeyStroke.getKeyStroke(KeyEvent.VK_BACK_SLASH, Shortcuts.COMMAND)), "⌘\\");
+        assertEquals(Shortcuts.describe(KeyStroke.getKeyStroke(KeyEvent.VK_CLOSE_BRACKET,
+            InputEvent.CTRL_DOWN_MASK)), "⌃]");
+        assertEquals(Shortcuts.describe(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0)), "Esc");
     }
 
     // The key map's layers (AGENTS.md › Decisions, 2026-11-13).
@@ -347,15 +306,27 @@ public class ShortcutsTest {
         assertTrue(ran.isEmpty());
     }
 
-    /** A command key held with ⌃, ⌥ or ⌘ is another key, and the keypad's keys are the keypad's. */
+    /** A command key held with ⌃, ⌥ or ⌘ is another key. */
     @Test
     public void commandKeysAreTypedWithNoModifierButShift() {
         Shortcuts keys = mapped();
         assertFalse(keys.dispatchKeyEvent(pressTyping(KeyEvent.VK_X, 'x', InputEvent.ALT_DOWN_MASK)));
         assertFalse(keys.dispatchKeyEvent(pressTyping(KeyEvent.VK_X, 'x', Shortcuts.COMMAND)));
-        assertFalse(keys.dispatchKeyEvent(new KeyEvent(source, KeyEvent.KEY_PRESSED, 0, 0, KeyEvent.VK_SPACE, ' ',
-            KEYPAD)));
         assertTrue(ran.isEmpty());
+    }
+
+    /** The numeric keypad has no keys of its own: its keys type, and are commands by the characters they type. */
+    @Test
+    public void theKeypadsKeysAreOrdinaryKeys() {
+        Shortcuts keys = mapped();
+        commandMode = false;
+        assertFalse(keys.dispatchKeyEvent(new KeyEvent(source, KeyEvent.KEY_PRESSED, 0, 0, KeyEvent.VK_NUMPAD8, '8',
+            KeyEvent.KEY_LOCATION_NUMPAD)));
+        assertFalse(keys.dispatchKeyEvent(type('8', 0)), "it types");
+        commandMode = true;
+        assertTrue(keys.dispatchKeyEvent(new KeyEvent(source, KeyEvent.KEY_PRESSED, 0, 0, KeyEvent.VK_X, 'x',
+            KeyEvent.KEY_LOCATION_NUMPAD)), "a command by its character");
+        assertEquals(ran, List.of("delete"));
     }
 
     /** In command mode a command key is a command, though it cannot run now: it does not type. */

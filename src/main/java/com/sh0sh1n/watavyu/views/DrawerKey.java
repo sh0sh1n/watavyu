@@ -11,10 +11,10 @@ import java.awt.Insets;
 import java.awt.RenderingHints;
 
 /**
- * A key of the controls drawer's keypad: a glyph with a short label under it, and in its top-left corner the keypad
- * key that does the same.
+ * A key of the controls drawer: a glyph with a short label under it, and in its top-left corner the key of the key map
+ * that does the same, if one does.
  */
-public final class KeypadKey extends JButton {
+public final class DrawerKey extends JButton {
 
     /** Width and height of the glyph, in pixels. */
     static final int GLYPH_SIZE = 18;
@@ -23,25 +23,33 @@ public final class KeypadKey extends JButton {
 
     private static final Font KEY_FONT = SpreadsheetTheme.labelFont().deriveFont(9F);
 
-    private final String key;
+    private String key = "";
 
     /**
-     * Makes a key.
+     * Makes a key, showing no key of the key map until {@link #showKey} is told one.
      *
      * @param glyph what the key shows
      * @param label what it does, in a word or two
-     * @param key   the keypad key that does the same, such as {@code 7} or {@code enter}
      */
-    public KeypadKey(final Glyph.Shape glyph, final String label, final String key) {
+    public DrawerKey(final Glyph.Shape glyph, final String label) {
         super(label, Glyph.of(glyph, GLYPH_SIZE));
-        this.key = key;
         setFont(LABEL_FONT);
         setVerticalTextPosition(SwingConstants.BOTTOM);
         setHorizontalTextPosition(SwingConstants.CENTER);
         setIconTextGap(1);
         setMargin(new Insets(0, 0, 0, 0));
         setFocusPainted(false);
-        getAccessibleContext().setAccessibleDescription("Keypad " + key);
+    }
+
+    /**
+     * Shows the key of the key map that does the same, in the corner.
+     *
+     * @param mapped the key as shown, such as {@code [} or Space, or empty for none
+     */
+    public void showKey(final String mapped) {
+        key = mapped;
+        getAccessibleContext().setAccessibleDescription(mapped.isEmpty() ? null : "Key: " + mapped);
+        repaint();
     }
 
     /** Returns what the key shows. */
@@ -62,7 +70,7 @@ public final class KeypadKey extends JButton {
         setText(label);
     }
 
-    /** Returns the keypad key shown in the corner. */
+    /** Returns the key of the key map shown in the corner, or empty for none. */
     public String getKey() {
         return key;
     }

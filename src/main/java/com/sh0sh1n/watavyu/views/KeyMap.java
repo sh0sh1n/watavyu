@@ -260,7 +260,7 @@ public final class KeyMap {
     /** Returns a mapped key as shown to the user: the character, Space, or a chord as macOS menus show it. */
     static String describe(final Binding binding) {
         if (binding.layer() == Layer.CHORD) {
-            return Shortcuts.describe(binding.stroke(), false);
+            return Shortcuts.describe(binding.stroke());
         }
         char c = binding.stroke().getKeyChar();
         return c == ' ' ? "Space" : String.valueOf(c);

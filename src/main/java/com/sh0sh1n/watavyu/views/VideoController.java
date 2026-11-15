@@ -66,17 +66,17 @@ public final class VideoController implements ClockListener {
     private static final long MILLI_IN_SEC = 1000L;
 
     /** The 45x45 size for num pad keys */
-    private static final int NUM_PAD_KEY_HEIGHT = 45;
+    private static final int KEY_HEIGHT = 45;
 
-    private static final int NUM_PAD_KEY_WIDTH = 45;
+    private static final int KEY_WIDTH = 45;
 
-    private static final String NUM_PAD_KEY_SIZE = "w " + NUM_PAD_KEY_HEIGHT + "!, h " + NUM_PAD_KEY_WIDTH + "!";
+    private static final String KEY_SIZE = "w " + KEY_HEIGHT + "!, h " + KEY_WIDTH + "!";
 
     /** The 45x95 size for tall num pad keys (enter, PC plus) */
-    private static final int TALL_NUM_PAD_KEY_HEIGHT = 95;
+    private static final int TALL_KEY_HEIGHT = 95;
 
-    private static final String TALL_NUM_PAD_KEY_SIZE = "span 1 2, w " + NUM_PAD_KEY_WIDTH + "!, h "
-            + TALL_NUM_PAD_KEY_HEIGHT + "!";
+    private static final String TALL_KEY_SIZE = "span 1 2, w " + KEY_WIDTH + "!, h "
+            + TALL_KEY_HEIGHT + "!";
 
     /** The 80x40 size for the text fields to the right of num pad */
     private static final int WIDE_TEXT_FIELD_WIDTH = 90;
@@ -131,10 +131,10 @@ public final class VideoController implements ClockListener {
     private Resources resourceMap;
 
     /** The drawer's key for each command it has, which {@link #run} presses. */
-    private final Map<Command, JButton> keys = new EnumMap<>(Command.class);
+    private final Map<Command, DrawerKey> keys = new EnumMap<>(Command.class);
 
     /** The play or pause key, which shows what pressing it does. */
-    private KeypadKey playKey;
+    private DrawerKey playKey;
 
     /**
      * Whether video controllers start in highlight and focus mode, which highlights the cell at the current time in
@@ -176,7 +176,7 @@ public final class VideoController implements ClockListener {
     }
 
     /**
-     * Returns the controls drawer: the playback and coding buttons, laid out as a numeric keypad, and their fields.
+     * Returns the controls drawer: the playback and coding buttons, laid out in the shape of a numeric keypad, as in Datavyu, and their fields.
      */
     public JComponent getControls() {
         return gridButtonPanel;
@@ -462,25 +462,32 @@ public final class VideoController implements ClockListener {
     }
 
     /**
-     * Makes a key of the keypad, the drawer's key for a command, which {@link #run} presses.
+     * Makes the drawer's key for a command, which {@link #run} presses, and which shows the command's key in the key
+     * map ({@link #showKeys}).
      *
-     * @param command the command, or null for a key that only the drawer has
+     * @param command the command
      * @param name    prefix of the button's name, which tests find it by
      * @param glyph   what the key shows
      * @param label   what it does, in a word or two
-     * @param key     the keypad key that does the same
      * @param action  what the key does
      * @return the key
      */
-    private KeypadKey buildButton(final Command command, final String name, final Glyph.Shape glyph,
-                                  final String label, final String key, final Runnable action) {
-        KeypadKey jButton = new KeypadKey(glyph, label, key);
+    private DrawerKey buildButton(final Command command, final String name, final Glyph.Shape glyph,
+                                  final String label, final Runnable action) {
+        DrawerKey jButton = new DrawerKey(glyph, label);
         jButton.addActionListener(e -> action.run());
         jButton.setName(name + "Button");
-        if (command != null) {
-            keys.put(command, jButton);
-        }
+        keys.put(command, jButton);
         return jButton;
+    }
+
+    /**
+     * Shows on each drawer key the key of the key map that runs its command, as the user has the map.
+     *
+     * @param keyText the key for a command, as shown, or empty for none
+     */
+    public void showKeys(final java.util.function.Function<Command, String> keyText) {
+        keys.forEach((command, key) -> key.showKey(keyText.apply(command)));
     }
 
 
@@ -513,7 +520,7 @@ public final class VideoController implements ClockListener {
     }
 
     /**
-     * Lays out the controls as a numeric keypad, with the fields beside it.
+     * Lays out the controls in the shape of a numeric keypad, with the fields beside it.
      */
     private void initComponents() {
         gridButtonPanel = new JPanel();
@@ -527,67 +534,66 @@ public final class VideoController implements ClockListener {
         // without their focus rings, so they would draw larger than these sizes.
         gridButtonPanel.setLayout(new MigLayout("wrap 5, novisualpadding, gap 5"));
 
-        // Placeholders along the Mac keypad's top row: clear, equals, slash, and the asterisk, whose key shows or
-        // hides these controls
-        gridButtonPanel.add(makePlaceholderButton(), NUM_PAD_KEY_SIZE);
-        gridButtonPanel.add(makePlaceholderButton(), NUM_PAD_KEY_SIZE);
-        gridButtonPanel.add(makePlaceholderButton(), NUM_PAD_KEY_SIZE);
-        gridButtonPanel.add(makePlaceholderButton(), NUM_PAD_KEY_SIZE);
+        // Placeholders along the top row of a Mac keypad's shape
+        gridButtonPanel.add(makePlaceholderButton(), KEY_SIZE);
+        gridButtonPanel.add(makePlaceholderButton(), KEY_SIZE);
+        gridButtonPanel.add(makePlaceholderButton(), KEY_SIZE);
+        gridButtonPanel.add(makePlaceholderButton(), KEY_SIZE);
         // Placeholder - perhaps eventually the sync video button
         gridButtonPanel.add(makePlaceholderButton(false), WIDE_TEXT_FIELD_SIZE);
 
-        // Set cell onset button with 7
-        JButton setCellOnsetButton = buildButton(Command.SET_ONSET, "setCellOnset", Glyph.Shape.SET_ONSET, "onset", "7", this::setCellOnsetAction);
-        gridButtonPanel.add(setCellOnsetButton, NUM_PAD_KEY_SIZE);
+        // Set cell onset
+        JButton setCellOnsetButton = buildButton(Command.SET_ONSET, "setCellOnset", Glyph.Shape.SET_ONSET, "onset", this::setCellOnsetAction);
+        gridButtonPanel.add(setCellOnsetButton, KEY_SIZE);
 
-        // Play or pause with 8; it shows the pause glyph while playing
-        playKey = buildButton(Command.PLAY_PAUSE, "playPause", Glyph.Shape.PLAY, "play", "8", this::playPauseAction);
+        // Play or pause; it shows the pause glyph while playing
+        playKey = buildButton(Command.PLAY_PAUSE, "playPause", Glyph.Shape.PLAY, "play", this::playPauseAction);
         showPlayKey();
         playKey.setRequestFocusEnabled(false);
-        gridButtonPanel.add(playKey, NUM_PAD_KEY_SIZE);
+        gridButtonPanel.add(playKey, KEY_SIZE);
 
-        // Set cell offset button with 9
-        JButton setCellOffsetButton = buildButton(Command.SET_OFFSET, "setCellOffset", Glyph.Shape.SET_OFFSET, "offset", "9", this::setCellOffsetAction);
-        gridButtonPanel.add(setCellOffsetButton, NUM_PAD_KEY_SIZE);
+        // Set cell offset
+        JButton setCellOffsetButton = buildButton(Command.SET_OFFSET, "setCellOffset", Glyph.Shape.SET_OFFSET, "offset", this::setCellOffsetAction);
+        gridButtonPanel.add(setCellOffsetButton, KEY_SIZE);
 
         addJumpByPair();
 
-        // Shuttle back button with 4
-        JButton shuttleBackButton = buildButton(Command.SHUTTLE_BACK, "shuttleBack", Glyph.Shape.SHUTTLE_BACK, "shuttle", "4", this::shuttleBackAction);
-        gridButtonPanel.add(shuttleBackButton, NUM_PAD_KEY_SIZE);
+        // Shuttle back
+        JButton shuttleBackButton = buildButton(Command.SHUTTLE_BACK, "shuttleBack", Glyph.Shape.SHUTTLE_BACK, "shuttle", this::shuttleBackAction);
+        gridButtonPanel.add(shuttleBackButton, KEY_SIZE);
 
-        // Reset the rate to 1x with 5
-        JButton resetRateButton = buildButton(Command.RESET_RATE, "resetRate", Glyph.Shape.RESET_RATE, "reset", "5",
+        // Reset the rate to 1x
+        JButton resetRateButton = buildButton(Command.RESET_RATE, "resetRate", Glyph.Shape.RESET_RATE, "reset",
             this::resetRateAction);
-        gridButtonPanel.add(resetRateButton, NUM_PAD_KEY_SIZE);
+        gridButtonPanel.add(resetRateButton, KEY_SIZE);
 
-        // Shuttle forward button with 6
-        JButton shuttleForwardButton = buildButton(Command.SHUTTLE_FORWARD, "shuttleForward", Glyph.Shape.SHUTTLE_FORWARD, "shuttle", "6", this::shuttleForwardAction);
-        gridButtonPanel.add(shuttleForwardButton, NUM_PAD_KEY_SIZE);
+        // Shuttle forward
+        JButton shuttleForwardButton = buildButton(Command.SHUTTLE_FORWARD, "shuttleForward", Glyph.Shape.SHUTTLE_FORWARD, "shuttle", this::shuttleForwardAction);
+        gridButtonPanel.add(shuttleForwardButton, KEY_SIZE);
 
 
-        // Find button (small plus)
-        JButton findButton = buildButton(null, "find", Glyph.Shape.FIND, "find", "+", this::findAction);
-        gridButtonPanel.add(findButton, NUM_PAD_KEY_SIZE);
+        // Find the onset field's time, or with Shift the offset field's
+        JButton findButton = buildButton(Command.FIND_ONSET, "find", Glyph.Shape.FIND, "find", this::findAction);
+        gridButtonPanel.add(findButton, KEY_SIZE);
         // Where the frame rate was: the grid keeps its shape.
         gridButtonPanel.add(new JLabel(), WIDE_TEXT_FIELD_SIZE);
 
-        // Jog back button with 1
-        JButton jogBackButton = buildButton(null, "jogBack", Glyph.Shape.JOG_BACK, "jog", "1", this::jogBackAction);
-        gridButtonPanel.add(jogBackButton, NUM_PAD_KEY_SIZE);
+        // Jog back
+        JButton jogBackButton = buildButton(Command.JOG_BACK, "jogBack", Glyph.Shape.JOG_BACK, "jog", this::jogBackAction);
+        gridButtonPanel.add(jogBackButton, KEY_SIZE);
 
         // Placeholder at 2, which paused before play and pause became one key
-        gridButtonPanel.add(makePlaceholderButton(), NUM_PAD_KEY_SIZE);
+        gridButtonPanel.add(makePlaceholderButton(), KEY_SIZE);
 
-        // Jog forward button with 3
-        JButton jogForwardButton = buildButton(null, "jogForward", Glyph.Shape.JOG_FORWARD, "jog", "3", this::jogForwardAction);
-        gridButtonPanel.add(jogForwardButton, NUM_PAD_KEY_SIZE);
+        // Jog forward
+        JButton jogForwardButton = buildButton(Command.JOG_FORWARD, "jogForward", Glyph.Shape.JOG_FORWARD, "jog", this::jogForwardAction);
+        gridButtonPanel.add(jogForwardButton, KEY_SIZE);
 
-        // Create new cell button with enter
-        JButton createNewCell = buildButton(Command.NEW_CELL_IN_SELECTED_COLUMN, "createNewCell", Glyph.Shape.NEW_CELL, "new cell", "enter", this::createNewCellAction);
+        // Create a new cell
+        JButton createNewCell = buildButton(Command.NEW_CELL_IN_SELECTED_COLUMN, "createNewCell", Glyph.Shape.NEW_CELL, "new cell", this::createNewCellAction);
         createNewCell.setAlignmentY(0.0F);
         createNewCell.setHorizontalTextPosition(javax.swing.SwingConstants.CENTER);
-        gridButtonPanel.add(createNewCell, TALL_NUM_PAD_KEY_SIZE);
+        gridButtonPanel.add(createNewCell, TALL_KEY_SIZE);
 
         // Onset text field
         onsetTextField.setHorizontalAlignment(SwingConstants.CENTER);
@@ -597,13 +603,13 @@ public final class VideoController implements ClockListener {
         onsetTextField.setName("findOnsetLabel");
         gridButtonPanel.add(makeLabelAndTextFieldPanel(new JLabel("Onset"), onsetTextField), WIDE_TEXT_FIELD_SIZE);
 
-        // Create new cell setting offset button with zero
+        // Create a new cell, setting the previous cell's offset
         JButton createNewCellSettingOffset = buildButton(Command.NEW_CELL_CLOSING_PREVIOUS, "createNewCellAndSetOffset", Glyph.Shape.NEW_CELL_PREVIOUS_OFFSET,
-                "new + prev offset", "0", this::createNewCellAndSetOffsetAction);
+                "new + prev offset", this::createNewCellAndSetOffsetAction);
         gridButtonPanel.add(createNewCellSettingOffset, "span 2, w 95!, h 45!");
 
         // Placeholder at the decimal point, which set the offset as 9 does
-        gridButtonPanel.add(makePlaceholderButton(), NUM_PAD_KEY_SIZE);
+        gridButtonPanel.add(makePlaceholderButton(), KEY_SIZE);
 
         // Offset text field
         offsetTextField.setHorizontalAlignment(SwingConstants.CENTER);
@@ -617,9 +623,9 @@ public final class VideoController implements ClockListener {
     }
 
     private void addJumpByPair() {
-        //Go back button - minus key
-        JButton jumpByButton = buildButton(Command.JUMP_BACK, "jumpBy", Glyph.Shape.JUMP_BACK, "jump", "−", () -> jumpBy(-1));
-        gridButtonPanel.add(jumpByButton, NUM_PAD_KEY_SIZE);
+        // Jump back
+        JButton jumpByButton = buildButton(Command.JUMP_BACK, "jumpBy", Glyph.Shape.JUMP_BACK, "jump", () -> jumpBy(-1));
+        gridButtonPanel.add(jumpByButton, KEY_SIZE);
         //Go back text field
         jumpByTextField.setHorizontalAlignment(SwingConstants.CENTER);
         jumpByTextField.setText("00:00:05:000");
@@ -670,8 +676,8 @@ public final class VideoController implements ClockListener {
     }
 
     /**
-     * Runs a playback or coding command, as its keypad key does. A command whose drawer key does just that is run by
-     * pressing the key, which shows the press while the drawer is open. Jogging, which repeats faster than a press can
+     * Runs a playback or coding command, as its key in the key map does. A command whose drawer key does just that is
+     * run by pressing the key, which shows the press while the drawer is open. Jogging, which repeats faster than a press can
      * show, jumping forward and finding, whose drawer keys depend on the direction or on Shift, are run directly.
      *
      * @param command the command
@@ -685,7 +691,7 @@ public final class VideoController implements ClockListener {
             case FIND_ONSET -> findOnsetAction();
             case FIND_OFFSET -> findOffsetAction();
             default -> {
-                JButton key = keys.get(command);
+                DrawerKey key = keys.get(command);
                 if (key == null) {
                     throw new IllegalArgumentException(command + " is not a playback command");
                 }
@@ -694,7 +700,7 @@ public final class VideoController implements ClockListener {
         }
     }
 
-    /** How long a key run from the keypad shows as pressed, as long as a click shows it. */
+    /** How long a key run from the keyboard shows as pressed, as long as a click shows it. */
     private static final int PRESS_SHOWN_MS = 68;
 
     /** Each drawer key's timer that ends its shown press, restarted by each press so a repeat shows in full. */
@@ -702,7 +708,7 @@ public final class VideoController implements ClockListener {
 
     /**
      * Runs a drawer key's command and shows the key pressed for a moment. {@link JButton#doClick()} would show it
-     * by holding the event thread for the whole press, which every keypad key would pay.
+     * by holding the event thread for the whole press, which every key run from the keyboard would pay.
      */
     private void press(final JButton key) {
         key.doClick(0);
