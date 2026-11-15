@@ -166,6 +166,24 @@ public class SheetModesInWindowTest {
         await(() -> notes.getCells().size() == 2, "the cell back");
     }
 
+    /** q goes to quick mode, where letters make cells and Space still plays; Esc comes back to command mode. */
+    @Test
+    public void qGoesToQuickModeAndEscapeComesBack() throws Exception {
+        type(KeyEvent.VK_Q, 'q', 0);
+        await(() -> panel.mode() == SpreadSheetPanel.Mode.QUICK, "quick mode");
+        assertEquals(panel.getModeMark().getMode(), "QUICK");
+        type(KeyEvent.VK_X, 'x', 0);
+        await(() -> notes.getCells().size() == 2, "x makes a cell rather than deleting one");
+        assertTrue(notes.getCells().stream().anyMatch(made -> "x".equals(made.getValues().get(0))));
+        assertTrue(sheet.inCommandMode(), "the keyboard stays on the sheet");
+
+        type(KeyEvent.VK_ESCAPE, '\u001b', 0);
+        await(() -> panel.mode() == SpreadSheetPanel.Mode.COMMAND, "command mode");
+        type(KeyEvent.VK_Z, 'z', 0);
+        settle();
+        assertEquals(notes.getCells().size(), 2, "letters are commands again");
+    }
+
     /** Tab in command mode leaves the focus on the sheet; it does not slip into the editor, and so into insert mode. */
     @Test
     public void tabStaysInCommandMode() throws Exception {

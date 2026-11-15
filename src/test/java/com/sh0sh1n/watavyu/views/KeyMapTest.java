@@ -44,6 +44,7 @@ public class KeyMapTest {
         expected.put("x", Command.DELETE_CELLS);
         expected.put("u", Command.UNDO);
         expected.put("i", Command.INSERT_MODE);
+        expected.put("q", Command.QUICK_MODE);
         expected.put("ctrl+j", Command.NEXT_CELL);
         expected.put("ctrl+k", Command.PREVIOUS_CELL);
         expected.put("ctrl+h", Command.COLUMN_LEFT);
@@ -89,6 +90,11 @@ public class KeyMapTest {
             KeyStroke.getKeyStroke(KeyEvent.VK_J, InputEvent.CTRL_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK));
         assertEquals(KeyMap.parse("escape", Command.UNDO).stroke(), KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0));
         assertEquals(KeyMap.parse("esc", Command.UNDO).layer(), KeyMap.Layer.CHORD);
+        assertEquals(KeyMap.parse("ctrl+shift+[", Command.UNDO).stroke(),
+            KeyStroke.getKeyStroke(KeyEvent.VK_OPEN_BRACKET, InputEvent.CTRL_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK));
+        assertEquals(KeyMap.parse("ctrl+space", Command.UNDO).stroke(),
+            KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, InputEvent.CTRL_DOWN_MASK));
+        assertEquals(KeyMap.parse("+", Command.UNDO).stroke(), KeyStroke.getKeyStroke('+'), "a plus alone is a character");
     }
 
     /**
@@ -97,7 +103,7 @@ public class KeyMapTest {
      */
     @Test
     public void keysThatCannotBeMappedAreRefused() {
-        for (String key : new String[] {"", "ab", "cmd+j", "alt+j", "shift+j", "ctrl+", "ctrl+jj", "\t", " ", "ctrl+{", "ctrl+<", "ctrl+é"}) {
+        for (String key : new String[] {"", "ab", "cmd+j", "alt+j", "shift+j", "ctrl+", "ctrl+jj", "\t", " ", "ctrl+{", "ctrl+<", "ctrl+é", "ctrl++", "shift++", "ctrl+shift+", "spacebar"}) {
             expectThrows(IllegalArgumentException.class, () -> KeyMap.parse(key, Command.UNDO));
         }
     }

@@ -84,6 +84,7 @@ public final class KeyMap {
         keys.put("x", Command.DELETE_CELLS);
         keys.put("u", Command.UNDO);
         keys.put("i", Command.INSERT_MODE);
+        keys.put("q", Command.QUICK_MODE);
         keys.put("ctrl+j", Command.NEXT_CELL);
         keys.put("ctrl+k", Command.PREVIOUS_CELL);
         keys.put("ctrl+h", Command.COLUMN_LEFT);
@@ -152,44 +153,26 @@ public final class KeyMap {
     static Binding parse(final String key, final Command command) {
         int modifiers = 0;
         String rest = key;
-        while (true) {
-            String lower = rest.toLowerCase(Locale.ROOT);
-            if (lower.startsWith("ctrl+") && rest.length() > "ctrl+".length()) {
-                modifiers |= InputEvent.CTRL_DOWN_MASK;
-                rest = rest.substring("ctrl+".length());
-            } else if (lower.startsWith("shift+") && rest.length() > "shift+".length()) {
-                modifiers |= InputEvent.SHIFT_DOWN_MASK;
-                rest = rest.substring("shift+".length());
-            } else if (lower.startsWith("alt+") && rest.length() > "alt+".length()) {
-                modifiers |= InputEvent.ALT_DOWN_MASK;
-                rest = rest.substring("alt+".length());
-            } else {
-                break;
-            }
+        for (int found = modifier(rest); found != 0; found = modifier(rest)) {
+            modifiers |= found;
+            rest = rest.substring(rest.indexOf('+') + 1);
         }
-        String name = rest.toLowerCase(Locale.ROOT);
+        int keyCode = namedKey(rest);
         if (modifiers == 0) {
-            if ("escape".equals(name) || "esc".equals(name)) {
+            if (keyCode == KeyEvent.VK_ESCAPE) {
                 return new Binding(key, Layer.CHORD, KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), command);
             }
-            if ("space".equals(name)) {
-                return new Binding(key, Layer.COMMAND, KeyStroke.getKeyStroke(' '), command);
+            char c = keyCode == KeyEvent.VK_SPACE ? ' ' : rest.length() == 1 ? rest.charAt(0) : '\0';
+            if (c < ' ' || c == KeyEvent.VK_DELETE || (c == ' ' && keyCode != KeyEvent.VK_SPACE)) {
+                throw new IllegalArgumentException("\"" + key + "\" is not a key: write a character, space, escape, "
+                    + "or a chord such as ctrl+j");
             }
-            if (rest.length() == 1 && rest.charAt(0) > ' ' && rest.charAt(0) != KeyEvent.VK_DELETE) {
-                return new Binding(key, Layer.COMMAND, KeyStroke.getKeyStroke(rest.charAt(0)), command);
-            }
-            throw new IllegalArgumentException("\"" + key + "\" is not a key: write a character, space, escape, "
-                + "or a chord such as ctrl+j");
+            return new Binding(key, Layer.COMMAND, KeyStroke.getKeyStroke(c), command);
         }
         if ((modifiers & InputEvent.CTRL_DOWN_MASK) == 0) {
             throw new IllegalArgumentException("\"" + key + "\" is not a chord: a chord holds ctrl");
         }
-        int keyCode = KeyEvent.VK_UNDEFINED;
-        if ("escape".equals(name) || "esc".equals(name)) {
-            keyCode = KeyEvent.VK_ESCAPE;
-        } else if ("space".equals(name)) {
-            keyCode = KeyEvent.VK_SPACE;
-        } else if (rest.length() == 1) {
+        if (keyCode == KeyEvent.VK_UNDEFINED && rest.length() == 1) {
             keyCode = KeyEvent.getExtendedKeyCodeForChar(Character.toLowerCase(rest.charAt(0)));
         }
         if (!PRESSABLE.contains(keyCode)) {
@@ -197,6 +180,30 @@ public final class KeyMap {
                 + "such as ctrl+shift+[ rather than ctrl+{");
         }
         return new Binding(key, Layer.CHORD, KeyStroke.getKeyStroke(keyCode, modifiers), command);
+    }
+
+    /** Returns the modifier a key as written starts with, such as {@code ctrl+}, or 0 for none. */
+    private static int modifier(final String key) {
+        String lower = key.toLowerCase(Locale.ROOT);
+        int plus = lower.indexOf('+');
+        if (plus < 0 || plus == lower.length() - 1) {
+            return 0;
+        }
+        return switch (lower.substring(0, plus)) {
+            case "ctrl" -> InputEvent.CTRL_DOWN_MASK;
+            case "shift" -> InputEvent.SHIFT_DOWN_MASK;
+            case "alt" -> InputEvent.ALT_DOWN_MASK;
+            default -> 0;
+        };
+    }
+
+    /** Returns the key a name writes, escape or space, or {@link KeyEvent#VK_UNDEFINED} for any other. */
+    private static int namedKey(final String name) {
+        return switch (name.toLowerCase(Locale.ROOT)) {
+            case "escape", "esc" -> KeyEvent.VK_ESCAPE;
+            case "space" -> KeyEvent.VK_SPACE;
+            default -> KeyEvent.VK_UNDEFINED;
+        };
     }
 
     /** Returns a mapped key as shown to the user: the character, Space, or a chord as macOS menus show it. */

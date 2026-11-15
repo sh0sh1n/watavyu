@@ -38,7 +38,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.function.BooleanSupplier;
 
 
 /**
@@ -107,8 +106,11 @@ public final class ProjectController {
     /** The commands that add media */
     private final MediaCommands mediaCommands = new MediaCommands(this);
 
-    /** Whether quick-key mode is on, in which typing in a selected column makes a cell; an application setting. */
-    private BooleanSupplier quickKeyMode = () -> false;
+    /**
+     * Whether the keyboard is in quick mode here: command mode in which a letter or digit makes a cell in the selected
+     * column. Each spreadsheet has its own, as it has its own insert mode.
+     */
+    private boolean quickKeyMode;
 
     /**
      * Default constructor.
@@ -235,17 +237,17 @@ public final class ProjectController {
     }
 
     /**
-     * Sets where this spreadsheet learns whether quick-key mode is on.
+     * Turns quick mode on or off; the spreadsheet's view goes in and out of it ({@code q}, Esc).
      *
-     * @param quickKeyMode tells whether quick-key mode is on
+     * @param on whether quick mode is on
      */
-    public void setQuickKeyMode(final BooleanSupplier quickKeyMode) {
-        this.quickKeyMode = quickKeyMode;
+    public void setQuickKeyMode(final boolean on) {
+        this.quickKeyMode = on;
     }
 
-    /** Returns whether quick-key mode is on, in which typing in a selected column makes a cell. */
+    /** Returns whether the keyboard is in quick mode here, in which typing in a selected column makes a cell. */
     public boolean isQuickKeyMode() {
-        return quickKeyMode.getAsBoolean();
+        return quickKeyMode;
     }
 
     /** Returns the commands that make, delete and time this spreadsheet's cells. */

@@ -1,6 +1,7 @@
 package com.sh0sh1n.watavyu.views;
 
 import com.sh0sh1n.watavyu.controllers.MediaPlayers;
+import com.sh0sh1n.watavyu.views.spreadsheet.SpreadsheetView;
 
 import javax.swing.JDialog;
 import javax.swing.JLabel;
@@ -29,6 +30,17 @@ import java.util.Map;
 public final class MediaWindow extends JDialog implements MediaPlayers.ColumnWindow {
 
     private static final long serialVersionUID = 1L;
+
+    /**
+     * Returns whether the keyboard is in a media window, outside any component that takes typed characters and with no
+     * menu open, where the key map's plain keys are commands, as in the spreadsheet's command mode.
+     */
+    public static boolean hasKeyboard() {
+        java.awt.KeyboardFocusManager focus = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager();
+        Component owner = focus.getFocusOwner();
+        return focus.getFocusedWindow() instanceof MediaWindow && owner != null
+            && !SpreadsheetView.takesCharacters(owner) && !SpreadsheetView.menuOpen();
+    }
 
     private static final String GAP = "gap";
 

@@ -20,6 +20,7 @@ import com.sh0sh1n.watavyu.util.Resources;
 import com.sh0sh1n.watavyu.controllers.ProjectController;
 import com.sh0sh1n.watavyu.models.*;
 import com.sh0sh1n.watavyu.util.Constants;
+import com.sh0sh1n.watavyu.views.MediaWindow;
 import com.sh0sh1n.watavyu.views.Shortcuts;
 import com.sh0sh1n.watavyu.views.VideoController;
 import com.sh0sh1n.watavyu.views.WindowPlacement;
@@ -75,6 +76,9 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
 
     /** The playhead beside the columns; set with the video controller. */
     private PlayheadCarriage playhead;
+
+    /** The keyboard's mode, shown above the playhead strip. */
+    private ModeMark modeMark;
 
     /** Scrollable view inserted into the JScrollPane */
     private SpreadsheetView mainView;
@@ -281,15 +285,13 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
         layoutFollowedByPlayhead();
         videoController.setPlayhead(playhead);
 
-        // Above the playhead, a blank the height of the column headers, so the strip starts level with the cells.
-        JComponent headerBlank = new JComponent() {
-            @Override
-            public Dimension getPreferredSize() {
-                JViewport columnHeader = scrollPane.getColumnHeader();
-                return new Dimension(PlayheadCarriage.WIDTH, scrollPane.getInsets().top
-                        + (columnHeader == null ? 0 : columnHeader.getPreferredSize().height));
-            }
-        };
+        // Above the playhead, the keyboard's mode, the height of the column headers, so the strip starts level with
+        // the cells.
+        modeMark = new ModeMark(() -> mode() == Mode.NONE ? "" : mode().name(), () -> {
+            JViewport columnHeader = scrollPane.getColumnHeader();
+            return scrollPane.getInsets().top + (columnHeader == null ? 0 : columnHeader.getPreferredSize().height);
+        });
+        JComponent headerBlank = modeMark;
         headerView.addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(final ComponentEvent e) {
@@ -367,7 +369,15 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
     public void registerListeners() {
         KeyboardFocusManager m = KeyboardFocusManager.getCurrentKeyboardFocusManager();
         m.addKeyEventDispatcher(this);
+        m.addPropertyChangeListener("focusOwner", keyboardMoves);
+        javax.swing.MenuSelectionManager.defaultManager().addChangeListener(menuMoves);
     }
+
+    /** Shows the mode again as menus open and close, as keys are a menu's while one is open. */
+    private final javax.swing.event.ChangeListener menuMoves = e -> showMode();
+
+    /** Follows the keyboard from component to component and window to window. */
+    private final java.beans.PropertyChangeListener keyboardMoves = e -> keyboardMoved();
 
     /**
      * Deregisters this column data panel with everything that is currently
@@ -376,6 +386,8 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
     public void deregisterListeners() {
         KeyboardFocusManager m = KeyboardFocusManager.getCurrentKeyboardFocusManager();
         m.removeKeyEventDispatcher(this);
+        m.removePropertyChangeListener("focusOwner", keyboardMoves);
+        javax.swing.MenuSelectionManager.defaultManager().removeChangeListener(menuMoves);
     }
 
     /**
@@ -573,9 +585,8 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
         SpreadsheetColumn selectedColumn = getSelectedColumn();
         // In quick-key mode, a letter or digit typed in a selected annotation column makes a cell holding it. A locked
         // column refuses the cell, and the key is still taken.
-        if (e.getID() == KeyEvent.KEY_PRESSED && !e.isMetaDown() && !e.isControlDown()
-                && projectController.isQuickKeyMode()
-                && (Character.isAlphabetic(e.getKeyChar()) || Character.isDigit(e.getKeyChar()))
+        if (e.getID() == KeyEvent.KEY_PRESSED && !e.isMetaDown() && !e.isControlDown() && mode() == Mode.QUICK
+                && isQuickKey(e.getKeyChar())
                 && selectedColumn != null && !selectedColumn.getColumn().isMedia()) {
             Cell made = projectController.cells().newCellTyped(selectedColumn.getColumn(), e.getKeyChar(),
                 videoController.getCurrentTime());
@@ -645,9 +656,12 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
         }
     }
 
-    /** Returns whether plain keys are commands in this spreadsheet's window now (command mode). */
+    /**
+     * Returns whether plain keys are commands now: in command mode in this spreadsheet's window, or in a media window,
+     * outside any text field, list or menu.
+     */
     public boolean takesCommandKeys() {
-        return mainView.takesCommandKeys();
+        return mainView.takesCommandKeys() || MediaWindow.hasKeyboard();
     }
 
     /**
@@ -659,14 +673,80 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
         return mainView.insertMode();
     }
 
-    /** Returns whether Esc and ⌃] would leave insert mode now. */
-    public boolean canLeaveInsertMode() {
-        return mainView.canLeaveInsertMode();
+    /**
+     * Goes to quick mode ({@code q}): command mode in which a letter or digit makes a point cell at the playhead in the
+     * selected annotation column, holding the character as its first value. The keyboard stays where it is.
+     */
+    public void quickMode() {
+        projectController.setQuickKeyMode(true);
+        showMode();
     }
 
-    /** Leaves insert mode for command mode (Esc, ⌃]), if in it. */
-    public void leaveInsertMode() {
+    /**
+     * Returns whether Esc and ⌃] would go to command mode now: in insert mode, or in quick mode with the keyboard on
+     * the spreadsheet or a media window; with a menu open, Esc is the menu's.
+     */
+    public boolean canGoToCommandMode() {
+        return mainView.canLeaveInsertMode() || mode() == Mode.QUICK;
+    }
+
+    /** Goes to command mode (Esc, ⌃]) from insert or quick mode. */
+    public void commandMode() {
+        projectController.setQuickKeyMode(false);
         mainView.leaveInsertMode();
+        showMode();
+    }
+
+    /** The keyboard's modes as the playhead strip shows them. */
+    public enum Mode {
+        COMMAND, INSERT, QUICK, NONE
+    }
+
+    /**
+     * Returns the keyboard's mode here: insert mode in a cell; else, with plain keys commands, on the spreadsheet or in a
+     * media window, quick or command mode; else none, as with the keyboard in another window, a field or a menu, where
+     * keys are theirs.
+     */
+    public Mode mode() {
+        if (mainView.inInsertMode()) {
+            return Mode.INSERT;
+        }
+        if (!takesCommandKeys()) {
+            return Mode.NONE;
+        }
+        return projectController.isQuickKeyMode() ? Mode.QUICK : Mode.COMMAND;
+    }
+
+    /**
+     * Tells whether a character is a quick key, which in quick mode makes a cell rather than running its command.
+     *
+     * @param c the character a key types
+     * @return whether it is a letter or digit
+     */
+    public static boolean isQuickKey(final char c) {
+        return Character.isLetterOrDigit(c);
+    }
+
+    /**
+     * Follows the keyboard as it moves: going into a cell's editor, by a key or a click, leaves quick mode, so Esc then
+     * comes back to command mode; and the playhead strip shows the mode.
+     */
+    void keyboardMoved() {
+        if (mainView.inInsertMode()) {
+            projectController.setQuickKeyMode(false);
+        }
+        showMode();
+    }
+
+    private void showMode() {
+        if (modeMark != null) {
+            modeMark.repaint();
+        }
+    }
+
+    /** Returns the keyboard's mode as shown above the playhead strip. */
+    ModeMark getModeMark() {
+        return modeMark;
     }
 
     /**
