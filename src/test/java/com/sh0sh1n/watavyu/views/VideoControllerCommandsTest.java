@@ -112,23 +112,23 @@ public class VideoControllerCommandsTest {
     /** A key run by name shows as pressed for a moment, without holding the event thread, and runs once. */
     @Test
     public void aKeyRunByNameShowsThePressAndRunsOnce() throws Exception {
-        JButton stop = key("stopButton");
+        JButton reset = key("resetRateButton");
         List<String> ran = new ArrayList<>();
-        SwingUtilities.invokeAndWait(() -> stop.addActionListener(e -> ran.add("stop")));
+        SwingUtilities.invokeAndWait(() -> reset.addActionListener(e -> ran.add("reset")));
 
         // Still shown pressed once the command has run: the press is not held on the event thread.
         boolean[] pressed = new boolean[1];
         SwingUtilities.invokeAndWait(() -> {
-            controller.run(Command.STOP);
-            pressed[0] = stop.getModel().isPressed();
+            controller.run(Command.RESET_RATE);
+            pressed[0] = reset.getModel().isPressed();
         });
         assertTrue(pressed[0]);
-        assertEquals(ran, List.of("stop"));
+        assertEquals(ran, List.of("reset"));
 
         Thread.sleep(300);
-        SwingUtilities.invokeAndWait(() -> pressed[0] = stop.getModel().isPressed());
+        SwingUtilities.invokeAndWait(() -> pressed[0] = reset.getModel().isPressed());
         assertFalse(pressed[0]);
-        assertEquals(ran, List.of("stop"), "letting go does not run it again");
+        assertEquals(ran, List.of("reset"), "letting go does not run it again");
     }
 
     @Test

@@ -667,11 +667,6 @@ public final class SpreadsheetView extends JPanel implements Scrollable {
         }
 
         @Override
-        public void clockStop(final double clockTime) {
-            // A stop leaves the needle where it is.
-        }
-
-        @Override
         public void clockPause(final double clockTime) {
             // A pause leaves the needle where it is.
         }

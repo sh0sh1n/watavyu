@@ -33,6 +33,7 @@ The aim is a smaller app whose every feature was chosen on purpose, with a moder
 
 Newest first. (owner) marks product decisions; the rest are engineering choices that can be revisited with reason.
 
+- **2026-11-13 (owner): one play/pause key** (F16). Play (keypad 8) plays or pauses, resuming at the rate playback paused at, and reads pause while playing. Stop became Reset (5), which sets the rate back to 1× and neither starts nor pauses playback. Pause went, and keypad 2 is blank. A jog while playing pauses and steps a frame. A shuttle changes the rate only, leaving playback running or paused (owner, 2026-11-14; it played at the next rate when paused). Playback has no rate 0 and no reverse, which worked only in a spreadsheet with no media, as the JavaFX player cannot play backward: shuttling down stops at 0.25×, and playback that should not move is paused.
 - **2026-11-08 (owner): the app icon** replaces Datavyu's leaf: a green play mark between light onset and offset brackets on a Graphite tile, made of the app's own marks. It is one look in light and dark appearance.
 - **2026-11-07 (owner): no Datavyu formats.** Watavyu reads and writes only its own project file, so its data stays in one clean, open format that scripts can process outside the app. Datavyu's `.opf` and `.csv` files stopped opening on 2026-10-30, and its JSON import and export (Spreadsheet > Import Passes From JSON and Export Passes To JSON) went on 2026-11-07. Datavyu projects are migrated outside Watavyu. SnakeYAML went with `.opf`; the citation reads `CITATION.cff` itself.
 - **2026-11-07 (owner): the code lives in `com.sh0sh1n.watavyu`**, under the owner's domain, `sh0sh1n.com`; it was `org.datavyu`. Packages are named for what they hold, in lower case and kept shallow (BUILDING.md › Application Structure): the data model is one package, `models`; the video player sits behind `playback`; the spreadsheet and its commands are one package, `controllers`; the spreadsheet's views are `views.spreadsheet` and the Code Editor's `views.codeeditor`. Class names say what a class is and do not repeat the app's name, which the package already gives: only the application class, `Watavyu`, carries it. Datavyu's names went with it: `Variable`, Datavyu's word for a column, is `Column`, and the main window is `MainWindow`.
@@ -63,7 +64,7 @@ Newest first. (owner) marks product decisions; the rest are engineering choices 
   - Column names `media_1`, `media_2`, … are provisional (2026-10-29). Alternatives to explore: a prefix such as `_media_1`, or namespaces such as `media::1` and `annotation::bookmarks`.
   - Media that fails to open stays (owner, 2026-11-03): its clip keeps its place, reads `(could not open)` as a missing file reads `(missing)`, and is removed with Undo or Delete like any other. Nothing takes a clip or column out of the spreadsheet without an edit.
   - A clip is one media container: video without audio and audio without video are the same to a media column. Audio alone shows a black window; splitting audio and video playback is a later discussion. Gaps between clips are black.
-- **2026-10-29 (owner): playback rates.** Shuttle steps through 0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 3 and 4× instead of Datavyu's powers of 2 from 1/32 to 32×; beyond 4×, people jump or scrub instead. (2× alone, decided 2026-10-14, felt a low ceiling.)
+- **2026-10-29 (owner): playback rates.** Shuttle steps through 0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 3 and 4×, forward only (2026-11-13), instead of Datavyu's powers of 2 from 1/32 to 32×; beyond 4×, people jump or scrub instead. (2× alone, decided 2026-10-14, felt a low ceiling.)
 - **2026-10-14 (owner): annotation columns have no subtypes.** The app has one kind of column, a list of codes.
 - **2026-10-14 (owner): work is tracked in TODO.md and AGENTS.md**, not GitHub issues or separate documents. Small bugs found while iterating are logged rather than fixed when the code may be redesigned or dropped.
 - **2026-10-14 (owner): the JSON project format** (F1). One `<name>.watavyu.json` file holds the whole project for now; folders, templates and reusable coding passes come later (U2). Backwards compatibility with Datavyu does not constrain the design: existing users keep Datavyu.
@@ -96,7 +97,7 @@ Newest first. (owner) marks product decisions; the rest are engineering choices 
 Ask the owner before acting on these.
 
 - Project structure beyond one file: folders, templates, and coding passes reused across experiments (U2).
-- Which controls the drawer keeps, found by trial (F6, F7, F16), and whether the Code Editor and Column List windows join the main window as the video controller did.
+- Which controls the drawer keeps, found by trial (F6, F7), and whether the Code Editor and Column List windows join the main window as the video controller did.
 - The defaults for the values font (sans or mono) and for dimming past cells, once both have been tried (U5).
 - Whether quick-key mode stays.
 - Whether one user action is one undo step, such as Add Media with several files or Set Onset on several cells (deferred by the owner, 2026-11-04). Until then each file and each cell is a step of its own.

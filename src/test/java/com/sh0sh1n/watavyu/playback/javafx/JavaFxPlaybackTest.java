@@ -238,6 +238,40 @@ public class JavaFxPlaybackTest {
         assertEquals(engine.commands.get(engine.commands.size() - 1), "seek 983.333");
     }
 
+    /**
+     * A step and a pause from two threads at once, as a jog while playing makes on the Swing thread while the clock's
+     * thread pauses the player, leave the frame after the one playback paused on: the pause never overwrites the step.
+     */
+    @Test
+    public void aStepAndAPauseAtOnceLeaveTheStep() throws Exception {
+        for (int i = 0; i < 5_000; i++) {
+            playback.seek(1_010);
+            fx.drain();
+            playback.play();
+            fx.drain();
+            engine.time = 1_010;
+            java.util.concurrent.CyclicBarrier together = new java.util.concurrent.CyclicBarrier(2);
+            Thread clock = new Thread(() -> {
+                await(together);
+                playback.pause();
+            });
+            clock.start();
+            await(together);
+            playback.stepForward();
+            clock.join();
+            assertEquals(playback.currentFrame(), 31, "after " + i + " tries");
+            fx.drain();
+        }
+    }
+
+    private static void await(final java.util.concurrent.CyclicBarrier barrier) {
+        try {
+            barrier.await();
+        } catch (InterruptedException | java.util.concurrent.BrokenBarrierException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
     @Test
     public void stepsStopAtTheEndsOfTheStream() {
         playback.stepBackward();

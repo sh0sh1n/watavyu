@@ -23,65 +23,37 @@ final class RateController {
     }
 
     /**
-     * The shuttle's rates: 0, then 0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 3 and 4 in each direction. Beyond 4x, people
-     * jump or scrub instead.
+     * The shuttle's rates: 0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 3 and 4, all forward. Beyond 4x, people jump or scrub
+     * instead. There is no rate 0, as playback that should not move is paused, and no reverse.
      */
     RateController() {
-        this(new float[]{-4F, -3F, -2F, -1.5F, -1.25F, -1F, -0.75F, -0.5F, -0.25F,
-                           0F, 0.25F, 0.5F, 0.75F, 1F, 1.25F, 1.5F, 2F, 3F, 4F});
+        this(new float[]{0.25F, 0.5F, 0.75F, 1F, 1.25F, 1.5F, 2F, 3F, 4F});
     }
 
-    /**
-     * Get the next larger rate. If this is the largest rate, it returns this largest rate.
-     *
-     * @param rate The current rate.
-     *
-     * @return Next larger rate.
-     */
+    /** Returns the rates faster than a rate, slowest first. */
     private List<Float> largerRates(float rate) {
-        SortedSet<Float> tailSet = rates.tailSet(rate);
-        List<Float> larger = new ArrayList<>(tailSet);
-        larger.remove(0);
-        return larger;
+        return new ArrayList<>(rates.tailSet(rate, false));
     }
 
-    /**
-     * Get the next smaller rate. If this is the smallest rate, it returns this smallest rate.
-     *
-     * @param rate The current rate.
-     *
-     * @return Next smaller rate.
-     */
+    /** Returns the rates slower than a rate, fastest first. */
     private List<Float> smallerRates(float rate) {
         return new ArrayList<>(rates.headSet(rate, false).descendingSet());
     }
 
     /**
-     * Get the next rate for the current rate.
+     * Get the next rate for the current rate, going no faster than the fastest rate or slower than the slowest.
      * @param currentRate The current rate.
      * @param jump The number of jumps to the next currentRate.
      *
      * @return Next rate for the number of signed jumps taking the current rate as a reference.
      */
     float nextRate(float currentRate, int jump) {
-        return nextRate(currentRate, jump, true);
-    }
-
-    /**
-     * Get the next rate for the current rate.
-     * @param currentRate The current rate.
-     * @param jump The number of jumps to the next currentRate.
-     * @param reverseAllowed False to stop at zero instead of moving to a negative rate.
-     *
-     * @return Next rate for the number of signed jumps taking the current rate as a reference.
-     */
-    float nextRate(float currentRate, int jump, boolean reverseAllowed) {
         List<Float> rates = jump < 0 ? smallerRates(currentRate) : largerRates(currentRate);
         float nextRate = currentRate;
         Iterator<Float> rate = rates.iterator();
         for (int jumps = 0; rate.hasNext() && jumps < Math.abs(jump); ++jumps) {
             nextRate = rate.next();
         }
-        return reverseAllowed ? nextRate : Math.max(nextRate, 0F);
+        return nextRate;
     }
 }

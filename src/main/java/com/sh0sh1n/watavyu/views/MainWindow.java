@@ -129,7 +129,7 @@ public final class MainWindow implements FileDropEventListener {
 
                 for (Component tab : tabbedPane.getComponents()) {
                     if (tab instanceof SpreadSheetPanel sheet) {
-                        sheet.getVideoController().stopAction();
+                        sheet.getVideoController().pause();
                         if (sheet.getMediaPlayers() != null) {
                             sheet.getMediaPlayers().setShowing(false);
                         }
@@ -1043,10 +1043,10 @@ public final class MainWindow implements FileDropEventListener {
     }
 
     /** The commands of the controls drawer and the keypad, which the selected spreadsheet's playback runs. */
-    private static final List<Command> PLAYBACK = List.of(Command.SET_ONSET, Command.PLAY, Command.SET_OFFSET,
-            Command.SHUTTLE_BACK, Command.STOP, Command.SHUTTLE_FORWARD, Command.JOG_BACK, Command.PAUSE,
-            Command.JOG_FORWARD, Command.NEW_CELL_CLOSING_PREVIOUS, Command.JUMP_BACK, Command.JUMP_FORWARD,
-            Command.FIND_ONSET, Command.FIND_OFFSET, Command.NEW_CELL_IN_SELECTED_COLUMN);
+    private static final List<Command> PLAYBACK = List.of(Command.SET_ONSET, Command.PLAY_PAUSE, Command.SET_OFFSET,
+            Command.SHUTTLE_BACK, Command.RESET_RATE, Command.SHUTTLE_FORWARD, Command.JOG_BACK, Command.JOG_FORWARD,
+            Command.NEW_CELL_CLOSING_PREVIOUS, Command.JUMP_BACK, Command.JUMP_FORWARD, Command.FIND_ONSET,
+            Command.FIND_OFFSET, Command.NEW_CELL_IN_SELECTED_COLUMN);
 
     /** Returns the selected spreadsheet's undo history, or null when no tab is open. */
     private SpreadsheetUndoManager history() {
@@ -1125,13 +1125,12 @@ public final class MainWindow implements FileDropEventListener {
                 .global("Spreadsheet", Command.SELECT_COLUMN_RIGHT, KeyStroke.getKeyStroke(KeyEvent.VK_RIGHT, cmd))
                 .keypad(Command.SHOW_CONTROLS, KeyEvent.VK_MULTIPLY, 0)
                 .keypad(Command.SET_ONSET, KeyEvent.VK_NUMPAD7, 0)
-                .keypad(Command.PLAY, KeyEvent.VK_NUMPAD8, 0)
+                .keypad(Command.PLAY_PAUSE, KeyEvent.VK_NUMPAD8, 0)
                 .keypad(Command.SET_OFFSET, KeyEvent.VK_NUMPAD9, 0)
                 .keypad(Command.SHUTTLE_BACK, KeyEvent.VK_NUMPAD4, 0)
-                .keypad(Command.STOP, KeyEvent.VK_NUMPAD5, 0)
+                .keypad(Command.RESET_RATE, KeyEvent.VK_NUMPAD5, 0)
                 .keypad(Command.SHUTTLE_FORWARD, KeyEvent.VK_NUMPAD6, 0)
                 .keypad(Command.JOG_BACK, KeyEvent.VK_NUMPAD1, 0)
-                .keypad(Command.PAUSE, KeyEvent.VK_NUMPAD2, 0)
                 .keypad(Command.JOG_FORWARD, KeyEvent.VK_NUMPAD3, 0)
                 .keypad(Command.NEW_CELL_CLOSING_PREVIOUS, KeyEvent.VK_NUMPAD0, 0)
                 .keypad(Command.JUMP_BACK, KeyEvent.VK_SUBTRACT, 0)
