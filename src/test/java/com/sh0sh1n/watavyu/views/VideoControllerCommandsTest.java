@@ -19,7 +19,7 @@ import javax.swing.SwingUtilities;
 import java.awt.Container;
 import javax.swing.JButton;
 
-/** The keypad runs the controls drawer's commands by name, as the drawer's keys do. */
+/** The key map runs the controls drawer's commands by name, as the drawer's keys do. */
 public class VideoControllerCommandsTest {
 
     private ProjectController spreadsheet;
@@ -32,7 +32,7 @@ public class VideoControllerCommandsTest {
         controller.setCurrentTime(20_000);
     }
 
-    /** The keypad's minus jumps back by the jump time, and Shift with it forward. */
+    /** Jump Back goes back by the jump time, and Jump Forward forward. */
     @Test
     public void jumpBackAndForwardByTheJumpTime() {
         controller.run(Command.JUMP_BACK);
@@ -43,7 +43,7 @@ public class VideoControllerCommandsTest {
         assertEquals(controller.getCurrentTime(), 25_000L);
     }
 
-    /** The drawer's key jumps back whichever way the keypad last jumped. */
+    /** The drawer's key jumps back whichever way the keys last jumped. */
     @Test
     public void theDrawersJumpKeyJumpsBackAfterAJumpForward() {
         controller.run(Command.JUMP_FORWARD);

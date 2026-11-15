@@ -127,10 +127,10 @@ public class CellCommandsTest {
         assertSame(cells.newCellInSelectedColumn(1_000).getColumn(), speech);
     }
 
-    // New Cell, from the keypad and drawer
+    // New Cell, from the drawer
 
     @Test
-    public void theKeypadsNewCellPrefersTheSelectedColumn() {
+    public void theDrawersNewCellPrefersTheSelectedColumn() {
         spreadsheet.setLastCreatedColumn(speech);
         gaze.setSelected(true);
 
@@ -283,7 +283,7 @@ public class CellCommandsTest {
 
         gaze.setSelected(true);
         cells.newCellClosingPrevious(5_000);
-        assertEquals(first.getOffset(), 5_000, "nor by the keypad's");
+        assertEquals(first.getOffset(), 5_000, "nor by the drawer's");
     }
 
     @Test
@@ -621,7 +621,7 @@ public class CellCommandsTest {
         assertFalse(spreadsheet.getUndoManager().canUndo(), "nothing was recorded");
     }
 
-    /** Redoing a new column puts it back selected; hidden since, it is not where the keypad's New Cell goes. */
+    /** Redoing a new column puts it back selected; hidden since, it is not where the drawer's New Cell goes. */
     @Test
     public void aColumnPutBackHiddenAndSelectedIsPassedOver() throws Exception {
         Column notes = spreadsheet.columns().newColumn("notes");

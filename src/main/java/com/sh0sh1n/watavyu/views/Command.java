@@ -3,11 +3,11 @@ package com.sh0sh1n.watavyu.views;
 import com.sh0sh1n.watavyu.util.Resources;
 
 /**
- * The main window's commands, by stable names. Its menu bar and keyboard shortcuts, the keypad's and the key map's
- * included, run a command through one action ({@link CommandTable}), so a command, its label and its state are defined
- * once. The key map ({@link KeyMap}) names commands by these names. The label is the command's name in menus and the shortcut list. The controls
- * drawer's keys call the selected tab's playback themselves; the keypad runs them by name through
- * {@link VideoController#run}.
+ * The main window's commands, by stable names. Its menu bar and keyboard shortcuts, the key map's included, run a
+ * command through one action ({@link CommandTable}), so a command, its label and its state are defined once. The key
+ * map ({@link KeyMap}) and its changes in Settings name commands by these names. The label is the command's name in
+ * menus and the shortcut list. The controls drawer's keys call the selected tab's playback themselves; the key map
+ * runs the same commands by name through {@link VideoController#run}.
  */
 public enum Command {
     NEW_PROJECT(menu("newMenuItem.text")),

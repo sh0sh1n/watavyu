@@ -120,7 +120,7 @@ public final class CodeValueEditor extends EditorComponent {
         if (!quickKeyMode.getAsBoolean() && !e.isConsumed() && !e.isMetaDown() && !e.isControlDown()
                 && !isReserved(e.getKeyChar())) {
 
-            // Avoids a nasty bug that occurs if carraige return goes to editor. 'New cell' numpad enter still processed as always
+            // Return typed into an empty value is dropped, so it does not become the value.
             if (isEmpty() && e.getKeyChar() == '\n') {
                 return;
             }

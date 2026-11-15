@@ -52,7 +52,7 @@ public final class CellCommands {
     }
 
     /**
-     * New Cell, from the keypad and the controls drawer: a point cell at the time in the first selected column, or
+     * New Cell, from the controls drawer: a point cell at the time in the first selected column, or
      * with none selected, as {@link #newCell(long)}.
      *
      * @param time the new cell's onset and offset
@@ -102,7 +102,7 @@ public final class CellCommands {
     }
 
     /**
-     * New Cell and Set Offset, from the keypad and the controls drawer: closes the cell before the time, setting its
+     * New Cell and Set Offset, from the controls drawer: closes the cell before the time, setting its
      * offset to a millisecond before it, and makes a point cell at the time. The cell closed is in the one selected
      * column, or else in the column of the cell last selected, unless it is hidden: of its cells starting before the
      * time, the latest, and among several starting then, the one last selected, or else the last of them. The new

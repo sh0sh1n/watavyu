@@ -242,7 +242,7 @@ public class VideoControllerTimeTest {
     @Test
     public void thePlayKeyShowsWhatPressingItDoes() throws Exception {
         VideoController controller = TestSpreadsheets.withPlayback(DataStoreFactory.newDataStore()).getVideoController();
-        KeypadKey play = (KeypadKey) find(controller.getControls(), "playPauseButton");
+        DrawerKey play = (DrawerKey) find(controller.getControls(), "playPauseButton");
         try {
             assertEquals(play.getGlyph(), Glyph.Shape.PLAY);
 
@@ -262,7 +262,7 @@ public class VideoControllerTimeTest {
         }
     }
 
-    private static void awaitGlyph(final KeypadKey key, final Glyph.Shape shape) throws Exception {
+    private static void awaitGlyph(final DrawerKey key, final Glyph.Shape shape) throws Exception {
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
         String label = shape == Glyph.Shape.PLAY ? "play" : "pause";
         Glyph.Shape[] shown = new Glyph.Shape[1];

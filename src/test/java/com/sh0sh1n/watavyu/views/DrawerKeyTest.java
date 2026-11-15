@@ -20,15 +20,17 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import javax.swing.JComponent;
 import javax.swing.LookAndFeel;
 import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 
 /**
- * The keypad's keys show a glyph, a label that fits, and the keypad key that does the same.
+ * The controls drawer's keys show a glyph, a label that fits, and the key of the key map that does the same; they sit
+ * in the shape of a numeric keypad.
  */
-public class KeypadKeyTest {
+public class DrawerKeyTest {
 
     private LookAndFeel before;
 
@@ -49,14 +51,12 @@ public class KeypadKeyTest {
         JComponent controls = TestSpreadsheets.withPlayback(DataStoreFactory.newDataStore()).getVideoController().getControls();
         controls.setSize(controls.getPreferredSize());
         layOut(controls);
-        List<KeypadKey> keys = new ArrayList<>();
+        List<DrawerKey> keys = new ArrayList<>();
         collect(controls, keys);
 
-        assertEquals(keys.stream().map(KeypadKey::getKey).toList(),
-                List.of("7", "8", "9", "−", "4", "5", "6", "+", "1", "3", "enter", "0"));
-        for (KeypadKey key : keys) {
+        assertEquals(keys.size(), 12);
+        for (DrawerKey key : keys) {
             assertTrue(key.getIcon() instanceof Glyph, key.getName());
-            assertTrue(!key.getKey().isEmpty(), key.getName());
             FontMetrics metrics = key.getFontMetrics(key.getFont());
             Insets insets = key.getInsets();
             int room = key.getWidth() - insets.left - insets.right;
@@ -67,8 +67,10 @@ public class KeypadKeyTest {
     }
 
     /**
-     * The keys sit as on a Mac's keypad: 45-pixel squares 5 pixels apart in rows and columns, enter two rows high and 0
-     * two wide. 2 is a blank, as play and pause are one key. The size includes the focus ring, as in Datavyu: MigLayout's visual padding, which would widen each key
+     * The keys sit as on a Mac's keypad, as in Datavyu, though no keypad key runs them: 45-pixel squares 5 pixels apart
+     * in rows and columns, new cell (where enter was) two rows high and new cell setting the offset (where 0 was) two
+     * wide. Where 2 was is a blank, as play and pause are one key. Each key is named here by the keypad key it stands
+     * where. The size includes the focus ring, as in Datavyu: MigLayout's visual padding, which would widen each key
      * by its ring, is off.
      */
     @Test
@@ -76,11 +78,17 @@ public class KeypadKeyTest {
         JComponent controls = TestSpreadsheets.withPlayback(DataStoreFactory.newDataStore()).getVideoController().getControls();
         controls.setSize(controls.getPreferredSize());
         layOut(controls);
-        List<KeypadKey> keys = new ArrayList<>();
+        List<DrawerKey> keys = new ArrayList<>();
         collect(controls, keys);
+        Map<String, String> where = Map.ofEntries(Map.entry("setCellOnsetButton", "7"),
+            Map.entry("playPauseButton", "8"), Map.entry("setCellOffsetButton", "9"), Map.entry("jumpByButton", "−"),
+            Map.entry("shuttleBackButton", "4"), Map.entry("resetRateButton", "5"),
+            Map.entry("shuttleForwardButton", "6"), Map.entry("findButton", "+"), Map.entry("jogBackButton", "1"),
+            Map.entry("jogForwardButton", "3"), Map.entry("createNewCellButton", "enter"),
+            Map.entry("createNewCellAndSetOffsetButton", "0"));
         Map<String, Rectangle> at = new HashMap<>();
-        for (KeypadKey key : keys) {
-            at.put(key.getKey(), key.getBounds());
+        for (DrawerKey key : keys) {
+            at.put(where.get(key.getName()), key.getBounds());
         }
 
         for (String key : List.of("7", "8", "9", "−", "4", "5", "6", "+", "1", "3")) {
@@ -118,11 +126,73 @@ public class KeypadKeyTest {
     }
 
     @Test
-    public void aKeySaysWhichKeypadKeyDoesTheSame() {
-        KeypadKey key = new KeypadKey(Glyph.Shape.PLAY, "play", "8");
-        assertEquals(key.getKey(), "8");
+    public void aKeySaysWhichKeyOfTheKeyMapDoesTheSame() {
+        DrawerKey key = new DrawerKey(Glyph.Shape.PLAY, "play");
+        assertEquals(key.getKey(), "", "none until told");
+        key.showKey("Space");
+        assertEquals(key.getKey(), "Space");
         assertEquals(key.getText(), "play");
-        assertEquals(key.getAccessibleContext().getAccessibleDescription(), "Keypad 8");
+        assertEquals(key.getAccessibleContext().getAccessibleDescription(), "Key: Space");
+    }
+
+    /** In the main window, the drawer's keys show the key map's keys, as the user has the map, or none. */
+    @Test
+    public void theDrawerShowsTheKeyMapsKeys() throws Exception {
+        Map<String, String> shown = new HashMap<>();
+        javax.swing.SwingUtilities.invokeAndWait(() -> {
+            javax.swing.JFrame frame = new javax.swing.JFrame();
+            try {
+                MainWindow window = TestSpreadsheets.mainWindow(frame);
+                List<DrawerKey> keys = new ArrayList<>();
+                collect(window.selectedController().getVideoController().getControls(), keys);
+                keys.forEach(key -> shown.put(key.getName(), key.getKey()));
+            } finally {
+                frame.dispose();
+            }
+        });
+
+        Map<String, String> expected = new HashMap<>();
+        expected.put("setCellOnsetButton", "[");
+        expected.put("playPauseButton", "Space");
+        expected.put("setCellOffsetButton", "]");
+        expected.put("jumpByButton", "b");
+        expected.put("shuttleBackButton", "<");
+        expected.put("resetRateButton", "=");
+        expected.put("shuttleForwardButton", ">");
+        expected.put("findButton", "");
+        expected.put("jogBackButton", ",");
+        expected.put("jogForwardButton", ".");
+        expected.put("createNewCellButton", "");
+        expected.put("createNewCellAndSetOffsetButton", "");
+        assertEquals(shown, expected);
+    }
+
+    /**
+     * The find key, which with Shift finds the offset field's time, shows the key that finds the offset if none finds
+     * the onset.
+     */
+    @Test
+    public void theFindKeyShowsFindOffsetsKeyWhenFindOnsetHasNone() throws Exception {
+        Map<String, String> shown = new HashMap<>();
+        javax.swing.SwingUtilities.invokeAndWait(() -> {
+            javax.swing.JFrame frame = new javax.swing.JFrame();
+            try {
+                VideoController controller = TestSpreadsheets.mainWindow(frame).selectedController()
+                    .getVideoController();
+                controller.showKeys(command -> command == Command.FIND_OFFSET ? Optional.of("f") : Optional.empty());
+                List<DrawerKey> keys = new ArrayList<>();
+                collect(controller.getControls(), keys);
+                keys.forEach(key -> shown.put(key.getName(), key.getKey()));
+                controller.showKeys(command -> command == Command.FIND_OFFSET ? Optional.of("f")
+                    : command == Command.FIND_ONSET ? Optional.of("g") : Optional.empty());
+                keys.forEach(key -> shown.put(key.getName() + " with both", key.getKey()));
+            } finally {
+                frame.dispose();
+            }
+        });
+        assertEquals(shown.get("findButton"), "f");
+        assertEquals(shown.get("findButton with both"), "g", "the onset's key wins");
+        assertEquals(shown.get("playPauseButton"), "");
     }
 
     private static void layOut(final Component component) {
@@ -134,8 +204,8 @@ public class KeypadKeyTest {
         }
     }
 
-    private static void collect(final Component component, final List<KeypadKey> keys) {
-        if (component instanceof KeypadKey key) {
+    private static void collect(final Component component, final List<DrawerKey> keys) {
+        if (component instanceof DrawerKey key) {
             keys.add(key);
         } else if (component instanceof Container container) {
             for (Component child : container.getComponents()) {
