@@ -213,6 +213,73 @@ public class CellCommandsTest {
         assertTrue(media.getCells().isEmpty());
     }
 
+    // New Cell Here (o, O)
+
+    @Test
+    public void newCellHereGoesInTheColumnGivenSelectedAlone() {
+        Cell selected = speech.createPointCell(500);
+        selected.setSelected(true);
+
+        Cell cell = cells.newCellInColumn(gaze, 2_000);
+
+        assertSame(cell.getColumn(), gaze);
+        assertEquals(cell.getOnset(), 2_000);
+        assertEquals(cell.getOffset(), 2_000);
+        assertTrue(cell.isSelected());
+        assertTrue(gaze.isSelected());
+        assertFalse(selected.isSelected());
+        assertFalse(speech.isSelected());
+        assertSame(spreadsheet.getLastCreatedColumn(), gaze);
+        undo();
+        assertTrue(gaze.getCells().isEmpty(), "undoable");
+    }
+
+    @Test
+    public void newCellHereRefusesMediaHiddenAndLockedColumns() throws Exception {
+        Column media = dataStore.createMediaColumn("media_1");
+        assertNull(cells.newCellInColumn(media, 1_000));
+        assertNull(cells.newCellInColumnClosingPrevious(media, 1_000));
+        speech.setHidden(true);
+        assertNull(cells.newCellInColumn(speech, 1_000));
+        Cell before = gaze.createPointCell(0);
+        gaze.setLocked(true);
+        assertNull(cells.newCellInColumn(gaze, 1_000));
+        assertNull(cells.newCellInColumnClosingPrevious(gaze, 1_000));
+        assertEquals(before.getOffset(), 0, "a locked column's cell is not closed");
+        assertFalse(spreadsheet.getUndoManager().canUndo());
+    }
+
+    @Test
+    public void newCellHereClosingPreviousClosesTheCellBeforeInTheSameColumn() {
+        Cell earlier = gaze.createPointCell(1_000);
+        Cell previous = gaze.createPointCell(3_000);
+        Cell later = gaze.createPointCell(9_000);
+        Cell elsewhere = speech.createPointCell(4_000);
+        elsewhere.setSelected(true);
+        speech.setSelected(true);
+
+        Cell cell = cells.newCellInColumnClosingPrevious(gaze, 5_000);
+
+        assertEquals(previous.getOffset(), 4_999);
+        assertEquals(earlier.getOffset(), 1_000);
+        assertEquals(later.getOffset(), 9_000);
+        assertEquals(elsewhere.getOffset(), 4_000, "another column's cell is left alone");
+        assertSame(cell.getColumn(), gaze);
+        assertEquals(cell.getOnset(), 5_000);
+        undo();
+        undo();
+        assertEquals(previous.getOffset(), 3_000);
+        assertEquals(gaze.getCells().size(), 3);
+    }
+
+    @Test
+    public void newCellHereClosingPreviousWithNoCellBeforeJustMakesOne() {
+        Cell later = gaze.createPointCell(9_000);
+        Cell cell = cells.newCellInColumnClosingPrevious(gaze, 5_000);
+        assertEquals(later.getOffset(), 9_000);
+        assertEquals(cell.getOnset(), 5_000);
+    }
+
     // New Cell and Set Offset
 
     @Test

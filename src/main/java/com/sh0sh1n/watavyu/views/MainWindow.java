@@ -182,6 +182,12 @@ public final class MainWindow implements FileDropEventListener {
             public void windowClosing(WindowEvent e) {
                 app.exit();
             }
+
+            @Override
+            public void windowClosed(WindowEvent e) {
+                // The shortcuts listen to every window; a disposed main window's must not run.
+                KeyboardFocusManager.getCurrentKeyboardFocusManager().removeKeyEventDispatcher(shortcuts);
+            }
         };
         frame.addWindowListener(exitListener);
     }
@@ -1023,6 +1029,19 @@ public final class MainWindow implements FileDropEventListener {
                 .enabledWhen(() -> getSpreadsheetPanel() != null);
         commands.define(Command.COLUMN_RIGHT, () -> getSpreadsheetPanel().moveHorizontally(true))
                 .enabledWhen(() -> getSpreadsheetPanel() != null);
+        commands.define(Command.NEW_CELL_HERE, () -> getSpreadsheetPanel().newCellHere(false))
+                .enabledWhen(() -> getSpreadsheetPanel() != null);
+        commands.define(Command.NEW_CELL_HERE_CLOSING_PREVIOUS, () -> getSpreadsheetPanel().newCellHere(true))
+                .enabledWhen(() -> getSpreadsheetPanel() != null);
+        commands.define(Command.GO_TO_ONSET, () -> getSpreadsheetPanel().goToSelectedCellTime(false))
+                .enabledWhen(() -> getSpreadsheetPanel() != null);
+        commands.define(Command.GO_TO_OFFSET, () -> getSpreadsheetPanel().goToSelectedCellTime(true))
+                .enabledWhen(() -> getSpreadsheetPanel() != null);
+        commands.define(Command.INSERT_MODE, () -> getSpreadsheetPanel().insertMode())
+                .enabledWhen(() -> getSpreadsheetPanel() != null);
+        // Enabled only in insert mode, so otherwise Esc goes on, as to close a dialog.
+        commands.define(Command.COMMAND_MODE, () -> getSpreadsheetPanel().leaveInsertMode())
+                .enabledWhen(() -> getSpreadsheetPanel() != null && getSpreadsheetPanel().canLeaveInsertMode());
         commands.define(Command.UNDO, this::undo)
                 .labelled(() -> history() == null ? Command.UNDO.label() : history().getUndoPresentationName())
                 .enabledWhen(() -> history() != null && history().canUndo());
@@ -1118,7 +1137,6 @@ public final class MainWindow implements FileDropEventListener {
     private Shortcuts createShortcuts() {
         final int cmd = Shortcuts.COMMAND;
         final int shift = InputEvent.SHIFT_DOWN_MASK;
-        final int ctrl = InputEvent.CTRL_DOWN_MASK;
         return Shortcuts.builder(commands::get)
                 .menu("File", Command.NEW_PROJECT, KeyStroke.getKeyStroke(KeyEvent.VK_N, cmd))
                 .menu("File", Command.OPEN, KeyStroke.getKeyStroke(KeyEvent.VK_O, cmd))
@@ -1139,10 +1157,6 @@ public final class MainWindow implements FileDropEventListener {
                 .menu("Spreadsheet", Command.HIGHLIGHT_AND_FOCUS, KeyStroke.getKeyStroke(KeyEvent.VK_F, cmd | shift))
                 .global("Spreadsheet", Command.SELECT_COLUMN_LEFT, KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, cmd))
                 .global("Spreadsheet", Command.SELECT_COLUMN_RIGHT, KeyStroke.getKeyStroke(KeyEvent.VK_RIGHT, cmd))
-                .global("Spreadsheet", Command.NEXT_CELL, KeyStroke.getKeyStroke(KeyEvent.VK_J, ctrl))
-                .global("Spreadsheet", Command.PREVIOUS_CELL, KeyStroke.getKeyStroke(KeyEvent.VK_K, ctrl))
-                .global("Spreadsheet", Command.COLUMN_LEFT, KeyStroke.getKeyStroke(KeyEvent.VK_H, ctrl))
-                .global("Spreadsheet", Command.COLUMN_RIGHT, KeyStroke.getKeyStroke(KeyEvent.VK_L, ctrl))
                 .keypad(Command.SHOW_CONTROLS, KeyEvent.VK_MULTIPLY, 0)
                 .keypad(Command.SET_ONSET, KeyEvent.VK_NUMPAD7, 0)
                 .keypad(Command.PLAY_PAUSE, KeyEvent.VK_NUMPAD8, 0)
@@ -1158,11 +1172,31 @@ public final class MainWindow implements FileDropEventListener {
                 .keypad(Command.FIND_ONSET, KeyEvent.VK_ADD, 0)
                 .keypad(Command.FIND_OFFSET, KeyEvent.VK_ADD, shift)
                 .keypad(Command.NEW_CELL_IN_SELECTED_COLUMN, KeyEvent.VK_ENTER, 0)
+                .keyMap(KeyMap.defaultMap())
+                .commandKeysWhen(this::isCommandKey)
                 .build(() -> frame.isFocused(), held -> {
                     if (controller() != null) {
                         controller().setShiftMask(held);
                     }
                 }, commands::refresh);
+    }
+
+    /**
+     * Tells whether a plain character is a command now: in command mode in the selected spreadsheet's window, or in a
+     * media window. In quick-key mode, letters and digits are left to the spreadsheet, which makes cells with them.
+     *
+     * @param c the character a key types
+     * @return whether the key map's command layer takes it
+     */
+    private boolean isCommandKey(final char c) {
+        SpreadSheetPanel panel = getSpreadsheetPanel();
+        if (panel == null || (isQuickKeyMode() && Character.isLetterOrDigit(c))) {
+            return false;
+        }
+        KeyboardFocusManager focus = KeyboardFocusManager.getCurrentKeyboardFocusManager();
+        boolean inMediaWindow = focus.getFocusedWindow() instanceof MediaWindow
+                && !(focus.getFocusOwner() instanceof javax.swing.text.JTextComponent);
+        return inMediaWindow || panel.takesCommandKeys();
     }
 
     /** Makes a menu item for a command, with its shortcut. */
@@ -1177,8 +1211,9 @@ public final class MainWindow implements FileDropEventListener {
 
     private <T extends JMenuItem> T withAccelerator(final T item, final Command command) {
         for (Shortcuts.Shortcut shortcut : shortcuts.all()) {
-            if (shortcut.getScope() != Shortcuts.Scope.KEYPAD
-                    && shortcut.getCommand() == command) {
+            boolean fixed = shortcut.getScope() == Shortcuts.Scope.MENU
+                    || shortcut.getScope() == Shortcuts.Scope.GLOBAL;
+            if (fixed && shortcut.getCommand() == command) {
                 item.setAccelerator(shortcut.getKey());
             }
         }

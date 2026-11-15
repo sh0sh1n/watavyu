@@ -554,8 +554,9 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
     }
 
     /**
-     * Takes a key for the spreadsheet on screen: a quick key, ahead of the keys that change mode, so in quick-key mode
-     * {@code i} makes a cell as other letters do.
+     * Takes a key for the spreadsheet on screen: ↑ and ↓ in the sheet, and quick keys. The key map's keys, which
+     * change mode among others, are the main window's ({@link com.sh0sh1n.watavyu.views.KeyMap}); in quick-key mode
+     * its letters and digits are left to this.
      *
      * @param e a key event, from any window
      * @return whether the spreadsheet took it
@@ -587,7 +588,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
             e.consume();
             return true;
         }
-        return mainView.modeKey(e);
+        return false;
     }
 
     /**
@@ -607,6 +608,66 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
             videoController.getCurrentTime());
         next.ifPresent(column::goTo);
         return next.isPresent();
+    }
+
+    /**
+     * New Cell Here ({@code o}) and New Cell Here Closing Previous ({@code O}): a point cell at the playhead in the
+     * selected column, the column of the selected cell or else the column selected last, which then goes into insert
+     * mode in it. Closing the previous cell first sets the offset of the column's cell before the playhead. Nothing
+     * happens with no column selected, or a media column; a locked column refuses, showing its lock.
+     *
+     * @param closingPrevious whether to set the previous cell's offset
+     */
+    public void newCellHere(final boolean closingPrevious) {
+        Cell current = currentCell();
+        SpreadsheetColumn column = current == null ? currentColumn() : columnOf(current);
+        if (column == null) {
+            return;
+        }
+        long time = videoController.timeForNewCell();
+        Cell made = closingPrevious
+            ? projectController.cells().newCellInColumnClosingPrevious(column.getColumn(), time)
+            : projectController.cells().newCellInColumn(column.getColumn(), time);
+        if (made != null) {
+            editCell(made);
+        }
+    }
+
+    /**
+     * Go to Onset and Go to Offset ({@code {}, {@code }}): moves the playhead to the selected cell's onset or offset,
+     * the cell navigation goes from. Nothing happens with no cell selected.
+     *
+     * @param offset whether to go to the offset
+     */
+    public void goToSelectedCellTime(final boolean offset) {
+        Cell current = currentCell();
+        if (current != null) {
+            videoController.setCurrentTime(offset ? current.getOffset() : current.getOnset());
+        }
+    }
+
+    /** Returns whether plain keys are commands in this spreadsheet's window now (command mode). */
+    public boolean takesCommandKeys() {
+        return mainView.takesCommandKeys();
+    }
+
+    /**
+     * Goes to insert mode in the selected cell ({@code i}).
+     *
+     * @return whether a cell was selected to go into
+     */
+    public boolean insertMode() {
+        return mainView.insertMode();
+    }
+
+    /** Returns whether Esc and ⌃] would leave insert mode now. */
+    public boolean canLeaveInsertMode() {
+        return mainView.canLeaveInsertMode();
+    }
+
+    /** Leaves insert mode for command mode (Esc, ⌃]), if in it. */
+    public void leaveInsertMode() {
+        mainView.leaveInsertMode();
     }
 
     /**

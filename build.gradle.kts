@@ -27,8 +27,9 @@ repositories {
 
 sourceSets {
     create("integrationTest") {
-        compileClasspath += sourceSets.main.get().output
-        runtimeClasspath += sourceSets.main.get().output
+        // Integration tests build windows as the unit tests do, with their helpers (TestSpreadsheets).
+        compileClasspath += sourceSets.main.get().output + sourceSets.test.get().output
+        runtimeClasspath += sourceSets.main.get().output + sourceSets.test.get().output
     }
 }
 

@@ -3,9 +3,9 @@ package com.sh0sh1n.watavyu.views;
 import com.sh0sh1n.watavyu.util.Resources;
 
 /**
- * The main window's commands, by stable names. Its menu bar and keyboard shortcuts, the keypad's included, run a
- * command through one action ({@link CommandTable}), so a command, its label and its state are defined once; a key
- * mapping can name commands too (F7). The label is the command's name in menus and the shortcut list. The controls
+ * The main window's commands, by stable names. Its menu bar and keyboard shortcuts, the keypad's and the key map's
+ * included, run a command through one action ({@link CommandTable}), so a command, its label and its state are defined
+ * once. The key map ({@link KeyMap}) names commands by these names. The label is the command's name in menus and the shortcut list. The controls
  * drawer's keys call the selected tab's playback themselves; the keypad runs them by name through
  * {@link VideoController#run}.
  */
@@ -30,6 +30,12 @@ public enum Command {
     PREVIOUS_CELL("Previous cell in the column"),
     COLUMN_LEFT("Column to the left"),
     COLUMN_RIGHT("Column to the right"),
+    NEW_CELL_HERE("New cell at the playhead in the selected column"),
+    NEW_CELL_HERE_CLOSING_PREVIOUS("New cell at the playhead, setting the previous cell's offset"),
+    GO_TO_ONSET("Go to the selected cell's onset"),
+    GO_TO_OFFSET("Go to the selected cell's offset"),
+    INSERT_MODE("Type in the selected cell (insert mode)"),
+    COMMAND_MODE("Stop typing (command mode)"),
     UNDO("Undo"),
     REDO("Redo"),
     TEMPORAL_LAYOUT(menu("weakTemporalAlignmentMenuItem.text")),

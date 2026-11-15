@@ -16,7 +16,6 @@ package com.sh0sh1n.watavyu.views.spreadsheet;
 
 import com.sh0sh1n.watavyu.controllers.ProjectController;
 import com.sh0sh1n.watavyu.models.Cell;
-import com.sh0sh1n.watavyu.views.Shortcuts;
 import com.sh0sh1n.watavyu.models.CellListener;
 import com.sh0sh1n.watavyu.models.Column;
 import com.sh0sh1n.watavyu.util.ClockTimer;
@@ -40,8 +39,6 @@ import java.awt.Graphics;
 import java.awt.KeyboardFocusManager;
 import java.awt.Point;
 import java.awt.Rectangle;
-import java.awt.event.InputEvent;
-import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.beans.PropertyChangeListener;
@@ -126,9 +123,6 @@ public final class SpreadsheetView extends JPanel implements Scrollable {
 
     /** Gives a component the keyboard focus. */
     private Consumer<Component> focusTaker = Component::requestFocus;
-
-    /** The key whose press the modes took, until it is released; the characters it types are dropped. */
-    private int takenKey = KeyEvent.VK_UNDEFINED;
 
     /**
      * How tall a cell was measured to be, and for what width, font and values.
@@ -255,60 +249,37 @@ public final class SpreadsheetView extends JPanel implements Scrollable {
     }
 
     /**
-     * Takes the keys that change mode, ahead of the component in focus: Esc and ⌃] in insert mode go to command mode,
-     * and {@code i} in command mode goes to insert mode in the selected cell. The characters a taken key types are
-     * dropped, so the {@code i} does not reach the cell it goes into.
+     * Leaves insert mode for command mode (Esc, ⌃]), if the keyboard is in insert mode here and no menu is open, as Esc
+     * then closes the menu.
      *
-     * @param e a key event, from any window
-     * @return whether the sheet took it
+     * @return whether it left
      */
-    public boolean modeKey(final KeyEvent e) {
-        return switch (e.getID()) {
-            case KeyEvent.KEY_PRESSED -> modeKeyPressed(e);
-            case KeyEvent.KEY_TYPED -> dropCharacter(e);
-            case KeyEvent.KEY_RELEASED -> {
-                if (e.getKeyCode() == takenKey) {
-                    takenKey = KeyEvent.VK_UNDEFINED;
-                }
-                yield false;
-            }
-            default -> false;
-        };
+    public boolean leaveInsertMode() {
+        if (!canLeaveInsertMode()) {
+            return false;
+        }
+        commandMode();
+        return true;
     }
 
-    private boolean modeKeyPressed(final KeyEvent e) {
-        int modifiers = e.getModifiersEx() & Shortcuts.MODIFIERS;
-        boolean leave = (e.getKeyCode() == KeyEvent.VK_ESCAPE && modifiers == 0)
-                || (e.getKeyCode() == KeyEvent.VK_CLOSE_BRACKET && modifiers == InputEvent.CTRL_DOWN_MASK);
-        boolean taken;
-        if (leave && inInsertMode() && !menuOpen()) {
-            commandMode();
-            taken = true;
-        } else {
-            taken = e.getKeyCode() == KeyEvent.VK_I && modifiers == 0 && inCommandMode() && insertMode();
-        }
-        takenKey = taken ? e.getKeyCode() : KeyEvent.VK_UNDEFINED;
-        if (taken) {
-            e.consume();
-        }
-        return taken;
+    /** Returns whether {@link #leaveInsertMode()} would leave insert mode now. */
+    public boolean canLeaveInsertMode() {
+        return inInsertMode() && !menuOpen();
+    }
+
+    /**
+     * Returns whether plain keys are commands now, for the window this sheet is in: the keyboard is in that window, not
+     * in insert mode nor in another text field, and no menu is open.
+     */
+    public boolean takesCommandKeys() {
+        Component owner = focusOwner.get();
+        return owner != null && !(owner instanceof javax.swing.text.JTextComponent) && !inInsertMode() && !menuOpen()
+                && java.util.Objects.equals(SwingUtilities.getWindowAncestor(owner), SwingUtilities.getWindowAncestor(this));
     }
 
     /** Returns whether a menu is open, which Esc closes rather than leaving insert mode. */
     static boolean menuOpen() {
         return MenuSelectionManager.defaultManager().getSelectedPath().length > 0;
-    }
-
-    /**
-     * Drops the characters of a key whose press the modes took. A held key presses again as it repeats, and the
-     * repeats are not taken, so a held {@code i} goes into the cell and then types, as in vim.
-     */
-    private boolean dropCharacter(final KeyEvent e) {
-        if (takenKey == KeyEvent.VK_UNDEFINED) {
-            return false;
-        }
-        e.consume();
-        return true;
     }
 
     // *************************************************************************

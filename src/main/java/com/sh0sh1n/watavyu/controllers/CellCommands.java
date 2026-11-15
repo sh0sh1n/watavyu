@@ -130,6 +130,37 @@ public final class CellCommands {
         return newCellIn(columnForNewCellAt(), time);
     }
 
+    /**
+     * New Cell Here ({@code o}): a point cell at the time in a column.
+     *
+     * @param column the column, the one selected
+     * @param time   the new cell's onset and offset
+     * @return the new cell, or null if the column is a media column or is hidden or locked
+     */
+    public Cell newCellInColumn(final Column column, final long time) {
+        return newCellIn(column, time);
+    }
+
+    /**
+     * New Cell Here Closing Previous ({@code O}): closes the column's cell before the time, as
+     * {@link #newCellClosingPrevious(long)} picks it, setting its offset to a millisecond before the time, and makes a
+     * point cell at the time in the same column.
+     *
+     * @param column the column, the one selected
+     * @param time   the new cell's onset and offset
+     * @return the new cell, or null if the column is a media column or is hidden or locked, which changes nothing
+     */
+    public Cell newCellInColumnClosingPrevious(final Column column, final long time) {
+        if (refusesCells(column)) {
+            return null;
+        }
+        Cell previous = cellToClose(column, time);
+        if (previous != null) {
+            CellTimes.setOffset(spreadsheet, previous, Math.max(0, time - 1));
+        }
+        return newCellIn(column, time);
+    }
+
     /** @return the cell to close before the time, as {@link #newCellClosingPrevious(long)} picks it, or null */
     private Cell cellToClose(final Column column, final long time) {
         List<Cell> started = column.getCells().stream().filter(cell -> cell.getOnset() <= time).sorted(BY_ONSET)
