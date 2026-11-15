@@ -285,13 +285,13 @@ public final class SpreadsheetView extends JPanel implements Scrollable {
     }
 
     /** Returns whether a component does something with typed characters: types them, or picks an item by them. */
-    static boolean takesCharacters(final Component component) {
+    public static boolean takesCharacters(final Component component) {
         return component instanceof JTextComponent || component instanceof JComboBox || component instanceof JList
                 || component instanceof JTable || component instanceof JTree;
     }
 
     /** Returns whether a menu is open, which Esc closes rather than leaving insert mode. */
-    static boolean menuOpen() {
+    public static boolean menuOpen() {
         return MenuSelectionManager.defaultManager().getSelectedPath().length > 0;
     }
 

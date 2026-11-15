@@ -140,24 +140,62 @@ public class SheetQuickModeTest {
     @Test
     public void thePlayheadStripShowsTheMode() throws Exception {
         withPanel(panel -> {
-            assertEquals(panel.getPlayhead().getMode(), "COMMAND");
+            assertEquals(panel.getModeMark().getMode(), "COMMAND");
             panel.quickMode();
-            assertEquals(panel.getPlayhead().getMode(), "QUICK");
+            assertEquals(panel.getModeMark().getMode(), "QUICK");
             cell.setSelected(true);
             owner.set(sheet.edit(cell).getDataView());
-            assertEquals(panel.getPlayhead().getMode(), "INSERT");
+            assertEquals(panel.getModeMark().getMode(), "INSERT");
             owner.set(null);
-            assertEquals(panel.getPlayhead().getMode(), "", "the keyboard in another app");
+            assertEquals(panel.getModeMark().getMode(), "", "the keyboard in another app");
         });
     }
 
-    /** Each spreadsheet has its own quick mode, as it has its own insert mode. */
+    /** Each spreadsheet has its own quick mode, as it has its own insert mode: another tab stays in command mode. */
     @Test
     public void quickModeIsTheSpreadsheets() throws Exception {
         withPanel(panel -> {
-            panel.quickMode();
             ProjectController other = TestSpreadsheets.withPlayback(DataStoreFactory.newDataStore());
-            assertFalse(other.isQuickKeyMode());
+            SpreadSheetPanel otherPanel = new SpreadSheetPanel(other, null);
+            try {
+                SpreadsheetView otherSheet = otherPanel.getSheet();
+                otherSheet.setFocus(() -> otherSheet, component -> { });
+                panel.quickMode();
+                assertEquals(panel.mode(), SpreadSheetPanel.Mode.QUICK);
+                assertFalse(other.isQuickKeyMode());
+                assertEquals(otherPanel.mode(), SpreadSheetPanel.Mode.COMMAND);
+            } finally {
+                otherPanel.close();
+            }
+        });
+    }
+
+    /** With a menu open, keys are the menu's: no mode shows, and Esc closes the menu rather than leaving quick mode. */
+    @Test
+    public void aMenuOpenTakesTheKeys() throws Exception {
+        withPanel(panel -> {
+            panel.quickMode();
+            javax.swing.MenuSelectionManager.defaultManager().setSelectedPath(
+                new javax.swing.MenuElement[] {new javax.swing.JPopupMenu()});
+            try {
+                assertEquals(panel.mode(), SpreadSheetPanel.Mode.NONE);
+                assertFalse(panel.canGoToCommandMode());
+                assertFalse(key(panel, KeyEvent.VK_A, 'a'));
+            } finally {
+                javax.swing.MenuSelectionManager.defaultManager().clearSelectedPath();
+            }
+            assertEquals(panel.mode(), SpreadSheetPanel.Mode.QUICK);
+        });
+    }
+
+    /** Option-letters are quick keys too, as they were. */
+    @Test
+    public void anOptionLetterMakesACell() throws Exception {
+        withPanel(panel -> {
+            panel.quickMode();
+            assertTrue(panel.takeKey(new KeyEvent(sheet, KeyEvent.KEY_PRESSED, 0, java.awt.event.InputEvent.ALT_DOWN_MASK,
+                KeyEvent.VK_A, 'å')));
+            assertEquals(notes.getCells().size(), 2);
         });
     }
 }

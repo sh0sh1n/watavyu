@@ -171,7 +171,7 @@ public class SheetModesInWindowTest {
     public void qGoesToQuickModeAndEscapeComesBack() throws Exception {
         type(KeyEvent.VK_Q, 'q', 0);
         await(() -> panel.mode() == SpreadSheetPanel.Mode.QUICK, "quick mode");
-        assertEquals(panel.getPlayhead().getMode(), "QUICK");
+        assertEquals(panel.getModeMark().getMode(), "QUICK");
         type(KeyEvent.VK_X, 'x', 0);
         await(() -> notes.getCells().size() == 2, "x makes a cell rather than deleting one");
         assertTrue(notes.getCells().stream().anyMatch(made -> "x".equals(made.getValues().get(0))));

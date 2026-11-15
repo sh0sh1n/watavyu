@@ -100,13 +100,13 @@ public class MainWindowTest {
      */
     @Test
     public void plainKeysAreCommandsInCommandModeOrAMediaWindowAndQuickModeKeepsLettersAndDigits() {
-        assertTrue(MainWindow.isCommandKey('x', false, false, () -> true), "command mode");
-        assertFalse(MainWindow.isCommandKey('x', false, false, () -> false), "insert mode, or another window");
-        assertTrue(MainWindow.isCommandKey('x', false, true, () -> false), "a media window");
-        assertFalse(MainWindow.isCommandKey('x', true, false, () -> true), "a quick key");
-        assertFalse(MainWindow.isCommandKey('7', true, true, () -> true), "a quick key");
-        assertTrue(MainWindow.isCommandKey(' ', true, false, () -> true), "Space plays in quick mode");
-        assertTrue(MainWindow.isCommandKey('[', true, false, () -> true), "[ sets the onset in quick mode");
+        assertTrue(MainWindow.isCommandKey('x', false, () -> true), "command mode, or a media window");
+        assertFalse(MainWindow.isCommandKey('x', false, () -> false), "insert mode, or another window");
+        assertFalse(MainWindow.isCommandKey('x', true, () -> true), "a quick key");
+        assertFalse(MainWindow.isCommandKey('7', true, () -> true), "a quick key");
+        assertFalse(MainWindow.isCommandKey('å', true, () -> true), "a quick key, typed with Option");
+        assertTrue(MainWindow.isCommandKey(' ', true, () -> true), "Space plays in quick mode");
+        assertTrue(MainWindow.isCommandKey('[', true, () -> true), "[ sets the onset in quick mode");
     }
 
     @Test
