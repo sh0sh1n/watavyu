@@ -97,7 +97,6 @@ public final class MainWindow implements FileDropEventListener {
 
     private JMenu openRecentFileMenu;
 
-    private boolean quickKeyMode = false;
 
     private final JTabbedPane tabbedPane = new JTabbedPane();
 
@@ -201,7 +200,6 @@ public final class MainWindow implements FileDropEventListener {
     private SpreadSheetPanel addTab(final ProjectController pc) {
         pc.setVideoController(new VideoController(pc, frame));
         pc.setTitleListener(() -> SwingUtilities.invokeLater(() -> updateTitle(pc)));
-        pc.setQuickKeyMode(this::isQuickKeyMode);
         pc.addUndoableEditListener(event -> refreshCommands());
 
         SpreadSheetPanel panel = new SpreadSheetPanel(pc, frame);
@@ -322,8 +320,7 @@ public final class MainWindow implements FileDropEventListener {
         String projectName = projectController.getProjectName();
         projectName = (projectName == null) ? "untitled" : projectName;
 
-        String title = windowTitle(resourceMap.getString("Application.title"), projectName + extension + postFix,
-                isQuickKeyMode());
+        String title = windowTitle(resourceMap.getString("Application.title"), projectName + extension + postFix);
         String tabTitle = projectName + postFix;
 
         projectController.getProject().setDatabaseFileName(projectName + extension);
@@ -339,13 +336,11 @@ public final class MainWindow implements FileDropEventListener {
     /**
      * Returns the main window's title.
      * @param applicationTitle The application's name.
-     * @param document         The project's file name and changed marker.
-     * @param quickKeyMode     Whether quick-key mode is on. Highlight-and-focus mode is on by default, so its state is
-     *                         shown only on its button and menu item.
+     * @param document         The project's file name and changed marker. The keyboard's mode shows in the playhead
+     *                         strip, and highlight-and-focus mode, on by default, on its menu item.
      */
-    static String windowTitle(final String applicationTitle, final String document, final boolean quickKeyMode) {
-        String title = applicationTitle + " - " + document;
-        return quickKeyMode ? title + " <QUICK KEY MODE>" : title;
+    static String windowTitle(final String applicationTitle, final String document) {
+        return applicationTitle + " - " + document;
     }
 
     /**
@@ -449,19 +444,10 @@ public final class MainWindow implements FileDropEventListener {
         }
     }
 
-    public void toggleQuickKeys() {
-        quickKeyMode = !quickKeyMode;
-        updateTitle();
-    }
-
     public void toggleHighlightAndFocusMode() {
         ProjectController selected = selectedController();
         selected.getVideoController().toggleCellHighlightingAutoFocus();
         selected.getSpreadSheetPanel().redrawCells();
-    }
-
-    public boolean isQuickKeyMode() {
-        return quickKeyMode;
     }
 
     private boolean canSave(final String directory, final String file) {
@@ -1039,9 +1025,11 @@ public final class MainWindow implements FileDropEventListener {
                 .enabledWhen(() -> getSpreadsheetPanel() != null);
         commands.define(Command.INSERT_MODE, () -> getSpreadsheetPanel().insertMode())
                 .enabledWhen(() -> getSpreadsheetPanel() != null);
-        // Enabled only in insert mode, so otherwise Esc goes on, as to close a dialog.
-        commands.define(Command.COMMAND_MODE, () -> getSpreadsheetPanel().leaveInsertMode())
-                .enabledWhen(() -> getSpreadsheetPanel() != null && getSpreadsheetPanel().canLeaveInsertMode());
+        commands.define(Command.QUICK_MODE, () -> getSpreadsheetPanel().quickMode())
+                .enabledWhen(() -> getSpreadsheetPanel() != null);
+        // Enabled only in insert or quick mode, so otherwise Esc goes on, as to close a dialog.
+        commands.define(Command.COMMAND_MODE, () -> getSpreadsheetPanel().commandMode())
+                .enabledWhen(() -> getSpreadsheetPanel() != null && getSpreadsheetPanel().canGoToCommandMode());
         commands.define(Command.UNDO, this::undo)
                 .labelled(() -> history() == null ? Command.UNDO.label() : history().getUndoPresentationName())
                 .enabledWhen(() -> history() != null && history().canUndo());
@@ -1056,7 +1044,6 @@ public final class MainWindow implements FileDropEventListener {
         commands.define(Command.RESET_ZOOM, this::resetZoom);
         commands.define(Command.MONOSPACED_VALUES, this::toggleMonospacedValues)
                 .checked(() -> Settings.get().isMonospacedValues());
-        commands.define(Command.QUICK_KEYS, this::toggleQuickKeys).labelled(this::quickKeyModeText);
         commands.define(Command.HIGHLIGHT_AND_FOCUS, this::toggleHighlightAndFocusMode)
                 .labelled(() -> highlightAndFocusText(controller() == null
                         ? VideoController.HIGHLIGHT_AND_FOCUS_BY_DEFAULT : controller().getCellHighlightAndFocus()));
@@ -1153,7 +1140,6 @@ public final class MainWindow implements FileDropEventListener {
                 .global("Spreadsheet", Command.ZOOM_IN, KeyStroke.getKeyStroke(KeyEvent.VK_EQUALS, cmd))
                 .global("Spreadsheet", Command.ZOOM_OUT, KeyStroke.getKeyStroke(KeyEvent.VK_MINUS, cmd))
                 .menu("Spreadsheet", Command.RESET_ZOOM, KeyStroke.getKeyStroke(KeyEvent.VK_0, cmd))
-                .menu("Spreadsheet", Command.QUICK_KEYS, KeyStroke.getKeyStroke(KeyEvent.VK_K, cmd | shift))
                 .menu("Spreadsheet", Command.HIGHLIGHT_AND_FOCUS, KeyStroke.getKeyStroke(KeyEvent.VK_F, cmd | shift))
                 .global("Spreadsheet", Command.SELECT_COLUMN_LEFT, KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, cmd))
                 .global("Spreadsheet", Command.SELECT_COLUMN_RIGHT, KeyStroke.getKeyStroke(KeyEvent.VK_RIGHT, cmd))
@@ -1190,11 +1176,8 @@ public final class MainWindow implements FileDropEventListener {
      */
     private boolean isCommandKey(final char c) {
         SpreadSheetPanel panel = getSpreadsheetPanel();
-        KeyboardFocusManager focus = KeyboardFocusManager.getCurrentKeyboardFocusManager();
-        return panel != null && isCommandKey(c, isQuickKeyMode(),
-            focus.getFocusedWindow() instanceof MediaWindow && focus.getFocusOwner() != null
-                && !(focus.getFocusOwner() instanceof javax.swing.text.JTextComponent),
-            panel::takesCommandKeys);
+        return panel != null && isCommandKey(c, panel.getProjectController().isQuickKeyMode(),
+            MediaWindow.hasKeyboard(), panel::takesCommandKeys);
     }
 
     /**
@@ -1306,8 +1289,6 @@ public final class MainWindow implements FileDropEventListener {
         spreadsheetMenu.add(zoomMenu);
         spreadsheetMenu.add(checkItem(Command.MONOSPACED_VALUES));
         spreadsheetMenu.add(pastCellDimMenu());
-        JMenuItem quickKeysItem = spreadsheetMenu.add(item(Command.QUICK_KEYS));
-        quickKeysItem.setToolTipText(resources.getString("quickKeysMenuItem.toolTipText"));
         JMenuItem highlightAndFocusItem = spreadsheetMenu.add(item(Command.HIGHLIGHT_AND_FOCUS));
         highlightAndFocusItem.setToolTipText(resources.getString("highlightAndFocusMenuItem.toolTipText"));
         menuBar.add(spreadsheetMenu);
@@ -1334,10 +1315,6 @@ public final class MainWindow implements FileDropEventListener {
             item.addActionListener(e -> open(file));
             openRecentFileMenu.add(item);
         }
-    }
-
-    private String quickKeyModeText() {
-        return quickKeyMode ? "Disable Quick Key Mode" : "Enable Quick Key Mode";
     }
 
     private static String highlightAndFocusText(final boolean on) {

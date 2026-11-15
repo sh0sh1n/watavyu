@@ -44,6 +44,7 @@ public class KeyMapTest {
         expected.put("x", Command.DELETE_CELLS);
         expected.put("u", Command.UNDO);
         expected.put("i", Command.INSERT_MODE);
+        expected.put("q", Command.QUICK_MODE);
         expected.put("ctrl+j", Command.NEXT_CELL);
         expected.put("ctrl+k", Command.PREVIOUS_CELL);
         expected.put("ctrl+h", Command.COLUMN_LEFT);

@@ -111,12 +111,7 @@ public class MainWindowTest {
 
     @Test
     public void theTitleNamesTheApplicationAndTheProject() {
-        assertEquals(MainWindow.windowTitle("Watavyu", "study.watavyu.json  *", false), "Watavyu - study.watavyu.json  *");
-    }
-
-    @Test
-    public void theTitleShowsQuickKeyMode() {
-        assertEquals(MainWindow.windowTitle("Watavyu", "study.watavyu.json  ", true), "Watavyu - study.watavyu.json   <QUICK KEY MODE>");
+        assertEquals(MainWindow.windowTitle("Watavyu", "study.watavyu.json  *"), "Watavyu - study.watavyu.json  *");
     }
 
     /** B8: a recovered project is named after the project that was autosaved. */

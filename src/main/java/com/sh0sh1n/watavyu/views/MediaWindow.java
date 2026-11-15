@@ -30,6 +30,16 @@ public final class MediaWindow extends JDialog implements MediaPlayers.ColumnWin
 
     private static final long serialVersionUID = 1L;
 
+    /**
+     * Returns whether the keyboard is in a media window, outside any text field, where the key map's plain keys are
+     * commands, as in the spreadsheet's command mode.
+     */
+    public static boolean hasKeyboard() {
+        java.awt.KeyboardFocusManager focus = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager();
+        return focus.getFocusedWindow() instanceof MediaWindow && focus.getFocusOwner() != null
+            && !(focus.getFocusOwner() instanceof javax.swing.text.JTextComponent);
+    }
+
     private static final String GAP = "gap";
 
     /** How far each new media window is set off from the one before. */

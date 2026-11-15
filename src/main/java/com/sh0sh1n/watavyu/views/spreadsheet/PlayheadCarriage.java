@@ -29,7 +29,8 @@ import java.util.function.Supplier;
  * The playhead: a strip beside the spreadsheet's columns with a needle at the clock's time, carrying the time and
  * rate. The needle has no scale of its own; in a spreadsheet laid out in time it sits where its time falls among the
  * cells ({@link TimeAxis}), scrolls with them, and is dragged to move the clock. Its line can run on across the
- * columns. In a spreadsheet laid out by order, which places nothing in time, the strip shows the time at its top.
+ * columns. In a spreadsheet laid out by order, which places nothing in time, the strip shows the time at its top. At
+ * its foot it shows the keyboard's mode (command, insert or quick), as vim does at the foot of its window.
  */
 public final class PlayheadCarriage extends JComponent implements VideoController.Playhead {
 
@@ -45,6 +46,9 @@ public final class PlayheadCarriage extends JComponent implements VideoControlle
     private static final Font TIME_FONT = SpreadsheetTheme.labelFont().deriveFont(11.5F);
     private static final Font RATE_FONT = SpreadsheetTheme.labelFont().deriveFont(10.5F);
     private static final int BADGE_HEIGHT = 30;
+    private static final Font MODE_FONT = SpreadsheetTheme.labelFont().deriveFont(Font.BOLD, 10F);
+    /** The height kept at the strip's foot for the mode. */
+    private static final int MODE_HEIGHT = 18;
     private static final int BADGE_MARGIN = 3;
 
     private final JViewport viewport;
@@ -52,6 +56,9 @@ public final class PlayheadCarriage extends JComponent implements VideoControlle
     private final LongConsumer seek;
     private final IntConsumer lineAt;
     private final BooleanSupplier lineAcross;
+
+    /** The keyboard's mode, as shown; empty shows none. */
+    private Supplier<String> mode = () -> "";
 
     /** A time and the rate at it, shown together, and whether playback is running. */
     private record Reading(long time, String rate, boolean playing) {
@@ -120,6 +127,21 @@ public final class PlayheadCarriage extends JComponent implements VideoControlle
     @Override
     public Dimension getPreferredSize() {
         return new Dimension(WIDTH, super.getPreferredSize().height);
+    }
+
+    /**
+     * Sets the keyboard's mode the strip shows at its foot. Whoever changes the mode repaints the strip.
+     *
+     * @param mode the mode now, such as COMMAND, or empty for none
+     */
+    public void showMode(final Supplier<String> mode) {
+        this.mode = mode;
+        repaint();
+    }
+
+    /** Returns the mode the strip shows. */
+    String getMode() {
+        return mode.get();
     }
 
     /** Shows the clock's time and rate; called from any thread. */
@@ -201,7 +223,8 @@ public final class PlayheadCarriage extends JComponent implements VideoControlle
             g.drawLine(getWidth() - 1, 0, getWidth() - 1, getHeight());
 
             int top = SwingUtilities.convertPoint(viewport, 0, 0, this).y;
-            int bottom = top + viewport.getExtentSize().height;
+            int modeTop = getHeight() - MODE_HEIGHT;
+            int bottom = Math.min(top + viewport.getExtentSize().height, modeTop);
             Reading shown = reading;
             Optional<Integer> needle = axis.get().map(a -> toStrip(a.y(shown.time())));
             // Which way the needle lies when out of view: -1 above, 1 below, 0 in view or absent.
@@ -223,9 +246,25 @@ public final class PlayheadCarriage extends JComponent implements VideoControlle
                         Math.min(needle.get(), bottom - BADGE_HEIGHT / 2));
             }
             paintBadge(g, badgeCentre, shown.time(), shown.rate(), pointing);
+            paintMode(g, modeTop);
         } finally {
             g.dispose();
         }
+    }
+
+    /** Draws the keyboard's mode at the strip's foot, in the times' quieter colour. */
+    private void paintMode(final Graphics2D g, final int modeTop) {
+        String text = mode.get();
+        g.setColor(SpreadsheetTheme.PALETTE.chrome());
+        g.fillRect(0, modeTop, getWidth() - 1, MODE_HEIGHT);
+        if (text.isEmpty()) {
+            return;
+        }
+        g.setColor(SpreadsheetTheme.PALETTE.time());
+        g.setFont(MODE_FONT);
+        FontMetrics metrics = g.getFontMetrics();
+        g.drawString(text, (getWidth() - metrics.stringWidth(text)) / 2,
+            modeTop + (MODE_HEIGHT + metrics.getAscent() - metrics.getDescent()) / 2);
     }
 
     private void paintBadge(final Graphics2D g, final int centre, final long time, final String rateText,

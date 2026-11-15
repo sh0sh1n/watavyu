@@ -36,7 +36,7 @@ public class SpreadSheetPanelTest {
         AtomicBoolean taken = new AtomicBoolean();
         SwingUtilities.invokeAndWait(() -> {
             ProjectController spreadsheet = TestSpreadsheets.withPlayback(dataStore);
-            spreadsheet.setQuickKeyMode(() -> true);
+            spreadsheet.setQuickKeyMode(true);
             SpreadSheetPanel panel = new SpreadSheetPanel(spreadsheet, null);
             panel.registerListeners();
             notes.setSelected(true);
@@ -65,7 +65,7 @@ public class SpreadSheetPanelTest {
         List<java.awt.Component> focused = new ArrayList<>();
         SwingUtilities.invokeAndWait(() -> {
             ProjectController spreadsheet = TestSpreadsheets.withPlayback(dataStore);
-            spreadsheet.setQuickKeyMode(() -> true);
+            spreadsheet.setQuickKeyMode(true);
             SpreadSheetPanel panel = new SpreadSheetPanel(spreadsheet, null);
             try {
                 SpreadsheetView sheet = panel.getColumns().get(0).getSheet();

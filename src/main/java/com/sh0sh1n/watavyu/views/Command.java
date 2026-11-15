@@ -35,7 +35,8 @@ public enum Command {
     GO_TO_ONSET("Go to the selected cell's onset"),
     GO_TO_OFFSET("Go to the selected cell's offset"),
     INSERT_MODE("Type in the selected cell (insert mode)"),
-    COMMAND_MODE("Stop typing (command mode)"),
+    QUICK_MODE("Make cells with letters and digits (quick mode)"),
+    COMMAND_MODE("Back to command mode"),
     UNDO("Undo"),
     REDO("Redo"),
     TEMPORAL_LAYOUT(menu("weakTemporalAlignmentMenuItem.text")),
@@ -43,7 +44,6 @@ public enum Command {
     ZOOM_OUT(menu("zoomOutMenuItem.text")),
     RESET_ZOOM(menu("resetZoomMenuItem.text")),
     MONOSPACED_VALUES(menu("monospacedValuesMenuItem.text")),
-    QUICK_KEYS("Quick Key Mode"),
     HIGHLIGHT_AND_FOCUS("Highlight and Focus Mode"),
 
     SHOW_CONTROLS(menu("showControlsMenuItem.text")),
