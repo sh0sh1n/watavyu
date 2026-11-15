@@ -144,13 +144,16 @@ public class MenuShortcutKeysTest {
         changes.put("ctrl+q", "NOT_A_COMMAND");
         com.sh0sh1n.watavyu.util.Settings.get().setKeys(changes);
         List<String> runs = new ArrayList<>();
+        List<String> problems = new ArrayList<>();
         try {
             SwingUtilities.invokeAndWait(() -> {
                 JFrame frame = new JFrame();
                 try {
-                    TestSpreadsheets.mainWindow(frame).getShortcuts().all().stream()
+                    MainWindow window = TestSpreadsheets.mainWindow(frame);
+                    window.getShortcuts().all().stream()
                         .filter(shortcut -> shortcut.getScope() == Shortcuts.Scope.COMMAND)
                         .forEach(shortcut -> runs.add(shortcut.getKeyText() + " " + shortcut.getCommand()));
+                    problems.addAll(window.getKeyMapProblems());
                 } finally {
                     frame.dispose();
                 }
@@ -162,5 +165,7 @@ public class MenuShortcutKeysTest {
         assertTrue(runs.contains("d DELETE_CELLS"), runs.toString());
         assertTrue(runs.stream().noneMatch(run -> run.startsWith("x ")), runs.toString());
         assertTrue(runs.contains("u UNDO"), "the other keys stay: " + runs);
+        assertEquals(problems.size(), 1, "the change left out is listed: " + problems);
+        assertTrue(problems.get(0).contains("NOT_A_COMMAND"), problems.get(0));
     }
 }

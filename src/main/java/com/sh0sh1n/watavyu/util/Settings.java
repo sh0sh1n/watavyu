@@ -2,6 +2,7 @@ package com.sh0sh1n.watavyu.util;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import org.apache.logging.log4j.LogManager;
@@ -56,6 +57,9 @@ public final class Settings {
     private final Path file;
 
     private final Data data;
+
+    /** Whether {@link #setKeys} was called this run; otherwise saving keeps the file's keys, edited by hand. */
+    private boolean keysSet;
 
     private Settings(final Path file, final Data data) {
         this.file = file;
@@ -117,6 +121,9 @@ public final class Settings {
             try {
                 Path folder = Objects.requireNonNull(file.toAbsolutePath().getParent(), "the settings file is in a folder");
                 Files.createDirectories(folder);
+                if (!keysSet) {
+                    keepKeysOnFile();
+                }
                 temporary = Files.createTempFile(folder, FILE_NAME, ".tmp");
                 MAPPER.writeValue(temporary.toFile(), data);
                 Files.move(temporary, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
@@ -124,6 +131,24 @@ public final class Settings {
                 logger.error("Cannot save settings to " + file, e);
                 deleteQuietly(temporary);
             }
+        }
+    }
+
+    /**
+     * Takes the keys the file holds now, which the user may have edited by hand while the application ran, so saving
+     * on quitting does not put back those read at launch.
+     */
+    private void keepKeysOnFile() {
+        if (!Files.isRegularFile(file)) {
+            return;
+        }
+        try {
+            JsonNode onFile = MAPPER.readTree(file.toFile());
+            if (onFile != null && onFile.isObject()) {
+                data.keys = onFile.has("keys") ? onFile.get("keys") : MAPPER.createObjectNode();
+            }
+        } catch (IOException e) {
+            logger.warn("Cannot read the keys in " + file + "; saving those read at launch", e);
         }
     }
 
@@ -288,24 +313,36 @@ public final class Settings {
 
     /**
      * Returns the user's changes to the key map, as written: each key, such as {@code d} or {@code ctrl+]}, and the
-     * name of the command it runs, or empty for none, in the order written. The key map reads and checks them.
+     * name of the command it runs, or empty for none (also for null), in the order written. A value that is not text is
+     * given as its JSON, which names no command, so the key map reports it; {@code keys} that is not an object gives
+     * none, and is logged. The key map reads and checks the changes.
      */
     public Map<String, String> getKeys() {
         synchronized (lock) {
-            return new LinkedHashMap<>(data.keys);
+            Map<String, String> keys = new LinkedHashMap<>();
+            if (!data.keys.isObject()) {
+                logger.warn("Settings' keys is not an object of keys and commands; it is left out");
+                return keys;
+            }
+            data.keys.properties().forEach(entry -> keys.put(entry.getKey(), entry.getValue().isNull() ? ""
+                : entry.getValue().isTextual() ? entry.getValue().asText() : entry.getValue().toString()));
+            return keys;
         }
     }
 
     /**
-     * Sets the user's changes to the key map, as {@link #getKeys()} returns them.
+     * Sets the user's changes to the key map, as {@link #getKeys()} returns them. The application never changes them
+     * itself: they are written by hand.
      *
      * @param keys each key and its command's name, or empty for none
      */
     public void setKeys(final Map<String, String> keys) {
         synchronized (lock) {
-            data.keys = new LinkedHashMap<>(keys);
+            data.keys = MAPPER.valueToTree(keys);
+            keysSet = true;
         }
     }
+
 
     /**
      * Returns the window's bounds when it was last moved or resized.
@@ -343,7 +380,11 @@ public final class Settings {
         int newSpreadsheetMediaColumns = 1;
         String spreadsheetFont = SANS;
         int pastCellDim = DEFAULT_PAST_CELL_DIM;
-        Map<String, String> keys = new LinkedHashMap<>();
+        /**
+         * The key map's changes, as written: read as any JSON, so a mistake in them cannot make the whole file
+         * unreadable; {@link #getKeys()} takes what it can.
+         */
+        JsonNode keys = MAPPER.createObjectNode();
 
         /** Replaces null collections from a hand-edited file, so callers never see null. */
         Data normalized() {
@@ -351,8 +392,7 @@ public final class Settings {
             recentProjects.removeIf(path -> path == null);
             windows = windows == null ? new LinkedHashMap<>() : new LinkedHashMap<>(windows);
             windows.values().removeIf(bounds -> bounds == null);
-            keys = keys == null ? new LinkedHashMap<>() : new LinkedHashMap<>(keys);
-            keys.replaceAll((key, command) -> command == null ? "" : command);
+            keys = keys == null ? MAPPER.createObjectNode() : keys;
             return this;
         }
     }

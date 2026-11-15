@@ -95,6 +95,9 @@ public final class MainWindow implements FileDropEventListener {
 
     private final Shortcuts shortcuts;
 
+    /** The user's changes to the key map that it could not make, which the Keyboard Shortcuts dialog lists. */
+    private final List<String> keyMapProblems;
+
     private JMenu openRecentFileMenu;
 
 
@@ -114,7 +117,10 @@ public final class MainWindow implements FileDropEventListener {
         frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 
         defineCommands();
-        shortcuts = createShortcuts();
+        KeyMap.WithChanges keyMap = KeyMap.defaultMap().withChanges(Settings.get().getKeys());
+        keyMapProblems = keyMap.problems();
+        keyMapProblems.forEach(problem -> logger.warn("Settings' keys: " + problem));
+        shortcuts = createShortcuts(keyMap.map());
         frame.setJMenuBar(createMenuBar());
         KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(shortcuts);
 
@@ -1118,17 +1124,16 @@ public final class MainWindow implements FileDropEventListener {
         return selected == null ? null : selected.getVideoController();
     }
 
-    /** The user's changes to the key map that it could not make, which the Keyboard Shortcuts dialog lists. */
-    private List<String> keyMapProblems = List.of();
+    /** Returns the user's changes to the key map that it could not make, as the Keyboard Shortcuts dialog lists them. */
+    List<String> getKeyMapProblems() {
+        return keyMapProblems;
+    }
 
     /**
-     * @return Every keyboard shortcut of the application: the fixed ⌘ keys, the keypad, and the key map with the
-     *         user's changes from Settings.
+     * @param keyMap the key map with the user's changes from Settings
+     * @return Every keyboard shortcut of the application: the fixed ⌘ keys, the keypad, and the key map.
      */
-    private Shortcuts createShortcuts() {
-        KeyMap.WithChanges keyMap = KeyMap.defaultMap().withChanges(Settings.get().getKeys());
-        keyMapProblems = keyMap.problems();
-        keyMapProblems.forEach(problem -> logger.warn("Settings' keys: " + problem + "; left out"));
+    private Shortcuts createShortcuts(final KeyMap keyMap) {
         final int cmd = Shortcuts.COMMAND;
         final int shift = InputEvent.SHIFT_DOWN_MASK;
         return Shortcuts.builder(commands::get)
@@ -1165,7 +1170,7 @@ public final class MainWindow implements FileDropEventListener {
                 .keypad(Command.FIND_ONSET, KeyEvent.VK_ADD, 0)
                 .keypad(Command.FIND_OFFSET, KeyEvent.VK_ADD, shift)
                 .keypad(Command.NEW_CELL_IN_SELECTED_COLUMN, KeyEvent.VK_ENTER, 0)
-                .keyMap(keyMap.map())
+                .keyMap(keyMap)
                 .commandKeysWhen(this::isCommandKey)
                 .build(() -> frame.isFocused(), held -> {
                     if (controller() != null) {

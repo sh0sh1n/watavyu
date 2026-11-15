@@ -152,7 +152,8 @@ public class KeyMapTest {
         assertEquals(commandOn(changed.map(), "ctrl+n"), Optional.of(Command.NEXT_CELL));
         assertEquals(commandOn(changed.map(), "ctrl+j"), Optional.of(Command.NEXT_CELL), "the default key stays");
         assertEquals(changed.map().bindings().size(), KeyMap.defaultMap().bindings().size() + 2);
-        assertEquals(changed.map().bindings().get(14).key(), "x", "a changed key keeps its place in the list");
+        int place = KeyMap.defaultMap().bindings().stream().map(KeyMap.Binding::key).toList().indexOf("x");
+        assertEquals(changed.map().bindings().get(place).key(), "x", "a changed key keeps its place in the list");
     }
 
     @Test
@@ -175,6 +176,26 @@ public class KeyMapTest {
         assertEquals(commandOn(changed.map(), "d"), Optional.empty());
         assertEquals(commandOn(changed.map(), "u"), Optional.of(Command.REDO));
         assertEquals(changed.map().bindings().size(), KeyMap.defaultMap().bindings().size());
+    }
+
+    @Test
+    public void commandsAreNamedInAnyCase() {
+        KeyMap.WithChanges changed = KeyMap.defaultMap().withChanges(changes("Ctrl+N", "next_cell"));
+        assertEquals(changed.problems(), List.of());
+        assertEquals(commandOn(changed.map(), "ctrl+n"), Optional.of(Command.NEXT_CELL));
+    }
+
+    /** Some key always leaves insert mode: turning off Esc and ⌃] leaves Esc on, and says so. */
+    @Test
+    public void someKeyAlwaysLeavesInsertMode() {
+        KeyMap.WithChanges changed = KeyMap.defaultMap().withChanges(changes("escape", "", "ctrl+]", ""));
+        assertEquals(commandOn(changed.map(), "escape"), Optional.of(Command.COMMAND_MODE));
+        assertEquals(commandOn(changed.map(), "ctrl+]"), Optional.empty());
+        assertEquals(changed.problems().size(), 1, changed.problems().toString());
+
+        KeyMap.WithChanges moved = KeyMap.defaultMap().withChanges(changes("escape", "", "ctrl+[", "COMMAND_MODE"));
+        assertEquals(commandOn(moved.map(), "escape"), Optional.empty(), "another key leaves it");
+        assertEquals(moved.problems(), List.of());
     }
 
     /** A key written two ways is one key, and the later change wins. */

@@ -78,6 +78,39 @@ public class SettingsTest {
         assertTrue(Settings.load(directory.resolve("none.json")).getKeys().isEmpty(), "none by default");
     }
 
+    /** A mistake in keys leaves the rest of the file read: the other settings are kept, and so saved again. */
+    @Test
+    public void badKeysLeaveTheOtherSettings() throws IOException {
+        Files.createDirectories(file.getParent());
+        for (String keys : new String[] {"[\"x\"]", "\"x\"", "{\"x\": {\"cmd\": \"UNDO\"}, \"u\": 3}"}) {
+            Files.write(file, ("{\"lastChosenDirectory\": \"/films\", \"keys\": " + keys + "}")
+                .getBytes(StandardCharsets.UTF_8));
+            Settings settings = Settings.load(file);
+            assertEquals(settings.getLastChosenDirectory(), "/films", keys);
+            if (keys.startsWith("{")) {
+                assertEquals(settings.getKeys().get("x"), "{\"cmd\":\"UNDO\"}", "given as its JSON, to be reported");
+                assertEquals(settings.getKeys().get("u"), "3");
+            } else {
+                assertTrue(settings.getKeys().isEmpty(), keys);
+            }
+        }
+    }
+
+    /** Keys are edited by hand, so saving on quitting keeps an edit made while the application ran. */
+    @Test
+    public void savingKeepsKeysEditedWhileRunning() throws IOException {
+        Settings settings = Settings.load(file);
+        settings.setLastChosenDirectory("/films");
+        Files.createDirectories(file.getParent());
+        Files.write(file, "{\"keys\": {\"d\": \"DELETE_CELLS\"}}".getBytes(StandardCharsets.UTF_8));
+
+        settings.save();
+
+        Settings loaded = Settings.load(file);
+        assertEquals(loaded.getKeys(), java.util.Map.of("d", "DELETE_CELLS"));
+        assertEquals(loaded.getLastChosenDirectory(), "/films");
+    }
+
     @Test
     public void theFileIsReadableJson() throws IOException {
         Settings settings = Settings.load(file);
