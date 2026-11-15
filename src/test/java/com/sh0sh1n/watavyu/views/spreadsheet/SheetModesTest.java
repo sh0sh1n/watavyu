@@ -19,8 +19,6 @@ import org.testng.annotations.Test;
 
 import java.awt.Component;
 import java.awt.event.FocusEvent;
-import java.awt.event.InputEvent;
-import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,7 +30,8 @@ import javax.swing.SwingUtilities;
 /**
  * The keyboard's modes (AGENTS.md › Decisions, 2026-11-13): in command mode the sheet has the focus and keys are
  * commands; in insert mode a part of the editor has it and keys type. {@code i} goes into the selected cell, and Esc
- * or ⌃] back out, with the cell still selected.
+ * or ⌃] back out, with the cell still selected. Which keys do this is the key map's ({@code KeyMapTest},
+ * {@code ShortcutsTest}); here are what they do.
  */
 public class SheetModesTest {
 
@@ -92,14 +91,6 @@ public class SheetModesTest {
         }
     }
 
-    private KeyEvent press(final int keyCode, final int modifiers) {
-        return new KeyEvent(sheet, KeyEvent.KEY_PRESSED, 0, modifiers, keyCode, KeyEvent.CHAR_UNDEFINED);
-    }
-
-    private KeyEvent typed(final char character) {
-        return new KeyEvent(sheet, KeyEvent.KEY_TYPED, 0, 0, KeyEvent.VK_UNDEFINED, character);
-    }
-
     /** Puts the test in insert mode in a selected cell, with its values in focus. */
     private SpreadsheetCell insertIn(final Cell cell) {
         cell.setSelected(true);
@@ -110,92 +101,92 @@ public class SheetModesTest {
     }
 
     @Test
-    public void escapeInInsertModeGoesToCommandModeAndDropsItsCharacter() throws Exception {
+    public void leavingInsertModeGoesToCommandModeWithTheCellSelected() throws Exception {
         withSheet(column -> {
             insertIn(second);
             assertTrue(sheet.inInsertMode());
+            assertTrue(sheet.canLeaveInsertMode());
 
-            KeyEvent escape = press(KeyEvent.VK_ESCAPE, 0);
-            assertTrue(sheet.modeKey(escape));
-            assertTrue(escape.isConsumed());
+            assertTrue(sheet.leaveInsertMode());
             assertEquals(focused, List.of(sheet));
             assertTrue(sheet.inCommandMode());
-
-            KeyEvent character = typed('\u001b');
-            assertTrue(sheet.modeKey(character), "its character does not reach the cell");
-            assertTrue(character.isConsumed());
-            assertFalse(sheet.modeKey(press(KeyEvent.VK_X, 0)));
-            assertFalse(sheet.modeKey(typed('x')), "the next key types");
-        });
-    }
-
-    @Test
-    public void controlCloseBracketGoesToCommandModeToo() throws Exception {
-        withSheet(column -> {
-            insertIn(second);
-            assertTrue(sheet.modeKey(press(KeyEvent.VK_CLOSE_BRACKET, InputEvent.CTRL_DOWN_MASK)));
-            assertEquals(focused, List.of(sheet));
-        });
-    }
-
-    @Test
-    public void otherBracketsAndEscapesWithModifiersType() throws Exception {
-        withSheet(column -> {
-            insertIn(second);
-            assertFalse(sheet.modeKey(press(KeyEvent.VK_CLOSE_BRACKET, 0)));
-            assertFalse(sheet.modeKey(press(KeyEvent.VK_CLOSE_BRACKET, InputEvent.META_DOWN_MASK)));
-            assertFalse(sheet.modeKey(press(KeyEvent.VK_ESCAPE, InputEvent.SHIFT_DOWN_MASK)));
-            assertEquals(focused, List.of());
+            assertTrue(second.isSelected());
+            assertTrue(notes.isSelected());
         });
     }
 
     /** Esc in command mode, or with the focus in another window or field, is not the sheet's. */
     @Test
-    public void escapeOutsideInsertModeIsLeftAlone() throws Exception {
+    public void outsideInsertModeThereIsNothingToLeave() throws Exception {
         withSheet(column -> {
             owner.set(sheet);
-            assertFalse(sheet.modeKey(press(KeyEvent.VK_ESCAPE, 0)));
+            assertFalse(sheet.canLeaveInsertMode());
+            assertFalse(sheet.leaveInsertMode());
             owner.set(new JTextField());
-            assertFalse(sheet.modeKey(press(KeyEvent.VK_ESCAPE, 0)));
+            assertFalse(sheet.leaveInsertMode());
             owner.set(null);
-            assertFalse(sheet.modeKey(press(KeyEvent.VK_ESCAPE, 0)));
+            assertFalse(sheet.leaveInsertMode());
             assertEquals(focused, List.of());
         });
     }
 
     @Test
-    public void iInCommandModeGoesIntoTheSelectedCell() throws Exception {
+    public void insertModeGoesIntoTheSelectedCell() throws Exception {
         withSheet(column -> {
             second.setSelected(true);
             owner.set(sheet);
 
-            assertTrue(sheet.modeKey(press(KeyEvent.VK_I, 0)));
+            assertTrue(sheet.insertMode());
             assertEquals(focused.size(), 1);
             assertEquals(((SpreadsheetCell) focused.get(0)).getCell(), second);
             assertTrue(sheet.inInsertMode());
-            assertTrue(sheet.modeKey(typed('i')), "the i does not reach the cell");
         });
     }
 
-    /** With a column selected and no cell, there is nothing to type into, and the key is left alone. */
+    /** With a column selected and no cell, there is nothing to type into. */
     @Test
-    public void iWithNoCellSelectedDoesNothing() throws Exception {
+    public void insertModeWithNoCellSelectedDoesNothing() throws Exception {
         withSheet(column -> {
             notes.setSelected(true);
             owner.set(sheet);
 
-            assertFalse(sheet.modeKey(press(KeyEvent.VK_I, 0)));
-            assertFalse(sheet.modeKey(typed('i')));
+            assertFalse(sheet.insertMode());
             assertEquals(focused, List.of());
+            assertTrue(sheet.inCommandMode());
         });
     }
 
+    /**
+     * Plain keys are commands with the keyboard on the sheet, or elsewhere in its window, but not in insert mode, in
+     * another text field, or with a menu open.
+     */
     @Test
-    public void iInInsertModeTypes() throws Exception {
+    public void plainKeysAreCommandsOnlyInCommandMode() throws Exception {
         withSheet(column -> {
+            owner.set(sheet);
+            assertTrue(sheet.takesCommandKeys());
+            owner.set(new javax.swing.JButton());
+            assertTrue(sheet.takesCommandKeys(), "a button beside the sheet");
+            owner.set(new JTextField());
+            assertFalse(sheet.takesCommandKeys(), "a text field");
+            owner.set(new javax.swing.JComboBox<String>());
+            assertFalse(sheet.takesCommandKeys(), "a combo box, which picks an item by its first letter");
+            owner.set(new javax.swing.JList<String>());
+            assertFalse(sheet.takesCommandKeys(), "a list");
+            owner.set(null);
+            assertFalse(sheet.takesCommandKeys(), "another app");
+
             insertIn(second);
-            assertFalse(sheet.modeKey(press(KeyEvent.VK_I, 0)));
-            assertFalse(sheet.modeKey(typed('i')));
+            assertFalse(sheet.takesCommandKeys(), "insert mode");
+            sheet.leaveInsertMode();
+            assertTrue(sheet.takesCommandKeys());
+            javax.swing.MenuSelectionManager.defaultManager().setSelectedPath(
+                new javax.swing.MenuElement[] {new javax.swing.JPopupMenu()});
+            try {
+                assertFalse(sheet.takesCommandKeys(), "a menu open");
+            } finally {
+                javax.swing.MenuSelectionManager.defaultManager().clearSelectedPath();
+            }
         });
     }
 
@@ -322,7 +313,7 @@ public class SheetModesTest {
             sheet.add(stray);
             owner.set(stray);
             assertFalse(sheet.inInsertMode());
-            assertFalse(sheet.modeKey(press(KeyEvent.VK_ESCAPE, 0)));
+            assertFalse(sheet.leaveInsertMode());
             sheet.remove(stray);
         });
     }
@@ -339,7 +330,7 @@ public class SheetModesTest {
             assertTrue(sheet.getEditor().isEmpty());
             assertEquals(editor.getParent(), sheet, "the editor waits, out of sight, for the focus to leave");
             assertTrue(sheet.inInsertMode());
-            assertTrue(sheet.modeKey(press(KeyEvent.VK_ESCAPE, 0)));
+            assertTrue(sheet.leaveInsertMode());
             assertEquals(focused, List.of(sheet));
         });
     }
@@ -352,44 +343,11 @@ public class SheetModesTest {
             javax.swing.JPopupMenu menu = new javax.swing.JPopupMenu();
             javax.swing.MenuSelectionManager.defaultManager().setSelectedPath(new javax.swing.MenuElement[] {menu});
             try {
-                assertFalse(sheet.modeKey(press(KeyEvent.VK_ESCAPE, 0)));
+                assertFalse(sheet.leaveInsertMode());
                 assertEquals(focused, List.of());
             } finally {
                 javax.swing.MenuSelectionManager.defaultManager().clearSelectedPath();
             }
-        });
-    }
-
-    /**
-     * A held key repeats, pressing and typing again. A held i goes into the cell once, its own character dropped, and
-     * then types, as in vim.
-     */
-    @Test
-    public void aHeldIGoesInOnceAndThenTypes() throws Exception {
-        withSheet(column -> {
-            second.setSelected(true);
-            owner.set(sheet);
-            assertTrue(sheet.modeKey(press(KeyEvent.VK_I, 0)));
-            assertTrue(sheet.modeKey(typed('i')));
-            assertFalse(sheet.modeKey(press(KeyEvent.VK_I, 0)), "a repeat types");
-            assertFalse(sheet.modeKey(typed('i')));
-            assertEquals(focused.size(), 1, "into the cell once");
-        });
-    }
-
-    /** A held Esc's characters are all dropped until it is released, whatever else is released meanwhile. */
-    @Test
-    public void aHeldEscapeTypesNothing() throws Exception {
-        withSheet(column -> {
-            insertIn(second);
-            assertTrue(sheet.modeKey(press(KeyEvent.VK_ESCAPE, 0)));
-            assertTrue(sheet.modeKey(typed('\u001b')));
-            assertTrue(sheet.modeKey(typed('\u001b')), "a repeat is dropped too");
-            assertFalse(sheet.modeKey(new KeyEvent(sheet, KeyEvent.KEY_RELEASED, 0, 0, KeyEvent.VK_X, 'x')),
-                "releasing another key leaves the held one");
-            assertTrue(sheet.modeKey(typed('\u001b')));
-            sheet.modeKey(new KeyEvent(sheet, KeyEvent.KEY_RELEASED, 0, 0, KeyEvent.VK_ESCAPE, '\u001b'));
-            assertFalse(sheet.modeKey(typed('x')));
         });
     }
 

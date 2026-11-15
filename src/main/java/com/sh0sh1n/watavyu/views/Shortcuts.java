@@ -14,10 +14,12 @@ import java.util.Set;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 /**
- * The application's keyboard shortcuts, in one table, and the dispatcher that runs them. Menu items take their
- * accelerators from this table, and the Keyboard Shortcuts dialog lists it.
+ * The application's keyboard shortcuts, in one table, and the dispatcher that runs them: the fixed ⌘ keys, the keypad,
+ * and the key map's two layers ({@link KeyMap}). Menu items take their accelerators from this table, and the Keyboard
+ * Shortcuts dialog lists it.
  */
 public final class Shortcuts implements KeyEventDispatcher {
 
@@ -51,7 +53,18 @@ public final class Shortcuts implements KeyEventDispatcher {
         /** Run by this dispatcher in every window, before the focused component sees the key. */
         GLOBAL,
         /** A numeric keypad key, run by this dispatcher in every window. The character the key types is dropped. */
-        KEYPAD
+        KEYPAD,
+        /**
+         * A plain character from the key map's command layer, run by this dispatcher while plain keys are commands
+         * (command mode), whether or not its command can run now; otherwise the character types. The key is matched by
+         * the character it types, so it follows the keyboard's layout.
+         */
+        COMMAND,
+        /**
+         * A chord from the key map (a key held with ⌃, or Esc), run by this dispatcher in every window and mode. A
+         * chord whose command cannot run now goes on to the focused component, so Esc still closes a dialog.
+         */
+        CHORD
     }
 
     /** One shortcut. */
@@ -105,6 +118,7 @@ public final class Shortcuts implements KeyEventDispatcher {
     public static final class Builder {
         private final List<Shortcut> shortcuts = new ArrayList<>();
         private final Function<Command, Action> actions;
+        private Predicate<Character> commandKeys = c -> false;
 
         private Builder(final Function<Command, Action> actions) {
             this.actions = actions;
@@ -124,6 +138,33 @@ public final class Shortcuts implements KeyEventDispatcher {
             KeyStroke key = KeyStroke.getKeyStroke(keyCode, modifiers);
             return add(new Shortcut("Video controller", command, key, describe(key, true),
                 Scope.KEYPAD, actions.apply(command)));
+        }
+
+        /**
+         * Adds the key map's keys, after the shortcuts added so far.
+         *
+         * @param keyMap the keys
+         * @return this builder
+         */
+        public Builder keyMap(final KeyMap keyMap) {
+            for (KeyMap.Binding binding : keyMap.bindings()) {
+                boolean command = binding.layer() == KeyMap.Layer.COMMAND;
+                add(new Shortcut(command ? "Command mode" : "Every mode", binding.command(), binding.stroke(),
+                    KeyMap.describe(binding), command ? Scope.COMMAND : Scope.CHORD,
+                    actions.apply(binding.command())));
+            }
+            return this;
+        }
+
+        /**
+         * Says when the command layer's keys are commands.
+         *
+         * @param commandKeys whether a plain character is a command now, as in command mode; by default never
+         * @return this builder
+         */
+        public Builder commandKeysWhen(final Predicate<Character> commandKeys) {
+            this.commandKeys = commandKeys;
+            return this;
         }
 
         private Builder add(final Shortcut shortcut) {
@@ -149,7 +190,8 @@ public final class Shortcuts implements KeyEventDispatcher {
                     throw new IllegalStateException(shortcut.keyText + " is used by more than one shortcut");
                 }
             }
-            return new Shortcuts(new ArrayList<>(shortcuts), mainWindowFocused, shiftHeld, beforeShortcut);
+            return new Shortcuts(new ArrayList<>(shortcuts), mainWindowFocused, shiftHeld, beforeShortcut,
+                commandKeys);
         }
     }
 
@@ -157,16 +199,23 @@ public final class Shortcuts implements KeyEventDispatcher {
     private final BooleanSupplier mainWindowFocused;
     private final Consumer<Boolean> shiftHeld;
     private final Runnable beforeShortcut;
+    private final Predicate<Character> commandKeys;
 
     /** True from the press of any keypad key until its release; the characters it types are dropped. */
     private boolean keypadKeyDown;
 
-    /** Key code of a key whose press this dispatcher handled, until it is released; its characters are dropped. */
+    /**
+     * Key code of a key whose press this dispatcher handled, until it is released or another key is pressed; its
+     * characters are dropped. A held key presses again as it repeats, so a held {@code i} goes into a cell once and
+     * then types, as in vim: the repeats are not commands in insert mode.
+     */
     private int handledKeyCode = KeyEvent.VK_UNDEFINED;
 
     private Shortcuts(final List<Shortcut> shortcuts, final BooleanSupplier mainWindowFocused,
-                      final Consumer<Boolean> shiftHeld, final Runnable beforeShortcut) {
+                      final Consumer<Boolean> shiftHeld, final Runnable beforeShortcut,
+                      final Predicate<Character> commandKeys) {
         this.shortcuts = shortcuts;
+        this.commandKeys = commandKeys;
         this.mainWindowFocused = mainWindowFocused;
         this.shiftHeld = shiftHeld;
         this.beforeShortcut = beforeShortcut;
@@ -211,21 +260,51 @@ public final class Shortcuts implements KeyEventDispatcher {
     }
 
     private boolean keyPressed(final KeyEvent e) {
+        boolean handled = handlePress(e);
+        handledKeyCode = handled ? e.getKeyCode() : KeyEvent.VK_UNDEFINED;
+        if (handled) {
+            e.consume();
+        }
+        return handled;
+    }
+
+    /** Runs the shortcut a key press is, if any; returns whether the press is taken. */
+    private boolean handlePress(final KeyEvent e) {
         boolean keypad = e.getKeyLocation() == KeyEvent.KEY_LOCATION_NUMPAD;
         if (keypad) {
             keypadKeyDown = true;
         }
         int modifiers = e.getModifiersEx() & MODIFIERS;
+        // The commands' state is worked out once a press, though a chord that cannot run goes on to another shortcut.
+        boolean refreshed = false;
+        if (!keypad) {
+            Shortcut chord = find(Scope.CHORD, KeyStroke.getKeyStroke(e.getKeyCode(), modifiers));
+            if (chord != null) {
+                beforeShortcut.run();
+                refreshed = true;
+                if (chord.action.isEnabled()) {
+                    run(chord, e);
+                    return true;
+                }
+            }
+            Shortcut command = commandKey(e, modifiers);
+            if (command != null) {
+                if (!refreshed) {
+                    beforeShortcut.run();
+                }
+                if (command.action.isEnabled()) {
+                    run(command, e);
+                }
+                return true;
+            }
+        }
         Shortcut shortcut = find(e.getKeyCode(), modifiers, keypad);
-        if (shortcut == null && !keypad && RESERVED.contains(KeyStroke.getKeyStroke(e.getKeyCode(), modifiers))) {
-            handledKeyCode = e.getKeyCode();
-            e.consume();
-            return true;
-        }
         if (shortcut == null) {
-            return false;
+            return !keypad && RESERVED.contains(KeyStroke.getKeyStroke(e.getKeyCode(), modifiers));
         }
-        beforeShortcut.run();
+        if (!refreshed) {
+            beforeShortcut.run();
+        }
         boolean menu = shortcut.scope == Scope.MENU;
         if (menu && mainWindowFocused.getAsBoolean()) {
             return false;
@@ -233,12 +312,7 @@ public final class Shortcuts implements KeyEventDispatcher {
         if (!shortcut.action.isEnabled()) {
             // A menu key whose item is greyed goes on to the focused component, as in the main window; a global or
             // keypad key does nothing.
-            if (menu) {
-                return false;
-            }
-            handledKeyCode = e.getKeyCode();
-            e.consume();
-            return true;
+            return !menu;
         }
         if (menu) {
             Object selected = shortcut.action.getValue(Action.SELECTED_KEY);
@@ -246,10 +320,36 @@ public final class Shortcuts implements KeyEventDispatcher {
                 shortcut.action.putValue(Action.SELECTED_KEY, !b);
             }
         }
-        handledKeyCode = e.getKeyCode();
-        e.consume();
-        shortcut.action.actionPerformed(new ActionEvent(e.getSource(), ActionEvent.ACTION_PERFORMED, shortcut.getName()));
+        run(shortcut, e);
         return true;
+    }
+
+    private static void run(final Shortcut shortcut, final KeyEvent e) {
+        shortcut.action.actionPerformed(new ActionEvent(e.getSource(), ActionEvent.ACTION_PERFORMED, shortcut.getName()));
+    }
+
+    /**
+     * Returns the command-layer key a press types, if plain keys are commands now: a printable character, typed with
+     * no modifier but Shift.
+     */
+    private Shortcut commandKey(final KeyEvent e, final int modifiers) {
+        char c = e.getKeyChar();
+        if ((modifiers & ~InputEvent.SHIFT_DOWN_MASK) != 0 || c == KeyEvent.CHAR_UNDEFINED || c < ' '
+                || c == KeyEvent.VK_DELETE) {
+            return null;
+        }
+        Shortcut shortcut = find(Scope.COMMAND, KeyStroke.getKeyStroke(c));
+        return shortcut != null && commandKeys.test(c) ? shortcut : null;
+    }
+
+    /** Returns the shortcut of a scope on a key, or null. */
+    private Shortcut find(final Scope scope, final KeyStroke key) {
+        for (Shortcut shortcut : shortcuts) {
+            if (shortcut.scope == scope && shortcut.key.equals(key)) {
+                return shortcut;
+            }
+        }
+        return null;
     }
 
     private boolean keyTyped(final KeyEvent e) {
@@ -274,7 +374,9 @@ public final class Shortcuts implements KeyEventDispatcher {
         Shortcut fallback = null;
         KeyStroke unmodified = KeyStroke.getKeyStroke(keyCode, 0);
         for (Shortcut shortcut : shortcuts) {
-            if ((shortcut.scope == Scope.KEYPAD) != keypad) {
+            boolean wanted = keypad ? shortcut.scope == Scope.KEYPAD
+                    : shortcut.scope == Scope.MENU || shortcut.scope == Scope.GLOBAL;
+            if (!wanted) {
                 continue;
             }
             if (shortcut.key.equals(pressed)) {
@@ -328,6 +430,10 @@ public final class Shortcuts implements KeyEventDispatcher {
             case KeyEvent.VK_BACK_SLASH -> "\\";
             case KeyEvent.VK_LEFT -> "←";
             case KeyEvent.VK_RIGHT -> "→";
+            case KeyEvent.VK_ESCAPE -> "Esc";
+            case KeyEvent.VK_OPEN_BRACKET -> "[";
+            case KeyEvent.VK_CLOSE_BRACKET -> "]";
+            case KeyEvent.VK_SPACE -> "Space";
             default -> KeyEvent.getKeyText(keyCode);
         };
     }

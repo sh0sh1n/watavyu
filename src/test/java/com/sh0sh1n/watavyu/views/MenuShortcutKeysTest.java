@@ -105,29 +105,32 @@ public class MenuShortcutKeysTest {
             "none"));
     }
 
-    /** ⌃J ⌃K ⌃H ⌃L navigate the spreadsheet from every window (AGENTS.md › Decisions, 2026-11-13). */
+    /**
+     * The main window runs the default key map (AGENTS.md › Decisions, 2026-11-13; the map is {@code KeyMapTest}'s):
+     * its plain keys as commands in command mode, its chords, ⌃J ⌃K ⌃H ⌃L among them, in every window.
+     */
     @Test
-    public void theNavigationChordsAreGlobal() throws Exception {
-        List<KeyStroke> keys = List.of(
-            KeyStroke.getKeyStroke(KeyEvent.VK_J, InputEvent.CTRL_DOWN_MASK),
-            KeyStroke.getKeyStroke(KeyEvent.VK_K, InputEvent.CTRL_DOWN_MASK),
-            KeyStroke.getKeyStroke(KeyEvent.VK_H, InputEvent.CTRL_DOWN_MASK),
-            KeyStroke.getKeyStroke(KeyEvent.VK_L, InputEvent.CTRL_DOWN_MASK));
+    public void theMainWindowRunsTheDefaultKeyMap() throws Exception {
         List<String> runs = new ArrayList<>();
         SwingUtilities.invokeAndWait(() -> {
             JFrame frame = new JFrame();
             try {
                 Shortcuts shortcuts = TestSpreadsheets.mainWindow(frame).getShortcuts();
-                for (KeyStroke key : keys) {
-                    runs.add(shortcuts.all().stream().filter(shortcut -> key.equals(shortcut.getKey()))
-                        .map(shortcut -> shortcut.getScope() + " " + shortcut.getCommand()).findFirst().orElse("none"));
-                }
+                shortcuts.all().stream()
+                    .filter(shortcut -> shortcut.getScope() == Shortcuts.Scope.COMMAND
+                        || shortcut.getScope() == Shortcuts.Scope.CHORD)
+                    .forEach(shortcut -> runs.add(shortcut.getScope() + " " + shortcut.getKey() + " "
+                        + shortcut.getCommand()));
             } finally {
                 frame.dispose();
             }
         });
 
-        assertEquals(runs, List.of("GLOBAL NEXT_CELL", "GLOBAL PREVIOUS_CELL", "GLOBAL COLUMN_LEFT",
-            "GLOBAL COLUMN_RIGHT"));
+        List<String> expected = new ArrayList<>();
+        for (KeyMap.Binding binding : KeyMap.defaultMap().bindings()) {
+            expected.add(binding.layer() + " " + binding.stroke() + " " + binding.command());
+        }
+        assertEquals(runs, expected);
+        assertTrue(runs.contains("CHORD ctrl pressed J NEXT_CELL"), runs.toString());
     }
 }
