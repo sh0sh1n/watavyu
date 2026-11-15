@@ -133,4 +133,39 @@ public class MenuShortcutKeysTest {
         assertEquals(runs, expected);
         assertTrue(runs.contains("CHORD ctrl pressed J NEXT_CELL"), runs.toString());
     }
+
+    /** The main window runs the key map with the user's changes from Settings, leaving out those it cannot read. */
+    @Test
+    public void theMainWindowRunsTheUsersChanges() throws Exception {
+        java.util.Map<String, String> before = com.sh0sh1n.watavyu.util.Settings.get().getKeys();
+        java.util.Map<String, String> changes = new java.util.LinkedHashMap<>();
+        changes.put("d", "DELETE_CELLS");
+        changes.put("x", "");
+        changes.put("ctrl+q", "NOT_A_COMMAND");
+        com.sh0sh1n.watavyu.util.Settings.get().setKeys(changes);
+        List<String> runs = new ArrayList<>();
+        List<String> problems = new ArrayList<>();
+        try {
+            SwingUtilities.invokeAndWait(() -> {
+                JFrame frame = new JFrame();
+                try {
+                    MainWindow window = TestSpreadsheets.mainWindow(frame);
+                    window.getShortcuts().all().stream()
+                        .filter(shortcut -> shortcut.getScope() == Shortcuts.Scope.COMMAND)
+                        .forEach(shortcut -> runs.add(shortcut.getKeyText() + " " + shortcut.getCommand()));
+                    problems.addAll(window.getKeyMapProblems());
+                } finally {
+                    frame.dispose();
+                }
+            });
+        } finally {
+            com.sh0sh1n.watavyu.util.Settings.get().setKeys(before);
+        }
+
+        assertTrue(runs.contains("d DELETE_CELLS"), runs.toString());
+        assertTrue(runs.stream().noneMatch(run -> run.startsWith("x ")), runs.toString());
+        assertTrue(runs.contains("u UNDO"), "the other keys stay: " + runs);
+        assertEquals(problems.size(), 1, "the change left out is listed: " + problems);
+        assertTrue(problems.get(0).contains("NOT_A_COMMAND"), problems.get(0));
+    }
 }

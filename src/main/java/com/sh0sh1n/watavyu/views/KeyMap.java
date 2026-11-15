@@ -115,16 +115,67 @@ public final class KeyMap {
      * @throws IllegalArgumentException if a key cannot be read, or two are the same key
      */
     public static KeyMap of(final Map<String, Command> keys) {
-        List<Binding> bindings = new ArrayList<>();
-        Set<KeyStroke> seen = new HashSet<>();
+        Map<KeyStroke, Binding> bindings = new LinkedHashMap<>();
         for (Map.Entry<String, Command> entry : keys.entrySet()) {
             Binding binding = parse(entry.getKey(), entry.getValue());
-            if (!seen.add(binding.stroke())) {
+            if (bindings.putIfAbsent(binding.stroke(), binding) != null) {
                 throw new IllegalArgumentException("\"" + entry.getKey() + "\" is mapped more than once");
             }
-            bindings.add(binding);
         }
-        return new KeyMap(bindings);
+        return new KeyMap(new ArrayList<>(bindings.values()));
+    }
+
+    /**
+     * A key map with the user's changes, and the changes it could not make.
+     *
+     * @param map      the map in effect
+     * @param problems each change left out, and why
+     */
+    public record WithChanges(KeyMap map, List<String> problems) {
+    }
+
+    /**
+     * Returns this map with the user's changes (Settings' {@code keys}): each key runs the command named, in any case,
+     * in place of what it ran, or with an empty name runs nothing. A change that cannot be read, such as an unknown key
+     * or command, is left out, so a mistake in the file never stops the application, and is reported. Some key always
+     * leaves insert mode: if the changes leave none, Esc does, as by default.
+     *
+     * @param changes each key as written and the name of the command it runs, or empty for none
+     * @return the map in effect, and the changes left out
+     */
+    public WithChanges withChanges(final Map<String, String> changes) {
+        Map<KeyStroke, Binding> bindings = new LinkedHashMap<>();
+        mapped.forEach(binding -> bindings.put(binding.stroke(), binding));
+        List<String> problems = new ArrayList<>();
+        for (Map.Entry<String, String> change : changes.entrySet()) {
+            String name = change.getValue().trim();
+            Command command = null;
+            if (!name.isEmpty()) {
+                try {
+                    command = Command.valueOf(name.toUpperCase(Locale.ROOT));
+                } catch (IllegalArgumentException e) {
+                    problems.add("\"" + change.getKey() + "\": no command is named " + name);
+                    continue;
+                }
+            }
+            try {
+                Binding binding = parse(change.getKey(), command);
+                if (command == null) {
+                    bindings.remove(binding.stroke());
+                } else {
+                    // A key mapped already keeps its place in the list; a new one goes at the end.
+                    bindings.put(binding.stroke(), binding);
+                }
+            } catch (IllegalArgumentException e) {
+                problems.add(e.getMessage());
+            }
+        }
+        if (bindings.values().stream().noneMatch(binding -> binding.command() == Command.COMMAND_MODE)) {
+            Binding escape = parse("escape", Command.COMMAND_MODE);
+            bindings.put(escape.stroke(), escape);
+            problems.add("no key would leave insert mode, so Esc still does");
+        }
+        return new WithChanges(new KeyMap(new ArrayList<>(bindings.values())), List.copyOf(problems));
     }
 
     /** Returns the mapped keys, in the order they are listed. */
