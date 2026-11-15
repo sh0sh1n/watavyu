@@ -1118,10 +1118,17 @@ public final class MainWindow implements FileDropEventListener {
         return selected == null ? null : selected.getVideoController();
     }
 
+    /** The user's changes to the key map that it could not make, which the Keyboard Shortcuts dialog lists. */
+    private List<String> keyMapProblems = List.of();
+
     /**
-     * @return Every keyboard shortcut of the application.
+     * @return Every keyboard shortcut of the application: the fixed ⌘ keys, the keypad, and the key map with the
+     *         user's changes from Settings.
      */
     private Shortcuts createShortcuts() {
+        KeyMap.WithChanges keyMap = KeyMap.defaultMap().withChanges(Settings.get().getKeys());
+        keyMapProblems = keyMap.problems();
+        keyMapProblems.forEach(problem -> logger.warn("Settings' keys: " + problem + "; left out"));
         final int cmd = Shortcuts.COMMAND;
         final int shift = InputEvent.SHIFT_DOWN_MASK;
         return Shortcuts.builder(commands::get)
@@ -1158,7 +1165,7 @@ public final class MainWindow implements FileDropEventListener {
                 .keypad(Command.FIND_ONSET, KeyEvent.VK_ADD, 0)
                 .keypad(Command.FIND_OFFSET, KeyEvent.VK_ADD, shift)
                 .keypad(Command.NEW_CELL_IN_SELECTED_COLUMN, KeyEvent.VK_ENTER, 0)
-                .keyMap(KeyMap.defaultMap())
+                .keyMap(keyMap.map())
                 .commandKeysWhen(this::isCommandKey)
                 .build(() -> frame.isFocused(), held -> {
                     if (controller() != null) {
@@ -1343,7 +1350,12 @@ public final class MainWindow implements FileDropEventListener {
         table.getColumnModel().getColumn(2).setPreferredWidth(110);
         JScrollPane scrollPane = new JScrollPane(table);
         scrollPane.setPreferredSize(new Dimension(620, 520));
-        JOptionPane.showMessageDialog(frame, scrollPane, "Keyboard Shortcuts", JOptionPane.PLAIN_MESSAGE);
+        Object message = scrollPane;
+        if (!keyMapProblems.isEmpty()) {
+            message = new Object[]{"These keys in settings.json are left out:\n  " + String.join("\n  ", keyMapProblems),
+                scrollPane};
+        }
+        JOptionPane.showMessageDialog(frame, message, "Keyboard Shortcuts", JOptionPane.PLAIN_MESSAGE);
     }
 
     class OpenTask extends SwingWorker<ProjectController, Void> {

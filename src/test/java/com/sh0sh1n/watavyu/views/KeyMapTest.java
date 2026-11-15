@@ -1,6 +1,7 @@
 package com.sh0sh1n.watavyu.views;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.expectThrows;
 
 import org.testng.annotations.Test;
@@ -124,5 +125,62 @@ public class KeyMapTest {
         assertEquals(map.keyText(Command.NEXT_CELL), Optional.of("⌃J"));
         assertEquals(map.keyText(Command.COMMAND_MODE), Optional.of("Esc"));
         assertEquals(map.keyText(Command.SAVE), Optional.empty());
+    }
+    // The user's changes (Settings' keys).
+
+    private static Map<String, String> changes(final String... keysAndCommands) {
+        Map<String, String> changes = new LinkedHashMap<>();
+        for (int i = 0; i < keysAndCommands.length; i += 2) {
+            changes.put(keysAndCommands[i], keysAndCommands[i + 1]);
+        }
+        return changes;
+    }
+
+    private static Optional<Command> commandOn(final KeyMap map, final String key) {
+        KeyStroke stroke = KeyMap.parse(key, Command.UNDO).stroke();
+        return map.bindings().stream().filter(binding -> binding.stroke().equals(stroke)).map(KeyMap.Binding::command)
+            .findFirst();
+    }
+
+    @Test
+    public void aChangeMapsAKeyInPlaceOfWhatItRan() {
+        KeyMap.WithChanges changed = KeyMap.defaultMap().withChanges(changes("x", "UNDO", "d", "DELETE_CELLS",
+            "ctrl+n", "NEXT_CELL"));
+        assertEquals(changed.problems(), List.of());
+        assertEquals(commandOn(changed.map(), "x"), Optional.of(Command.UNDO));
+        assertEquals(commandOn(changed.map(), "d"), Optional.of(Command.DELETE_CELLS));
+        assertEquals(commandOn(changed.map(), "ctrl+n"), Optional.of(Command.NEXT_CELL));
+        assertEquals(commandOn(changed.map(), "ctrl+j"), Optional.of(Command.NEXT_CELL), "the default key stays");
+        assertEquals(changed.map().bindings().size(), KeyMap.defaultMap().bindings().size() + 2);
+        assertEquals(changed.map().bindings().get(14).key(), "x", "a changed key keeps its place in the list");
+    }
+
+    @Test
+    public void anEmptyCommandTurnsAKeyOff() {
+        KeyMap.WithChanges changed = KeyMap.defaultMap().withChanges(changes("x", "", "escape", " "));
+        assertEquals(changed.problems(), List.of());
+        assertEquals(commandOn(changed.map(), "x"), Optional.empty());
+        assertEquals(commandOn(changed.map(), "escape"), Optional.empty());
+        assertEquals(commandOn(changed.map(), "ctrl+]"), Optional.of(Command.COMMAND_MODE));
+    }
+
+    /** A change that cannot be read is left out and reported; the others still apply, so the app always starts. */
+    @Test
+    public void aChangeThatCannotBeReadIsLeftOut() {
+        KeyMap.WithChanges changed = KeyMap.defaultMap().withChanges(changes("cmd+s", "UNDO", "d", "DELETE",
+            "u", "REDO"));
+        assertEquals(changed.problems().size(), 2, changed.problems().toString());
+        assertTrue(changed.problems().get(0).contains("cmd+s"), changed.problems().get(0));
+        assertTrue(changed.problems().get(1).contains("DELETE"), changed.problems().get(1));
+        assertEquals(commandOn(changed.map(), "d"), Optional.empty());
+        assertEquals(commandOn(changed.map(), "u"), Optional.of(Command.REDO));
+        assertEquals(changed.map().bindings().size(), KeyMap.defaultMap().bindings().size());
+    }
+
+    /** A key written two ways is one key, and the later change wins. */
+    @Test
+    public void theLaterOfTwoChangesToOneKeyWins() {
+        KeyMap.WithChanges changed = KeyMap.defaultMap().withChanges(changes("esc", "UNDO", "escape", "REDO"));
+        assertEquals(commandOn(changed.map(), "escape"), Optional.of(Command.REDO));
     }
 }

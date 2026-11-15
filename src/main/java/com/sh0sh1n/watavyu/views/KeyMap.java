@@ -127,6 +127,67 @@ public final class KeyMap {
         return new KeyMap(bindings);
     }
 
+    /**
+     * A key map with the user's changes, and the changes it could not make.
+     *
+     * @param map      the map in effect
+     * @param problems each change left out, and why
+     */
+    public record WithChanges(KeyMap map, List<String> problems) {
+    }
+
+    /**
+     * Returns this map with the user's changes (Settings' {@code keys}): each key runs the command named, in place of
+     * what it ran, or with an empty name runs nothing. A change that cannot be read, such as an unknown key or command,
+     * is left out, so a mistake in the file never stops the application, and is reported.
+     *
+     * @param changes each key as written and the name of the command it runs, or empty for none
+     * @return the map in effect, and the changes left out
+     */
+    public WithChanges withChanges(final Map<String, String> changes) {
+        List<Binding> bindings = new ArrayList<>(mapped);
+        List<String> problems = new ArrayList<>();
+        for (Map.Entry<String, String> change : changes.entrySet()) {
+            String name = change.getValue().trim();
+            Command command = null;
+            if (!name.isEmpty()) {
+                try {
+                    command = Command.valueOf(name);
+                } catch (IllegalArgumentException e) {
+                    problems.add("\"" + change.getKey() + "\": no command is named " + name);
+                    continue;
+                }
+            }
+            Binding binding;
+            try {
+                binding = parse(change.getKey(), command);
+            } catch (IllegalArgumentException e) {
+                problems.add(e.getMessage());
+                continue;
+            }
+            int at = indexOf(bindings, binding.stroke());
+            if (command == null) {
+                if (at >= 0) {
+                    bindings.remove(at);
+                }
+            } else if (at >= 0) {
+                bindings.set(at, binding);
+            } else {
+                bindings.add(binding);
+            }
+        }
+        return new WithChanges(new KeyMap(bindings), List.copyOf(problems));
+    }
+
+    private static int indexOf(final List<Binding> bindings, final KeyStroke stroke) {
+        for (int i = 0; i < bindings.size(); i++) {
+            if (bindings.get(i).stroke().equals(stroke)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     /** Returns the mapped keys, in the order they are listed. */
     public List<Binding> bindings() {
         return mapped;

@@ -59,6 +59,25 @@ public class SettingsTest {
         assertEquals(loaded.getWindowBounds("main"), Optional.of(new Rectangle(10, 20, 800, 600)));
     }
 
+    /** The key map's changes are kept as written, in order, for the key map to read and check. */
+    @Test
+    public void keysReadBackAsWritten() throws IOException {
+        Files.createDirectories(file.getParent());
+        Files.write(file, "{\"keys\": {\"ctrl+]\": \"COMMAND_MODE\", \"x\": \"\", \"d\": null, \"zz\": \"NOPE\"}}"
+            .getBytes(StandardCharsets.UTF_8));
+        Settings settings = Settings.load(file);
+        java.util.Map<String, String> expected = new java.util.LinkedHashMap<>();
+        expected.put("ctrl+]", "COMMAND_MODE");
+        expected.put("x", "");
+        expected.put("d", "");
+        expected.put("zz", "NOPE");
+        assertEquals(new java.util.ArrayList<>(settings.getKeys().entrySet()), new java.util.ArrayList<>(expected.entrySet()));
+
+        settings.save();
+        assertEquals(Settings.load(file).getKeys(), expected);
+        assertTrue(Settings.load(directory.resolve("none.json")).getKeys().isEmpty(), "none by default");
+    }
+
     @Test
     public void theFileIsReadableJson() throws IOException {
         Settings settings = Settings.load(file);

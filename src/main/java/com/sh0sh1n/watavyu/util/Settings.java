@@ -287,6 +287,27 @@ public final class Settings {
     }
 
     /**
+     * Returns the user's changes to the key map, as written: each key, such as {@code d} or {@code ctrl+]}, and the
+     * name of the command it runs, or empty for none, in the order written. The key map reads and checks them.
+     */
+    public Map<String, String> getKeys() {
+        synchronized (lock) {
+            return new LinkedHashMap<>(data.keys);
+        }
+    }
+
+    /**
+     * Sets the user's changes to the key map, as {@link #getKeys()} returns them.
+     *
+     * @param keys each key and its command's name, or empty for none
+     */
+    public void setKeys(final Map<String, String> keys) {
+        synchronized (lock) {
+            data.keys = new LinkedHashMap<>(keys);
+        }
+    }
+
+    /**
      * Returns the window's bounds when it was last moved or resized.
      * @param window The window's key, see {@link com.sh0sh1n.watavyu.views.WindowPlacement}.
      */
@@ -322,6 +343,7 @@ public final class Settings {
         int newSpreadsheetMediaColumns = 1;
         String spreadsheetFont = SANS;
         int pastCellDim = DEFAULT_PAST_CELL_DIM;
+        Map<String, String> keys = new LinkedHashMap<>();
 
         /** Replaces null collections from a hand-edited file, so callers never see null. */
         Data normalized() {
@@ -329,6 +351,8 @@ public final class Settings {
             recentProjects.removeIf(path -> path == null);
             windows = windows == null ? new LinkedHashMap<>() : new LinkedHashMap<>(windows);
             windows.values().removeIf(bounds -> bounds == null);
+            keys = keys == null ? new LinkedHashMap<>() : new LinkedHashMap<>(keys);
+            keys.replaceAll((key, command) -> command == null ? "" : command);
             return this;
         }
     }
