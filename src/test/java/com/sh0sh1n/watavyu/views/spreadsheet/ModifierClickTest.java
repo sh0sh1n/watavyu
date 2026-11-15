@@ -1,5 +1,6 @@
 package com.sh0sh1n.watavyu.views.spreadsheet;
 
+import static org.testng.Assert.assertTrue;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -71,11 +72,28 @@ public class ModifierClickTest {
 
     @Test
     public void aCommandClickAddsACellToTheSelection() throws Exception {
-        SwingUtilities.invokeAndWait(() ->
-            cell.mousePressed(mouse(cell, MouseEvent.MOUSE_PRESSED, InputEvent.META_DOWN_MASK)));
+        SwingUtilities.invokeAndWait(() -> {
+            model.setSelected(false);
+            cell.mousePressed(mouse(cell, MouseEvent.MOUSE_PRESSED, InputEvent.META_DOWN_MASK));
+        });
 
         verify(cells, never()).clearCellSelection();
         verify(cells).addCellToSelection(model);
+        assertTrue(model.isSelected());
+        assertTrue(model.getColumn().isSelected(), "with its column");
+    }
+
+    /** A ⌘-click on a selected cell takes it out of the selection. */
+    @Test
+    public void aCommandClickOnASelectedCellDeselectsIt() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            model.setSelected(true);
+            cell.mousePressed(mouse(cell, MouseEvent.MOUSE_PRESSED, InputEvent.META_DOWN_MASK));
+        });
+
+        verify(cells, never()).clearCellSelection();
+        verify(cells, never()).addCellToSelection(model);
+        verify(cells).removeCellFromSelection(model);
     }
 
     @Test

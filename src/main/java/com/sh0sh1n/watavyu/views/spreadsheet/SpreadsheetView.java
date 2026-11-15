@@ -39,7 +39,6 @@ import java.awt.Graphics;
 import java.awt.KeyboardFocusManager;
 import java.awt.Point;
 import java.awt.Rectangle;
-import java.awt.event.FocusEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
@@ -245,18 +244,6 @@ public final class SpreadsheetView extends JPanel implements Scrollable {
     }
 
     /**
-     * Returns whether focus leaving a part of the editor went to the editor's own sheet, as on going to command mode,
-     * which keeps the cell and its column selected. Focus going to another tab's sheet is focus leaving this one.
-     *
-     * @param lost focus leaving a part of the editor, or null
-     * @param part the part of the editor that lost it
-     */
-    public static boolean toCommandMode(final FocusEvent lost, final Component part) {
-        return lost != null && lost.getOppositeComponent() instanceof SpreadsheetView sheet
-                && SwingUtilities.isDescendingFrom(part, sheet);
-    }
-
-    /**
      * Takes the keys that change mode, ahead of the component in focus: Esc and ⌃] in insert mode go to command mode,
      * and {@code i} in command mode goes to insert mode in the selected cell. The characters a taken key types are
      * dropped, so the {@code i} does not reach the cell it goes into.
@@ -372,7 +359,7 @@ public final class SpreadsheetView extends JPanel implements Scrollable {
         return shown;
     }
 
-    private Optional<SpreadsheetColumn> columnOf(final Column column) {
+    Optional<SpreadsheetColumn> columnOf(final Column column) {
         return columns.stream().filter(shown -> shown.getColumn().equals(column)).findFirst();
     }
 
@@ -545,8 +532,7 @@ public final class SpreadsheetView extends JPanel implements Scrollable {
 
     /**
      * Takes an editor off the sheet. One that holds the focus shrinks out of sight, so its cell is drawn beneath, and
-     * leaves once the focus has left it, so that its parts hear they lost the focus, as a cell's view always has, and
-     * the cell is deselected as before.
+     * leaves once the focus has left it, so that its parts hear they lost the focus, as a cell's view always has.
      */
     private void retire(final SpreadsheetCell old) {
         if (old == null) {

@@ -909,11 +909,18 @@ public final class MainWindow implements FileDropEventListener {
     }
 
     public void newCellLeft() {
-        selectedController().cells().newCellsBeside(ArrayDirection.LEFT);
+        editLast(selectedController().cells().newCellsBeside(ArrayDirection.LEFT));
     }
 
     public void newCellRight() {
-        selectedController().cells().newCellsBeside(ArrayDirection.RIGHT);
+        editLast(selectedController().cells().newCellsBeside(ArrayDirection.RIGHT));
+    }
+
+    /** Goes to insert mode in the last of the cells a command made, if it made any. */
+    private void editLast(final List<Cell> made) {
+        if (!made.isEmpty()) {
+            getSpreadsheetPanel().editCell(made.get(made.size() - 1));
+        }
     }
 
     /**
@@ -1277,7 +1284,10 @@ public final class MainWindow implements FileDropEventListener {
     /** Creates a cell at the current time in the column last given a cell or edited, as the New Cell menu item does. */
     public void newCell() {
         ProjectController selected = selectedController();
-        selected.cells().newCell(selected.getVideoController().getCurrentTime());
+        Cell made = selected.cells().newCell(selected.getVideoController().getCurrentTime());
+        if (made != null) {
+            getSpreadsheetPanel().editCell(made);
+        }
     }
 
     /**

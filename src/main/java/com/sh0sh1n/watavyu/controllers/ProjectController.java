@@ -37,7 +37,6 @@ import javax.swing.undo.UndoableEditSupport;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BooleanSupplier;
 
@@ -62,9 +61,6 @@ public final class ProjectController {
 
     /** The last cell that was created */
     private Cell lastCreatedCell;
-
-    /** The last list of cells that was selected */
-    private List<Cell> lastSelectedCells;
 
     /** The last cell that was selected */
     private Cell lastSelectedCell;
@@ -130,7 +126,6 @@ public final class ProjectController {
         lastCreatedCell = null;
         lastSelectedCell = null;
         lastCreatedColumn = null;
-        lastSelectedCells = new ArrayList<>();
         dataStore.setTitleNotifier(this::titleChanged);
         undoSupport.addUndoableEditListener(event -> undoManager.addEdit(event.getEdit()));
     }
@@ -285,9 +280,6 @@ public final class ProjectController {
      * @param removed cells of this spreadsheet
      */
     public void removeCells(final List<Cell> removed) {
-        List<Cell> stillSelected = new ArrayList<>(lastSelectedCells);
-        stillSelected.removeAll(removed);
-        lastSelectedCells = stillSelected;
         for (Cell cell : removed) {
             if (cell.equals(lastCreatedCell)) {
                 lastCreatedCell = null;
@@ -387,29 +379,12 @@ public final class ProjectController {
     }
 
     /**
-     * Return a list of last selected cells.
-     *
-     * @return The last selected cells.
-     */
-    public List<Cell> getLastSelectedCells() { return lastSelectedCells; }
-
-    /**
      * Sets the last selected cell to the specified cell.
      *
      * @param newCell The newly selected cell.
      */
     public void setLastSelectedCell(final Cell newCell) {
         lastSelectedCell = newCell;
-    }
-
-    /**
-     * Sets the last selected cells, this setter is used to persist the selected cells
-     * before performing actions on the Menu.
-     *
-     * @param lastSelectedCells The newly selected cell.
-     */
-    public void setLastSelectedCells(List<Cell> lastSelectedCells) {
-        this.lastSelectedCells = lastSelectedCells;
     }
 
     /**

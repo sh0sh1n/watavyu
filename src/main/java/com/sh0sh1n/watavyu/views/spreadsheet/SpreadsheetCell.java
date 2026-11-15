@@ -25,11 +25,10 @@ import com.sh0sh1n.watavyu.views.spreadsheet.editors.CellValuesView;
 import com.sh0sh1n.watavyu.views.spreadsheet.editors.TimeStampDataValueEditor.TimeStampSource;
 import com.sh0sh1n.watavyu.views.spreadsheet.editors.TimeStampTextField;
 
+import java.util.List;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
-import java.util.ArrayList;
-import java.util.List;
 
 
 /**
@@ -310,12 +309,21 @@ public final class SpreadsheetCell extends JPanel
             // User has clicked on editor or magic spot with modifier. Add
             // this cell to the current selection.
         } else if (groupSel && !contSel) {
-          logger.debug("User has clicked on editor or magic spot with modifier.");
+            // A ⌘-click adds the cell to the selection, or takes it out, in command mode.
             parentColumn.getSheet().commandMode();
-            model.setHighlighted(!model.isSelected());
-
             if (model.isSelected()) {
+                cellSelL.removeCellFromSelection(model);
+                // Its column stays selected only for a cell still selected in it, or as the one column selected.
+                if (parentColumn.getSelectedCell() == null
+                        && controller.getDataStore().getSelectedColumns().size() > 1) {
+                    parentColumn.setSelected(false);
+                }
+            } else {
+                model.setHighlighted(true);
                 cellSelL.addCellToSelection(model);
+                // A selected cell's column is selected.
+                parentColumn.setSelected(true);
+                controller.setLastSelectedCell(model);
             }
 
             // User has clicked on editor or magic spot with shift modifier.
@@ -328,20 +336,22 @@ public final class SpreadsheetCell extends JPanel
             // User has clicked somewhere in the cell without modifier. This
             // cell needs to be highlighted.
         } else {
-            // Only change selection if not selected.
-            if (!model.isHighlighted()) {
-                logger.debug("Just highlighted");
-                // Deselect cells, and other columns, before selected cell contents. From command mode no editor
-                // loses the focus to deselect the column it was in.
-                parentColumn.setExclusiveSelected(true);
-                model.setHighlighted(true);
-                cellSelL.setHighlightedCell(model);
+            // A press on a value or time selects the cell and its column alone, and the focus goes to what was
+            // pressed, in insert mode.
+            if (!selectedAlone()) {
+                parentColumn.select(model);
             }
         }
 
         // Update the find windows to the newly selected cell's values
         controller.getVideoController().setOnsetField(model.getOnset());
         controller.getVideoController().setOffsetField(model.getOffset());
+    }
+
+    /** Returns whether this cell is the one cell selected, in the one column selected. */
+    private boolean selectedAlone() {
+        return controller.getDataStore().getSelectedCells().equals(List.of(model))
+                && controller.getDataStore().getSelectedColumns().equals(List.of(parentColumn.getColumn()));
     }
 
     @Override
@@ -355,44 +365,18 @@ public final class SpreadsheetCell extends JPanel
     // *************************************************************************
     // FocusListener Overrides
     // *************************************************************************
+    /** The cell in focus is scrolled into sight. Focus does not change the selection, which the sheet owns. */
     @Override
     public void focusGained(final FocusEvent e) {
-
-//        if (model.isHighlighted() && (cellPanel.getBorder().equals(NORMAL_BORDER)
-//                || cellPanel.getBorder().equals(OVERLAP_BORDER))) {
-            model.setSelected(true);
-//        }
         if (controller.getSpreadSheetPanel() != null) {
             controller.getSpreadSheetPanel().validate();
             controller.getSpreadSheetPanel().reorientView(model);
         }
-
-        parentColumn.setSelected(true);
     }
 
     @Override
     public void focusLost(final FocusEvent e) {
-
         parentColumn.setIndexOfPreviousFocusedCell(getDataView().getEdTracker().indexOfCurrentEditor());
-
-        List<Cell> selectedCells = controller.getDataStore().getSelectedCells();
-        List<Cell> newSelectedCell =  new ArrayList<>();
-
-        if (selectedCells.size() == 0){
-            newSelectedCell.add(model);
-            controller.setLastSelectedCell(model);
-        } else {
-            newSelectedCell =  selectedCells;
-            newSelectedCell.add(model);
-        }
-
-        controller.setLastSelectedCells(newSelectedCell);
-
-        // Going to command mode keeps the cell and its column selected.
-        if (!SpreadsheetView.toCommandMode(e, this)) {
-            model.setSelected(false);
-            parentColumn.setSelected(false);
-        }
     }
 
     @Override

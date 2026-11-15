@@ -21,6 +21,7 @@ import com.sh0sh1n.watavyu.util.Settings;
 import net.miginfocom.swing.MigLayout;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import com.sh0sh1n.watavyu.models.Cell;
 import com.sh0sh1n.watavyu.models.Identifier;
 import com.sh0sh1n.watavyu.playback.StreamViewer;
 import com.sh0sh1n.watavyu.playback.javafx.JavaFxVideoPlugin;
@@ -977,7 +978,14 @@ public final class VideoController implements ClockListener {
             clockTimer.setForceTime(time);
         }
 
-        spreadsheet.cells().newCellInSelectedColumn(time);
+        edit(spreadsheet.cells().newCellInSelectedColumn(time));
+    }
+
+    /** Goes to insert mode in a cell a command made, if it made one. */
+    private void edit(final Cell made) {
+        if (made != null && spreadsheet.getSpreadSheetPanel() != null) {
+            spreadsheet.getSpreadSheetPanel().editCell(made);
+        }
     }
 
     /**
@@ -992,7 +1000,7 @@ public final class VideoController implements ClockListener {
             clockTimer.setForceTime(time);
         }
 
-        spreadsheet.cells().newCellClosingPrevious(time);
+        edit(spreadsheet.cells().newCellClosingPrevious(time));
     }
 
     public ClockTimer getClockTimer() {

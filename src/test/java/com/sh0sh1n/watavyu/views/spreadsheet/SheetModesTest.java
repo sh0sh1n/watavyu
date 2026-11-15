@@ -199,22 +199,25 @@ public class SheetModesTest {
         });
     }
 
-    /** Focus leaving the editor for the sheet keeps the cell and its column selected; leaving elsewhere does not. */
+    /**
+     * The selection is the sheet's, and does not follow the focus: focus leaving the editor, for the sheet, another
+     * window or another field, keeps the cell and its column selected, and focus coming to an editor selects nothing.
+     */
     @Test
-    public void goingToCommandModeKeepsTheSelection() throws Exception {
+    public void theFocusLeavesTheSelectionAlone() throws Exception {
         withSheet(column -> {
             SpreadsheetCell editor = insertIn(second);
             editor.focusLost(new FocusEvent(editor.getOnset(), FocusEvent.FOCUS_LOST, false, sheet));
-            editor.getDataView().focusLost(new FocusEvent(editor.getDataView(), FocusEvent.FOCUS_LOST, false, sheet));
+            editor.getDataView().focusLost(new FocusEvent(editor.getDataView(), FocusEvent.FOCUS_LOST, false, null));
+            editor.focusLost(new FocusEvent(editor.getOnset(), FocusEvent.FOCUS_LOST, false, new JTextField()));
             assertTrue(second.isSelected());
             assertTrue(notes.isSelected());
 
-            editor.getDataView().focusLost(new FocusEvent(editor.getDataView(), FocusEvent.FOCUS_LOST, false, null));
-            assertFalse(second.isSelected(), "focus leaving for another window deselects, as before");
-            second.setSelected(true);
-            editor.focusLost(new FocusEvent(editor.getOnset(), FocusEvent.FOCUS_LOST, false, new JTextField()));
-            assertFalse(second.isSelected());
-            assertFalse(notes.isSelected());
+            SpreadsheetCell other = sheet.edit(first);
+            other.getDataView().focusGained(new FocusEvent(other.getDataView(), FocusEvent.FOCUS_GAINED));
+            other.focusGained(new FocusEvent(other.getOnset(), FocusEvent.FOCUS_GAINED));
+            assertFalse(first.isSelected());
+            assertTrue(second.isSelected());
         });
     }
 
@@ -285,6 +288,23 @@ public class SheetModesTest {
             first.setSelected(true);
             second.setSelected(true);
             owner.set(sheet);
+
+            column.followNeedle();
+
+            assertTrue(second.isSelected());
+            assertFalse(first.isSelected());
+            assertEquals(sheet.getEditor().orElseThrow().getCell(), second);
+        });
+    }
+
+    /** In insert mode, a tick moves the editor and the keyboard to the cell in play, selected alone in its column. */
+    @Test
+    public void followingTheNeedleInInsertModeSelectsTheCellInPlay() throws Exception {
+        withSheet(column -> {
+            when(playback.getCellHighlightAndFocus()).thenReturn(true);
+            when(playback.getCurrentTime()).thenReturn(2_000L);
+            when(clock.isPaused()).thenReturn(false);
+            insertIn(first);
 
             column.followNeedle();
 
@@ -377,23 +397,6 @@ public class SheetModesTest {
             assertFalse(down.isConsumed());
             assertFalse(second.isSelected());
             assertEquals(focused, List.of());
-        });
-    }
-
-    /** Focus going from the editor to another tab's sheet is focus leaving this one, which deselects. */
-    @Test
-    public void focusGoingToAnotherSheetDeselects() throws Exception {
-        withSheet(column -> {
-            SpreadsheetCell editor = insertIn(second);
-            SpreadsheetView other = new SpreadsheetView(
-                TestSpreadsheets.withPlayback(DataStoreFactory.newDataStore()));
-            try {
-                editor.getDataView().focusLost(new FocusEvent(editor.getDataView(), FocusEvent.FOCUS_LOST, false,
-                    other));
-                assertFalse(second.isSelected());
-            } finally {
-                other.close();
-            }
         });
     }
 

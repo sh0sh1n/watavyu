@@ -246,7 +246,14 @@ public final class DefaultColumn implements Column {
 
     @Override
     public void setSelected(final boolean selected) {
-        this.selected = selected && !isHidden();
+        boolean now = selected && !isHidden();
+        // Unset until the constructor sets it, when there is no listener to tell.
+        if (!Boolean.valueOf(now).equals(this.selected)) {
+            this.selected = now;
+            for (ColumnListener vl : listeners) {
+                vl.selectionChanged(now);
+            }
+        }
     }
 
     @Override

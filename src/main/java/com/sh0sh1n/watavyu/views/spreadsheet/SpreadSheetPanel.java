@@ -566,8 +566,14 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
                 && projectController.isQuickKeyMode()
                 && (Character.isAlphabetic(e.getKeyChar()) || Character.isDigit(e.getKeyChar()))
                 && selectedColumn != null && !selectedColumn.getColumn().isMedia()) {
-            projectController.cells().newCellTyped(selectedColumn.getColumn(), e.getKeyChar(),
+            Cell made = projectController.cells().newCellTyped(selectedColumn.getColumn(), e.getKeyChar(),
                 videoController.getCurrentTime());
+            if (made != null) {
+                // The keyboard stays where it is, and the new cell is shown.
+                revalidate();
+                validate();
+                reorientView(made);
+            }
             e.consume();
             return true;
         }
@@ -698,6 +704,32 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
             highlightedCell.setHighlighted(true);
         } else if (highlightedCell != null) {
             highlightedCell.setHighlighted(false);
+        }
+    }
+
+    @Override
+    public void removeCellFromSelection(final Cell cell) {
+        cell.setSelected(false);
+        if (cell.equals(highlightedCell)) {
+            highlightedCell = null;
+        }
+        if (cell.equals(lastSelectedCell)) {
+            lastSelectedCell = null;
+        }
+        if (cell.equals(projectController.getLastSelectedCell())) {
+            projectController.setLastSelectedCell(null);
+        }
+    }
+
+    /**
+     * Goes to insert mode in a cell, its editor taking the focus, leaving the selection as it is, as after a command
+     * makes the cell.
+     *
+     * @param cell a cell of a shown column
+     */
+    public void editCell(final Cell cell) {
+        if (mainView.columnOf(cell.getColumn()).filter(SpreadsheetColumn::isVisible).isPresent()) {
+            mainView.focusEditor(mainView.edit(cell));
         }
     }
 

@@ -165,29 +165,33 @@ public class SpreadsheetViewTest {
         });
     }
 
-    /** Deleting the cell in focus moves the editor to the cell after it. */
+    /** Deleting the cell under the editor takes the editor off, and selects no other cell. */
     @Test
-    public void deletingTheCellInFocusMovesTheEditorOn() throws Exception {
+    public void deletingTheCellUnderTheEditorTakesItOff() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
             sheet.edit(first);
             gaze.removeCell(first);
             frame.validate();
 
-            assertEquals(sheet.getEditor().map(SpreadsheetCell::getCell), Optional.of(second));
+            assertEquals(sheet.getEditor(), Optional.empty());
             assertEquals(sheet.boundsOf(first), Optional.empty());
+            assertFalse(second.isSelected());
         });
     }
 
-    /** A new cell is drawn, and the editor goes over it. */
+    /**
+     * A new cell is drawn, and the editor stays where it was: the commands that go into a new cell move it
+     * ({@code SheetModesInPanelTest}).
+     */
     @Test
-    public void aNewCellTakesTheEditor() throws Exception {
+    public void aNewCellIsDrawnAndLeavesTheEditor() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
+            sheet.edit(first);
             Cell third = gaze.createPointCell(3_000);
             frame.validate();
 
-            assertEquals(sheet.getEditor().map(SpreadsheetCell::getCell), Optional.of(third));
             assertNotEquals(sheet.boundsOf(third), Optional.empty());
-            assertEquals(sheet.getEditor().orElseThrow().getBounds(), bounds(third));
+            assertEquals(sheet.getEditor().map(SpreadsheetCell::getCell), Optional.of(first));
         });
     }
 }

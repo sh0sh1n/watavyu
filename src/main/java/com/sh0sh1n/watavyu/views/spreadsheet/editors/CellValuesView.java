@@ -23,7 +23,6 @@ import com.sh0sh1n.watavyu.models.MediaClip;
 import com.sh0sh1n.watavyu.views.spreadsheet.EditorComponent;
 import com.sh0sh1n.watavyu.views.spreadsheet.EditorTracker;
 import com.sh0sh1n.watavyu.views.spreadsheet.SecondaryClick;
-import com.sh0sh1n.watavyu.views.spreadsheet.SpreadsheetView;
 
 import javax.swing.*;
 import java.awt.event.FocusEvent;
@@ -254,18 +253,12 @@ public final class CellValuesView extends JTextArea implements FocusListener {
     public void focusGained(final FocusEvent fe) {
         // Typing after the cell takes the focus again is an edit of its own.
         typing = false;
-        // New Cell from the menu goes to the column of the cell last in focus.
-        controller.setLastCreatedColumn(parentCell.getColumn());
-        controller.setLastSelectedCell(parentCell);
-        parentCell.setSelected(true);
     }
 
+    /** Focus leaving the values leaves the selection alone, which the sheet owns. */
     @Override
     public void focusLost(final FocusEvent fe) {
-        // Going to command mode keeps the cell selected.
-        if (!SpreadsheetView.toCommandMode(fe, this)) {
-            parentCell.setSelected(false);
-        }
+        // Nothing to do.
     }
 
     // *************************************************************************
