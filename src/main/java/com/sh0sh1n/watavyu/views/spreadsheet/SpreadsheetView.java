@@ -25,6 +25,11 @@ import com.sh0sh1n.watavyu.views.spreadsheet.editors.CellValuesView;
 import com.sh0sh1n.watavyu.views.spreadsheet.layouts.SheetGeometry;
 
 import javax.swing.CellRendererPane;
+import javax.swing.JComboBox;
+import javax.swing.JList;
+import javax.swing.JTable;
+import javax.swing.JTree;
+import javax.swing.text.JTextComponent;
 import javax.swing.JPanel;
 import javax.swing.JViewport;
 import javax.swing.Scrollable;
@@ -46,6 +51,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
@@ -269,12 +275,19 @@ public final class SpreadsheetView extends JPanel implements Scrollable {
 
     /**
      * Returns whether plain keys are commands now, for the window this sheet is in: the keyboard is in that window, not
-     * in insert mode nor in another text field, and no menu is open.
+     * in insert mode nor in another component that takes typed characters, such as a text field or a list, and no menu
+     * is open.
      */
     public boolean takesCommandKeys() {
         Component owner = focusOwner.get();
-        return owner != null && !(owner instanceof javax.swing.text.JTextComponent) && !inInsertMode() && !menuOpen()
-                && java.util.Objects.equals(SwingUtilities.getWindowAncestor(owner), SwingUtilities.getWindowAncestor(this));
+        return owner != null && !takesCharacters(owner) && !inInsertMode() && !menuOpen()
+                && Objects.equals(SwingUtilities.getWindowAncestor(owner), SwingUtilities.getWindowAncestor(this));
+    }
+
+    /** Returns whether a component does something with typed characters: types them, or picks an item by them. */
+    static boolean takesCharacters(final Component component) {
+        return component instanceof JTextComponent || component instanceof JComboBox || component instanceof JList
+                || component instanceof JTable || component instanceof JTree;
     }
 
     /** Returns whether a menu is open, which Esc closes rather than leaving insert mode. */

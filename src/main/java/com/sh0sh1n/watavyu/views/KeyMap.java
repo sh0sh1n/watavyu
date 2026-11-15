@@ -42,6 +42,26 @@ public final class KeyMap {
     public record Binding(String key, Layer layer, KeyStroke stroke, Command command) {
     }
 
+    /**
+     * The keys a chord can name: those a press reports, letters, digits and the unshifted punctuation of a US layout.
+     * A shifted character, such as an opening brace, is a key press of another key with Shift.
+     */
+    private static final Set<Integer> PRESSABLE = pressableKeys();
+
+    private static Set<Integer> pressableKeys() {
+        Set<Integer> keys = new HashSet<>(List.of(KeyEvent.VK_ESCAPE, KeyEvent.VK_SPACE, KeyEvent.VK_OPEN_BRACKET,
+            KeyEvent.VK_CLOSE_BRACKET, KeyEvent.VK_COMMA, KeyEvent.VK_PERIOD, KeyEvent.VK_SLASH,
+            KeyEvent.VK_SEMICOLON, KeyEvent.VK_QUOTE, KeyEvent.VK_BACK_SLASH, KeyEvent.VK_MINUS, KeyEvent.VK_EQUALS,
+            KeyEvent.VK_BACK_QUOTE));
+        for (int key = KeyEvent.VK_A; key <= KeyEvent.VK_Z; key++) {
+            keys.add(key);
+        }
+        for (int key = KeyEvent.VK_0; key <= KeyEvent.VK_9; key++) {
+            keys.add(key);
+        }
+        return Set.copyOf(keys);
+    }
+
     /** The default map, in the order the Keyboard Shortcuts dialog lists it. */
     private static final Map<String, Command> DEFAULTS = defaultKeys();
 
@@ -172,8 +192,9 @@ public final class KeyMap {
         } else if (rest.length() == 1) {
             keyCode = KeyEvent.getExtendedKeyCodeForChar(Character.toLowerCase(rest.charAt(0)));
         }
-        if (keyCode == KeyEvent.VK_UNDEFINED) {
-            throw new IllegalArgumentException("\"" + key + "\" is not a key");
+        if (!PRESSABLE.contains(keyCode)) {
+            throw new IllegalArgumentException("\"" + key + "\" is not a key: a chord names a key as it is unshifted, "
+                + "such as ctrl+shift+[ rather than ctrl+{");
         }
         return new Binding(key, Layer.CHORD, KeyStroke.getKeyStroke(keyCode, modifiers), command);
     }

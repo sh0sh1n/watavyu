@@ -1190,13 +1190,28 @@ public final class MainWindow implements FileDropEventListener {
      */
     private boolean isCommandKey(final char c) {
         SpreadSheetPanel panel = getSpreadsheetPanel();
-        if (panel == null || (isQuickKeyMode() && Character.isLetterOrDigit(c))) {
+        KeyboardFocusManager focus = KeyboardFocusManager.getCurrentKeyboardFocusManager();
+        return panel != null && isCommandKey(c, isQuickKeyMode(),
+            focus.getFocusedWindow() instanceof MediaWindow && focus.getFocusOwner() != null
+                && !(focus.getFocusOwner() instanceof javax.swing.text.JTextComponent),
+            panel::takesCommandKeys);
+    }
+
+    /**
+     * Tells whether a plain character is a command, from what the keyboard is in.
+     *
+     * @param c             the character a key types
+     * @param quickKeyMode  whether quick-key mode is on, which leaves letters and digits to the spreadsheet
+     * @param inMediaWindow whether the keyboard is in a media window, outside any text field
+     * @param sheetTakesKeys whether the selected spreadsheet is in command mode in the main window
+     * @return whether the key map's command layer takes it
+     */
+    static boolean isCommandKey(final char c, final boolean quickKeyMode, final boolean inMediaWindow,
+                                final java.util.function.BooleanSupplier sheetTakesKeys) {
+        if (quickKeyMode && Character.isLetterOrDigit(c)) {
             return false;
         }
-        KeyboardFocusManager focus = KeyboardFocusManager.getCurrentKeyboardFocusManager();
-        boolean inMediaWindow = focus.getFocusedWindow() instanceof MediaWindow
-                && !(focus.getFocusOwner() instanceof javax.swing.text.JTextComponent);
-        return inMediaWindow || panel.takesCommandKeys();
+        return inMediaWindow || sheetTakesKeys.getAsBoolean();
     }
 
     /** Makes a menu item for a command, with its shortcut. */

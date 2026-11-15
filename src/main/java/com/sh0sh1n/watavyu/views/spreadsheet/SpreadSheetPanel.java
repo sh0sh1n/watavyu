@@ -600,7 +600,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
      */
     public boolean moveVertically(final boolean down) {
         Cell current = currentCell();
-        SpreadsheetColumn column = current == null ? currentColumn() : columnOf(current);
+        SpreadsheetColumn column = columnFor(current);
         if (column == null) {
             return false;
         }
@@ -619,12 +619,11 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
      * @param closingPrevious whether to set the previous cell's offset
      */
     public void newCellHere(final boolean closingPrevious) {
-        Cell current = currentCell();
-        SpreadsheetColumn column = current == null ? currentColumn() : columnOf(current);
+        SpreadsheetColumn column = columnFor(currentCell());
         if (column == null) {
             return;
         }
-        long time = videoController.timeForNewCell();
+        long time = videoController.syncedTimeForNewCell();
         Cell made = closingPrevious
             ? projectController.cells().newCellInColumnClosingPrevious(column.getColumn(), time)
             : projectController.cells().newCellInColumn(column.getColumn(), time);
@@ -688,6 +687,15 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
         return column == null ? null : column.getSelectedCell();
     }
 
+    /**
+     * Returns the column the keys act in: the current cell's, or with none the column selected last; null with none.
+     *
+     * @param current the cell navigation goes from, or null
+     */
+    private SpreadsheetColumn columnFor(final Cell current) {
+        return current == null ? currentColumn() : columnOf(current);
+    }
+
     /** Returns the shown column view of a cell, or null if its column is hidden or gone. */
     private SpreadsheetColumn columnOf(final Cell cell) {
         return mainView.shownColumnOf(cell.getColumn()).orElse(null);
@@ -717,7 +725,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
      */
     public void moveHorizontally(final boolean right) {
         Cell current = currentCell();
-        SpreadsheetColumn from = current == null ? currentColumn() : columnOf(current);
+        SpreadsheetColumn from = columnFor(current);
         List<SpreadsheetColumn> shown = getVisibleColumns();
         List<Column> models = shown.stream().map(SpreadsheetColumn::getColumn).toList();
         Optional<Column> target = CellNavigation.beside(models, from == null ? null : from.getColumn(), right);

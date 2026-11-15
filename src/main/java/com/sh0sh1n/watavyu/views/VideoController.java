@@ -971,16 +971,16 @@ public final class VideoController implements ClockListener {
      */
     public void createNewCellAction() {
         logger.info("New cell");
-        edit(spreadsheet.cells().newCellInSelectedColumn(timeForNewCell()));
+        edit(spreadsheet.cells().newCellInSelectedColumn(syncedTimeForNewCell()));
     }
 
     /**
-     * Returns the time for a new cell: the playhead's, to which playing media is brought precisely, so the cell starts
-     * where the clock is.
+     * Brings playing media precisely to the clock, a seek of every player, and returns the time for a new cell: the
+     * playhead's, so the cell starts where the media shows.
      *
      * @return the time
      */
-    public long timeForNewCell() {
+    public long syncedTimeForNewCell() {
         long time = getCurrentTime();
         if (!clockTimer.isPaused()) {
             clockTimer.setForceTime(time);
@@ -1000,7 +1000,7 @@ public final class VideoController implements ClockListener {
      */
     public void createNewCellAndSetOffsetAction() {
         logger.info("New cell set offset");
-        edit(spreadsheet.cells().newCellClosingPrevious(timeForNewCell()));
+        edit(spreadsheet.cells().newCellClosingPrevious(syncedTimeForNewCell()));
     }
 
     public ClockTimer getClockTimer() {

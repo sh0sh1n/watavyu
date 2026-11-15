@@ -104,8 +104,8 @@ public final class CellCommands {
     /**
      * New Cell and Set Offset, from the keypad and the controls drawer: closes the cell before the time, setting its
      * offset to a millisecond before it, and makes a point cell at the time. The cell closed is in the one selected
-     * column, or else in the column of the cell last selected, unless it is hidden: of its cells starting at or before
-     * the time, the latest, and among several starting then, the one last selected, or else the last of them. The new
+     * column, or else in the column of the cell last selected, unless it is hidden: of its cells starting before the
+     * time, the latest, and among several starting then, the one last selected, or else the last of them. The new
      * cell goes in the first selected annotation column, else the column of the first selected cell, else the column
      * last given a cell, else the first annotation column, passing over hidden columns.
      *
@@ -122,10 +122,7 @@ public final class CellCommands {
             if (closing.refusesEdits()) {
                 return null;
             }
-            Cell previous = cellToClose(closing, time);
-            if (previous != null) {
-                CellTimes.setOffset(spreadsheet, previous, Math.max(0, time - 1));
-            }
+            closePrevious(closing, time);
         }
         return newCellIn(columnForNewCellAt(), time);
     }
@@ -154,16 +151,25 @@ public final class CellCommands {
         if (refusesCells(column)) {
             return null;
         }
+        closePrevious(column, time);
+        return newCellIn(column, time);
+    }
+
+    /**
+     * Sets the offset of a column's cell before a time, as {@link #newCellClosingPrevious(long)} picks it, to a
+     * millisecond before the time. A cell starting at the time is not before it, so it is never given an offset before
+     * its onset, as a second new cell at a paused playhead would give the first.
+     */
+    private void closePrevious(final Column column, final long time) {
         Cell previous = cellToClose(column, time);
         if (previous != null) {
-            CellTimes.setOffset(spreadsheet, previous, Math.max(0, time - 1));
+            CellTimes.setOffset(spreadsheet, previous, time - 1);
         }
-        return newCellIn(column, time);
     }
 
     /** @return the cell to close before the time, as {@link #newCellClosingPrevious(long)} picks it, or null */
     private Cell cellToClose(final Column column, final long time) {
-        List<Cell> started = column.getCells().stream().filter(cell -> cell.getOnset() <= time).sorted(BY_ONSET)
+        List<Cell> started = column.getCells().stream().filter(cell -> cell.getOnset() < time).sorted(BY_ONSET)
             .toList();
         if (started.isEmpty()) {
             return null;

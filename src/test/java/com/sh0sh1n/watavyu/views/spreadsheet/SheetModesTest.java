@@ -169,6 +169,10 @@ public class SheetModesTest {
             assertTrue(sheet.takesCommandKeys(), "a button beside the sheet");
             owner.set(new JTextField());
             assertFalse(sheet.takesCommandKeys(), "a text field");
+            owner.set(new javax.swing.JComboBox<String>());
+            assertFalse(sheet.takesCommandKeys(), "a combo box, which picks an item by its first letter");
+            owner.set(new javax.swing.JList<String>());
+            assertFalse(sheet.takesCommandKeys(), "a list");
             owner.set(null);
             assertFalse(sheet.takesCommandKeys(), "another app");
 

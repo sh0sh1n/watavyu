@@ -272,6 +272,20 @@ public class CellCommandsTest {
         assertEquals(gaze.getCells().size(), 3);
     }
 
+    /** A cell starting at the playhead is not before it, so a second O at a paused playhead does not close the first. */
+    @Test
+    public void aCellStartingAtTheTimeIsNotClosed() {
+        Cell first = cells.newCellInColumnClosingPrevious(gaze, 5_000);
+        Cell earlier = gaze.createPointCell(2_000);
+        cells.newCellInColumnClosingPrevious(gaze, 5_000);
+        assertEquals(first.getOffset(), 5_000);
+        assertEquals(earlier.getOffset(), 4_999, "the cell before is closed");
+
+        gaze.setSelected(true);
+        cells.newCellClosingPrevious(5_000);
+        assertEquals(first.getOffset(), 5_000, "nor by the keypad's");
+    }
+
     @Test
     public void newCellHereClosingPreviousWithNoCellBeforeJustMakesOne() {
         Cell later = gaze.createPointCell(9_000);

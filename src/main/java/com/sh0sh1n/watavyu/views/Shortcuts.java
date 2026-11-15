@@ -275,10 +275,13 @@ public final class Shortcuts implements KeyEventDispatcher {
             keypadKeyDown = true;
         }
         int modifiers = e.getModifiersEx() & MODIFIERS;
+        // The commands' state is worked out once a press, though a chord that cannot run goes on to another shortcut.
+        boolean refreshed = false;
         if (!keypad) {
             Shortcut chord = find(Scope.CHORD, KeyStroke.getKeyStroke(e.getKeyCode(), modifiers));
             if (chord != null) {
                 beforeShortcut.run();
+                refreshed = true;
                 if (chord.action.isEnabled()) {
                     run(chord, e);
                     return true;
@@ -286,7 +289,9 @@ public final class Shortcuts implements KeyEventDispatcher {
             }
             Shortcut command = commandKey(e, modifiers);
             if (command != null) {
-                beforeShortcut.run();
+                if (!refreshed) {
+                    beforeShortcut.run();
+                }
                 if (command.action.isEnabled()) {
                     run(command, e);
                 }
@@ -297,7 +302,9 @@ public final class Shortcuts implements KeyEventDispatcher {
         if (shortcut == null) {
             return !keypad && RESERVED.contains(KeyStroke.getKeyStroke(e.getKeyCode(), modifiers));
         }
-        beforeShortcut.run();
+        if (!refreshed) {
+            beforeShortcut.run();
+        }
         boolean menu = shortcut.scope == Scope.MENU;
         if (menu && mainWindowFocused.getAsBoolean()) {
             return false;

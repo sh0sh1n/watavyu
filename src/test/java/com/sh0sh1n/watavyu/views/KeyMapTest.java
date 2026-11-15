@@ -91,10 +91,13 @@ public class KeyMapTest {
         assertEquals(KeyMap.parse("esc", Command.UNDO).layer(), KeyMap.Layer.CHORD);
     }
 
-    /** ⌘ keys stay fixed, so a chord holds ⌃; ⌥ or ⇧ alone type characters. */
+    /**
+     * ⌘ keys stay fixed, so a chord holds ⌃; ⌥ or ⇧ alone type characters. A chord names a key as it is unshifted, as
+     * a press reports it: ⌃{ is ⌃⇧[.
+     */
     @Test
     public void keysThatCannotBeMappedAreRefused() {
-        for (String key : new String[] {"", "ab", "cmd+j", "alt+j", "shift+j", "ctrl+", "ctrl+jj", "\t", " "}) {
+        for (String key : new String[] {"", "ab", "cmd+j", "alt+j", "shift+j", "ctrl+", "ctrl+jj", "\t", " ", "ctrl+{", "ctrl+<", "ctrl+é"}) {
             expectThrows(IllegalArgumentException.class, () -> KeyMap.parse(key, Command.UNDO));
         }
     }

@@ -94,6 +94,21 @@ public class MainWindowTest {
         assertEquals(SheetLayoutFactory.DEFAULT_LAYOUT, SheetLayoutType.WeakTemporal);
     }
 
+    /**
+     * Plain keys are commands in the spreadsheet's command mode and in a media window; in quick-key mode letters and
+     * digits make cells instead, while playback and timing keys, which are Space and punctuation, stay commands.
+     */
+    @Test
+    public void plainKeysAreCommandsInCommandModeOrAMediaWindowAndQuickModeKeepsLettersAndDigits() {
+        assertTrue(MainWindow.isCommandKey('x', false, false, () -> true), "command mode");
+        assertFalse(MainWindow.isCommandKey('x', false, false, () -> false), "insert mode, or another window");
+        assertTrue(MainWindow.isCommandKey('x', false, true, () -> false), "a media window");
+        assertFalse(MainWindow.isCommandKey('x', true, false, () -> true), "a quick key");
+        assertFalse(MainWindow.isCommandKey('7', true, true, () -> true), "a quick key");
+        assertTrue(MainWindow.isCommandKey(' ', true, false, () -> true), "Space plays in quick mode");
+        assertTrue(MainWindow.isCommandKey('[', true, false, () -> true), "[ sets the onset in quick mode");
+    }
+
     @Test
     public void theTitleNamesTheApplicationAndTheProject() {
         assertEquals(MainWindow.windowTitle("Watavyu", "study.watavyu.json  *", false), "Watavyu - study.watavyu.json  *");
