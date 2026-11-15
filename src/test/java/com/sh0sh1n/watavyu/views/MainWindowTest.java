@@ -261,6 +261,29 @@ public class MainWindowTest {
         assertEquals(selected, List.of("gaze", "speech", "gaze"));
     }
 
+    /** ⌃L and ⌃H go to the column to the right and left, and ⌃J and ⌃K down and up it, in the selected tab. */
+    @Test
+    public void navigationCommandsMoveInTheSelectedTab() throws Exception {
+        ProjectController study = secondTab();
+        onEdt(() -> {
+            Column speech = study.columns().newColumn("speech");
+            speech.createPointCell(0);
+            speech.createPointCell(1_000);
+            study.getDataStore().deselectAll();
+        });
+        List<String> selected = new ArrayList<>();
+
+        for (Command command : List.of(Command.COLUMN_RIGHT, Command.COLUMN_RIGHT, Command.NEXT_CELL,
+                Command.PREVIOUS_CELL, Command.COLUMN_LEFT)) {
+            run(command);
+            Cell cell = view.getSpreadsheetPanel().getSelectedColumn().getSelectedCell();
+            selected.add(view.getSpreadsheetPanel().getSelectedColumn().getColumn().getName()
+                + (cell == null ? "" : " " + cell.getOnset()));
+        }
+
+        assertEquals(selected, List.of("gaze", "speech 0", "speech 1000", "speech 0", "gaze"));
+    }
+
     /** Undo names the selected tab's last edit, and is disabled in a tab with none. */
     @Test
     public void undoNamesTheSelectedTabsEdit() throws Exception {

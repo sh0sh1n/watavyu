@@ -138,8 +138,7 @@ public final class TimeStampTextField extends JTextField
     public void processKeyEvent(final KeyEvent ke) {
         super.processKeyEvent(ke);
 
-        if (!ke.isConsumed() || ke.getKeyCode() == KeyEvent.VK_UP
-                || ke.getKeyCode() == KeyEvent.VK_DOWN) {
+        if (!ke.isConsumed()) {
             getParent().dispatchEvent(ke);
         }
     }

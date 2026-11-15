@@ -14,11 +14,13 @@
  */
 package com.sh0sh1n.watavyu.views.spreadsheet;
 
+import com.sh0sh1n.watavyu.controllers.CellNavigation;
 import com.sh0sh1n.watavyu.controllers.MediaPlayers;
 import com.sh0sh1n.watavyu.util.Resources;
 import com.sh0sh1n.watavyu.controllers.ProjectController;
 import com.sh0sh1n.watavyu.models.*;
 import com.sh0sh1n.watavyu.util.Constants;
+import com.sh0sh1n.watavyu.views.Shortcuts;
 import com.sh0sh1n.watavyu.views.VideoController;
 import com.sh0sh1n.watavyu.views.WindowPlacement;
 import com.sh0sh1n.watavyu.views.NewColumnV;
@@ -559,6 +561,14 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
      * @return whether the spreadsheet took it
      */
     boolean takeKey(final KeyEvent e) {
+        if (e.getID() == KeyEvent.KEY_PRESSED && (e.getModifiersEx() & Shortcuts.MODIFIERS) == 0
+                && (e.getKeyCode() == KeyEvent.VK_UP || e.getKeyCode() == KeyEvent.VK_DOWN) && mainView.hasKeyboard()
+                && !SpreadsheetView.menuOpen()) {
+            // ↑ and ↓, while the keyboard is in the sheet, are ⌃K and ⌃J, and at a column's end do nothing as they do.
+            moveVertically(e.getKeyCode() == KeyEvent.VK_DOWN);
+            e.consume();
+            return true;
+        }
         SpreadsheetColumn selectedColumn = getSelectedColumn();
         // In quick-key mode, a letter or digit typed in a selected annotation column makes a cell holding it. A locked
         // column refuses the cell, and the key is still taken.
@@ -578,6 +588,84 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
             return true;
         }
         return mainView.modeKey(e);
+    }
+
+    /**
+     * Next and Previous Cell (⌃J, ⌃K, and ↓, ↑ in the sheet): goes down or up the selected column, from its selected
+     * cell or with none from the playhead ({@link CellNavigation#vertical}), in the mode the keyboard is in.
+     *
+     * @param down whether going down, to later cells
+     * @return whether there was a cell to go to
+     */
+    public boolean moveVertically(final boolean down) {
+        Cell current = currentCell();
+        SpreadsheetColumn column = current == null ? currentColumn() : columnOf(current);
+        if (column == null) {
+            return false;
+        }
+        Optional<Cell> next = CellNavigation.vertical(column.getCellsTemporally(), current, down,
+            videoController.getCurrentTime());
+        next.ifPresent(column::goTo);
+        return next.isPresent();
+    }
+
+    /**
+     * Returns the cell navigation goes from: the one being typed in, or else the highlighted cell, the one selected
+     * last, or else the first selected cell of the selected column; null with no cell selected.
+     */
+    private Cell currentCell() {
+        if (mainView.inInsertMode()) {
+            Optional<Cell> editing = mainView.getEditor().map(SpreadsheetCell::getCell).filter(Cell::isSelected);
+            if (editing.isPresent()) {
+                return editing.get();
+            }
+        }
+        if (highlightedCell != null && highlightedCell.isSelected() && columnOf(highlightedCell) != null) {
+            return highlightedCell;
+        }
+        SpreadsheetColumn column = currentColumn();
+        return column == null ? null : column.getSelectedCell();
+    }
+
+    /** Returns the shown column view of a cell, or null if its column is hidden or gone. */
+    private SpreadsheetColumn columnOf(final Cell cell) {
+        return mainView.shownColumnOf(cell.getColumn()).orElse(null);
+    }
+
+    /**
+     * Returns the column navigation goes from with no cell selected: the column selected last, the one New Cell from
+     * the menu goes to, if it is selected and shown, or else the first selected.
+     */
+    private SpreadsheetColumn currentColumn() {
+        Column last = projectController.getLastCreatedColumn();
+        if (last != null && last.isSelected()) {
+            Optional<SpreadsheetColumn> shown = mainView.shownColumnOf(last);
+            if (shown.isPresent()) {
+                return shown.get();
+            }
+        }
+        return getSelectedColumn();
+    }
+
+    /**
+     * Column Left and Right (⌃H, ⌃L): goes to the shown annotation column beside the selected one
+     * ({@link CellNavigation#beside}), landing on the cell whose onset is nearest the selected cell's, or with none the
+     * playhead's time, or selecting the column alone if it has no cells; in the mode the keyboard is in.
+     *
+     * @param right whether going right
+     */
+    public void moveHorizontally(final boolean right) {
+        Cell current = currentCell();
+        SpreadsheetColumn from = current == null ? currentColumn() : columnOf(current);
+        List<SpreadsheetColumn> shown = getVisibleColumns();
+        List<Column> models = shown.stream().map(SpreadsheetColumn::getColumn).toList();
+        Optional<Column> target = CellNavigation.beside(models, from == null ? null : from.getColumn(), right);
+        if (target.isEmpty()) {
+            return;
+        }
+        long time = current == null ? videoController.getCurrentTime() : current.getOnset();
+        SpreadsheetColumn to = shown.get(models.indexOf(target.get()));
+        CellNavigation.nearest(to.getCellsTemporally(), time).ifPresentOrElse(to::goTo, to::goToColumn);
     }
 
     /** Returns how the cells are laid out: in time (temporal) or one after another (ordinal). */
@@ -728,7 +816,7 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
      * @param cell a cell of a shown column
      */
     public void editCell(final Cell cell) {
-        if (mainView.columnOf(cell.getColumn()).filter(SpreadsheetColumn::isVisible).isPresent()) {
+        if (columnOf(cell) != null) {
             mainView.focusEditor(mainView.edit(cell));
         }
     }

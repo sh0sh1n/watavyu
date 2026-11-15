@@ -104,4 +104,30 @@ public class MenuShortcutKeysTest {
         assertEquals(runs, List.of("GLOBAL SELECT_COLUMN_LEFT", "GLOBAL SELECT_COLUMN_RIGHT", "none", "none", "none",
             "none"));
     }
+
+    /** ⌃J ⌃K ⌃H ⌃L navigate the spreadsheet from every window (AGENTS.md › Decisions, 2026-11-13). */
+    @Test
+    public void theNavigationChordsAreGlobal() throws Exception {
+        List<KeyStroke> keys = List.of(
+            KeyStroke.getKeyStroke(KeyEvent.VK_J, InputEvent.CTRL_DOWN_MASK),
+            KeyStroke.getKeyStroke(KeyEvent.VK_K, InputEvent.CTRL_DOWN_MASK),
+            KeyStroke.getKeyStroke(KeyEvent.VK_H, InputEvent.CTRL_DOWN_MASK),
+            KeyStroke.getKeyStroke(KeyEvent.VK_L, InputEvent.CTRL_DOWN_MASK));
+        List<String> runs = new ArrayList<>();
+        SwingUtilities.invokeAndWait(() -> {
+            JFrame frame = new JFrame();
+            try {
+                Shortcuts shortcuts = TestSpreadsheets.mainWindow(frame).getShortcuts();
+                for (KeyStroke key : keys) {
+                    runs.add(shortcuts.all().stream().filter(shortcut -> key.equals(shortcut.getKey()))
+                        .map(shortcut -> shortcut.getScope() + " " + shortcut.getCommand()).findFirst().orElse("none"));
+                }
+            } finally {
+                frame.dispose();
+            }
+        });
+
+        assertEquals(runs, List.of("GLOBAL NEXT_CELL", "GLOBAL PREVIOUS_CELL", "GLOBAL COLUMN_LEFT",
+            "GLOBAL COLUMN_RIGHT"));
+    }
 }
