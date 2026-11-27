@@ -33,41 +33,61 @@ public class MacOS {
         return new String[]{yesOption, cancelOption, noOption};
     }
 
+    /** The app's bundle identifier, the defaults domain of the app as a bundle (build.gradle.kts › Distribution). */
+    public static final String BUNDLE_ID = "com.sh0sh1n.watavyu";
+
+    /** The defaults key that turns the accent popup on or off while a key is held. */
+    private static final String PRESS_AND_HOLD = "ApplePressAndHoldEnabled";
+
     /**
-     * Test whether the Apple press and hold functionality is enabled.
-     *
-     * @return True if press and hold is enabled; otherwise false.
+     * Turns off the accent popup shown while a key is held, for this app alone, so a held key repeats, as holding a
+     * navigation chord or a jog key needs. It is set in the app's own defaults domain, and only if the user has not
+     * set it there, never for every app; macOS reads it as the app starts, so it takes effect from the next launch.
      */
-    public static boolean isOSXPressAndHoldEnabled() {
+    public static void turnOffPressAndHold() {
+        String domain = pressAndHoldDomain(System.getProperty("jpackage.app-path"));
         try {
-            List<String> output = defaults("read", "-g", "ApplePressAndHoldEnabled");
-            return output.isEmpty() || !output.get(0).equals("0");
+            List<String> read = defaults(readPressAndHold(domain));
+            if (isUnset(read)) {
+                List<String> output = defaults(turnOffPressAndHold(domain));
+                logger.info("Press and hold turned off in " + domain + ": " + String.join(" ", output));
+            }
         } catch (IOException e) {
-            logger.error("Error when checking press and hold on OSX " + e.getMessage());
+            logger.error("Could not turn off press and hold in " + domain + ": " + e);
         }
-        return false;
     }
 
     /**
-     * Sets the press and hold value.
+     * Returns the defaults domain that holds this app's settings: its bundle identifier when it runs as the app,
+     * whose launcher names itself in {@code jpackage.app-path}, and otherwise {@code java}, the name of the program a
+     * bare JVM runs as, as under {@code ./gradlew run}.
      *
-     * @param pressAndHold The press and hold state.
+     * @param appPath the app launcher's path, or null outside the app
      */
-    public static void setOSXPressAndHoldValue(boolean pressAndHold) {
-        try {
-            List<String> output = defaults("write", "-g", "ApplePressAndHoldEnabled", "-bool",
-                pressAndHold ? "true" : "false");
-            logger.info("Press and hold for OSX command returned: " + String.join(System.lineSeparator(), output));
-        } catch (IOException e) {
-            logger.error("Error occurred when processing press and hold " + e);
-        }
+    static String pressAndHoldDomain(final String appPath) {
+        return appPath == null ? "java" : BUNDLE_ID;
+    }
+
+    /** Returns the {@code defaults} arguments that read press and hold in a domain. */
+    static List<String> readPressAndHold(final String domain) {
+        return List.of("read", domain, PRESS_AND_HOLD);
+    }
+
+    /** Returns the {@code defaults} arguments that turn press and hold off in a domain. */
+    static List<String> turnOffPressAndHold(final String domain) {
+        return List.of("write", domain, PRESS_AND_HOLD, "-bool", "false");
+    }
+
+    /** Returns whether {@code defaults read} found no value, which it says on its error output. */
+    static boolean isUnset(final List<String> readOutput) {
+        return readOutput.stream().anyMatch(line -> line.contains("does not exist"));
     }
 
     /** Runs the {@code defaults} command with these arguments, and returns the lines it prints, errors included. */
-    private static List<String> defaults(final String... arguments) throws IOException {
+    private static List<String> defaults(final List<String> arguments) throws IOException {
         List<String> command = new ArrayList<>();
         command.add("defaults");
-        command.addAll(List.of(arguments));
+        command.addAll(arguments);
         Process process = new ProcessBuilder(command).redirectErrorStream(true).start();
         try (BufferedReader output = new BufferedReader(
                 new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
