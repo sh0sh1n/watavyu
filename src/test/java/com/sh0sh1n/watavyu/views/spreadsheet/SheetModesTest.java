@@ -30,7 +30,7 @@ import javax.swing.SwingUtilities;
 /**
  * The keyboard's modes (AGENTS.md › Decisions, 2026-11-13): in command mode the sheet has the focus and keys are
  * commands; in insert mode a part of the editor has it and keys type. {@code i} goes into the selected cell, and Esc
- * or ⌃] back out, with the cell still selected. Which keys do this is the key map's ({@code KeyMapTest},
+ * or ⌃[ back out, with the cell still selected. Which keys do this is the key map's ({@code KeyMapTest},
  * {@code ShortcutsTest}); here are what they do.
  */
 public class SheetModesTest {

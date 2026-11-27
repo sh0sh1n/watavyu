@@ -23,7 +23,7 @@ import javax.swing.SwingUtilities;
 
 /**
  * Quick mode (AGENTS.md › Decisions, 2026-11-13): command mode in which a letter or digit makes a point cell at the
- * playhead in the selected annotation column, holding the character. {@code q} enters it and Esc or ⌃] leave it;
+ * playhead in the selected annotation column, holding the character. {@code q} enters it and Esc or ⌃[ leave it;
  * going into a cell leaves it too. The playhead strip shows the keyboard's mode. Which keys do this is the key map's.
  */
 public class SheetQuickModeTest {

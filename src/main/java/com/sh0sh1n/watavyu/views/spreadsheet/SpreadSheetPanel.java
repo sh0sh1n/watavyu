@@ -683,14 +683,14 @@ public final class SpreadSheetPanel extends JPanel implements DataStoreListener,
     }
 
     /**
-     * Returns whether Esc and ⌃] would go to command mode now: in insert mode, or in quick mode with the keyboard on
+     * Returns whether Esc and ⌃[ would go to command mode now: in insert mode, or in quick mode with the keyboard on
      * the spreadsheet or a media window; with a menu open, Esc is the menu's.
      */
     public boolean canGoToCommandMode() {
         return mainView.canLeaveInsertMode() || mode() == Mode.QUICK;
     }
 
-    /** Goes to command mode (Esc, ⌃]) from insert or quick mode. */
+    /** Goes to command mode (Esc, ⌃[) from insert or quick mode. */
     public void commandMode() {
         projectController.setQuickKeyMode(false);
         mainView.leaveInsertMode();

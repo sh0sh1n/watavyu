@@ -26,7 +26,7 @@ import javax.swing.SwingUtilities;
 /**
  * The key map in a shown main window, with real focus, which the unit tests stand in for: {@code i} goes into the
  * selected cell without typing itself there, though its character comes after the focus has moved, typing goes into
- * the cell, and Esc and ⌃] come back to command mode with the cell still selected; in command mode {@code o}, {@code x}
+ * the cell, and Esc and ⌃[ come back to command mode with the cell still selected; in command mode {@code o}, {@code x}
  * and {@code u} make, delete and bring back cells. Keys are posted to the event queue as the system would post them
  * (press, character, release), since macOS drops a robot's keys from a process without accessibility access; the focus
  * manager delivers them to the component in focus. Needs an awake display and an unlocked screen.
@@ -124,11 +124,11 @@ public class SheetModesInWindowTest {
     }
 
     @Test
-    public void controlCloseBracketComesBackToo() throws Exception {
+    public void controlOpenBracketComesBackToo() throws Exception {
         type(KeyEvent.VK_I, 'i', 0);
         await(() -> sheet.inInsertMode(), "insert mode");
 
-        type(KeyEvent.VK_CLOSE_BRACKET, '\u001d', InputEvent.CTRL_DOWN_MASK);
+        type(KeyEvent.VK_OPEN_BRACKET, '\u001b', InputEvent.CTRL_DOWN_MASK);
         await(() -> sheet.inCommandMode(), "command mode");
         assertTrue(cell.isSelected());
         assertEquals(cell.getValues().get(0), "", "nothing typed");

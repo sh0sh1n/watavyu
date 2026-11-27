@@ -53,7 +53,7 @@ public class KeyMapTest {
         expected.put("ctrl+p", Command.PLAY_PAUSE);
         expected.put("ctrl+r", Command.REDO);
         expected.put("escape", Command.COMMAND_MODE);
-        expected.put("ctrl+]", Command.COMMAND_MODE);
+        expected.put("ctrl+[", Command.COMMAND_MODE);
         assertEquals(List.copyOf(defaults().entrySet()), List.copyOf(expected.entrySet()));
     }
 
@@ -162,7 +162,7 @@ public class KeyMapTest {
         assertEquals(changed.problems(), List.of());
         assertEquals(commandOn(changed.map(), "x"), Optional.empty());
         assertEquals(commandOn(changed.map(), "escape"), Optional.empty());
-        assertEquals(commandOn(changed.map(), "ctrl+]"), Optional.of(Command.COMMAND_MODE));
+        assertEquals(commandOn(changed.map(), "ctrl+["), Optional.of(Command.COMMAND_MODE));
     }
 
     /** A change that cannot be read is left out and reported; the others still apply, so the app always starts. */
@@ -185,15 +185,16 @@ public class KeyMapTest {
         assertEquals(commandOn(changed.map(), "ctrl+n"), Optional.of(Command.NEXT_CELL));
     }
 
-    /** Some key always leaves insert mode: turning off Esc and ⌃] leaves Esc on, and says so. */
+    /** Some key always leaves insert mode: turning off Esc and ⌃[ leaves Esc on, and says so. */
     @Test
     public void someKeyAlwaysLeavesInsertMode() {
-        KeyMap.WithChanges changed = KeyMap.defaultMap().withChanges(changes("escape", "", "ctrl+]", ""));
+        KeyMap.WithChanges changed = KeyMap.defaultMap().withChanges(changes("escape", "", "ctrl+[", ""));
         assertEquals(commandOn(changed.map(), "escape"), Optional.of(Command.COMMAND_MODE));
-        assertEquals(commandOn(changed.map(), "ctrl+]"), Optional.empty());
+        assertEquals(commandOn(changed.map(), "ctrl+["), Optional.empty());
         assertEquals(changed.problems().size(), 1, changed.problems().toString());
 
-        KeyMap.WithChanges moved = KeyMap.defaultMap().withChanges(changes("escape", "", "ctrl+[", "COMMAND_MODE"));
+        KeyMap.WithChanges moved = KeyMap.defaultMap().withChanges(changes("escape", "", "ctrl+[", "",
+            "ctrl+]", "COMMAND_MODE"));
         assertEquals(commandOn(moved.map(), "escape"), Optional.empty(), "another key leaves it");
         assertEquals(moved.problems(), List.of());
     }
