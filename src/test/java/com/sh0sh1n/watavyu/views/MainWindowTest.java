@@ -251,26 +251,6 @@ public class MainWindowTest {
         assertEquals(view.action(Command.TEMPORAL_LAYOUT).getValue(Action.SELECTED_KEY), false);
     }
 
-    /** ⌘← and ⌘→ select the column to the left and right in the selected tab. */
-    @Test
-    public void selectColumnCommandsMoveTheSelectionInTheSelectedTab() throws Exception {
-        ProjectController study = secondTab();
-        onEdt(() -> {
-            study.columns().newColumn("speech");
-            study.columns().newColumn("gesture");
-            study.getDataStore().deselectAll();
-        });
-        List<String> selected = new ArrayList<>();
-
-        for (Command command : List.of(Command.SELECT_COLUMN_RIGHT, Command.SELECT_COLUMN_RIGHT,
-                Command.SELECT_COLUMN_LEFT)) {
-            run(command);
-            selected.add(view.getSpreadsheetPanel().getSelectedColumn().getColumn().getName());
-        }
-
-        assertEquals(selected, List.of("gaze", "speech", "gaze"));
-    }
-
     /** ⌃L and ⌃H go to the column to the right and left, and ⌃J and ⌃K down and up it, in the selected tab. */
     @Test
     public void navigationCommandsMoveInTheSelectedTab() throws Exception {

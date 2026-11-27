@@ -24,8 +24,6 @@ public enum Command {
     NEW_CELL_LEFT(menu("newCellLeftMenuItem.text")),
     NEW_CELL_RIGHT(menu("newCellRightMenuItem.text")),
     DELETE_CELLS(menu("deleteCellMenuItem.text")),
-    SELECT_COLUMN_LEFT("Select column to left"),
-    SELECT_COLUMN_RIGHT("Select column to right"),
     NEXT_CELL("Next cell in the column"),
     PREVIOUS_CELL("Previous cell in the column"),
     COLUMN_LEFT("Column to the left"),
