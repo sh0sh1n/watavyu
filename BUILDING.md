@@ -2,7 +2,7 @@
 
 ## Scope
 
-This is the Gradle build for the personal macOS fork. It targets local development on macOS 27 / Apple Silicon. It builds and launches the existing Swing application with an OpenJFX Media video player; it does not create an installer or sign an app bundle.
+This is the Gradle build for the macOS fork. It targets macOS 27 / Apple Silicon. It builds and launches the Swing application with an OpenJFX Media video player, and packages it as a signed, notarized `Watavyu.app` in a disk image for anyone to install (see [Distribution](#distribution)).
 
 Gradle is the only build. The Maven build (`pom.xml`, the assembly descriptors, the `compile_*.sh`/`package-macos.sh` scripts and the javafx-maven-plugin/appbundle packaging resources) has been removed.
 
@@ -39,6 +39,8 @@ make build
 make run
 make test
 make clean
+make dist      # build/dist/Watavyu-<version>.dmg, checked; signed if SIGNING_IDENTITY is set
+make release   # make dist, then notarized and stapled
 ```
 
 The Makefile is a small convenience layer over the Gradle Wrapper; it does not introduce another build system. It reads the repo-pinned Java location from asdf for the build process. You can also invoke Gradle directly with `./gradlew <task>`.
@@ -273,16 +275,33 @@ Playback starts about 130 ms after `play`, and the video then trails the wall cl
 
 Not needed for seeking with this backend. Native exact seeks already complete in tens of milliseconds on the original recording, with no difference between the first and a repeated visit to the same position; shorter keyframe intervals save at most about 16 ms (one display refresh). A precomputed proxy or frame cache would add disk use and invalidation logic for no measured benefit. If slower sources appear (for example 4K or long-GOP HEVC), measure them with `playbackBenchmark` first; a proxy would then be a separate transcode keyed by source path, size, modification time and transcode settings, stored under `~/Library/Caches/Watavyu`, never replacing the original or changing annotation timestamps.
 
+## Distribution
+
+`make release` builds `build/dist/Watavyu-<version>.dmg`: `Watavyu.app`, with its own Java runtime, signed with the Developer ID certificate of sh0sh1n LLC and notarized by Apple, beside a link to Applications. It opens on any Apple Silicon Mac with no Gatekeeper warning, even offline, as Apple's ticket is stapled to it. The tasks, in `build.gradle.kts` › Distribution, each run the one before:
+
+- `distApp` builds `build/dist/app/Watavyu.app`, unsigned. `jlink` makes a runtime of the JDK modules the app and its libraries use (`distModules`, from `jdeps --print-module-deps`) and JavaFX's modules; `jpackage` wraps it with the app's jars, the icon (drawn by `AppIcon` and turned into an `.icns` by `distIconset` and `distIcon`) and an Info.plist naming `com.sh0sh1n.watavyu`.
+  - A signed app may load only libraries signed by its own team, and notarization refuses unsigned code inside jars, so no native library is left in a jar for Java to unpack as it runs (`distJars`). JavaFX's libraries, with the patched `libjfxmedia_avf.dylib`, go into the runtime's `lib` folder, where JavaFX looks before unpacking its own into `~/.openjfx`. FlatLaf's macOS library goes into `Contents/app/natives`, which `flatlaf.nativeLibraryPath` names; FlatLaf loads it only for features Watavyu does not use.
+  - `jpackage` refuses a version starting with 0, which macOS takes, so it is given a placeholder and the Gradle project's version (less `-SNAPSHOT`) is written into the Info.plist after. The oldest macOS the app declares (`LSMinimumSystemVersion`) is the newest any of its code was built for (each binary's `minos`): 11.0 today, though the app is built and tested only on macOS 27. jpackage's default microphone prompt is taken out.
+- `distSign` signs a copy in `build/dist/signed`, inside out: each library and executable, then the runtime bundle, then the app, whose launcher carries the entitlements in `src/dist/entitlements.plist`. With a certificate, everything is signed with the hardened runtime and a secure timestamp, as notarization requires; the one exception the JVM needs is `allow-jit`. Without one (`-PsigningIdentity` unset), it is signed ad hoc and without the hardened runtime, which would refuse the app's own libraries for want of a team: such an app runs on the Mac that built it, and macOS blocks it anywhere else.
+- `distCheck` checks the signed app: every piece of code signed, the hardened runtime and exactly the file's entitlements when signed with a certificate, no native library in any jar, the bundle identifier (which `MacOS.BUNDLE_ID` must match) and version. It then launches the app with a project holding a video from `src/test/resources/video`, its settings and log under `build/dist-check`, waits for the video to open and checks with `lsof` that every library the process loaded, but macOS's own, came from inside the app. It shows a window for a few seconds, so it needs an awake display, like `integrationTest`; it is not part of `check`.
+- `distDmg` puts the checked app in a compressed disk image, signed with the certificate if there is one.
+- `distNotarize` sends the disk image to Apple's notary service and waits (usually minutes), prints Apple's log if it is not accepted, staples the ticket to the image and has Gatekeeper assess it. Notarizing the image covers the app inside it.
+
+One-time setup on the Mac that makes releases, by the account holder of sh0sh1n LLC's Apple Developer membership:
+
+1. Create the certificate: Xcode › Settings › Accounts, select the sh0sh1n LLC team, Manage Certificates, `+`, Developer ID Application. It goes into the login keychain; `security find-identity -v -p codesigning` then lists `Developer ID Application: sh0sh1n LLC (<team ID>)`. Back up its private key (Keychain Access › export as `.p12`): another Mac cannot sign as sh0sh1n LLC without it.
+2. Name it for the build, outside the repository: put `signingIdentity=Developer ID Application: sh0sh1n LLC (<team ID>)` in `~/.gradle/gradle.properties`, or pass `SIGNING_IDENTITY="..."` to `make`.
+3. Store notary credentials in the keychain, under the profile name the build uses: create an app-specific password at account.apple.com › Sign-In and Security, then run `xcrun notarytool store-credentials watavyu-notary --apple-id <Apple ID> --team-id <team ID>`, which asks for it. (`-PnotaryProfile` names another profile.)
+
+No password, key or certificate is in the repository or the build files. The app makes no network connections of its own: notarization happens when a release is built, and Gatekeeper's checks are macOS's.
+
 ## Verification On This Machine
 
 - `make build` succeeds on Temurin 25.0.4 / macOS 27 arm64 with Error Prone enabled and no compiler warnings.
 - `make run` reaches the application window. Opening a project file whose media column lists a 10 s, 1280x720, 30 fps MP4 (locked, onset 2 s, volume 0.5), a media column whose file was missing, and an annotation column: the autosave written a minute later held all three, unchanged and in order, with the clip's length, size and frame rate as the file reported them. A project file with three clips in one media column (two overlapping, written without their files' details, and one missing) autosaved them with each opened file's length, size and frame rate, and the missing clip as it was read. (Both checked 2026-10-17 without looking at the windows; the owner checked basic use by hand.) A `.mov` shows the conversion message and adds no clip. On 2026-10-29 `make run` with a project holding a 10 s clip and two annotation columns showed the controls drawer, the playhead strip reading `00:00:00:000 stopped` and its line across the columns at the top; driving it with clicks was not possible from the agent's session (no Accessibility permission), so dragging the playhead and playing were not checked in the running app.
+- `./gradlew distCheck` passes, signed ad hoc and, on 2026-11-27, with an Apple Development certificate standing in for Developer ID, which turns on the hardened runtime and library validation: the app opened a video with every library loaded from inside it, under `allow-jit` alone. Not yet done: signing with the Developer ID certificate, notarizing, and opening the disk image on another Mac.
 - `./gradlew integrationTest`: 28 tests pass. As controls, the same tests fail against stock OpenJFX (6 seek/step tests), against a library without the audio-tap change (start latency), and against a library without the seek-frame fix (stale frame after pause).
 - `./gradlew test` runs 485 tests and all pass, with none skipped. Before the move from Mockito 2.10 to 5.24.0, the `setUp` methods of `CellTest`, `DataStoreTest` and `ColumnTest` failed on JDK 25 ("Cannot define class using reflection") and TestNG skipped those classes' 27 tests. `OpenControllerTest` and `SaveControllerTest` pass since their Maven-era paths (a trailing slash on `testPath`, output under `target/`) were fixed. The suite is now a green verification gate.
 - On 2026-10-29, a generated project of 11 columns and 3,000 cells, driven in the running app on this machine with the EDT's event times recorded: scrolling in 6 or 40 px steps at 60 Hz kept the EDT about 21% busy with at most one event over 16 ms (33% on `main` before U5, and 44–56% with up to 18 such events before the layout stopped placing cells on scroll), and 10 s of playback at 1× or 4× with the sheet following the needle had at most two (45–67 before), with the playhead's line across the columns on or off. The harness was a throwaway; the rule it measured is pinned by `SheetLayoutTest`.
 - Checked by the owner on 2026-10-21: clips in one column take over each other's picture and sound, and clips in different media columns play their sound together, each following its window's volume control.
 - Not verified automatically: audible audio and the volume control (the volume path changed with the audio-tap removal), and interactive playback driven by Watavyu's clock and keyboard shortcuts. Check these by hand after `make run`.
-
-## Not Included
-
-No installer/app image or code signing is configured.
