@@ -1,5 +1,6 @@
 import net.ltgt.gradle.errorprone.errorprone
 import java.io.ByteArrayOutputStream
+import java.nio.ByteBuffer
 import java.nio.file.Files
 import java.util.concurrent.TimeUnit
 import java.util.zip.ZipEntry
@@ -265,7 +266,7 @@ tasks.register<JavaExec>("playbackBenchmark") {
 // runs: JavaFX's go into the runtime's lib folder, where JavaFX looks before unpacking its own, and FlatLaf's into
 // the app's natives folder, which flatlaf.nativeLibraryPath names.
 val appName = "Watavyu"
-val bundleId = "com.sh0sh1n.watavyu" // MacOS.BUNDLE_ID
+val bundleId = "com.sh0sh1n.watavyu"
 val appVersion = version.toString().removeSuffix("-SNAPSHOT")
 val distDir = layout.buildDirectory.dir("dist")
 val jdkHome = javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(25)) }
@@ -282,9 +283,13 @@ fun isMachO(file: File): Boolean {
     if (!file.isFile || file.length() < 4 || file.name.endsWith(".class") || file.name.endsWith(".jar")) {
         return false
     }
-    val magic = file.inputStream().use { it.readNBytes(4) }.joinToString("") { "%02x".format(it) }
+    val head = file.inputStream().use { it.readNBytes(8) }
+    val magic = head.take(4).joinToString("") { "%02x".format(it) }
+    // A universal binary's magic is a class file's too: a universal binary goes on with the count of its
+    // architectures, a class file with its version, 45 or more.
+    val next = if (head.size == 8) ByteBuffer.wrap(head, 4, 4).int else 0
     // 64-bit Mach-O as an Apple Silicon Mac writes it, and a universal binary.
-    return magic == "cffaedfe" || magic == "cafebabe"
+    return magic == "cffaedfe" || magic == "cafebabe" && next in 1..44
 }
 
 /** Orders macOS versions such as 11.0 and 14.10 by their numbers. */
@@ -456,6 +461,8 @@ val distApp = tasks.register<Exec>("distApp") {
             "--java-options", "-Xmx1g",
             "--java-options", "--enable-native-access=javafx.graphics,javafx.media,ALL-UNNAMED",
             "--java-options", "-Dflatlaf.nativeLibraryPath=\$APPDIR/natives",
+            // The app's settings domain (MacOS.BUNDLE_ID_PROPERTY), so the identifier is written only here.
+            "--java-options", "-Dwatavyu.bundleId=$bundleId",
             "--dest", output.get().asFile.absolutePath,
         )
     })
@@ -473,11 +480,14 @@ val distApp = tasks.register<Exec>("distApp") {
             "Set :CFBundleShortVersionString $appVersion",
             "Set :CFBundleVersion $appVersion",
             "Set :LSMinimumSystemVersion $minimum",
-            // jpackage asks for the microphone by default; the app records nothing.
-            "Delete :NSMicrophoneUsageDescription",
         )
         for (change in changes) {
             dist.exec.exec { commandLine("/usr/libexec/PlistBuddy", "-c", change, plist) }
+        }
+        // jpackage asks for the microphone by default; the app records nothing. A jpackage that stops asking is fine.
+        dist.exec.exec {
+            commandLine("/usr/libexec/PlistBuddy", "-c", "Delete :NSMicrophoneUsageDescription", plist)
+            isIgnoreExitValue = true
         }
     }
 }
@@ -526,13 +536,14 @@ val distSign = tasks.register("distSign") {
     }
 }
 
-/** Runs a command and returns what it prints, errors included, failing if it fails. */
-fun output(exec: ExecOperations, vararg command: String): String {
+/** Runs a command and returns what it prints, errors included, failing if it fails unless [mayFail]. */
+fun output(exec: ExecOperations, vararg command: String, mayFail: Boolean = false): String {
     val out = ByteArrayOutputStream()
     exec.exec {
         commandLine(*command)
         standardOutput = out
         errorOutput = out
+        isIgnoreExitValue = mayFail
     }
     return out.toString()
 }
@@ -584,11 +595,11 @@ val distCheck = tasks.register("distCheck") {
             output(dist.exec, "/usr/libexec/PlistBuddy", "-c", "Print :$key", plist).trim()
         }.getOrNull()
         expect(plistValue("CFBundleIdentifier") == bundleId, "bundle identifier ${plistValue("CFBundleIdentifier")}")
-        expect(file("src/main/java/com/sh0sh1n/watavyu/util/MacOS.java").readText()
-            .contains("BUNDLE_ID = \"$bundleId\""), "MacOS.BUNDLE_ID is not $bundleId")
         val shownVersion = plistValue("CFBundleShortVersionString")
         expect(shownVersion == appVersion, "version $shownVersion, not $appVersion")
         expect(plistValue("NSMicrophoneUsageDescription") == null, "asks for the microphone")
+        val launcherOptions = File(app, "Contents/app/$appName.cfg").readText()
+        expect(launcherOptions.contains("-Dwatavyu.bundleId=$bundleId"), "the app is not told its bundle identifier")
 
         // Launched with a project holding a video, it loads only libraries from inside itself, and plays the video.
         val dir = work.get().asFile
@@ -666,15 +677,11 @@ val distNotarize = tasks.register("distNotarize") {
     group = "distribution"
     dependsOn(distDmg)
     val dmg = distDir.map { it.file("$appName-$appVersion.dmg") }
-    doFirst {
-        if (signingIdentity.get() == "-") {
-            throw GradleException("Notarizing needs the Developer ID Application certificate: -PsigningIdentity=...")
-        }
-    }
     doLast {
         val image = dmg.get().asFile.absolutePath
+        // notarytool fails on a submission Apple does not accept, which the status below explains.
         val submitted = output(dist.exec, "xcrun", "notarytool", "submit", image,
-            "--keychain-profile", notaryProfile.get(), "--wait", "--output-format", "json")
+            "--keychain-profile", notaryProfile.get(), "--wait", "--output-format", "json", mayFail = true)
         val status = Regex("\"status\"\\s*:\\s*\"([^\"]+)\"").find(submitted)?.groupValues?.get(1)
         if (status != "Accepted") {
             val id = Regex("\"id\"\\s*:\\s*\"([^\"]+)\"").find(submitted)?.groupValues?.get(1)
@@ -688,5 +695,12 @@ val distNotarize = tasks.register("distNotarize") {
         dist.exec.exec { commandLine("xcrun", "stapler", "validate", image) }
         dist.exec.exec { commandLine("spctl", "--assess", "--type", "open", "--context", "context:primary-signature",
             "--verbose=2", image) }
+    }
+}
+// Before anything is built: notarizing needs the certificate, which an ad hoc build would find out only at the end.
+gradle.taskGraph.whenReady {
+    if (hasTask(distNotarize.get()) && signingIdentity.get() == "-") {
+        throw GradleException("Notarizing needs the Developer ID Application certificate: set signingIdentity " +
+            "(BUILDING.md › Distribution)")
     }
 }
