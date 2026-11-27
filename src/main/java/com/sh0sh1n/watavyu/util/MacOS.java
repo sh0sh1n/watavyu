@@ -33,8 +33,14 @@ public class MacOS {
         return new String[]{yesOption, cancelOption, noOption};
     }
 
-    /** The app's bundle identifier, the defaults domain of the app as a bundle (build.gradle.kts › Distribution). */
-    public static final String BUNDLE_ID = "com.sh0sh1n.watavyu";
+    /**
+     * The defaults domain of a JVM that the JDK's own {@code java} launcher runs, as under {@code ./gradlew run}: the
+     * bundle identifier in the launcher's embedded Info.plist.
+     */
+    static final String JAVA_LAUNCHER_DOMAIN = "net.java.openjdk.java";
+
+    /** The system property in which the app's launcher gives its bundle identifier (BUILDING.md › Distribution). */
+    static final String BUNDLE_ID_PROPERTY = "watavyu.bundleId";
 
     /** The defaults key that turns the accent popup on or off while a key is held. */
     private static final String PRESS_AND_HOLD = "ApplePressAndHoldEnabled";
@@ -42,10 +48,15 @@ public class MacOS {
     /**
      * Turns off the accent popup shown while a key is held, for this app alone, so a held key repeats, as holding a
      * navigation chord or a jog key needs. It is set in the app's own defaults domain, and only if the user has not
-     * set it there, never for every app; macOS reads it as the app starts, so it takes effect from the next launch.
+     * set it there, never for every app. macOS reads it as the app starts, so it takes effect from the next launch,
+     * and it is done on a thread of its own, so the launch does not wait for the {@code defaults} command.
      */
-    public static void turnOffPressAndHold() {
-        String domain = pressAndHoldDomain(System.getProperty("jpackage.app-path"));
+    public static void turnOffPressAndHoldInBackground() {
+        Thread.ofPlatform().daemon().name("press-and-hold").start(MacOS::turnOffPressAndHold);
+    }
+
+    private static void turnOffPressAndHold() {
+        String domain = pressAndHoldDomain(System.getProperty(BUNDLE_ID_PROPERTY));
         try {
             if (!isSet(domain, PRESS_AND_HOLD)) {
                 Defaults written = defaults(turnOffPressAndHold(domain));
@@ -55,19 +66,18 @@ public class MacOS {
         } catch (IOException e) {
             logger.error("Could not turn off press and hold in " + domain + ": " + e);
         } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+            logger.info("Press and hold left as it is in " + domain + ": interrupted");
         }
     }
 
     /**
-     * Returns the defaults domain that holds this app's settings: its bundle identifier when it runs as the app,
-     * whose launcher names itself in {@code jpackage.app-path}, and otherwise {@code java}, the name of the program a
-     * bare JVM runs as, as under {@code ./gradlew run}.
+     * Returns the defaults domain that holds this app's settings: its bundle identifier, which the app's launcher
+     * gives, or outside the app that of the JDK's launcher.
      *
-     * @param appPath the app launcher's path, or null outside the app
+     * @param bundleId the app's bundle identifier, or null outside the app
      */
-    static String pressAndHoldDomain(final String appPath) {
-        return appPath == null ? "java" : BUNDLE_ID;
+    static String pressAndHoldDomain(final String bundleId) {
+        return bundleId == null || bundleId.isBlank() ? JAVA_LAUNCHER_DOMAIN : bundleId;
     }
 
     /** Returns the {@code defaults} arguments that turn press and hold off in a domain. */

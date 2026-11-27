@@ -173,7 +173,7 @@ public final class Watavyu {
      */
     private void start(final String[] args) {
         AppIcon.install();
-        MacOS.turnOffPressAndHold();
+        MacOS.turnOffPressAndHoldInBackground();
         SpreadsheetTheme.installLookAndFeel();
         mainFrame = new JFrame();
         SpreadsheetTheme.setMonospacedValues(Settings.get().isMonospacedValues());
