@@ -75,11 +75,11 @@ public class MenuShortcutKeysTest {
     }
 
     /**
-     * B5: ⌘← and ⌘→, which text takes to go to a line's ends, select columns, so they are global; plain and other
-     * arrows are left to the cell.
+     * The arrows, with ⌘ or without, are no shortcuts, so a cell's text takes them: ⌘← and ⌘→ go to a line's ends.
+     * ⌃H and ⌃L go to the columns beside.
      */
     @Test
-    public void onlyCommandArrowsSelectColumns() throws Exception {
+    public void arrowsAreLeftToTheCell() throws Exception {
         List<KeyStroke> keys = List.of(
             KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, InputEvent.META_DOWN_MASK),
             KeyStroke.getKeyStroke(KeyEvent.VK_RIGHT, InputEvent.META_DOWN_MASK),
@@ -101,8 +101,7 @@ public class MenuShortcutKeysTest {
             }
         });
 
-        assertEquals(runs, List.of("GLOBAL SELECT_COLUMN_LEFT", "GLOBAL SELECT_COLUMN_RIGHT", "none", "none", "none",
-            "none"));
+        assertEquals(runs, List.of("none", "none", "none", "none", "none", "none"));
     }
 
     /**

@@ -18,7 +18,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import com.sh0sh1n.watavyu.controllers.ColumnCommands;
 import com.sh0sh1n.watavyu.controllers.ProjectController;
-import com.sh0sh1n.watavyu.controllers.CellNavigation;
 import com.sh0sh1n.watavyu.models.*;
 import com.sh0sh1n.watavyu.util.Constants;
 import com.sh0sh1n.watavyu.views.LockMark;
@@ -426,16 +425,6 @@ public final class SpreadsheetColumn extends JLabel implements ColumnListener, M
             }
         }
         return null;
-    }
-
-    /**
-     * Returns the cell whose onset is nearest a cell's, the first of those as near.
-     *
-     * @param cell a cell, in this column or another
-     * @return the nearest cell, or null for a column without cells
-     */
-    public Cell getNearestCellTemporally(final Cell cell) {
-        return CellNavigation.nearest(getCellsTemporally(), cell.getOnset()).orElse(null);
     }
 
     /**

@@ -1014,10 +1014,6 @@ public final class MainWindow implements FileDropEventListener {
         commands.define(Command.DELETE_CELLS, this::deleteCells)
                 .labelled(() -> countedLabel("deleteCellMenuItem", selection.cells()))
                 .enabledWhen(() -> selection.cells() > 0);
-        commands.define(Command.SELECT_COLUMN_LEFT, () -> getSpreadsheetPanel().selectNextColumn(-1))
-                .enabledWhen(() -> getSpreadsheetPanel() != null);
-        commands.define(Command.SELECT_COLUMN_RIGHT, () -> getSpreadsheetPanel().selectNextColumn(1))
-                .enabledWhen(() -> getSpreadsheetPanel() != null);
         commands.define(Command.NEXT_CELL, () -> getSpreadsheetPanel().moveVertically(true))
                 .enabledWhen(() -> getSpreadsheetPanel() != null);
         commands.define(Command.PREVIOUS_CELL, () -> getSpreadsheetPanel().moveVertically(false))
@@ -1158,8 +1154,6 @@ public final class MainWindow implements FileDropEventListener {
                 .global("Spreadsheet", Command.ZOOM_OUT, KeyStroke.getKeyStroke(KeyEvent.VK_MINUS, cmd))
                 .menu("Spreadsheet", Command.RESET_ZOOM, KeyStroke.getKeyStroke(KeyEvent.VK_0, cmd))
                 .menu("Spreadsheet", Command.HIGHLIGHT_AND_FOCUS, KeyStroke.getKeyStroke(KeyEvent.VK_F, cmd | shift))
-                .global("Spreadsheet", Command.SELECT_COLUMN_LEFT, KeyStroke.getKeyStroke(KeyEvent.VK_LEFT, cmd))
-                .global("Spreadsheet", Command.SELECT_COLUMN_RIGHT, KeyStroke.getKeyStroke(KeyEvent.VK_RIGHT, cmd))
                 .keyMap(map)
                 .commandKeysWhen(this::isCommandKey)
                 .build(() -> frame.isFocused(), held -> {
