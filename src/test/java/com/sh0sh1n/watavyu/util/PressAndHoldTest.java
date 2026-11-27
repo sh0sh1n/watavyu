@@ -6,11 +6,13 @@ import static org.testng.Assert.assertTrue;
 
 import org.testng.annotations.Test;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 /**
- * The accent popup while a key is held is turned off for this app alone (TODO.md B2): in the app's own defaults
- * domain, never the global one, and only where the user has not set it.
+ * The accent popup while a key is held is turned off for this app alone: in the app's own defaults domain, never the
+ * global one, and only where the user has not set it.
  */
 public class PressAndHoldTest {
 
@@ -26,19 +28,30 @@ public class PressAndHoldTest {
         for (String domain : List.of(MacOS.pressAndHoldDomain(null), MacOS.pressAndHoldDomain("/app"))) {
             assertEquals(MacOS.turnOffPressAndHold(domain),
                 List.of("write", domain, "ApplePressAndHoldEnabled", "-bool", "false"));
-            assertEquals(MacOS.readPressAndHold(domain), List.of("read", domain, "ApplePressAndHoldEnabled"));
             assertFalse(MacOS.turnOffPressAndHold(domain).contains("-g"));
             assertFalse(MacOS.turnOffPressAndHold(domain).contains("NSGlobalDomain"));
         }
     }
 
-    /** A value the user set, on or off, is left as it is; only a missing one is written. */
+    /**
+     * Only a missing value is written, so one the user set, on or off, is left. A value is missing both from a domain
+     * that does not exist yet, as the app's does not before its first launch, and from one without the key. Checked
+     * against the real {@code defaults} in a throwaway domain.
+     */
     @Test
-    public void onlyAnUnsetValueIsWritten() {
-        assertTrue(MacOS.isUnset(List.of(
-            "2026-11-27 10:00:00.000 defaults[1:2] ",
-            "The domain/default pair of (com.sh0sh1n.watavyu, ApplePressAndHoldEnabled) does not exist")));
-        assertFalse(MacOS.isUnset(List.of("1")));
-        assertFalse(MacOS.isUnset(List.of("0")));
+    public void aValueIsMissingFromANewDomainAndFromOneWithoutTheKey() throws Exception {
+        String domain = "com.sh0sh1n.watavyu.press-and-hold-test";
+        MacOS.defaults(List.of("delete", domain));
+        try {
+            assertFalse(MacOS.isSet(domain, "ApplePressAndHoldEnabled"), "no domain yet");
+            assertEquals(MacOS.defaults(List.of("write", domain, "Other", "-bool", "true")).exitCode(), 0);
+            assertFalse(MacOS.isSet(domain, "ApplePressAndHoldEnabled"), "a domain without the key");
+            assertEquals(MacOS.defaults(MacOS.turnOffPressAndHold(domain)).exitCode(), 0);
+            assertTrue(MacOS.isSet(domain, "ApplePressAndHoldEnabled"), "turned off");
+        } finally {
+            // Deleting a domain's values leaves its file, empty.
+            MacOS.defaults(List.of("delete", domain));
+            Files.deleteIfExists(Path.of(System.getProperty("user.home"), "Library", "Preferences", domain + ".plist"));
+        }
     }
 }

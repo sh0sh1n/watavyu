@@ -47,13 +47,15 @@ public class MacOS {
     public static void turnOffPressAndHold() {
         String domain = pressAndHoldDomain(System.getProperty("jpackage.app-path"));
         try {
-            List<String> read = defaults(readPressAndHold(domain));
-            if (isUnset(read)) {
-                List<String> output = defaults(turnOffPressAndHold(domain));
-                logger.info("Press and hold turned off in " + domain + ": " + String.join(" ", output));
+            if (!isSet(domain, PRESS_AND_HOLD)) {
+                Defaults written = defaults(turnOffPressAndHold(domain));
+                logger.info("Press and hold turned off in " + domain + " (" + written.exitCode() + "): "
+                    + String.join(" ", written.lines()));
             }
         } catch (IOException e) {
             logger.error("Could not turn off press and hold in " + domain + ": " + e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 
@@ -68,23 +70,35 @@ public class MacOS {
         return appPath == null ? "java" : BUNDLE_ID;
     }
 
-    /** Returns the {@code defaults} arguments that read press and hold in a domain. */
-    static List<String> readPressAndHold(final String domain) {
-        return List.of("read", domain, PRESS_AND_HOLD);
-    }
-
     /** Returns the {@code defaults} arguments that turn press and hold off in a domain. */
     static List<String> turnOffPressAndHold(final String domain) {
         return List.of("write", domain, PRESS_AND_HOLD, "-bool", "false");
     }
 
-    /** Returns whether {@code defaults read} found no value, which it says on its error output. */
-    static boolean isUnset(final List<String> readOutput) {
-        return readOutput.stream().anyMatch(line -> line.contains("does not exist"));
+    /**
+     * Returns whether a defaults domain holds a value for a key. {@code defaults read} fails if it does not, worded
+     * one way for a domain that does not exist and another for a key missing from one that does.
+     *
+     * @param domain the domain, such as {@code com.sh0sh1n.watavyu}
+     * @param key    the key
+     * @throws IOException          if {@code defaults} cannot be run
+     * @throws InterruptedException if interrupted while it runs
+     */
+    static boolean isSet(final String domain, final String key) throws IOException, InterruptedException {
+        return defaults(List.of("read", domain, key)).exitCode() == 0;
     }
 
-    /** Runs the {@code defaults} command with these arguments, and returns the lines it prints, errors included. */
-    private static List<String> defaults(final List<String> arguments) throws IOException {
+    /**
+     * What the {@code defaults} command did.
+     *
+     * @param exitCode its exit status, 0 when it did what was asked
+     * @param lines    the lines it printed, errors included
+     */
+    record Defaults(int exitCode, List<String> lines) {
+    }
+
+    /** Runs the {@code defaults} command with these arguments, and waits for it to finish. */
+    static Defaults defaults(final List<String> arguments) throws IOException, InterruptedException {
         List<String> command = new ArrayList<>();
         command.add("defaults");
         command.addAll(arguments);
@@ -95,7 +109,7 @@ public class MacOS {
             for (String line = output.readLine(); line != null; line = output.readLine()) {
                 lines.add(line);
             }
-            return lines;
+            return new Defaults(process.waitFor(), List.copyOf(lines));
         }
     }
 
