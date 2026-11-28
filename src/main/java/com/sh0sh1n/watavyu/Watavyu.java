@@ -94,6 +94,15 @@ public final class Watavyu {
         return window;
     }
 
+    /**
+     * Sets the main window without starting the application, as tests do.
+     *
+     * @param window the main window
+     */
+    void setWindow(final MainWindow window) {
+        this.window = window;
+    }
+
     public void setCommandLineFile(String commandLineFile) {
         logger.info("Command line file set to " + commandLineFile);
         this.commandLineFile = commandLineFile;

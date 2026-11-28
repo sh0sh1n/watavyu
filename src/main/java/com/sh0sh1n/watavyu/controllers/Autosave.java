@@ -36,8 +36,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * no running Watavyu owns: its work was neither saved nor discarded, and it can be recovered.
  *
  * <p>The lock file also says where the work came from ({@link Origin}), so recovered work saves back to its project
- * file. The lock file is in place before the project file is first written and goes after it, and the project file is
- * replaced only once its new contents are complete, so a crash at any moment leaves the last autosave whole.
+ * file, and the spreadsheet's name, so work never saved keeps it. The lock file is in place before the project file is first written and goes after it, and the project file is
+ * replaced only once its new contents are complete and on disk, so a crash at any moment leaves the last autosave whole.
  */
 public final class Autosave {
 
@@ -52,6 +52,9 @@ public final class Autosave {
 
     /** The extension of a project file being written, before it replaces the autosave */
     private static final String PARTIAL = ".partial";
+
+    /** How old a lock file not yet in place must be before another Watavyu takes it as left behind */
+    static final long STALE_MILLIS = 60_000;
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -84,6 +87,9 @@ public final class Autosave {
 
     /** Where the work came from, as the lock file says; null for an untitled spreadsheet */
     private Origin origin;
+
+    /** The spreadsheet's name, as the lock file says; null for one that has none */
+    private String projectName;
 
     /** The fingerprint of the project file last written, or null before the first */
     private String contents;
@@ -155,7 +161,8 @@ public final class Autosave {
                         claimed.add(autosave);
                     }
                 } else if (name.endsWith(NEW_LOCK)
-                        && !OWNED.contains(name.substring(0, name.length() - NEW_LOCK.length()))) {
+                        && !OWNED.contains(name.substring(0, name.length() - NEW_LOCK.length()))
+                        && isStale(entry)) {
                     deleteIfAbandoned(entry);
                 }
             }
@@ -194,7 +201,7 @@ public final class Autosave {
             autosave.delete();
             return null;
         }
-        autosave.origin = readOrigin(autosave.channel);
+        autosave.readLock();
         return autosave;
     }
 
@@ -231,6 +238,18 @@ public final class Autosave {
         }
     }
 
+    /**
+     * Returns whether a lock file not yet in place is old enough to have been left. One just made may not be locked
+     * yet, and opening it then could keep the Watavyu making it from locking it.
+     */
+    private static boolean isStale(final Path newLock) {
+        try {
+            return Files.getLastModifiedTime(newLock).toMillis() < System.currentTimeMillis() - STALE_MILLIS;
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
     /** Deletes a lock file left before it was put in place, unless the Watavyu making it is still at it. */
     private static void deleteIfAbandoned(final Path newLock) {
         try (FileChannel channel = FileChannel.open(newLock, StandardOpenOption.READ, StandardOpenOption.WRITE)) {
@@ -243,11 +262,10 @@ public final class Autosave {
     }
 
     /**
-     * Reads where an autosave's work came from out of its lock file.
-     *
-     * @return where it came from, or null for an untitled spreadsheet or a lock file that cannot be read
+     * Reads where the work came from and the spreadsheet's name out of the lock file. A lock file that cannot be read
+     * leaves both null, so the work opens as untitled.
      */
-    private static Origin readOrigin(final FileChannel channel) {
+    private void readLock() {
         try {
             int size = Math.toIntExact(channel.size());
             ByteBuffer buffer = ByteBuffer.allocate(size);
@@ -260,16 +278,23 @@ public final class Autosave {
                 read += more;
             }
             JsonNode root = MAPPER.readTree(buffer.array(), 0, read);
-            if (root == null || !root.hasNonNull("projectFile")) {
-                return null;
+            if (root == null) {
+                return;
             }
-            JsonNode fingerprint = root.get("fingerprint");
-            return new Origin(new File(root.get("projectFile").asText()),
-                fingerprint == null || fingerprint.isNull() ? null : fingerprint.asText());
+            projectName = text(root, "name");
+            String projectFile = text(root, "projectFile");
+            if (projectFile != null) {
+                origin = new Origin(new File(projectFile), text(root, "fingerprint"));
+            }
         } catch (IOException | ArithmeticException e) {
             logger.warn("Could not read where an autosave came from; it opens as untitled", e);
-            return null;
         }
+    }
+
+    /** Returns a field's text, or null if it is missing or null. */
+    private static String text(final JsonNode root, final String field) {
+        JsonNode value = root.get(field);
+        return value == null || value.isNull() ? null : value.asText();
     }
 
     /**
@@ -277,22 +302,32 @@ public final class Autosave {
      *
      * @param project the project file's contents
      * @param from    where the work came from, or null for an untitled spreadsheet
+     * @param name    the spreadsheet's name, or null if it has none
      * @throws IOException if it cannot be saved; the autosave keeps what it held
      */
-    public void write(final String project, final Origin from) throws IOException {
-        if (contents == null || !Objects.equals(origin, from)) {
-            writeOrigin(from);
+    public void write(final String project, final Origin from, final String name) throws IOException {
+        if (contents == null || !Objects.equals(origin, from) || !Objects.equals(projectName, name)) {
+            writeLock(from, name);
         }
         Path partial = folder.resolve(id + PARTIAL);
-        Files.writeString(partial, project, StandardCharsets.UTF_8);
+        // On disk before it replaces the last autosave, so a power cut cannot leave the autosave empty.
+        try (FileChannel out = FileChannel.open(partial, StandardOpenOption.CREATE,
+                StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.WRITE)) {
+            ByteBuffer buffer = ByteBuffer.wrap(project.getBytes(StandardCharsets.UTF_8));
+            while (buffer.hasRemaining()) {
+                out.write(buffer);
+            }
+            out.force(true);
+        }
         Files.move(partial, getFile(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
         contents = Fingerprint.of(project);
     }
 
-    private void writeOrigin(final Origin from) throws IOException {
+    private void writeLock(final Origin from, final String name) throws IOException {
         ObjectNode root = MAPPER.createObjectNode();
         root.put("projectFile", from == null ? null : from.projectFile().getAbsolutePath());
         root.put("fingerprint", from == null ? null : from.fingerprint());
+        root.put("name", name);
         channel.truncate(0);
         ByteBuffer buffer = ByteBuffer.wrap(MAPPER.writeValueAsBytes(root));
         while (buffer.hasRemaining()) {
@@ -300,6 +335,7 @@ public final class Autosave {
         }
         channel.force(false);
         origin = from;
+        projectName = name;
     }
 
     /** Returns the autosave's project file; it exists once the autosave has been written. */
@@ -310,6 +346,11 @@ public final class Autosave {
     /** Returns where the work came from, or null for an untitled spreadsheet. */
     public Origin getOrigin() {
         return origin;
+    }
+
+    /** Returns the spreadsheet's name, or null if it has none. */
+    public String getProjectName() {
+        return projectName;
     }
 
     /** Returns the fingerprint of the project file last written, or null before the first. */

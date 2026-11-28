@@ -24,7 +24,7 @@ public final class AutosaveHolder {
      * @throws Exception if the autosave cannot be written
      */
     public static void main(final String[] args) throws Exception {
-        Autosave.create(Paths.get(args[0])).write(PROJECT, null);
+        Autosave.create(Paths.get(args[0])).write(PROJECT, null, null);
         System.out.println(READY);
         System.out.flush();
         Thread.sleep(Long.MAX_VALUE);

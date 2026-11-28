@@ -135,7 +135,7 @@ public final class AutoSaveController implements ActionListener {
             }
             File projectFile = controller.getProjectFile();
             autosave.write(project, projectFile == null ? null
-                : new Autosave.Origin(projectFile, controller.getSavedFingerprint()));
+                : new Autosave.Origin(projectFile, controller.getSavedFingerprint()), controller.getProjectName());
         } catch (UserWarningException | ProjectFileException | IOException e) {
             logger.error("Unable to autosave " + controller.getProjectNamePretty(), e);
         }

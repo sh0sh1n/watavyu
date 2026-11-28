@@ -256,14 +256,14 @@ public final class ProjectController {
 
     /**
      * Returns the project file this spreadsheet was opened from or last saved to, which Save writes, or null if it
-     * has not been saved as a project file.
+     * has not been saved as a project file. A file opened by a name alone, with no folder, as from the command line,
+     * is in the working folder, where Save writes it.
      */
     public File getProjectFile() {
-        if (!(lastSaveOption instanceof ProjectFileFilter) || getProjectDirectory() == null
-                || getDatabaseFileName() == null) {
+        if (!(lastSaveOption instanceof ProjectFileFilter) || getDatabaseFileName() == null) {
             return null;
         }
-        return new File(getProjectDirectory(), getDatabaseFileName());
+        return new File(getProjectDirectory(), getDatabaseFileName()).getAbsoluteFile();
     }
 
     /**

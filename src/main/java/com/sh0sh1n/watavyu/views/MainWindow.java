@@ -52,6 +52,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Predicate;
 
 /**
  * The main window: a tab per open spreadsheet, the menu bar, and the keyboard shortcuts.
@@ -82,6 +83,9 @@ public final class MainWindow implements FileDropEventListener {
 
     /** Where each spreadsheet's autosave is kept, and where unsaved work is recovered from at launch */
     private final Path autosaveFolder;
+
+    /** Asks whether Save may write over a project file that changed on disk */
+    private Predicate<File> replaceChanged = this::replaceChangedFile;
 
     /** The main window */
     private final JFrame frame;
@@ -282,7 +286,7 @@ public final class MainWindow implements FileDropEventListener {
     /**
      * Reopens the unsaved work of every Watavyu that stopped without saving or discarding it, as after a crash, each
      * in a tab of its own, without asking. Work from a project file reopens as that project with unsaved changes, so
-     * Save writes it there; untitled work reopens untitled. Autosaves a running Watavyu owns are left to it. The
+     * Save writes it there; work never saved reopens with its name, or untitled. Autosaves a running Watavyu owns are left to it. The
      * untitled spreadsheet open at launch gives way, if it is untouched.
      */
     public void recoverAutosaves() {
@@ -317,7 +321,14 @@ public final class MainWindow implements FileDropEventListener {
         ProjectController pc = new ProjectController(opened.getProject(), opened.getDataStore());
         Autosave.Origin origin = autosave.getOrigin();
         if (origin == null) {
-            pc.getDataStore().setName("untitled");
+            String name = autosave.getProjectName();
+            if (name == null) {
+                pc.getDataStore().setName("untitled");
+            } else {
+                // Named as a project file is, so the name is taken whole rather than losing what follows a dot.
+                pc.setProjectName(name + ProjectDocument.EXTENSION);
+                pc.getDataStore().setName(name);
+            }
         } else {
             File projectFile = origin.projectFile();
             pc.setProjectName(projectFile.getName());
@@ -426,15 +437,23 @@ public final class MainWindow implements FileDropEventListener {
      */
     public boolean save() {
         ProjectController projectController = selectedController();
-        if (projectController.isNewProject() || (projectController.getProjectName() == null)
-                || !(projectController.getLastSaveOption() instanceof ProjectFileFilter)) {
+        File file = projectController.getProjectFile();
+        if (projectController.isNewProject() || projectController.getProjectName() == null || file == null) {
             return saveAs();
         }
-        File file = new File(projectController.getProjectDirectory(), projectController.getDatabaseFileName());
-        if (projectController.changedOnDisk(file) && !replaceChangedFile(file)) {
+        if (projectController.changedOnDisk(file) && !replaceChanged.test(file)) {
             return false;
         }
         return saveProject(file);
+    }
+
+    /**
+     * Sets how Save asks whether to write over a project file that changed on disk, so tests can answer for the user.
+     *
+     * @param ask answers for a project file whether to replace it
+     */
+    void askToReplaceChangedFilesWith(final Predicate<File> ask) {
+        replaceChanged = ask;
     }
 
     /**

@@ -18,6 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -50,7 +51,7 @@ public class AutosaveTest {
     private Autosave written(final String project, final Autosave.Origin origin) throws IOException {
         Autosave autosave = Autosave.create(folder);
         made.add(autosave);
-        autosave.write(project, origin);
+        autosave.write(project, origin, null);
         return autosave;
     }
 
@@ -88,6 +89,34 @@ public class AutosaveTest {
     }
 
     @Test
+    public void anAutosaveLetGoIsClaimedWithItsSpreadsheetsName() throws IOException {
+        Autosave autosave = Autosave.create(folder);
+        made.add(autosave);
+        autosave.write(PROJECT, null, "study");
+        autosave.release();
+
+        assertEquals(claim().get(0).getProjectName(), "study");
+    }
+
+    @Test
+    public void aLockFileJustMadeIsLeftToTheWatavyuMakingIt() throws IOException {
+        Path newLock = Files.createFile(folder.resolve("fresh.lock.new"));
+
+        assertTrue(claim().isEmpty());
+        assertTrue(Files.exists(newLock), "it may not be locked yet");
+    }
+
+    @Test
+    public void aLockFileLeftBeforeItWasInPlaceIsCleared() throws IOException {
+        Path newLock = Files.createFile(folder.resolve("left.lock.new"));
+        Files.setLastModifiedTime(newLock,
+            FileTime.fromMillis(System.currentTimeMillis() - Autosave.STALE_MILLIS - 1_000));
+
+        assertTrue(claim().isEmpty());
+        assertFalse(Files.exists(newLock));
+    }
+
+    @Test
     public void untitledWorkHasNoOrigin() throws IOException {
         written(PROJECT, null).release();
 
@@ -117,7 +146,7 @@ public class AutosaveTest {
         Path file = autosave.getFile();
         String later = PROJECT.replace("[]", "[ ]");
 
-        autosave.write(later, null);
+        autosave.write(later, null, null);
 
         assertEquals(autosave.getFile(), file);
         assertEquals(Files.readString(file), later);

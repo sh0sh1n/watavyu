@@ -137,6 +137,34 @@ public class AutoSaveControllerTest {
     }
 
     @Test
+    public void aProjectFileOpenedByNameAloneIsInTheWorkingFolder() throws Exception {
+        ProjectController spreadsheet = spreadsheet("study", "gaze");
+        spreadsheet.setDatabaseFileName("study.watavyu.json");
+        spreadsheet.setLastSaveOption(ProjectFileFilter.INSTANCE);
+        AutoSaveController autoSave = autoSave(spreadsheet);
+        try {
+            autoSave.save();
+
+            assertEquals(autoSave.getAutosave().getOrigin().projectFile(),
+                new File("study.watavyu.json").getAbsoluteFile());
+        } finally {
+            autoSave.discard();
+        }
+    }
+
+    @Test
+    public void theAutosaveKeepsTheSpreadsheetsName() throws Exception {
+        AutoSaveController autoSave = autoSave(spreadsheet("study", "gaze"));
+        try {
+            autoSave.save();
+
+            assertEquals(autoSave.getAutosave().getProjectName(), "study");
+        } finally {
+            autoSave.discard();
+        }
+    }
+
+    @Test
     public void untitledWorkComesFromNoProjectFile() throws Exception {
         AutoSaveController autoSave = autoSave(spreadsheet("study", "gaze"));
         try {
