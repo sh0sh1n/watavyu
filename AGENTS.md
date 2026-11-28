@@ -13,11 +13,11 @@ The aim is a smaller app whose every feature was chosen on purpose, with a moder
 - **Transparent data.** A project is one readable JSON file holding the spreadsheet and the project, in an open format with a published schema, so scripts can process it outside the app; the app reads and writes projects in no other format. Videos are data columns like any other, with explicit onsets (F1).
 - **Fewer windows.** The main window, video controller and video windows were hard to manage. The video controller window is gone: media tracks are media columns in the spreadsheet, and its buttons and playhead sit beside the columns (F4, F6). The numpad shortcuts gave way to a vim-like key mapping the user can change, so coding works on laptops without a numpad.
 - **Comfortable for hours, then fast.** Researchers code for hours at a stretch, so the UI's first priority is little eye strain; performance comes second (U5).
-- **One platform.** macOS on Apple Silicon, Java 25, Swing with OpenJFX video through a patched media library. The app makes no network connections of its own; the rule keeps traffic off the public internet, and project and video files on mounted or local-network volumes are fine.
+- **One platform.** macOS 27 or later on Apple Silicon, Java 25, Swing with OpenJFX video through a patched media library. The app makes no network connections of its own; the rule keeps traffic off the public internet, and project and video files on mounted or local-network volumes are fine.
 
 ## How to Work Here
 
-- **The owner reviews goals, architecture and design, not diffs.** Take code-level choices (patterns, libraries, structure) yourself and record structural ones under [Decisions](#decisions). Rebuilding something from scratch is an acceptable price when it has gone badly; say so plainly.
+- **The owner reviews goals, architecture and design, not diffs.** Take code-level choices (patterns, libraries, structure) yourself and record structural ones under [Decisions](#decisions). Rebuilding something from scratch is an acceptable price when it has gone badly; say so plainly. This holds now that the app is distributed: agents' review passes stand in for a person reading the code (owner, 2026-11-27).
 - **Stop and ask about product decisions**: what the app does, its rules and feel, and anything under [Undecided](#undecided).
 - **Tests are the specification.** A behaviour without a test that pins it is unfinished. Do not write characterization tests for behaviour that may be cut.
 - **Never weaken a check to get green.** No disabled tests, relaxed rules or silenced warnings. Checks only ratchet up: when an Error Prone check, PMD rule or SpotBugs pattern reaches zero findings, make it fail the build.
@@ -33,7 +33,7 @@ The aim is a smaller app whose every feature was chosen on purpose, with a moder
 
 Newest first. (owner) marks product decisions; the rest are engineering choices that can be revisited with reason.
 
-- **2026-11-27 (owner): Watavyu is distributed to anyone**, as a disk image signed with the Developer ID of sh0sh1n LLC (sh0sh1n.com) and notarized by Apple, so macOS opens it without a warning. The bundle identifier is `com.sh0sh1n.watavyu`.
+- **2026-11-27 (owner): Watavyu is distributed to anyone**, as a disk image signed with the Developer ID of sh0sh1n LLC (sh0sh1n.com) and notarized by Apple, so macOS opens it without a warning. The bundle identifier is `com.sh0sh1n.watavyu`. It runs on macOS 27 or later, the version it is built and tested on. No public release is planned yet: builds for now test the release pipeline with alpha builds.
 - **2026-11-27: the app carries its own runtime, and no native code in jars** (BUILDING.md › Distribution). `jlink` and `jpackage` build `Watavyu.app` with a runtime that has JavaFX in it. Every native library is a file in the bundle, signed with it: JavaFX's in the runtime's `lib` folder, where JavaFX looks first, FlatLaf's where `flatlaf.nativeLibraryPath` points. `distCheck` launches the signed app and checks that nothing it loads comes from outside it. Ad hoc builds skip the hardened runtime, which would refuse the app's libraries for want of a team.
 - **2026-11-27: press and hold is the app's own setting.** The app turns the accent popup off in its own defaults domain (`com.sh0sh1n.watavyu`, or the JDK launcher's `net.java.openjdk.java` under `./gradlew run`) if the user has not set it there, and never in the global domain, which it used to change for every app and restore only on a clean quit.
 

@@ -4,7 +4,7 @@ Fork of Datavyu aimed at modernization and simplification. Projects are saved as
 
 ## Installing
 
-Watavyu runs on Apple Silicon Macs. Releases are disk images, signed by sh0sh1n LLC and notarized by Apple: open one and drag Watavyu to Applications. Java comes inside the app. [BUILDING.md › Distribution](BUILDING.md#distribution) covers how a release is made.
+Watavyu runs on Apple Silicon Macs with macOS 27 or later. No release has been published yet; releases will be disk images, signed by sh0sh1n LLC and notarized by Apple: open one and drag Watavyu to Applications. Java comes inside the app. [BUILDING.md › Distribution](BUILDING.md#distribution) covers how a release is made.
 
 ## Citing
 

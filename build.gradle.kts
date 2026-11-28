@@ -268,6 +268,8 @@ tasks.register<JavaExec>("playbackBenchmark") {
 val appName = "Watavyu"
 val bundleId = "com.sh0sh1n.watavyu"
 val appVersion = version.toString().removeSuffix("-SNAPSHOT")
+// The oldest macOS the app runs on, the one it is built and tested on (owner, 2026-11-27).
+val minimumMacOS = "27.0"
 val distDir = layout.buildDirectory.dir("dist")
 val jdkHome = javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(25)) }
     .map { it.metadata.installationPath.asFile.absolutePath }
@@ -301,7 +303,7 @@ val macOSVersions = Comparator<String> { a, b ->
 }
 
 /** Returns the oldest macOS a Mach-O file runs on, as it was built for (its LC_BUILD_VERSION), such as 11.0. */
-fun minimumMacOS(file: File, exec: ExecOperations): String {
+fun builtForMacOS(file: File, exec: ExecOperations): String {
     val output = ByteArrayOutputStream()
     exec.exec {
         commandLine("otool", "-l", file.absolutePath)
@@ -440,6 +442,9 @@ val distApp = tasks.register<Exec>("distApp") {
     inputs.dir(jars)
     inputs.dir(runtime)
     inputs.file(icns)
+    // Written into the Info.plist after jpackage, so a change rebuilds the app.
+    inputs.property("version", appVersion)
+    inputs.property("minimumMacOS", minimumMacOS)
     outputs.dir(output)
     argumentProviders.add(CommandLineArgumentProvider {
         listOf(
@@ -472,14 +477,19 @@ val distApp = tasks.register<Exec>("distApp") {
     }
     doLast {
         val app = output.get().dir("$appName.app").asFile
-        // The newest macOS any of its code needs is the oldest the app runs on.
-        val minimum = app.walk().filter(::isMachO).map { minimumMacOS(it, dist.exec) }
-            .maxWithOrNull(macOSVersions)
+        // No code in the app may need a macOS newer than the oldest the app declares.
+        val tooNew = app.walk().filter(::isMachO)
+            .map { it to builtForMacOS(it, dist.exec) }
+            .filter { macOSVersions.compare(it.second, minimumMacOS) > 0 }
+            .map { "${it.first.name} needs macOS ${it.second}" }.toList()
+        if (tooNew.isNotEmpty()) {
+            throw GradleException("The app declares macOS $minimumMacOS, but ${tooNew.joinToString()}")
+        }
         val plist = File(app, "Contents/Info.plist").absolutePath
         val changes = listOf(
             "Set :CFBundleShortVersionString $appVersion",
             "Set :CFBundleVersion $appVersion",
-            "Set :LSMinimumSystemVersion $minimum",
+            "Set :LSMinimumSystemVersion $minimumMacOS",
         )
         for (change in changes) {
             dist.exec.exec { commandLine("/usr/libexec/PlistBuddy", "-c", change, plist) }
@@ -598,6 +608,8 @@ val distCheck = tasks.register("distCheck") {
         val shownVersion = plistValue("CFBundleShortVersionString")
         expect(shownVersion == appVersion, "version $shownVersion, not $appVersion")
         expect(plistValue("NSMicrophoneUsageDescription") == null, "asks for the microphone")
+        val oldestMacOS = plistValue("LSMinimumSystemVersion")
+        expect(oldestMacOS == minimumMacOS, "runs on macOS $oldestMacOS, not $minimumMacOS")
         val launcherOptions = File(app, "Contents/app/$appName.cfg").readText()
         expect(launcherOptions.contains("-Dwatavyu.bundleId=$bundleId"), "the app is not told its bundle identifier")
 
