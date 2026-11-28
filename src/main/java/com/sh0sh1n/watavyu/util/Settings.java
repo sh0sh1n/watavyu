@@ -82,11 +82,18 @@ public final class Settings {
      * Returns the settings file this run uses.
      */
     static Path defaultFile() {
+        return directory().resolve(FILE_NAME);
+    }
+
+    /**
+     * Returns the folder that holds this run's settings file and the application's other files, such as autosaves:
+     * {@code ~/Library/Application Support/Watavyu}, or the folder the {@value #DIRECTORY_PROPERTY} property names.
+     */
+    public static Path directory() {
         String directory = System.getProperty(DIRECTORY_PROPERTY);
-        Path base = directory != null && !directory.isEmpty()
+        return directory != null && !directory.isEmpty()
                 ? Paths.get(directory)
                 : Paths.get(System.getProperty("user.home"), "Library", "Application Support", "Watavyu");
-        return base.resolve(FILE_NAME);
     }
 
     /**

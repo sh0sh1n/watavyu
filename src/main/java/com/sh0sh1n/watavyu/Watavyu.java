@@ -114,13 +114,10 @@ public final class Watavyu {
     }
 
     /**
-     * User quits- check for save needed. Note that this can be used even in
-     * situations when the application is not truly "quitting", but just the
-     * database information is being lost (e.g. on an "open" or "new"
-     * instruction). In all interpretations, "true" indicates that all unsaved
-     * changes are to be discarded.
+     * Asks about each spreadsheet's unsaved changes before quitting. Once the user has saved or discarded them all,
+     * each spreadsheet's autosave is deleted, as its work is safe or knowingly let go; the caller then quits.
      *
-     * @return True for quit, false otherwise.
+     * @return whether to quit: false if the user cancelled or a save did not happen, which leaves every autosave
      */
     public boolean safeQuit() {
         List<SpreadSheetPanel> spreadsheets = new ArrayList<>();
@@ -129,7 +126,11 @@ public final class Watavyu {
                 spreadsheets.add(spreadSheetPanel);
             }
         }
-        return mayClose(spreadsheets, "UnsavedDialog.message");
+        if (!mayClose(spreadsheets, "UnsavedDialog.message")) {
+            return false;
+        }
+        spreadsheets.forEach(spreadsheet -> spreadsheet.getProjectController().close());
+        return true;
     }
 
     /**
@@ -192,7 +193,7 @@ public final class Watavyu {
         mainFrame.setVisible(true);
 
         window.startFirstSpreadsheet();
-        window.checkForAutosavedFile();
+        window.recoverAutosaves();
         ready();
     }
 

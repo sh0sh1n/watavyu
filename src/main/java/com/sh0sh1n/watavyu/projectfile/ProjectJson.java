@@ -63,9 +63,10 @@ public final class ProjectJson {
      *
      * @param file     where to write
      * @param document the project
+     * @return what was written, the file's contents
      * @throws ProjectFileException if the project breaks the format or the file cannot be written
      */
-    public static void write(final Path file, final ProjectDocument document) throws ProjectFileException {
+    public static String write(final Path file, final ProjectDocument document) throws ProjectFileException {
         String text = toJson(document);
         Path temporary = null;
         try {
@@ -80,6 +81,7 @@ public final class ProjectJson {
             Files.setPosixFilePermissions(temporary, Files.exists(target)
                 ? Files.getPosixFilePermissions(target) : NEW_FILE_PERMISSIONS);
             Files.move(temporary, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            return text;
         } catch (IOException e) {
             throw new ProjectFileException("Unable to save " + file.getFileName() + ": " + e.getMessage(), e);
         } finally {

@@ -20,12 +20,17 @@ import com.sh0sh1n.watavyu.models.DataStore;
 import com.sh0sh1n.watavyu.models.DataStoreFactory;
 import com.sh0sh1n.watavyu.models.UserWarningException;
 import com.sh0sh1n.watavyu.models.Project;
+import com.sh0sh1n.watavyu.projectfile.Fingerprint;
 import com.sh0sh1n.watavyu.projectfile.ProjectDocument;
 import com.sh0sh1n.watavyu.projectfile.ProjectFileException;
 import com.sh0sh1n.watavyu.projectfile.ProjectJson;
 import com.sh0sh1n.watavyu.projectfile.SpreadsheetColumns;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
 
 
 /**
@@ -45,6 +50,9 @@ public final class OpenController {
     /** Why the last project file could not be opened. */
     private String error = null;
 
+    /** The fingerprint of the project file opened, as it was read. */
+    private String fingerprint = null;
+
 
     /**
      * Opens a project file. On failure the data store and project stay null and {@link #getError()} says why.
@@ -53,7 +61,12 @@ public final class OpenController {
      */
     public void openProjectFile(final File projectFile) {
         try {
-            ProjectDocument document = ProjectJson.read(projectFile.toPath());
+            // The bytes are read once, so the fingerprint is of the very contents opened.
+            byte[] contents = Files.readAllBytes(projectFile.toPath());
+            ProjectDocument document;
+            try (InputStream in = new ByteArrayInputStream(contents)) {
+                document = ProjectJson.read(in);
+            }
             DataStore openedDataStore = DataStoreFactory.newDataStore();
             SpreadsheetColumns.addColumns(openedDataStore, document.columns(),
                 projectFile.getAbsoluteFile().getParentFile().toPath());
@@ -63,10 +76,19 @@ public final class OpenController {
 
             dataStore = openedDataStore;
             project = new Project();
+            fingerprint = Fingerprint.of(contents);
         } catch (ProjectFileException | UserWarningException e) {
             logger.error("Unable to open project file " + projectFile, e);
             error = "Unable to open " + projectFile.getName() + ".\n" + e.getMessage();
+        } catch (IOException e) {
+            logger.error("Unable to read project file " + projectFile, e);
+            error = "Unable to open " + projectFile.getName() + ".\nUnable to read it: " + e.getMessage();
         }
+    }
+
+    /** Returns the fingerprint of the project file opened, as it was read, or null if it did not open. */
+    public String getFingerprint() {
+        return fingerprint;
     }
 
     /** Returns why the last project file could not be opened, or null if it opened. */

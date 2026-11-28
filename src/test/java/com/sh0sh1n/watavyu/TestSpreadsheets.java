@@ -7,6 +7,7 @@ import com.sh0sh1n.watavyu.views.MainWindow;
 import com.sh0sh1n.watavyu.views.VideoController;
 
 import javax.swing.JFrame;
+import java.nio.file.Path;
 
 /** Spreadsheets for tests, wired as a tab wires its own. */
 public final class TestSpreadsheets {
@@ -35,5 +36,16 @@ public final class TestSpreadsheets {
      */
     public static MainWindow mainWindow(final JFrame frame) {
         return new MainWindow(new Watavyu(), frame);
+    }
+
+    /**
+     * Fills a window with the main window's contents, keeping autosaves in a given folder. Runs on the EDT.
+     *
+     * @param frame          the window
+     * @param autosaveFolder where autosaves are kept and recovered from
+     * @return the main window's contents, with one untitled spreadsheet
+     */
+    public static MainWindow mainWindow(final JFrame frame, final Path autosaveFolder) {
+        return new MainWindow(new Watavyu(), frame, autosaveFolder);
     }
 }

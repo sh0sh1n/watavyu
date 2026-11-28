@@ -17,6 +17,7 @@ package com.sh0sh1n.watavyu.controllers;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import com.sh0sh1n.watavyu.models.UserWarningException;
+import com.sh0sh1n.watavyu.projectfile.Fingerprint;
 import com.sh0sh1n.watavyu.projectfile.ProjectDocument;
 import com.sh0sh1n.watavyu.projectfile.ProjectFileException;
 import com.sh0sh1n.watavyu.projectfile.ProjectJson;
@@ -37,10 +38,11 @@ public final class SaveController {
      *
      * @param projectFile where to save
      * @param document    the project
+     * @return the fingerprint of the file saved
      * @throws UserWarningException if the project cannot be saved
      */
-    public void saveProject(final File projectFile, final ProjectDocument document) throws UserWarningException {
-        saveProject(projectFile, document, true);
+    public String saveProject(final File projectFile, final ProjectDocument document) throws UserWarningException {
+        return saveProject(projectFile, document, true);
     }
 
     /**
@@ -49,13 +51,15 @@ public final class SaveController {
      * @param projectFile where to save
      * @param document    the project
      * @param remember    whether to add the file to the recent projects
+     * @return the fingerprint of the file saved
      * @throws UserWarningException if the project cannot be saved
      */
-    public void saveProject(final File projectFile, final ProjectDocument document, final boolean remember)
+    public String saveProject(final File projectFile, final ProjectDocument document, final boolean remember)
             throws UserWarningException {
         logger.info("Saving project to " + projectFile.getAbsolutePath());
+        String fingerprint;
         try {
-            ProjectJson.write(projectFile.toPath(), document);
+            fingerprint = Fingerprint.of(ProjectJson.write(projectFile.toPath(), document));
         } catch (ProjectFileException e) {
             logger.error("Failed to save project. Error: ", e);
             throw new UserWarningException("Unable to save " + projectFile.getName() + ".\n" + e.getMessage(), e);
@@ -64,5 +68,6 @@ public final class SaveController {
             Settings.get().rememberProject(projectFile);
             Settings.get().save();
         }
+        return fingerprint;
     }
 }

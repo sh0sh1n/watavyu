@@ -23,7 +23,9 @@ import com.sh0sh1n.watavyu.models.DataStoreFactory;
 import com.sh0sh1n.watavyu.models.UserWarningException;
 import com.sh0sh1n.watavyu.models.Column;
 import com.sh0sh1n.watavyu.models.Project;
+import com.sh0sh1n.watavyu.projectfile.Fingerprint;
 import com.sh0sh1n.watavyu.projectfile.ProjectDocument;
+import com.sh0sh1n.watavyu.projectfile.ProjectFileFilter;
 import com.sh0sh1n.watavyu.projectfile.SpreadsheetColumns;
 import com.sh0sh1n.watavyu.undoableedits.SpreadsheetUndoManager;
 import com.sh0sh1n.watavyu.views.VideoController;
@@ -90,6 +92,9 @@ public final class ProjectController {
 
     /** Autosaves this spreadsheet while its tab is open; null until started. */
     private AutoSaveController autoSave;
+
+    /** The fingerprint of the project file as this spreadsheet last read or wrote it, or null if it has neither. */
+    private String savedFingerprint;
 
     /** The commands that make, delete and time cells */
     private final CellCommands cellCommands = new CellCommands(this);
@@ -209,9 +214,10 @@ public final class ProjectController {
      * Starts autosaving this spreadsheet.
      *
      * @param minutes how often to save it
+     * @param folder  where autosaves are kept
      */
-    public void startAutoSave(final int minutes) {
-        autoSave = new AutoSaveController(this, minutes);
+    public void startAutoSave(final int minutes, final Path folder) {
+        autoSave = new AutoSaveController(this, minutes, folder);
         autoSave.start();
     }
 
@@ -220,12 +226,61 @@ public final class ProjectController {
         return autoSave;
     }
 
-    /** Records that the project was just saved: it has no unsaved changes, so its autosave is deleted. */
-    public void markSaved() {
+    /**
+     * Records that the project was just saved: it has no unsaved changes, so its autosave is deleted.
+     *
+     * @param fingerprint the fingerprint of the project file written
+     */
+    public void markSaved(final String fingerprint) {
+        savedFingerprint = fingerprint;
         markProjectAsUnchanged();
         dataStore.markAsUnchanged();
         if (autoSave != null) {
             autoSave.clear();
+        }
+    }
+
+    /** Returns the fingerprint of the project file as this spreadsheet last read or wrote it, or null if unknown. */
+    public String getSavedFingerprint() {
+        return savedFingerprint;
+    }
+
+    /**
+     * Records the project file's fingerprint as this spreadsheet was opened from it.
+     *
+     * @param fingerprint its fingerprint, or null if unknown
+     */
+    public void setSavedFingerprint(final String fingerprint) {
+        savedFingerprint = fingerprint;
+    }
+
+    /**
+     * Returns the project file this spreadsheet was opened from or last saved to, which Save writes, or null if it
+     * has not been saved as a project file.
+     */
+    public File getProjectFile() {
+        if (!(lastSaveOption instanceof ProjectFileFilter) || getProjectDirectory() == null
+                || getDatabaseFileName() == null) {
+            return null;
+        }
+        return new File(getProjectDirectory(), getDatabaseFileName());
+    }
+
+    /**
+     * Returns whether saving to a project file would overwrite a version this spreadsheet has not seen: the file is
+     * there and holds something other than what this spreadsheet last read from it or wrote to it, as when another
+     * Watavyu, recovered work or another tool saved it since. A file that cannot be read counts as changed.
+     *
+     * @param file the project file
+     * @return whether it changed on disk
+     */
+    public boolean changedOnDisk(final File file) {
+        try {
+            String onDisk = Fingerprint.ofFile(file.toPath());
+            return onDisk != null && !onDisk.equals(savedFingerprint);
+        } catch (IOException e) {
+            logger.warn("Could not read " + file + " to see whether it changed", e);
+            return true;
         }
     }
 
