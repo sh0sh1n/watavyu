@@ -53,15 +53,19 @@ Updated 2026-11-08. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 **F14. A clearer selected column header in Paper.** ready, low priority, *verified* (contrast measured). A selected column's header has a bar in the selection colour along its bottom (`SpreadsheetColumn.headerBorder`), at 2.7:1 against Paper's chrome, under the 3:1 the other marks keep (`PaletteTest`). Use the accent, a thicker bar, or a selection colour tuned for chrome.
 
+**F17. Opening projects from Finder.** ready, *from reading*. The app answers macOS's request to open a file (`MacOS.loadCompileHandler`), but its bundle declares no document type, so double-clicking a `.watavyu.json` does not offer Watavyu, and claiming `json` would claim every JSON file. Declare an exported type (`com.sh0sh1n.watavyu.project`, conforming to `public.json`) for the compound extension `watavyu.json` through jpackage's file associations or the Info.plist, and check in Finder that it takes only project files.
+
 ## Research
 
 **U2. Project structure.** needs the owner. Spreadsheets are usually instances of a project template, and coding passes (columns and their codes) are reused across experiments. Datavyu handled this with Ruby scripts that created a spreadsheet, or migrated one when the template changed; that worked imperfectly and is not to be recreated. Explore how projects, templates, spreadsheets and portable coding passes relate, likely as a folder hierarchy, and where large videos live (often copied locally from a network share for speed). The project file holds everything until this is settled.
 
 **U4. Media identity and cached details.** Whether a clip's media is the file it was coded against, and what to trust when opening it goes wrong. Today a clip's cached details (length, size, frame rate) are replaced by whatever its file reports when it opens (`MediaPlayers.open`), so a file that opens but reports wrongly, or a different file at the same path, overwrites details that were right. Revisit with fingerprinting the media (owner: later), so a clip knows its file. A future idea (owner): filler cells with no media, as placeholders in a media column.
 
+**U6. The first release, and how people hear of new ones.** needs the owner, deferred (2026-11-27): no public release is planned yet, and builds for now are alpha builds that test the pipeline. The build makes a signed, notarized disk image (BUILDING.md › Distribution), but nothing is published yet. To settle when a release is planned: the first release's version number (the project is `0.1.0-SNAPSHOT`; `CITATION.cff` takes `version` and `date-released` at the first release), where disk images are published (GitHub Releases, beside the source the GPL asks for), and how users learn of new versions, as the app makes no network connections and so cannot check for updates itself.
+
 ## Dependencies
 
-None open.
+**D3. SpotBugs Gradle plugin 6.5.15.** ready from 2026-12-10, *verified*. 6.5.13 (`gradle/libs.versions.toml`) calls `Configuration.setVisible`, which Gradle 9 deprecates and Gradle 11 removes, so every build warns of deprecated features. 6.5.15, released 2026-11-26, stops calling it (spotbugs-gradle-plugin #1848). It waits until it has been out two weeks.
 
 ## Refactors
 
