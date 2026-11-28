@@ -65,7 +65,7 @@ Updated 2026-11-08. Re-measure with the commands in [BUILDING.md › Analysis Re
 
 ## Dependencies
 
-None open.
+**D3. SpotBugs Gradle plugin 6.5.15.** ready from 2026-12-10, *verified*. 6.5.13 (`gradle/libs.versions.toml`) calls `Configuration.setVisible`, which Gradle 9 deprecates and Gradle 11 removes, so every build warns of deprecated features. 6.5.15, released 2026-11-26, stops calling it (spotbugs-gradle-plugin #1848). It waits until it has been out two weeks.
 
 ## Refactors
 

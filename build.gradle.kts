@@ -508,14 +508,31 @@ val signingIdentity = providers.gradleProperty("signingIdentity").orElse("-")
 val notaryProfile = providers.gradleProperty("notaryProfile").orElse("watavyu-notary")
 
 /**
+ * Runs a command and returns what it prints, errors included, so a step that works prints nothing. If the command
+ * fails, so does the build, with what it printed, unless [mayFail].
+ */
+fun output(exec: ExecOperations, vararg command: String, mayFail: Boolean = false): String {
+    val out = ByteArrayOutputStream()
+    val result = exec.exec {
+        commandLine(*command)
+        standardOutput = out
+        errorOutput = out
+        isIgnoreExitValue = true
+    }
+    if (result.exitValue != 0 && !mayFail) {
+        throw GradleException("${command.first()} failed (exit ${result.exitValue}): ${command.joinToString(" ")}\n$out")
+    }
+    return out.toString()
+}
+
+/**
  * Signs code with a certificate, the hardened runtime and a secure timestamp, which notarization requires, or ad hoc,
  * without them: the hardened runtime loads only libraries signed by the app's team, and an ad hoc signature has none.
  */
 fun codesign(exec: ExecOperations, identity: String, target: File, vararg options: String) {
     val signing = if (identity == "-") listOf("--timestamp=none") else listOf("--options", "runtime", "--timestamp")
-    exec.exec {
-        commandLine(listOf("codesign", "--force", "--sign", identity) + signing + options + target.absolutePath)
-    }
+    output(exec, *(listOf("codesign", "--force", "--sign", identity) + signing + options + target.absolutePath)
+        .toTypedArray())
 }
 
 val distSign = tasks.register("distSign") {
@@ -542,20 +559,8 @@ val distSign = tasks.register("distSign") {
             .forEach { codesign(dist.exec, identity, it) }
         codesign(dist.exec, identity, File(app, "Contents/runtime"))
         codesign(dist.exec, identity, app, "--entitlements", entitlements.absolutePath)
-        dist.exec.exec { commandLine("codesign", "--verify", "--deep", "--strict", "--verbose=2", app.absolutePath) }
+        output(dist.exec, "codesign", "--verify", "--deep", "--strict", "--verbose=2", app.absolutePath)
     }
-}
-
-/** Runs a command and returns what it prints, errors included, failing if it fails unless [mayFail]. */
-fun output(exec: ExecOperations, vararg command: String, mayFail: Boolean = false): String {
-    val out = ByteArrayOutputStream()
-    exec.exec {
-        commandLine(*command)
-        standardOutput = out
-        errorOutput = out
-        isIgnoreExitValue = mayFail
-    }
-    return out.toString()
 }
 
 val distCheck = tasks.register("distCheck") {
@@ -673,13 +678,11 @@ val distDmg = tasks.register("distDmg") {
         Files.createSymbolicLink(staging.resolve("Applications").toPath(), File("/Applications").toPath())
         val image = dmg.get().asFile
         image.delete()
-        dist.exec.exec {
-            commandLine("hdiutil", "create", "-volname", appName, "-srcfolder", staging.path, "-format", "ULFO",
-                image.absolutePath)
-        }
+        output(dist.exec, "diskutil", "image", "create", "from", "--format", "ULFO", "--volumeName", appName,
+            staging.path, image.absolutePath)
         val identity = signingIdentity.get()
         if (identity != "-") {
-            dist.exec.exec { commandLine("codesign", "--force", "--timestamp", "--sign", identity, image.absolutePath) }
+            output(dist.exec, "codesign", "--force", "--timestamp", "--sign", identity, image.absolutePath)
         }
     }
 }
