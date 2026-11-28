@@ -34,40 +34,84 @@ public class MacOS {
     }
 
     /**
-     * Test whether the Apple press and hold functionality is enabled.
-     *
-     * @return True if press and hold is enabled; otherwise false.
+     * The defaults domain of a JVM that the JDK's own {@code java} launcher runs, as under {@code ./gradlew run}: the
+     * bundle identifier in the launcher's embedded Info.plist.
      */
-    public static boolean isOSXPressAndHoldEnabled() {
+    static final String JAVA_LAUNCHER_DOMAIN = "net.java.openjdk.java";
+
+    /** The system property in which the app's launcher gives its bundle identifier (BUILDING.md › Distribution). */
+    static final String BUNDLE_ID_PROPERTY = "watavyu.bundleId";
+
+    /** The defaults key that turns the accent popup on or off while a key is held. */
+    private static final String PRESS_AND_HOLD = "ApplePressAndHoldEnabled";
+
+    /**
+     * Turns off the accent popup shown while a key is held, for this app alone, so a held key repeats, as holding a
+     * navigation chord or a jog key needs. It is set in the app's own defaults domain, and only if the user has not
+     * set it there, never for every app. macOS reads it as the app starts, so it takes effect from the next launch,
+     * and it is done on a thread of its own, so the launch does not wait for the {@code defaults} command.
+     */
+    public static void turnOffPressAndHoldInBackground() {
+        Thread.ofPlatform().daemon().name("press-and-hold").start(MacOS::turnOffPressAndHold);
+    }
+
+    private static void turnOffPressAndHold() {
+        String domain = pressAndHoldDomain(System.getProperty(BUNDLE_ID_PROPERTY));
         try {
-            List<String> output = defaults("read", "-g", "ApplePressAndHoldEnabled");
-            return output.isEmpty() || !output.get(0).equals("0");
+            if (!isSet(domain, PRESS_AND_HOLD)) {
+                Defaults written = defaults(turnOffPressAndHold(domain));
+                logger.info("Press and hold turned off in " + domain + " (" + written.exitCode() + "): "
+                    + String.join(" ", written.lines()));
+            }
         } catch (IOException e) {
-            logger.error("Error when checking press and hold on OSX " + e.getMessage());
+            logger.error("Could not turn off press and hold in " + domain + ": " + e);
+        } catch (InterruptedException e) {
+            logger.info("Press and hold left as it is in " + domain + ": interrupted");
         }
-        return false;
     }
 
     /**
-     * Sets the press and hold value.
+     * Returns the defaults domain that holds this app's settings: its bundle identifier, which the app's launcher
+     * gives, or outside the app that of the JDK's launcher.
      *
-     * @param pressAndHold The press and hold state.
+     * @param bundleId the app's bundle identifier, or null outside the app
      */
-    public static void setOSXPressAndHoldValue(boolean pressAndHold) {
-        try {
-            List<String> output = defaults("write", "-g", "ApplePressAndHoldEnabled", "-bool",
-                pressAndHold ? "true" : "false");
-            logger.info("Press and hold for OSX command returned: " + String.join(System.lineSeparator(), output));
-        } catch (IOException e) {
-            logger.error("Error occurred when processing press and hold " + e);
-        }
+    static String pressAndHoldDomain(final String bundleId) {
+        return bundleId == null || bundleId.isBlank() ? JAVA_LAUNCHER_DOMAIN : bundleId;
     }
 
-    /** Runs the {@code defaults} command with these arguments, and returns the lines it prints, errors included. */
-    private static List<String> defaults(final String... arguments) throws IOException {
+    /** Returns the {@code defaults} arguments that turn press and hold off in a domain. */
+    static List<String> turnOffPressAndHold(final String domain) {
+        return List.of("write", domain, PRESS_AND_HOLD, "-bool", "false");
+    }
+
+    /**
+     * Returns whether a defaults domain holds a value for a key. {@code defaults read} fails if it does not, worded
+     * one way for a domain that does not exist and another for a key missing from one that does.
+     *
+     * @param domain the domain, such as {@code com.sh0sh1n.watavyu}
+     * @param key    the key
+     * @throws IOException          if {@code defaults} cannot be run
+     * @throws InterruptedException if interrupted while it runs
+     */
+    static boolean isSet(final String domain, final String key) throws IOException, InterruptedException {
+        return defaults(List.of("read", domain, key)).exitCode() == 0;
+    }
+
+    /**
+     * What the {@code defaults} command did.
+     *
+     * @param exitCode its exit status, 0 when it did what was asked
+     * @param lines    the lines it printed, errors included
+     */
+    record Defaults(int exitCode, List<String> lines) {
+    }
+
+    /** Runs the {@code defaults} command with these arguments, and waits for it to finish. */
+    static Defaults defaults(final List<String> arguments) throws IOException, InterruptedException {
         List<String> command = new ArrayList<>();
         command.add("defaults");
-        command.addAll(List.of(arguments));
+        command.addAll(arguments);
         Process process = new ProcessBuilder(command).redirectErrorStream(true).start();
         try (BufferedReader output = new BufferedReader(
                 new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
@@ -75,7 +119,7 @@ public class MacOS {
             for (String line = output.readLine(); line != null; line = output.readLine()) {
                 lines.add(line);
             }
-            return lines;
+            return new Defaults(process.waitFor(), List.copyOf(lines));
         }
     }
 

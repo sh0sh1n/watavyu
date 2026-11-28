@@ -65,9 +65,6 @@ public final class Watavyu {
         logger.debug("The java library path is: " + System.getProperty("java.library.path"));
     }
 
-    // TODO: Move this to some OS specifics
-    private boolean osxPressAndHoldEnabled;
-
     /** The main window's frame. It exists before the window, which uses it while it is built. */
     private JFrame mainFrame;
 
@@ -176,11 +173,7 @@ public final class Watavyu {
      */
     private void start(final String[] args) {
         AppIcon.install();
-        // Key repeat instead of the accent popup while holding keys (B2: this changes the setting for every app).
-        if (MacOS.isOSXPressAndHoldEnabled()) {
-            osxPressAndHoldEnabled = true;
-            MacOS.setOSXPressAndHoldValue(false);
-        }
+        MacOS.turnOffPressAndHoldInBackground();
         SpreadsheetTheme.installLookAndFeel();
         mainFrame = new JFrame();
         SpreadsheetTheme.setMonospacedValues(Settings.get().isMonospacedValues());
@@ -230,10 +223,6 @@ public final class Watavyu {
      * Clean up after ourselves.
      */
     public void shutdown() {
-        if (osxPressAndHoldEnabled) {
-            MacOS.setOSXPressAndHoldValue(true);
-        }
-
         logger.info("Saving settings.");
         Settings.get().save();
     }
