@@ -68,7 +68,7 @@ import java.util.function.Supplier;
  * <p>The sheet holds the keyboard's modes (AGENTS.md › Decisions, 2026-11-13). In command mode the sheet itself has
  * the focus, so keys are commands and the selection is a cell, or a column with no cell; in insert mode a part of
  * the editor has it, and keys type into the cell. {@code i} goes from command to insert mode in the selected cell,
- * and Esc or ⌃] back, with the cell still selected.
+ * and Esc or ⌃[ back, with the cell still selected.
  */
 public final class SpreadsheetView extends JPanel implements Scrollable {
 
@@ -255,7 +255,7 @@ public final class SpreadsheetView extends JPanel implements Scrollable {
     }
 
     /**
-     * Leaves insert mode for command mode (Esc, ⌃]), if the keyboard is in insert mode here and no menu is open, as Esc
+     * Leaves insert mode for command mode (Esc, ⌃[), if the keyboard is in insert mode here and no menu is open, as Esc
      * then closes the menu.
      *
      * @return whether it left

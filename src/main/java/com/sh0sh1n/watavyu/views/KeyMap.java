@@ -92,7 +92,7 @@ public final class KeyMap {
         keys.put("ctrl+p", Command.PLAY_PAUSE);
         keys.put("ctrl+r", Command.REDO);
         keys.put("escape", Command.COMMAND_MODE);
-        keys.put("ctrl+]", Command.COMMAND_MODE);
+        keys.put("ctrl+[", Command.COMMAND_MODE);
         return Collections.unmodifiableMap(keys);
     }
 
