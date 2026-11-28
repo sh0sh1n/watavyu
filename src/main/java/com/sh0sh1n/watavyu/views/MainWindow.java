@@ -17,7 +17,6 @@ package com.sh0sh1n.watavyu.views;
 import com.sh0sh1n.watavyu.util.Dialogs;
 import com.sh0sh1n.watavyu.util.Resources;
 import com.sh0sh1n.watavyu.util.Settings;
-import org.apache.commons.io.FilenameUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import com.sh0sh1n.watavyu.Watavyu;
@@ -27,7 +26,6 @@ import com.sh0sh1n.watavyu.views.spreadsheet.FileDropEventListener;
 import com.sh0sh1n.watavyu.models.*;
 import com.sh0sh1n.watavyu.playback.javafx.JavaFxVideoPlugin;
 import com.sh0sh1n.watavyu.projectfile.ProjectDocument;
-import com.sh0sh1n.watavyu.projectfile.ProjectPaths;
 import com.sh0sh1n.watavyu.undoableedits.SpreadsheetUndoManager;
 import com.sh0sh1n.watavyu.util.ArrayDirection;
 import com.sh0sh1n.watavyu.views.spreadsheet.TransparentPanel;
@@ -49,10 +47,12 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Predicate;
 
 /**
  * The main window: a tab per open spreadsheet, the menu bar, and the keyboard shortcuts.
@@ -80,6 +80,12 @@ public final class MainWindow implements FileDropEventListener {
 
     /** The running application, which quits and asks about unsaved work */
     private final Watavyu app;
+
+    /** Where each spreadsheet's autosave is kept, and where unsaved work is recovered from at launch */
+    private final Path autosaveFolder;
+
+    /** Asks whether Save may write over a project file that changed on disk */
+    private Predicate<File> replaceChanged = this::replaceChangedFile;
 
     /** The main window */
     private final JFrame frame;
@@ -113,7 +119,20 @@ public final class MainWindow implements FileDropEventListener {
      * @param frame The main window.
      */
     public MainWindow(final Watavyu app, final JFrame frame) {
+        this(app, frame, AutoSaveController.defaultFolder());
+    }
+
+    /**
+     * Fills the main window with the menu bar and an empty spreadsheet, keeping autosaves in a given folder. The
+     * caller places and shows it.
+     *
+     * @param app            The running application.
+     * @param frame          The main window.
+     * @param autosaveFolder Where autosaves are kept.
+     */
+    public MainWindow(final Watavyu app, final JFrame frame, final Path autosaveFolder) {
         this.app = app;
+        this.autosaveFolder = autosaveFolder;
         this.frame = frame;
         frame.setName("mainFrame");
         frame.setTitle(Resources.of(Watavyu.class).getString("Application.title"));
@@ -220,7 +239,7 @@ public final class MainWindow implements FileDropEventListener {
         tabbedPane.setTabComponentAt(tabbedPane.indexOfComponent(panel),
             new TabWithCloseButton(tabbedPane, this::closeTab));
         tabbedPane.setSelectedComponent(panel);
-        pc.startAutoSave(AUTOSAVE_MINUTES);
+        pc.startAutoSave(AUTOSAVE_MINUTES, autosaveFolder);
         return panel;
     }
 
@@ -264,38 +283,66 @@ public final class MainWindow implements FileDropEventListener {
     }
 
 
-    public void checkForAutosavedFile() {
-        // Autosaves are written to the temporary folder, and one left there is from a run that did not quit cleanly.
-        File[] listOfFiles = new File(System.getProperty("java.io.tmpdir")).listFiles();
-        if (listOfFiles == null) {
-            return;
+    /**
+     * Reopens the unsaved work of every Watavyu that stopped without saving or discarding it, as after a crash, each
+     * in a tab of its own, without asking. Work from a project file reopens as that project with unsaved changes, so
+     * Save writes it there; work never saved reopens with its name, or untitled. Autosaves a running Watavyu owns are left to it. The
+     * untitled spreadsheet open at launch gives way, if it is untouched.
+     */
+    public void recoverAutosaves() {
+        ProjectController selected = selectedController();
+        SpreadSheetPanel untouched = tabbedPane.getTabCount() == 1 && selected != null
+            && selected.getProjectName() == null && !selected.isChanged() ? selected.getSpreadSheetPanel() : null;
+        boolean recovered = false;
+        for (Autosave autosave : Autosave.claimAbandoned(autosaveFolder)) {
+            recovered |= recover(autosave);
         }
-        for (File f : listOfFiles) {
-            if (f.isFile() && FilenameUtils.wildcardMatchOnSystem(f.getName(), "~*" + ProjectDocument.EXTENSION)) {
-                // The autosave is deleted once it has opened, or if the user does not want it.
-                if (JOptionPane.showConfirmDialog(null,
-                        "Watavyu quit before \"" + recoveredName(f.getName())
-                            + "\" was saved. Recover the unsaved project?",
-                        "Watavyu",
-                        JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
-                    if (recover(f)) {
-                        deleteAutosave(f);
-                        saveAs();
-                    }
-                } else {
-                    deleteAutosave(f);
-                }
+        if (recovered && untouched != null) {
+            removeTab(untouched);
+        }
+    }
+
+    /**
+     * Opens an autosave in a new tab, which takes it over. One that does not open is left where it is, and the user
+     * is told where.
+     *
+     * @param autosave an autosave no running Watavyu owns
+     * @return whether it opened
+     */
+    private boolean recover(final Autosave autosave) {
+        OpenController opened = new OpenController();
+        opened.openProjectFile(autosave.getFile().toFile());
+        if (opened.getError() != null) {
+            autosave.release();
+            warn("Watavyu could not reopen unsaved work it autosaved, which is left at\n" + autosave.getFile()
+                + "\n\n" + opened.getError());
+            return false;
+        }
+        ProjectController pc = new ProjectController(opened.getProject(), opened.getDataStore());
+        Autosave.Origin origin = autosave.getOrigin();
+        if (origin == null) {
+            String name = autosave.getProjectName();
+            if (name == null) {
+                pc.getDataStore().setName("untitled");
+            } else {
+                // Named as a project file is, so the name is taken whole rather than losing what follows a dot.
+                pc.setProjectName(name + ProjectDocument.EXTENSION);
+                pc.getDataStore().setName(name);
             }
+        } else {
+            File projectFile = origin.projectFile();
+            pc.setProjectName(projectFile.getName());
+            pc.setProjectDirectory(projectFile.getParent());
+            pc.setDatabaseFileName(projectFile.getName());
+            pc.setLastSaveOption(ProjectFileFilter.INSTANCE);
+            pc.setSavedFingerprint(origin.fingerprint());
+            pc.getDataStore().setName(projectFile.getName());
         }
+        pc.projectChanged();
+        createNewSpreadsheet(pc);
+        pc.getAutoSave().adopt(autosave);
+        return true;
     }
-
-    /** Deletes an autosave that was recovered or declined, and logs it if the file stays. */
-    private static void deleteAutosave(final File autosave) {
-        if (!autosave.delete() && autosave.exists()) {
-            logger.warn("Could not delete the autosave " + autosave);
-        }
-    }
-
 
     /**
      * Update the title of the application.
@@ -390,11 +437,35 @@ public final class MainWindow implements FileDropEventListener {
      */
     public boolean save() {
         ProjectController projectController = selectedController();
-        if (projectController.isNewProject() || (projectController.getProjectName() == null)
-                || !(projectController.getLastSaveOption() instanceof ProjectFileFilter)) {
+        File file = projectController.getProjectFile();
+        if (projectController.isNewProject() || projectController.getProjectName() == null || file == null) {
             return saveAs();
         }
-        return saveProject(new File(projectController.getProjectDirectory(), projectController.getDatabaseFileName()));
+        if (projectController.changedOnDisk(file) && !replaceChanged.test(file)) {
+            return false;
+        }
+        return saveProject(file);
+    }
+
+    /**
+     * Sets how Save asks whether to write over a project file that changed on disk, so tests can answer for the user.
+     *
+     * @param ask answers for a project file whether to replace it
+     */
+    void askToReplaceChangedFilesWith(final Predicate<File> ask) {
+        replaceChanged = ask;
+    }
+
+    /**
+     * Asks whether to save over a project file that changed on disk since the spreadsheet opened or last saved it.
+     *
+     * @param file the project file
+     * @return whether to replace it
+     */
+    private boolean replaceChangedFile(final File file) {
+        Resources resourceMap = Resources.of(Watavyu.class);
+        return Dialogs.confirm(frame, resourceMap.getString("ChangedOnDiskDialog.message", file.getName()),
+                resourceMap.getString("ChangedOnDiskDialog.title"), "Replace");
     }
 
     /**
@@ -444,9 +515,9 @@ public final class MainWindow implements FileDropEventListener {
     private boolean saveProject(final File file) {
         ProjectController projectController = selectedController();
         try {
-            new SaveController().saveProject(file, projectController.toDocument(file.getAbsoluteFile().getParentFile()
-                .toPath()));
-            projectController.markSaved();
+            String fingerprint = new SaveController().saveProject(file,
+                projectController.toDocument(file.getAbsoluteFile().getParentFile().toPath()));
+            projectController.markSaved(fingerprint);
             return true;
         } catch (UserWarningException e) {
             logger.error("Save failed. Error: ", e);
@@ -587,37 +658,6 @@ public final class MainWindow implements FileDropEventListener {
         FileFilter filter = filterFor(f);
         fileChooser.setFileFilter(filter != null ? filter : ProjectFileFilter.INSTANCE);
         open(fileChooser);
-    }
-
-    /**
-     * Opens an autosaved project in a new tab as an unsaved project named after the original, so that saving it goes
-     * through Save As and quitting asks about it.
-     *
-     * @param autosave the autosaved file
-     * @return whether it opened
-     */
-    private boolean recover(final File autosave) {
-        open(autosave);
-        ProjectController projectController = selectedController();
-        if (projectController == null || !autosave.getName().equals(projectController.getDatabaseFileName())) {
-            return false;
-        }
-        projectController.setLastSaveOption(null);
-        projectController.setProjectName(recoveredName(autosave.getName()));
-        projectController.projectChanged();
-        return true;
-    }
-
-    /**
-     * Returns the project's name.
-     * @param autosave the name of an autosaved file: {@code ~}, the project's name, {@code _} and a number, then the
-     *                 extension
-     */
-    static String recoveredName(final String autosave) {
-        String name = ProjectPaths.isProjectFile(autosave)
-            ? autosave.substring(0, autosave.length() - ProjectDocument.EXTENSION.length())
-            : FilenameUtils.removeExtension(autosave);
-        return name.replaceFirst("^~", "").replaceFirst("_\\d+$", "");
     }
 
     private OpenController openProjectFile(final File projectFile) {
@@ -1384,6 +1424,7 @@ public final class MainWindow implements FileDropEventListener {
             pController.setLastSaveOption(filter);
             pController.setProjectDirectory(fileChooser.getSelectedFile().getParent());
             pController.setDatabaseFileName(fileChooser.getSelectedFile().getName());
+            pController.setSavedFingerprint(openController.getFingerprint());
 
             setProgress(40);
 

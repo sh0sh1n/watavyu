@@ -8,12 +8,16 @@ import static org.testng.Assert.assertSame;
 import static org.testng.Assert.assertTrue;
 
 import com.sh0sh1n.watavyu.TestSpreadsheets;
+import com.sh0sh1n.watavyu.controllers.Autosave;
 import com.sh0sh1n.watavyu.controllers.SaveController;
 import com.sh0sh1n.watavyu.controllers.ProjectController;
 import com.sh0sh1n.watavyu.models.Cell;
 import com.sh0sh1n.watavyu.models.DataStoreFactory;
 import com.sh0sh1n.watavyu.models.Column;
 import com.sh0sh1n.watavyu.models.Project;
+import com.sh0sh1n.watavyu.projectfile.Fingerprint;
+import com.sh0sh1n.watavyu.projectfile.ProjectDocument;
+import com.sh0sh1n.watavyu.projectfile.ProjectJson;
 import com.sh0sh1n.watavyu.views.spreadsheet.SpreadSheetPanel;
 import com.sh0sh1n.watavyu.views.spreadsheet.layouts.SheetLayoutFactory;
 import com.sh0sh1n.watavyu.views.spreadsheet.layouts.SheetLayoutFactory.SheetLayoutType;
@@ -41,13 +45,15 @@ public class MainWindowTest {
     private JFrame frame;
     private MainWindow view;
     private Path folder;
+    private Path autosaves;
 
     @BeforeMethod
     public void setUp() throws Exception {
         folder = Files.createTempDirectory("study");
+        autosaves = Files.createTempDirectory("autosaves");
         SwingUtilities.invokeAndWait(() -> {
             frame = new JFrame();
-            view = TestSpreadsheets.mainWindow(frame);
+            view = TestSpreadsheets.mainWindow(frame, autosaves);
         });
     }
 
@@ -114,12 +120,196 @@ public class MainWindowTest {
         assertEquals(MainWindow.windowTitle("Watavyu", "study.watavyu.json  *"), "Watavyu - study.watavyu.json  *");
     }
 
-    /** B8: a recovered project is named after the project that was autosaved. */
+    /** Leaves an autosave as a Watavyu that stopped without saving leaves it: written, then let go. */
+    private Autosave leftBehind(final Autosave.Origin origin, final String... columns) throws Exception {
+        return leftBehindNamed(origin, null, columns);
+    }
+
+    /** Leaves an autosave of a spreadsheet with a name, as a Watavyu that stopped without saving leaves it. */
+    private Autosave leftBehindNamed(final Autosave.Origin origin, final String name, final String... columns)
+            throws Exception {
+        ProjectController spreadsheet = new ProjectController(new Project(), DataStoreFactory.newDataStore());
+        for (String column : columns) {
+            spreadsheet.getDataStore().createColumn(column);
+        }
+        Autosave autosave = Autosave.create(autosaves);
+        autosave.write(ProjectJson.toJson(spreadsheet.toDocument(autosaves)), origin, name);
+        autosave.release();
+        return autosave;
+    }
+
+    /**
+     * B11: work a Watavyu left unsaved reopens at launch without asking, as its project with unsaved changes, in place
+     * of the untouched untitled spreadsheet; saving writes it to the project file and deletes the autosave.
+     */
     @Test
-    public void aRecoveredProjectIsNamedAfterTheOriginal() {
-        assertEquals(MainWindow.recoveredName("~study_12005522346316252883.watavyu.json"), "study");
-        assertEquals(MainWindow.recoveredName("~session_04_5415962468724307690.watavyu.json"), "session_04");
-        assertEquals(MainWindow.recoveredName("~noname_42.watavyu.json"), "noname");
+    public void unsavedWorkReopensAsItsProjectAndSavesToIt() throws Exception {
+        File study = projectFile("study", "gaze");
+        Autosave left = leftBehind(new Autosave.Origin(study, Fingerprint.ofFile(study.toPath())), "gaze", "speech");
+
+        onEdt(() -> {
+            view.startFirstSpreadsheet();
+            view.recoverAutosaves();
+        });
+
+        assertEquals(view.getTabbedPane().getTabCount(), 1);
+        ProjectController recovered = view.selectedController();
+        assertEquals(recovered.getProjectName(), "study");
+        assertEquals(recovered.getProjectFile(), study);
+        assertTrue(recovered.isChanged());
+        assertNotNull(recovered.getDataStore().getColumn("speech"));
+        assertTrue(Files.exists(left.getFile()), "the autosave stays until the work is saved");
+        assertTrue(Autosave.claimAbandoned(autosaves).isEmpty(), "the recovered spreadsheet owns it");
+
+        onEdt(() -> assertTrue(view.save()));
+
+        assertTrue(Files.readString(study.toPath()).contains("\"speech\""));
+        assertFalse(Files.exists(left.getFile()));
+        assertFalse(recovered.isChanged());
+    }
+
+    @Test
+    public void untitledUnsavedWorkReopensUntitled() throws Exception {
+        leftBehind(null, "gaze");
+
+        onEdt(() -> view.recoverAutosaves());
+
+        ProjectController recovered = view.selectedController();
+        assertNull(recovered.getProjectName());
+        assertNull(recovered.getProjectFile());
+        assertTrue(recovered.isChanged());
+        assertNotNull(recovered.getDataStore().getColumn("gaze"));
+    }
+
+    /** B8: work in a project named but never saved, as from New Project, reopens with its name, whole. */
+    @Test
+    public void unsavedWorkInANamedProjectReopensWithItsName() throws Exception {
+        leftBehindNamed(null, "session.04", "gaze");
+
+        onEdt(() -> view.recoverAutosaves());
+
+        ProjectController recovered = view.selectedController();
+        assertEquals(recovered.getProjectName(), "session.04");
+        assertNull(recovered.getProjectFile(), "it was never saved, so Save asks where");
+        assertTrue(recovered.isChanged());
+    }
+
+    @Test
+    public void anAutosaveARunningWatavyuOwnsIsNotRecovered() throws Exception {
+        Autosave owned = Autosave.create(autosaves);
+        try {
+            owned.write(ProjectJson.toJson(new ProjectDocument(List.of())), null, null);
+            onEdt(() -> {
+                view.startFirstSpreadsheet();
+                view.recoverAutosaves();
+            });
+
+            assertEquals(view.getTabbedPane().getTabCount(), 1);
+            assertFalse(view.selectedController().isChanged());
+        } finally {
+            owned.delete();
+        }
+    }
+
+    @Test
+    public void withNothingToRecoverTheUntitledSpreadsheetStays() throws Exception {
+        onEdt(() -> {
+            view.startFirstSpreadsheet();
+            view.recoverAutosaves();
+        });
+
+        assertEquals(view.getTabbedPane().getTabCount(), 1);
+        assertNull(view.selectedController().getProjectName());
+    }
+
+    /**
+     * B11: Save warns before writing over a project file that changed on disk since the spreadsheet opened or last
+     * saved it, and only then: the spreadsheet's own saves are not changes.
+     */
+    @Test
+    public void aProjectFileChangesOnDiskOnlyWhenSomethingElseWritesIt() throws Exception {
+        File study = projectFile("study", "gaze");
+        onEdt(() -> view.open(study));
+        ProjectController opened = view.selectedController();
+        assertFalse(opened.changedOnDisk(study), "as opened");
+
+        onEdt(() -> {
+            opened.getDataStore().createColumn("speech");
+            assertTrue(view.save());
+        });
+        assertFalse(opened.changedOnDisk(study), "as saved here");
+
+        Files.writeString(study.toPath(), Files.readString(study.toPath()).replace("speech", "talk"));
+        assertTrue(opened.changedOnDisk(study), "saved by something else");
+
+        Files.delete(study.toPath());
+        assertFalse(opened.changedOnDisk(study), "nothing there to overwrite");
+    }
+
+    @Test
+    public void aProjectFileNeverReadIsAChangeIfItIsThere() throws Exception {
+        File study = projectFile("study", "gaze");
+        ProjectController untitled = new ProjectController(new Project(), DataStoreFactory.newDataStore());
+
+        assertTrue(untitled.changedOnDisk(study));
+    }
+
+    /** Opens a project, adds a column, and has something else save over its file. */
+    private ProjectController changedElsewhere(final File study) throws Exception {
+        onEdt(() -> {
+            view.open(study);
+            view.selectedController().getDataStore().createColumn("speech");
+        });
+        Files.writeString(study.toPath(), Files.readString(study.toPath()).replace("gaze", "talk"));
+        return view.selectedController();
+    }
+
+    /** B11: Save asks before writing over a project file saved elsewhere since; Cancel leaves the file as it is. */
+    @Test
+    public void savingOverAFileChangedOnDiskAsksAndCancelKeepsIt() throws Exception {
+        File study = projectFile("study", "gaze");
+        ProjectController opened = changedElsewhere(study);
+        String elsewhere = Files.readString(study.toPath());
+        List<File> asked = new ArrayList<>();
+        view.askToReplaceChangedFilesWith(file -> {
+            asked.add(file);
+            return false;
+        });
+
+        onEdt(() -> assertFalse(view.save()));
+
+        assertEquals(asked, List.of(study));
+        assertEquals(Files.readString(study.toPath()), elsewhere);
+        assertTrue(opened.isChanged());
+    }
+
+    @Test
+    public void replacingAFileChangedOnDiskSavesOverIt() throws Exception {
+        File study = projectFile("study", "gaze");
+        ProjectController opened = changedElsewhere(study);
+        view.askToReplaceChangedFilesWith(file -> true);
+
+        onEdt(() -> assertTrue(view.save()));
+
+        assertTrue(Files.readString(study.toPath()).contains("\"speech\""));
+        assertFalse(opened.isChanged());
+        assertFalse(opened.changedOnDisk(study));
+    }
+
+    @Test
+    public void savingOverAnUnchangedFileDoesNotAsk() throws Exception {
+        File study = projectFile("study", "gaze");
+        onEdt(() -> {
+            view.open(study);
+            view.selectedController().getDataStore().createColumn("speech");
+        });
+        view.askToReplaceChangedFilesWith(file -> {
+            throw new AssertionError("asked about " + file);
+        });
+
+        onEdt(() -> assertTrue(view.save()));
+
+        assertTrue(Files.readString(study.toPath()).contains("\"speech\""));
     }
 
     /** It has its empty media columns but no unsaved changes, so it is not autosaved and gives way to a project. */
